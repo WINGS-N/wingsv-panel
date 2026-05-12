@@ -1,0 +1,118 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  frontend:
+    name: build frontend bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          if-no-files-found: error
+          retention-days: 1
+
+  build:
+    name: build ${{ matrix.goos }}/${{ matrix.goarch }}${{ matrix.gomips && format('/{0}', matrix.gomips) || '' }}
+    needs: frontend
+    runs-on: ubuntu-latest
+    # MIPS variants currently fail because modernc.org/libc (transitive via
+    # modernc.org/sqlite) has no build files for linux/mips*. Keep them in the
+    # matrix so the limitation is visible on every tag, but don't block the
+    # release for the other architectures.
+    continue-on-error: ${{ contains(matrix.goarch, 'mips') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm
+            goarm: "7"
+          - goos: linux
+            goarch: arm64
+          - goos: linux
+            goarch: mips
+            gomips: softfloat
+          - goos: linux
+            goarch: mipsle
+            gomips: softfloat
+          - goos: linux
+            goarch: mips64le
+          - goos: linux
+            goarch: riscv64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+
+      - name: build binary
+        env:
+          CGO_ENABLED: "0"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          GOMIPS: ${{ matrix.gomips }}
+        run: |
+          suffix="${GOARCH}"
+          if [ -n "${GOARM}" ]; then suffix="${suffix}v${GOARM}"; fi
+          if [ -n "${GOMIPS}" ]; then suffix="${suffix}-${GOMIPS}"; fi
+          out="wingsv-panel-${GOOS}-${suffix}"
+          mkdir -p dist
+          go build \
+            -trimpath \
+            -ldflags "-s -w -X main.version=${GITHUB_REF_NAME}" \
+            -o "dist/${out}" ./cmd/server
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wingsv-panel-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm && format('v{0}', matrix.goarm) || '' }}${{ matrix.gomips && format('-{0}', matrix.gomips) || '' }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wingsv-panel-*
+          merge-multiple: true
+
+      - name: create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["web/src/*"]
+    }
+  },
+  "include": ["web/src/**/*", "vite.config.js"],
+  "exclude": ["node_modules", "web/dist"]
+}

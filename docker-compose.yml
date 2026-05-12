@@ -1,0 +1,16 @@
+services:
+  app:
+    image: ghcr.io/wings-n/wingsv-panel:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wingsv-panel
+    ports:
+      - "8080:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      PUBLIC_BASE_URL: "https://v.wingsnet.org"
+      GITHUB_REPO: "WINGS-N/WINGSV"
+      RELEASE_ASSET_SUFFIX: ".apk"
+      STATIC_DIR: "/app/web/dist"
+    restart: unless-stopped

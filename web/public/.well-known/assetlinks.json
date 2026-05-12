@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "wings.v",
+      "sha256_cert_fingerprints": [
+        "1D:D5:99:1F:36:E2:FB:4C:03:C6:B1:2C:7C:0E:40:D0:77:AA:20:6B:F8:FD:62:C3:CF:E3:D6:F6:1E:F5:63:83",
+        "82:66:E6:46:73:C5:97:BE:B7:84:E2:F3:16:BC:A1:45:C7:76:EE:40:EF:8D:45:BC:7D:B6:17:00:F4:24:F9:1D"
+      ]
+    }
+  }
+]
