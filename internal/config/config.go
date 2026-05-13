@@ -26,7 +26,9 @@ func Load() Config {
 		AssetLinksJSON:         getEnv("ASSET_LINKS_JSON", ""),
 		GitHubRepo:             getEnv("GITHUB_REPO", "WINGS-N/WINGSV"),
 		ReleaseAssetSuffix:     getEnv("RELEASE_ASSET_SUFFIX", ".apk"),
-		StaticDir:              getEnv("STATIC_DIR", "web/dist"),
+		// Default empty so the embedded SPA bundle is served. Set STATIC_DIR
+		// explicitly to swap the frontend without rebuilding the binary.
+		StaticDir:              getEnv("STATIC_DIR", ""),
 		DBPath:                 getEnv("DB_PATH", "./v-wingsnet.db"),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
 		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", "admin"),

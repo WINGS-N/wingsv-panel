@@ -8,7 +8,6 @@ data:
   PUBLIC_BASE_URL: "https://v.wingsnet.org"
   GITHUB_REPO: "WINGS-N/WINGSV"
   RELEASE_ASSET_SUFFIX: ".apk"
-  STATIC_DIR: "/app/web/dist"
   DB_PATH: "/data/v-wingsnet.db"
   BOOTSTRAP_ADMIN_USERNAME: "admin"
   BOOTSTRAP_ADMIN_PASSWORD: "admin"
