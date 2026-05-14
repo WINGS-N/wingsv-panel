@@ -715,6 +715,10 @@ type RuntimeState struct {
 	Phase         TunnelPhase            `protobuf:"varint,2,opt,name=phase,proto3,enum=wingsv.guardian.TunnelPhase" json:"phase,omitempty"`
 	ActiveBackend string                 `protobuf:"bytes,3,opt,name=active_backend,json=activeBackend,proto3" json:"active_backend,omitempty"`
 	ErrorMessage  string                 `protobuf:"bytes,4,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	// Сигнал устройства: есть ли актуально подтверждённый root-доступ. Панель
+	// использует это чтобы прятать root/sharing/xposed/kernel-WG секции в UI и
+	// молча обнулять их при push'е конфига клиенту без рута.
+	HasRootAccess bool `protobuf:"varint,5,opt,name=has_root_access,json=hasRootAccess,proto3" json:"has_root_access,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -775,6 +779,13 @@ func (x *RuntimeState) GetErrorMessage() string {
 		return x.ErrorMessage
 	}
 	return ""
+}
+
+func (x *RuntimeState) GetHasRootAccess() bool {
+	if x != nil {
+		return x.HasRootAccess
+	}
+	return false
 }
 
 type ConfigPush struct {
@@ -1391,12 +1402,13 @@ const file_guardian_proto_rawDesc = "" +
 	"\x05ts_ms\x18\x01 \x01(\x03R\x04tsMs\"r\n" +
 	"\vStateReport\x12*\n" +
 	"\bsnapshot\x18\x01 \x01(\v2\x0e.wingsv.ConfigR\bsnapshot\x127\n" +
-	"\aruntime\x18\x02 \x01(\v2\x1d.wingsv.guardian.RuntimeStateR\aruntime\"\xb3\x01\n" +
+	"\aruntime\x18\x02 \x01(\v2\x1d.wingsv.guardian.RuntimeStateR\aruntime\"\xdb\x01\n" +
 	"\fRuntimeState\x12#\n" +
 	"\rtunnel_active\x18\x01 \x01(\bR\ftunnelActive\x122\n" +
 	"\x05phase\x18\x02 \x01(\x0e2\x1c.wingsv.guardian.TunnelPhaseR\x05phase\x12%\n" +
 	"\x0eactive_backend\x18\x03 \x01(\tR\ractiveBackend\x12#\n" +
-	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\"P\n" +
+	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\x12&\n" +
+	"\x0fhas_root_access\x18\x05 \x01(\bR\rhasRootAccess\"P\n" +
 	"\n" +
 	"ConfigPush\x12&\n" +
 	"\x06config\x18\x01 \x01(\v2\x0e.wingsv.ConfigR\x06config\x12\x1a\n" +

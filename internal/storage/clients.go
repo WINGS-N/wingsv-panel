@@ -24,6 +24,7 @@ type Client struct {
 	LogXRayEnabled          bool
 	SyncMode                string
 	PeriodicIntervalMinutes int
+	HasRootAccess           bool
 }
 
 func (s *Store) CreateClient(id string, ownerAdminID int64, name, tokenHash string, tokenPlain []byte) (Client, error) {
@@ -101,7 +102,8 @@ func (s *Store) FindClientByID(id string) (Client, error) {
 		SELECT id, owner_admin_id, name, token_hash, hwid, device_name, device_model,
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
-		       sync_mode, periodic_interval_minutes
+		       sync_mode, periodic_interval_minutes,
+		       has_root_access
 		FROM clients WHERE id = ?`, id)
 	return scanClient(row)
 }
@@ -111,7 +113,8 @@ func (s *Store) ListClientsByOwner(ownerAdminID int64) ([]Client, error) {
 		SELECT id, owner_admin_id, name, token_hash, hwid, device_name, device_model,
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
-		       sync_mode, periodic_interval_minutes
+		       sync_mode, periodic_interval_minutes,
+		       has_root_access
 		FROM clients WHERE owner_admin_id = ? ORDER BY created_at DESC`, ownerAdminID)
 	if err != nil {
 		return nil, err
@@ -133,7 +136,8 @@ func (s *Store) ListAllClients() ([]Client, error) {
 		SELECT id, owner_admin_id, name, token_hash, hwid, device_name, device_model,
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
-		       sync_mode, periodic_interval_minutes
+		       sync_mode, periodic_interval_minutes,
+		       has_root_access
 		FROM clients ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -224,6 +228,14 @@ func (s *Store) MarkAllClientsOffline() error {
 	return err
 }
 
+// UpdateClientRootAccess persists the latest has_root_access signal the device
+// sent in its RuntimeState. Panel uses this to hide / strip root-only config
+// blocks when the client has no root grant.
+func (s *Store) UpdateClientRootAccess(id string, hasRoot bool) error {
+	_, err := s.db.Exec(`UPDATE clients SET has_root_access = ? WHERE id = ?`, boolToInt(hasRoot), id)
+	return err
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }
@@ -243,13 +255,14 @@ func scanClientRows(rows *sql.Rows) (Client, error) {
 func scanClientFromScanner(scanner rowScanner) (Client, error) {
 	var c Client
 	var createdAt, lastSeenAt int64
-	var online, logRuntime, logProxy, logXRay int
+	var online, logRuntime, logProxy, logXRay, hasRoot int
 	err := scanner.Scan(
 		&c.ID, &c.OwnerAdminID, &c.Name, &c.TokenHash,
 		&c.HWID, &c.DeviceName, &c.DeviceModel, &c.OSVersion, &c.AppVersion,
 		&createdAt, &lastSeenAt, &online,
 		&logRuntime, &logProxy, &logXRay,
 		&c.SyncMode, &c.PeriodicIntervalMinutes,
+		&hasRoot,
 	)
 	if err != nil {
 		return Client{}, err
@@ -260,6 +273,7 @@ func scanClientFromScanner(scanner rowScanner) (Client, error) {
 	c.LogRuntimeEnabled = logRuntime != 0
 	c.LogProxyEnabled = logProxy != 0
 	c.LogXRayEnabled = logXRay != 0
+	c.HasRootAccess = hasRoot != 0
 	if c.SyncMode == "" {
 		c.SyncMode = "always"
 	}

@@ -148,6 +148,7 @@
       <ConfigFormEditor
         v-if="configMode === 'form'"
         :model-value="formValue"
+        :has-root-access="!!detail.client?.has_root_access"
         @update:model-value="onFormChanged"
       />
       <JsonEditor v-else v-model="configDraft" height="fixed" />
@@ -381,6 +382,7 @@
       <ConfigFormEditor
         :model-value="formValue"
         :sections="backendTabSections[backend]"
+        :has-root-access="!!detail.client?.has_root_access"
         @update:model-value="onFormChanged"
       />
     </div>

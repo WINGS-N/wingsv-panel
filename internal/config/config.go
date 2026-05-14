@@ -21,11 +21,11 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		ListenAddr:             getEnv("LISTEN_ADDR", ":8080"),
-		PublicBaseURL:          strings.TrimRight(getEnv("PUBLIC_BASE_URL", "https://v.wingsnet.org"), "/"),
-		AssetLinksJSON:         getEnv("ASSET_LINKS_JSON", ""),
-		GitHubRepo:             getEnv("GITHUB_REPO", "WINGS-N/WINGSV"),
-		ReleaseAssetSuffix:     getEnv("RELEASE_ASSET_SUFFIX", ".apk"),
+		ListenAddr:         getEnv("LISTEN_ADDR", ":8080"),
+		PublicBaseURL:      strings.TrimRight(getEnv("PUBLIC_BASE_URL", "https://v.wingsnet.org"), "/"),
+		AssetLinksJSON:     getEnv("ASSET_LINKS_JSON", ""),
+		GitHubRepo:         getEnv("GITHUB_REPO", "WINGS-N/WINGSV"),
+		ReleaseAssetSuffix: getEnv("RELEASE_ASSET_SUFFIX", ".apk"),
 		// Default empty so the embedded SPA bundle is served. Set STATIC_DIR
 		// explicitly to swap the frontend without rebuilding the binary.
 		StaticDir:              getEnv("STATIC_DIR", ""),

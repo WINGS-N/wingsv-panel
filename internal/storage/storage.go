@@ -44,6 +44,7 @@ func Open(dbPath string) (*Store, error) {
 		`ALTER TABLE admins ADD COLUMN avatar_png BLOB`,
 		`ALTER TABLE admins ADD COLUMN avatar_version INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE client_configs ADD COLUMN config_version INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE clients ADD COLUMN has_root_access INTEGER NOT NULL DEFAULT 0`,
 	} {
 		if _, err := db.Exec(alter); err != nil {
 			if !strings.Contains(err.Error(), "duplicate column name") {

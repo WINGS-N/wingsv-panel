@@ -502,10 +502,19 @@ const props = defineProps({
   modelValue: { type: Object, required: true },
   // Optional whitelist of section ids — if omitted, all are rendered.
   sections: { type: Array, default: null },
+  // Whether the target client has root grant. Root/sharing/xposed sections are
+  // hidden when this is false so we don't offer settings that would freeze a
+  // non-rooted device on import.
+  hasRootAccess: { type: Boolean, default: false },
 });
 const emit = defineEmits(["update:modelValue"]);
 
+const ROOT_ONLY_SECTIONS = new Set(["root", "sharing", "xposed"]);
+
 function show(id) {
+  if (ROOT_ONLY_SECTIONS.has(id) && !props.hasRootAccess) {
+    return false;
+  }
   return !props.sections || props.sections.includes(id);
 }
 

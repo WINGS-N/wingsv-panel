@@ -272,9 +272,11 @@ func (h *Handler) handleClientFrame(frame *guardianpb.Frame, sess *session) {
 			}
 		}
 		if report.GetRuntime() != nil {
-			if b, err := proto.Marshal(report.GetRuntime()); err == nil {
+			runtime := report.GetRuntime()
+			if b, err := proto.Marshal(runtime); err == nil {
 				_ = h.store.UpsertClientRuntime(sess.client.ID, b)
 			}
+			_ = h.store.UpdateClientRootAccess(sess.client.ID, runtime.GetHasRootAccess())
 		}
 		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
 	case *guardianpb.Frame_LogChunk:
@@ -287,10 +289,11 @@ func (h *Handler) handleClientFrame(frame *guardianpb.Frame, sess *session) {
 		_ = h.store.AppendClientLogs(sess.client.ID, int32(chunk.GetStream()), base, lines)
 		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
 	case *guardianpb.Frame_StatusUpdate:
-		if payload.StatusUpdate.GetRuntime() != nil {
-			if b, err := proto.Marshal(payload.StatusUpdate.GetRuntime()); err == nil {
+		if runtime := payload.StatusUpdate.GetRuntime(); runtime != nil {
+			if b, err := proto.Marshal(runtime); err == nil {
 				_ = h.store.UpsertClientRuntime(sess.client.ID, b)
 			}
+			_ = h.store.UpdateClientRootAccess(sess.client.ID, runtime.GetHasRootAccess())
 		}
 		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
 	case *guardianpb.Frame_CommandAck:

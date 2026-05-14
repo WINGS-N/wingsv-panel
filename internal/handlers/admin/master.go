@@ -146,6 +146,9 @@ func (h *Handler) handleMasterConfigApply(w http.ResponseWriter, r *http.Request
 			}
 		}
 		mergeMasterIntoConfig(desired, masterCfg, flags)
+		if !client.HasRootAccess {
+			stripRootOnlyBlocks(desired)
+		}
 		bytes, err := proto.Marshal(desired)
 		if err != nil {
 			continue
@@ -254,6 +257,22 @@ func (h *Handler) resolveMasterSeed(fromClientID, fromLink string, admin storage
 		return out, nil
 	}
 	return nil, nil
+}
+
+// stripRootOnlyBlocks silently zeroes out config sections that require root on
+// the device. Called before pushing config to clients whose latest StateReport
+// said has_root_access=false. The admin panel could still send a config with
+// these blocks (e.g. a master template), but the device-side gating is best
+// effort: a brand-new client that never reported anything keeps the default
+// (no root), and we err on the side of "don't poke a non-rooted device with
+// root settings that would freeze its UI".
+func stripRootOnlyBlocks(cfg *wingsvpb.Config) {
+	if cfg == nil {
+		return
+	}
+	cfg.Root = nil
+	cfg.Sharing = nil
+	cfg.Xposed = nil
 }
 
 // stripMasterIdentity removes per-client identity fields so the seed only

@@ -68,6 +68,7 @@ type clientView struct {
 	SyncMode                string `json:"sync_mode"`
 	PeriodicIntervalMinutes int    `json:"periodic_interval_minutes"`
 	BackendType             string `json:"backend_type"`
+	HasRootAccess           bool   `json:"has_root_access"`
 }
 
 func toClientView(c storage.Client) clientView {
@@ -87,6 +88,7 @@ func toClientView(c storage.Client) clientView {
 		LogXRayEnabled:          c.LogXRayEnabled,
 		SyncMode:                c.SyncMode,
 		PeriodicIntervalMinutes: c.PeriodicIntervalMinutes,
+		HasRootAccess:           c.HasRootAccess,
 	}
 }
 
@@ -559,6 +561,9 @@ func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request
 	// Never let an admin push a Guardian credential block to a client; the
 	// panel rebinding mid-session would brick remote management.
 	parsed.Guardian = nil
+	if !client.HasRootAccess {
+		stripRootOnlyBlocks(parsed)
+	}
 	bytesProto, err := proto.Marshal(parsed)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
