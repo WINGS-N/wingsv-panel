@@ -2373,24 +2373,31 @@ func (x *VlessProfile) GetPort() uint32 {
 }
 
 type XraySettings struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	AllowLan               *bool                  `protobuf:"varint,1,opt,name=allow_lan,json=allowLan,proto3,oneof" json:"allow_lan,omitempty"`
-	AllowInsecure          *bool                  `protobuf:"varint,2,opt,name=allow_insecure,json=allowInsecure,proto3,oneof" json:"allow_insecure,omitempty"`
-	LocalProxyPort         *uint32                `protobuf:"varint,3,opt,name=local_proxy_port,json=localProxyPort,proto3,oneof" json:"local_proxy_port,omitempty"`
-	RemoteDns              string                 `protobuf:"bytes,4,opt,name=remote_dns,json=remoteDns,proto3" json:"remote_dns,omitempty"`
-	DirectDns              string                 `protobuf:"bytes,5,opt,name=direct_dns,json=directDns,proto3" json:"direct_dns,omitempty"`
-	Ipv6                   *bool                  `protobuf:"varint,6,opt,name=ipv6,proto3,oneof" json:"ipv6,omitempty"`
-	SniffingEnabled        *bool                  `protobuf:"varint,7,opt,name=sniffing_enabled,json=sniffingEnabled,proto3,oneof" json:"sniffing_enabled,omitempty"`
-	ProxyQuicEnabled       *bool                  `protobuf:"varint,8,opt,name=proxy_quic_enabled,json=proxyQuicEnabled,proto3,oneof" json:"proxy_quic_enabled,omitempty"`
-	LocalProxyEnabled      *bool                  `protobuf:"varint,9,opt,name=local_proxy_enabled,json=localProxyEnabled,proto3,oneof" json:"local_proxy_enabled,omitempty"`
-	LocalProxyAuthEnabled  *bool                  `protobuf:"varint,10,opt,name=local_proxy_auth_enabled,json=localProxyAuthEnabled,proto3,oneof" json:"local_proxy_auth_enabled,omitempty"`
-	LocalProxyUsername     string                 `protobuf:"bytes,11,opt,name=local_proxy_username,json=localProxyUsername,proto3" json:"local_proxy_username,omitempty"`
-	LocalProxyPassword     string                 `protobuf:"bytes,12,opt,name=local_proxy_password,json=localProxyPassword,proto3" json:"local_proxy_password,omitempty"`
-	RestartOnNetworkChange *bool                  `protobuf:"varint,13,opt,name=restart_on_network_change,json=restartOnNetworkChange,proto3,oneof" json:"restart_on_network_change,omitempty"`
-	TransportMode          XrayTransportMode      `protobuf:"varint,14,opt,name=transport_mode,json=transportMode,proto3,enum=wingsv.XrayTransportMode" json:"transport_mode,omitempty"`
-	RuntimeMode            ProxyRuntimeMode       `protobuf:"varint,15,opt,name=runtime_mode,json=runtimeMode,proto3,enum=wingsv.ProxyRuntimeMode" json:"runtime_mode,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	AllowLan                *bool                  `protobuf:"varint,1,opt,name=allow_lan,json=allowLan,proto3,oneof" json:"allow_lan,omitempty"`
+	AllowInsecure           *bool                  `protobuf:"varint,2,opt,name=allow_insecure,json=allowInsecure,proto3,oneof" json:"allow_insecure,omitempty"`
+	LocalProxyPort          *uint32                `protobuf:"varint,3,opt,name=local_proxy_port,json=localProxyPort,proto3,oneof" json:"local_proxy_port,omitempty"`
+	RemoteDns               string                 `protobuf:"bytes,4,opt,name=remote_dns,json=remoteDns,proto3" json:"remote_dns,omitempty"`
+	DirectDns               string                 `protobuf:"bytes,5,opt,name=direct_dns,json=directDns,proto3" json:"direct_dns,omitempty"`
+	Ipv6                    *bool                  `protobuf:"varint,6,opt,name=ipv6,proto3,oneof" json:"ipv6,omitempty"`
+	SniffingEnabled         *bool                  `protobuf:"varint,7,opt,name=sniffing_enabled,json=sniffingEnabled,proto3,oneof" json:"sniffing_enabled,omitempty"`
+	ProxyQuicEnabled        *bool                  `protobuf:"varint,8,opt,name=proxy_quic_enabled,json=proxyQuicEnabled,proto3,oneof" json:"proxy_quic_enabled,omitempty"`
+	LocalProxyEnabled       *bool                  `protobuf:"varint,9,opt,name=local_proxy_enabled,json=localProxyEnabled,proto3,oneof" json:"local_proxy_enabled,omitempty"`
+	LocalProxyAuthEnabled   *bool                  `protobuf:"varint,10,opt,name=local_proxy_auth_enabled,json=localProxyAuthEnabled,proto3,oneof" json:"local_proxy_auth_enabled,omitempty"`
+	LocalProxyUsername      string                 `protobuf:"bytes,11,opt,name=local_proxy_username,json=localProxyUsername,proto3" json:"local_proxy_username,omitempty"`
+	LocalProxyPassword      string                 `protobuf:"bytes,12,opt,name=local_proxy_password,json=localProxyPassword,proto3" json:"local_proxy_password,omitempty"`
+	RestartOnNetworkChange  *bool                  `protobuf:"varint,13,opt,name=restart_on_network_change,json=restartOnNetworkChange,proto3,oneof" json:"restart_on_network_change,omitempty"`
+	TransportMode           XrayTransportMode      `protobuf:"varint,14,opt,name=transport_mode,json=transportMode,proto3,enum=wingsv.XrayTransportMode" json:"transport_mode,omitempty"`
+	RuntimeMode             ProxyRuntimeMode       `protobuf:"varint,15,opt,name=runtime_mode,json=runtimeMode,proto3,enum=wingsv.ProxyRuntimeMode" json:"runtime_mode,omitempty"`
+	LocalProxyListenAddress string                 `protobuf:"bytes,16,opt,name=local_proxy_listen_address,json=localProxyListenAddress,proto3" json:"local_proxy_listen_address,omitempty"`
+	HttpProxyEnabled        *bool                  `protobuf:"varint,17,opt,name=http_proxy_enabled,json=httpProxyEnabled,proto3,oneof" json:"http_proxy_enabled,omitempty"`
+	HttpProxyAuthEnabled    *bool                  `protobuf:"varint,18,opt,name=http_proxy_auth_enabled,json=httpProxyAuthEnabled,proto3,oneof" json:"http_proxy_auth_enabled,omitempty"`
+	HttpProxyUsername       string                 `protobuf:"bytes,19,opt,name=http_proxy_username,json=httpProxyUsername,proto3" json:"http_proxy_username,omitempty"`
+	HttpProxyPassword       string                 `protobuf:"bytes,20,opt,name=http_proxy_password,json=httpProxyPassword,proto3" json:"http_proxy_password,omitempty"`
+	HttpProxyPort           *uint32                `protobuf:"varint,21,opt,name=http_proxy_port,json=httpProxyPort,proto3,oneof" json:"http_proxy_port,omitempty"`
+	HttpProxyListenAddress  string                 `protobuf:"bytes,22,opt,name=http_proxy_listen_address,json=httpProxyListenAddress,proto3" json:"http_proxy_listen_address,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *XraySettings) Reset() {
@@ -2526,6 +2533,55 @@ func (x *XraySettings) GetRuntimeMode() ProxyRuntimeMode {
 		return x.RuntimeMode
 	}
 	return ProxyRuntimeMode_PROXY_RUNTIME_MODE_UNSPECIFIED
+}
+
+func (x *XraySettings) GetLocalProxyListenAddress() string {
+	if x != nil {
+		return x.LocalProxyListenAddress
+	}
+	return ""
+}
+
+func (x *XraySettings) GetHttpProxyEnabled() bool {
+	if x != nil && x.HttpProxyEnabled != nil {
+		return *x.HttpProxyEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetHttpProxyAuthEnabled() bool {
+	if x != nil && x.HttpProxyAuthEnabled != nil {
+		return *x.HttpProxyAuthEnabled
+	}
+	return false
+}
+
+func (x *XraySettings) GetHttpProxyUsername() string {
+	if x != nil {
+		return x.HttpProxyUsername
+	}
+	return ""
+}
+
+func (x *XraySettings) GetHttpProxyPassword() string {
+	if x != nil {
+		return x.HttpProxyPassword
+	}
+	return ""
+}
+
+func (x *XraySettings) GetHttpProxyPort() uint32 {
+	if x != nil && x.HttpProxyPort != nil {
+		return *x.HttpProxyPort
+	}
+	return 0
+}
+
+func (x *XraySettings) GetHttpProxyListenAddress() string {
+	if x != nil {
+		return x.HttpProxyListenAddress
+	}
+	return ""
 }
 
 type Xposed struct {
@@ -3507,7 +3563,8 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x12subscription_title\x18\x05 \x01(\tR\x11subscriptionTitle\x12\x18\n" +
 	"\aaddress\x18\x06 \x01(\tR\aaddress\x12\x17\n" +
 	"\x04port\x18\a \x01(\rH\x00R\x04port\x88\x01\x01B\a\n" +
-	"\x05_port\"\x99\a\n" +
+	"\x05_port\"\xd4\n" +
+	"\n" +
 	"\fXraySettings\x12 \n" +
 	"\tallow_lan\x18\x01 \x01(\bH\x00R\ballowLan\x88\x01\x01\x12*\n" +
 	"\x0eallow_insecure\x18\x02 \x01(\bH\x01R\rallowInsecure\x88\x01\x01\x12-\n" +
@@ -3526,7 +3583,15 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x14local_proxy_password\x18\f \x01(\tR\x12localProxyPassword\x12>\n" +
 	"\x19restart_on_network_change\x18\r \x01(\bH\bR\x16restartOnNetworkChange\x88\x01\x01\x12@\n" +
 	"\x0etransport_mode\x18\x0e \x01(\x0e2\x19.wingsv.XrayTransportModeR\rtransportMode\x12;\n" +
-	"\fruntime_mode\x18\x0f \x01(\x0e2\x18.wingsv.ProxyRuntimeModeR\vruntimeModeB\f\n" +
+	"\fruntime_mode\x18\x0f \x01(\x0e2\x18.wingsv.ProxyRuntimeModeR\vruntimeMode\x12;\n" +
+	"\x1alocal_proxy_listen_address\x18\x10 \x01(\tR\x17localProxyListenAddress\x121\n" +
+	"\x12http_proxy_enabled\x18\x11 \x01(\bH\tR\x10httpProxyEnabled\x88\x01\x01\x12:\n" +
+	"\x17http_proxy_auth_enabled\x18\x12 \x01(\bH\n" +
+	"R\x14httpProxyAuthEnabled\x88\x01\x01\x12.\n" +
+	"\x13http_proxy_username\x18\x13 \x01(\tR\x11httpProxyUsername\x12.\n" +
+	"\x13http_proxy_password\x18\x14 \x01(\tR\x11httpProxyPassword\x12+\n" +
+	"\x0fhttp_proxy_port\x18\x15 \x01(\rH\vR\rhttpProxyPort\x88\x01\x01\x129\n" +
+	"\x19http_proxy_listen_address\x18\x16 \x01(\tR\x16httpProxyListenAddressB\f\n" +
 	"\n" +
 	"_allow_lanB\x11\n" +
 	"\x0f_allow_insecureB\x13\n" +
@@ -3536,7 +3601,10 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x13_proxy_quic_enabledB\x16\n" +
 	"\x14_local_proxy_enabledB\x1b\n" +
 	"\x19_local_proxy_auth_enabledB\x1c\n" +
-	"\x1a_restart_on_network_change\"\xee\x04\n" +
+	"\x1a_restart_on_network_changeB\x15\n" +
+	"\x13_http_proxy_enabledB\x1a\n" +
+	"\x18_http_proxy_auth_enabledB\x12\n" +
+	"\x10_http_proxy_port\"\xee\x04\n" +
 	"\x06Xposed\x12\x1d\n" +
 	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x12\x1e\n" +
 	"\ball_apps\x18\x02 \x01(\bH\x01R\aallApps\x88\x01\x01\x123\n" +
