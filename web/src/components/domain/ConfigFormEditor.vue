@@ -279,6 +279,10 @@
         <label class="form-label">Xray TPROXY mode</label>
         <OneuiSwitch :model-value="!!root.xrayTproxyMode" @change="setRootSettings('xrayTproxyMode', $event)" />
       </div>
+      <div class="form-row">
+        <label class="form-label">Блокировка split-tunnel утечек</label>
+        <OneuiSwitch :model-value="root.splitTunnelLockdown !== false" @change="setRootSettings('splitTunnelLockdown', $event)" />
+      </div>
       <div class="form-row form-row-stack">
         <label class="form-label">WG-интерфейс имя (template)</label>
         <input class="text-input" :value="root.wgInterfaceName || ''" @input="setRootSettings('wgInterfaceName', $event.target.value)" />
