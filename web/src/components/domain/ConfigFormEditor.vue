@@ -117,6 +117,10 @@
         <label class="form-label">Direct DNS</label>
         <input class="text-input" :value="xraySettings.directDns || ''" @input="setXrayS('directDns', $event.target.value)" />
       </div>
+      <div class="form-row">
+        <label class="form-label">Wake probe</label>
+        <OneuiSelect :model-value="xraySettings.wakeProbeMode || 'WAKE_PROBE_MODE_UNSPECIFIED'" :options="wakeProbeOptions" @change="setXrayS('wakeProbeMode', $event === 'WAKE_PROBE_MODE_UNSPECIFIED' ? undefined : $event)" />
+      </div>
     </section>
 
     <!-- WB Stream -->
@@ -561,6 +565,12 @@ const backendOptions = [
 const tunnelModeOptions = [
   { value: "TUNNEL_MODE_WIREGUARD", label: "WireGuard" },
   { value: "TUNNEL_MODE_AMNEZIAWG", label: "AmneziaWG" },
+];
+
+const wakeProbeOptions = [
+  { value: "WAKE_PROBE_MODE_UNSPECIFIED", label: "По умолчанию (процесс)" },
+  { value: "WAKE_PROBE_MODE_PROCESS", label: "Проверка процесса" },
+  { value: "WAKE_PROBE_MODE_HTTP_PROBE", label: "HTTP проверка через VPN" },
 ];
 
 const procfsOptions = [
