@@ -410,8 +410,8 @@ const lastCreatedLink = ref("");
 const seedMode = ref("empty");
 const seedFromClientId = ref("");
 const seedLink = ref("");
-const syncMode = ref("always");
-const syncIntervalMinutes = ref(30);
+const syncMode = ref("periodic");
+const syncIntervalMinutes = ref(15);
 const confirmDelete = ref(null);
 const deletingId = ref("");
 const deleteError = ref("");
@@ -465,8 +465,8 @@ function openCreate() {
   seedMode.value = "empty";
   seedFromClientId.value = "";
   seedLink.value = "";
-  syncMode.value = "always";
-  syncIntervalMinutes.value = 30;
+  syncMode.value = "periodic";
+  syncIntervalMinutes.value = 15;
 }
 
 function closeCreate() {

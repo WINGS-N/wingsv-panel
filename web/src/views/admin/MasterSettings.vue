@@ -188,8 +188,8 @@ const visibleSections = computed(() => {
   return Array.from(ids);
 });
 
-const syncMode = ref("always");
-const syncIntervalMinutes = ref(30);
+const syncMode = ref("periodic");
+const syncIntervalMinutes = ref(15);
 const configDraft = ref("{}");
 const lastSavedAt = ref(null);
 
