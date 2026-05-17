@@ -58,13 +58,32 @@
         <label class="form-label">Резервная VK ссылка</label>
         <textarea class="text-input" rows="2" :value="turn.linkSecondary || ''" @input="setTurn('linkSecondary', $event.target.value)" />
       </div>
+      <div class="form-row form-row-stack">
+        <label class="form-label">Host / Port override</label>
+        <input class="text-input" :value="turn.host || ''" @input="setTurn('host', $event.target.value || undefined)" placeholder="host (опционально)" />
+        <input class="text-input mt-2" :value="turn.port || ''" @input="setTurn('port', toIntOrUndef($event.target.value))" placeholder="port (опционально)" inputmode="numeric" />
+        <p class="form-hint">Переопределяет host/port из VK link. Пустые поля — без override.</p>
+      </div>
       <div class="form-row">
         <label class="form-label">Threads</label>
         <input class="text-input form-input-narrow" :value="turn.threads || ''" @input="setTurn('threads', toIntOrUndef($event.target.value))" inputmode="numeric" />
       </div>
       <div class="form-row">
+        <label class="form-label">Creds group size</label>
+        <input class="text-input form-input-narrow" :value="turn.credsGroupSize || ''" @input="setTurn('credsGroupSize', toIntOrUndef($event.target.value))" inputmode="numeric" />
+      </div>
+      <div class="form-row">
         <label class="form-label">Session mode</label>
         <OneuiSelect :model-value="turn.sessionMode || 'TURN_SESSION_MODE_UNSPECIFIED'" :options="sessionModeOptions" @change="setTurn('sessionMode', $event === 'TURN_SESSION_MODE_UNSPECIFIED' ? undefined : $event)" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Runtime mode</label>
+        <OneuiSelect :model-value="turn.runtimeMode || 'PROXY_RUNTIME_MODE_UNSPECIFIED'" :options="runtimeModeOptions" @change="setTurn('runtimeMode', $event === 'PROXY_RUNTIME_MODE_UNSPECIFIED' ? undefined : $event)" />
+      </div>
+      <div class="form-row form-row-stack" v-if="turn.runtimeMode === 'PROXY_RUNTIME_MODE_PROXY'">
+        <label class="form-label">Local endpoint (proxy-mode)</label>
+        <input class="text-input" :value="turn.localEndpoint?.host || ''" @input="setTurnLocalEndpointHost($event.target.value)" placeholder="host" />
+        <input class="text-input mt-2" :value="turn.localEndpoint?.port || ''" @input="setTurnLocalEndpointPort($event.target.value)" placeholder="port" inputmode="numeric" />
       </div>
       <div class="form-row">
         <label class="form-label">UDP</label>
@@ -73,6 +92,22 @@
       <div class="form-row">
         <label class="form-label">Без обфускации</label>
         <OneuiSwitch :model-value="!!turn.noObfuscation" @change="setTurn('noObfuscation', $event)" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Manual captcha</label>
+        <OneuiSwitch :model-value="!!turn.manualCaptcha" @change="setTurn('manualCaptcha', $event)" />
+      </div>
+      <div class="form-row" v-if="!turn.manualCaptcha">
+        <label class="form-label">Captcha auto-solver</label>
+        <OneuiSelect :model-value="turn.captchaAutoSolver || 'v2'" :options="captchaAutoSolverOptions" @change="setTurn('captchaAutoSolver', $event || undefined)" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Restart on network change</label>
+        <OneuiSwitch :model-value="!!turn.restartOnNetworkChange" @change="setTurn('restartOnNetworkChange', $event)" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">DNS режим</label>
+        <OneuiSelect :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'" :options="dnsOptions" @change="setAp('dnsMode', $event === 'DNS_MODE_UNSPECIFIED' ? undefined : $event)" />
       </div>
       <div class="form-row form-row-stack">
         <label class="form-label">Свои DNS-резолверы</label>
@@ -158,6 +193,10 @@
       <div class="form-row">
         <label class="form-label">Параллельных комнат</label>
         <input class="text-input form-input-narrow" :value="wb.roomCount || ''" @input="setWb('roomCount', toIntOrUndef($event.target.value))" inputmode="numeric" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">DNS режим</label>
+        <OneuiSelect :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'" :options="dnsOptions" @change="setAp('dnsMode', $event === 'DNS_MODE_UNSPECIFIED' ? undefined : $event)" />
       </div>
     </section>
 
@@ -573,6 +612,17 @@ const wakeProbeOptions = [
   { value: "WAKE_PROBE_MODE_HTTP_PROBE", label: "HTTP проверка через VPN" },
 ];
 
+const runtimeModeOptions = [
+  { value: "PROXY_RUNTIME_MODE_UNSPECIFIED", label: "По умолчанию (VPN)" },
+  { value: "PROXY_RUNTIME_MODE_VPN", label: "VPN" },
+  { value: "PROXY_RUNTIME_MODE_PROXY", label: "Local proxy" },
+];
+
+const captchaAutoSolverOptions = [
+  { value: "v2", label: "v2 (рекомендуется)" },
+  { value: "v1", label: "v1 (legacy)" },
+];
+
 const procfsOptions = [
   { value: "XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED", label: "По умолчанию" },
   { value: "XPOSED_PROCFS_HOOK_MODE_DISABLED", label: "Отключено" },
@@ -676,6 +726,20 @@ function setTurnPort(portText) {
   if (port == null || Number.isNaN(port)) delete ep.port;
   else ep.port = port;
   setTurn("endpoint", Object.keys(ep).length ? ep : undefined);
+}
+
+function setTurnLocalEndpointHost(host) {
+  const ep = { ...(turn.value.localEndpoint || {}), host };
+  if (!host) delete ep.host;
+  setTurn("localEndpoint", Object.keys(ep).length ? ep : undefined);
+}
+
+function setTurnLocalEndpointPort(portText) {
+  const port = portText === "" ? undefined : Number(portText);
+  const ep = { ...(turn.value.localEndpoint || {}) };
+  if (port == null || Number.isNaN(port)) delete ep.port;
+  else ep.port = port;
+  setTurn("localEndpoint", Object.keys(ep).length ? ep : undefined);
 }
 
 function setXrayS(key, value) {
