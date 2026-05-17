@@ -123,6 +123,21 @@
           DoH (https://...), plain UDP (udp://ip[:port] или просто ip[:port]). DoT пока не поддерживается.
         </p>
       </div>
+      <h4 class="form-subsection-title">Обфускация / WRAP</h4>
+      <div class="form-row">
+        <label class="form-label">Режим WRAP</label>
+        <OneuiSelect :model-value="turn.wrapMode || 'WRAP_MODE_UNSPECIFIED'" :options="wrapModeOptions" @change="setTurn('wrapMode', $event === 'WRAP_MODE_UNSPECIFIED' ? undefined : $event)" />
+      </div>
+      <div class="form-row" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
+        <label class="form-label">Шифр</label>
+        <OneuiSelect :model-value="turnPrimaryWrapCipher" :options="wrapCipherOptions" @change="setTurnPrimaryWrapCipher($event)" />
+      </div>
+      <div class="form-row form-row-stack" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
+        <label class="form-label">Ключ (hex, 32 байта)</label>
+        <input class="text-input" :value="turnWrapKeyHex" @input="setTurnWrapKeyHex($event.target.value)" placeholder="64 hex-символа (пусто — клиент сгенерирует сам)" />
+        <button class="button-secondary mt-2" type="button" @click="generateTurnWrapKey">Сгенерировать новый ключ</button>
+        <p class="form-hint">Пустое значение — клиент сгенерирует ключ при первом запуске.</p>
+      </div>
     </section>
 
     <!-- Xray basics -->
@@ -623,6 +638,18 @@ const captchaAutoSolverOptions = [
   { value: "v1", label: "v1 (legacy)" },
 ];
 
+const wrapModeOptions = [
+  { value: "WRAP_MODE_UNSPECIFIED", label: "По умолчанию" },
+  { value: "WRAP_MODE_OFF", label: "Выключено" },
+  { value: "WRAP_MODE_PREFERRED", label: "Предпочтительно" },
+  { value: "WRAP_MODE_REQUIRED", label: "Обязательно" },
+];
+
+const wrapCipherOptions = [
+  { value: "WRAP_CIPHER_AES_256_CTR", label: "AES-256-CTR (ARM AES-NI)" },
+  { value: "WRAP_CIPHER_CHACHA20_XOR", label: "ChaCha20-XOR (программный)" },
+];
+
 const procfsOptions = [
   { value: "XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED", label: "По умолчанию" },
   { value: "XPOSED_PROCFS_HOOK_MODE_DISABLED", label: "Отключено" },
@@ -740,6 +767,73 @@ function setTurnLocalEndpointPort(portText) {
   if (port == null || Number.isNaN(port)) delete ep.port;
   else ep.port = port;
   setTurn("localEndpoint", Object.keys(ep).length ? ep : undefined);
+}
+
+const turnPrimaryWrapCipher = computed(() => {
+  const list = turn.value.wrapCiphers;
+  if (Array.isArray(list) && list.length > 0) return list[0];
+  return "WRAP_CIPHER_AES_256_CTR";
+});
+
+function setTurnPrimaryWrapCipher(value) {
+  if (!value || value === "WRAP_CIPHER_AES_256_CTR") {
+    setTurn("wrapCiphers", undefined);
+    return;
+  }
+  setTurn("wrapCiphers", [value]);
+}
+
+const turnWrapKeyHex = computed(() => {
+  const key = turn.value.wrapKey;
+  if (!key) return "";
+  if (typeof key === "string") {
+    try {
+      const bytes = atob(key);
+      let hex = "";
+      for (let i = 0; i < bytes.length; i++) {
+        hex += bytes.charCodeAt(i).toString(16).padStart(2, "0");
+      }
+      return hex;
+    } catch {
+      return key;
+    }
+  }
+  if (key instanceof Uint8Array) {
+    return Array.from(key)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+  return "";
+});
+
+function setTurnWrapKeyHex(text) {
+  const clean = (text || "").trim().toLowerCase();
+  if (!clean) {
+    setTurn("wrapKey", undefined);
+    return;
+  }
+  if (!/^[0-9a-f]+$/.test(clean) || clean.length % 2 !== 0) {
+    return;
+  }
+  const bytes = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+  }
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  setTurn("wrapKey", btoa(binary));
+}
+
+function generateTurnWrapKey() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  let hex = "";
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, "0");
+  }
+  setTurnWrapKeyHex(hex);
 }
 
 function setXrayS(key, value) {
