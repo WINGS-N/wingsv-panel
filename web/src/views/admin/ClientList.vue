@@ -47,7 +47,7 @@
         </div>
       </div>
 
-      <div class="bento-card">
+      <div v-if="!admin?.must_change_password" class="bento-card">
         <span class="bento-icon bento-icon-img">
           <img src="/img/icon-shield.png" alt="" />
         </span>
