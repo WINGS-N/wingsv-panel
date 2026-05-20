@@ -138,6 +138,10 @@
         <button class="button-secondary mt-2" type="button" @click="generateTurnWrapKey">Сгенерировать новый ключ</button>
         <p class="form-hint">Пустое значение — клиент сгенерирует ключ при первом запуске.</p>
       </div>
+      <div class="form-row" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
+        <label class="form-label">Передавать ключ in-band</label>
+        <OneuiSwitch :model-value="turnWrapSendKey" @change="setTurnWrapSendKey($event)" />
+      </div>
     </section>
 
     <!-- Xray basics -->
@@ -824,6 +828,22 @@ function setTurnWrapKeyHex(text) {
     binary += String.fromCharCode(bytes[i]);
   }
   setTurn("wrapKey", btoa(binary));
+}
+
+const turnWrapSendKey = computed(() => {
+  const v = turn.value.wrapKeyDelivery;
+  if (v === "WRAP_KEY_DELIVERY_OFF") return false;
+  // UNSPECIFIED and IN_BAND both default to true
+  return true;
+});
+
+function setTurnWrapSendKey(enabled) {
+  if (enabled) {
+    // omit field for default (in-band)
+    setTurn("wrapKeyDelivery", undefined);
+  } else {
+    setTurn("wrapKeyDelivery", "WRAP_KEY_DELIVERY_OFF");
+  }
 }
 
 function generateTurnWrapKey() {
