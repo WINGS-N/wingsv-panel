@@ -646,8 +646,8 @@ const wrapModeOptions = [
 ];
 
 const wrapCipherOptions = [
-  { value: "WRAP_CIPHER_AES_256_CTR", label: "AES-256-CTR (ARM AES-NI)" },
-  { value: "WRAP_CIPHER_CHACHA20_XOR", label: "ChaCha20-XOR (программный)" },
+  { value: "WRAP_CIPHER_SRTP_AES_256_GCM", label: "SRTP / AES-256-GCM (ARM AES-NI)" },
+  { value: "WRAP_CIPHER_SRTP_CHACHA20_POLY1305", label: "SRTP / ChaCha20-Poly1305 (программный)" },
 ];
 
 const procfsOptions = [
@@ -772,11 +772,11 @@ function setTurnLocalEndpointPort(portText) {
 const turnPrimaryWrapCipher = computed(() => {
   const list = turn.value.wrapCiphers;
   if (Array.isArray(list) && list.length > 0) return list[0];
-  return "WRAP_CIPHER_AES_256_CTR";
+  return "WRAP_CIPHER_SRTP_AES_256_GCM";
 });
 
 function setTurnPrimaryWrapCipher(value) {
-  if (!value || value === "WRAP_CIPHER_AES_256_CTR") {
+  if (!value || value === "WRAP_CIPHER_SRTP_AES_256_GCM") {
     setTurn("wrapCiphers", undefined);
     return;
   }
