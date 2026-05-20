@@ -272,6 +272,55 @@ func (TunnelMode) EnumDescriptor() ([]byte, []int) {
 	return file_wingsv_proto_rawDescGZIP(), []int{3}
 }
 
+type WrapKeyDelivery int32
+
+const (
+	WrapKeyDelivery_WRAP_KEY_DELIVERY_UNSPECIFIED WrapKeyDelivery = 0 // default = IN_BAND
+	WrapKeyDelivery_WRAP_KEY_DELIVERY_IN_BAND     WrapKeyDelivery = 1 // send wrap_key_proposal in SessionHello
+	WrapKeyDelivery_WRAP_KEY_DELIVERY_OFF         WrapKeyDelivery = 2 // never send; server must have preset
+)
+
+// Enum value maps for WrapKeyDelivery.
+var (
+	WrapKeyDelivery_name = map[int32]string{
+		0: "WRAP_KEY_DELIVERY_UNSPECIFIED",
+		1: "WRAP_KEY_DELIVERY_IN_BAND",
+		2: "WRAP_KEY_DELIVERY_OFF",
+	}
+	WrapKeyDelivery_value = map[string]int32{
+		"WRAP_KEY_DELIVERY_UNSPECIFIED": 0,
+		"WRAP_KEY_DELIVERY_IN_BAND":     1,
+		"WRAP_KEY_DELIVERY_OFF":         2,
+	}
+)
+
+func (x WrapKeyDelivery) Enum() *WrapKeyDelivery {
+	p := new(WrapKeyDelivery)
+	*p = x
+	return p
+}
+
+func (x WrapKeyDelivery) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WrapKeyDelivery) Descriptor() protoreflect.EnumDescriptor {
+	return file_wingsv_proto_enumTypes[4].Descriptor()
+}
+
+func (WrapKeyDelivery) Type() protoreflect.EnumType {
+	return &file_wingsv_proto_enumTypes[4]
+}
+
+func (x WrapKeyDelivery) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WrapKeyDelivery.Descriptor instead.
+func (WrapKeyDelivery) EnumDescriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{4}
+}
+
 type WrapMode int32
 
 const (
@@ -308,11 +357,11 @@ func (x WrapMode) String() string {
 }
 
 func (WrapMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[4].Descriptor()
+	return file_wingsv_proto_enumTypes[5].Descriptor()
 }
 
 func (WrapMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[4]
+	return &file_wingsv_proto_enumTypes[5]
 }
 
 func (x WrapMode) Number() protoreflect.EnumNumber {
@@ -321,7 +370,7 @@ func (x WrapMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WrapMode.Descriptor instead.
 func (WrapMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{4}
+	return file_wingsv_proto_rawDescGZIP(), []int{5}
 }
 
 type WrapCipher int32
@@ -364,11 +413,11 @@ func (x WrapCipher) String() string {
 }
 
 func (WrapCipher) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[5].Descriptor()
+	return file_wingsv_proto_enumTypes[6].Descriptor()
 }
 
 func (WrapCipher) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[5]
+	return &file_wingsv_proto_enumTypes[6]
 }
 
 func (x WrapCipher) Number() protoreflect.EnumNumber {
@@ -377,7 +426,7 @@ func (x WrapCipher) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WrapCipher.Descriptor instead.
 func (WrapCipher) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{5}
+	return file_wingsv_proto_rawDescGZIP(), []int{6}
 }
 
 type TurnSessionMode int32
@@ -416,11 +465,11 @@ func (x TurnSessionMode) String() string {
 }
 
 func (TurnSessionMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[6].Descriptor()
+	return file_wingsv_proto_enumTypes[7].Descriptor()
 }
 
 func (TurnSessionMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[6]
+	return &file_wingsv_proto_enumTypes[7]
 }
 
 func (x TurnSessionMode) Number() protoreflect.EnumNumber {
@@ -429,7 +478,7 @@ func (x TurnSessionMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use TurnSessionMode.Descriptor instead.
 func (TurnSessionMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{6}
+	return file_wingsv_proto_rawDescGZIP(), []int{7}
 }
 
 type ProxyRuntimeMode int32
@@ -465,11 +514,11 @@ func (x ProxyRuntimeMode) String() string {
 }
 
 func (ProxyRuntimeMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[7].Descriptor()
+	return file_wingsv_proto_enumTypes[8].Descriptor()
 }
 
 func (ProxyRuntimeMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[7]
+	return &file_wingsv_proto_enumTypes[8]
 }
 
 func (x ProxyRuntimeMode) Number() protoreflect.EnumNumber {
@@ -478,7 +527,7 @@ func (x ProxyRuntimeMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ProxyRuntimeMode.Descriptor instead.
 func (ProxyRuntimeMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{7}
+	return file_wingsv_proto_rawDescGZIP(), []int{8}
 }
 
 type XrayRoutingMatchType int32
@@ -523,11 +572,11 @@ func (x XrayRoutingMatchType) String() string {
 }
 
 func (XrayRoutingMatchType) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[8].Descriptor()
+	return file_wingsv_proto_enumTypes[9].Descriptor()
 }
 
 func (XrayRoutingMatchType) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[8]
+	return &file_wingsv_proto_enumTypes[9]
 }
 
 func (x XrayRoutingMatchType) Number() protoreflect.EnumNumber {
@@ -536,7 +585,7 @@ func (x XrayRoutingMatchType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XrayRoutingMatchType.Descriptor instead.
 func (XrayRoutingMatchType) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{8}
+	return file_wingsv_proto_rawDescGZIP(), []int{9}
 }
 
 type XrayRoutingAction int32
@@ -575,11 +624,11 @@ func (x XrayRoutingAction) String() string {
 }
 
 func (XrayRoutingAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[9].Descriptor()
+	return file_wingsv_proto_enumTypes[10].Descriptor()
 }
 
 func (XrayRoutingAction) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[9]
+	return &file_wingsv_proto_enumTypes[10]
 }
 
 func (x XrayRoutingAction) Number() protoreflect.EnumNumber {
@@ -588,7 +637,7 @@ func (x XrayRoutingAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XrayRoutingAction.Descriptor instead.
 func (XrayRoutingAction) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{9}
+	return file_wingsv_proto_rawDescGZIP(), []int{10}
 }
 
 type WakeProbeMode int32
@@ -624,11 +673,11 @@ func (x WakeProbeMode) String() string {
 }
 
 func (WakeProbeMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[10].Descriptor()
+	return file_wingsv_proto_enumTypes[11].Descriptor()
 }
 
 func (WakeProbeMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[10]
+	return &file_wingsv_proto_enumTypes[11]
 }
 
 func (x WakeProbeMode) Number() protoreflect.EnumNumber {
@@ -637,7 +686,7 @@ func (x WakeProbeMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WakeProbeMode.Descriptor instead.
 func (WakeProbeMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{10}
+	return file_wingsv_proto_rawDescGZIP(), []int{11}
 }
 
 type XrayTransportMode int32
@@ -673,11 +722,11 @@ func (x XrayTransportMode) String() string {
 }
 
 func (XrayTransportMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[11].Descriptor()
+	return file_wingsv_proto_enumTypes[12].Descriptor()
 }
 
 func (XrayTransportMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[11]
+	return &file_wingsv_proto_enumTypes[12]
 }
 
 func (x XrayTransportMode) Number() protoreflect.EnumNumber {
@@ -686,7 +735,7 @@ func (x XrayTransportMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XrayTransportMode.Descriptor instead.
 func (XrayTransportMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{11}
+	return file_wingsv_proto_rawDescGZIP(), []int{12}
 }
 
 type XposedProcfsHookMode int32
@@ -728,11 +777,11 @@ func (x XposedProcfsHookMode) String() string {
 }
 
 func (XposedProcfsHookMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[12].Descriptor()
+	return file_wingsv_proto_enumTypes[13].Descriptor()
 }
 
 func (XposedProcfsHookMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[12]
+	return &file_wingsv_proto_enumTypes[13]
 }
 
 func (x XposedProcfsHookMode) Number() protoreflect.EnumNumber {
@@ -741,7 +790,7 @@ func (x XposedProcfsHookMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XposedProcfsHookMode.Descriptor instead.
 func (XposedProcfsHookMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{12}
+	return file_wingsv_proto_rawDescGZIP(), []int{13}
 }
 
 type XposedIcmpSpoofingMode int32
@@ -780,11 +829,11 @@ func (x XposedIcmpSpoofingMode) String() string {
 }
 
 func (XposedIcmpSpoofingMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[13].Descriptor()
+	return file_wingsv_proto_enumTypes[14].Descriptor()
 }
 
 func (XposedIcmpSpoofingMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[13]
+	return &file_wingsv_proto_enumTypes[14]
 }
 
 func (x XposedIcmpSpoofingMode) Number() protoreflect.EnumNumber {
@@ -793,7 +842,7 @@ func (x XposedIcmpSpoofingMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use XposedIcmpSpoofingMode.Descriptor instead.
 func (XposedIcmpSpoofingMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{13}
+	return file_wingsv_proto_rawDescGZIP(), []int{14}
 }
 
 type ThemeMode int32
@@ -832,11 +881,11 @@ func (x ThemeMode) String() string {
 }
 
 func (ThemeMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[14].Descriptor()
+	return file_wingsv_proto_enumTypes[15].Descriptor()
 }
 
 func (ThemeMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[14]
+	return &file_wingsv_proto_enumTypes[15]
 }
 
 func (x ThemeMode) Number() protoreflect.EnumNumber {
@@ -845,7 +894,7 @@ func (x ThemeMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ThemeMode.Descriptor instead.
 func (ThemeMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{14}
+	return file_wingsv_proto_rawDescGZIP(), []int{15}
 }
 
 type DnsMode int32
@@ -884,11 +933,11 @@ func (x DnsMode) String() string {
 }
 
 func (DnsMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[15].Descriptor()
+	return file_wingsv_proto_enumTypes[16].Descriptor()
 }
 
 func (DnsMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[15]
+	return &file_wingsv_proto_enumTypes[16]
 }
 
 func (x DnsMode) Number() protoreflect.EnumNumber {
@@ -897,7 +946,7 @@ func (x DnsMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DnsMode.Descriptor instead.
 func (DnsMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{15}
+	return file_wingsv_proto_rawDescGZIP(), []int{16}
 }
 
 type SharingMasqueradeMode int32
@@ -936,11 +985,11 @@ func (x SharingMasqueradeMode) String() string {
 }
 
 func (SharingMasqueradeMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[16].Descriptor()
+	return file_wingsv_proto_enumTypes[17].Descriptor()
 }
 
 func (SharingMasqueradeMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[16]
+	return &file_wingsv_proto_enumTypes[17]
 }
 
 func (x SharingMasqueradeMode) Number() protoreflect.EnumNumber {
@@ -949,7 +998,7 @@ func (x SharingMasqueradeMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SharingMasqueradeMode.Descriptor instead.
 func (SharingMasqueradeMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{16}
+	return file_wingsv_proto_rawDescGZIP(), []int{17}
 }
 
 type SharingWifiLock int32
@@ -991,11 +1040,11 @@ func (x SharingWifiLock) String() string {
 }
 
 func (SharingWifiLock) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[17].Descriptor()
+	return file_wingsv_proto_enumTypes[18].Descriptor()
 }
 
 func (SharingWifiLock) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[17]
+	return &file_wingsv_proto_enumTypes[18]
 }
 
 func (x SharingWifiLock) Number() protoreflect.EnumNumber {
@@ -1004,7 +1053,7 @@ func (x SharingWifiLock) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SharingWifiLock.Descriptor instead.
 func (SharingWifiLock) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{17}
+	return file_wingsv_proto_rawDescGZIP(), []int{18}
 }
 
 type SharingIpMonitorMode int32
@@ -1046,11 +1095,11 @@ func (x SharingIpMonitorMode) String() string {
 }
 
 func (SharingIpMonitorMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[18].Descriptor()
+	return file_wingsv_proto_enumTypes[19].Descriptor()
 }
 
 func (SharingIpMonitorMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[18]
+	return &file_wingsv_proto_enumTypes[19]
 }
 
 func (x SharingIpMonitorMode) Number() protoreflect.EnumNumber {
@@ -1059,7 +1108,7 @@ func (x SharingIpMonitorMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SharingIpMonitorMode.Descriptor instead.
 func (SharingIpMonitorMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{18}
+	return file_wingsv_proto_rawDescGZIP(), []int{19}
 }
 
 type ByeDpiHostsMode int32
@@ -1098,11 +1147,11 @@ func (x ByeDpiHostsMode) String() string {
 }
 
 func (ByeDpiHostsMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[19].Descriptor()
+	return file_wingsv_proto_enumTypes[20].Descriptor()
 }
 
 func (ByeDpiHostsMode) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[19]
+	return &file_wingsv_proto_enumTypes[20]
 }
 
 func (x ByeDpiHostsMode) Number() protoreflect.EnumNumber {
@@ -1111,7 +1160,7 @@ func (x ByeDpiHostsMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ByeDpiHostsMode.Descriptor instead.
 func (ByeDpiHostsMode) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{19}
+	return file_wingsv_proto_rawDescGZIP(), []int{20}
 }
 
 type ByeDpiDesyncMethod int32
@@ -1159,11 +1208,11 @@ func (x ByeDpiDesyncMethod) String() string {
 }
 
 func (ByeDpiDesyncMethod) Descriptor() protoreflect.EnumDescriptor {
-	return file_wingsv_proto_enumTypes[20].Descriptor()
+	return file_wingsv_proto_enumTypes[21].Descriptor()
 }
 
 func (ByeDpiDesyncMethod) Type() protoreflect.EnumType {
-	return &file_wingsv_proto_enumTypes[20]
+	return &file_wingsv_proto_enumTypes[21]
 }
 
 func (x ByeDpiDesyncMethod) Number() protoreflect.EnumNumber {
@@ -1172,7 +1221,7 @@ func (x ByeDpiDesyncMethod) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ByeDpiDesyncMethod.Descriptor instead.
 func (ByeDpiDesyncMethod) EnumDescriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{20}
+	return file_wingsv_proto_rawDescGZIP(), []int{21}
 }
 
 type Config struct {
@@ -1716,9 +1765,13 @@ type Turn struct {
 	WrapKey []byte `protobuf:"bytes,20,opt,name=wrap_key,json=wrapKey,proto3" json:"wrap_key,omitempty"`
 	// Список разрешённых шифров в порядке предпочтения (первый — наиболее
 	// желательный). Пустой ≡ [AES_256_CTR].
-	WrapCiphers   []WrapCipher `protobuf:"varint,21,rep,packed,name=wrap_ciphers,json=wrapCiphers,proto3,enum=wingsv.WrapCipher" json:"wrap_ciphers,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	WrapCiphers []WrapCipher `protobuf:"varint,21,rep,packed,name=wrap_ciphers,json=wrapCiphers,proto3,enum=wingsv.WrapCipher" json:"wrap_ciphers,omitempty"`
+	// Передавать wrap_key in-band через mu/v1 SessionHello.
+	// По умолчанию (UNSPECIFIED) — true. ON_FALSE отключает передачу
+	// (сервер обязан иметь preset).
+	WrapKeyDelivery WrapKeyDelivery `protobuf:"varint,22,opt,name=wrap_key_delivery,json=wrapKeyDelivery,proto3,enum=wingsv.WrapKeyDelivery" json:"wrap_key_delivery,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Turn) Reset() {
@@ -1896,6 +1949,13 @@ func (x *Turn) GetWrapCiphers() []WrapCipher {
 		return x.WrapCiphers
 	}
 	return nil
+}
+
+func (x *Turn) GetWrapKeyDelivery() WrapKeyDelivery {
+	if x != nil {
+		return x.WrapKeyDelivery
+	}
+	return WrapKeyDelivery_WRAP_KEY_DELIVERY_UNSPECIFIED
 }
 
 type WireGuard struct {
@@ -3661,7 +3721,7 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x04port\x18\x02 \x01(\rR\x04port\"2\n" +
 	"\x04Cidr\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\fR\x04addr\x12\x16\n" +
-	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xe3\a\n" +
+	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xa8\b\n" +
 	"\x04Turn\x12,\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x12\n" +
 	"\x04link\x18\x02 \x01(\tR\x04link\x12\x1d\n" +
@@ -3685,7 +3745,8 @@ const file_wingsv_proto_rawDesc = "" +
 	"tunnelMode\x12-\n" +
 	"\twrap_mode\x18\x13 \x01(\x0e2\x10.wingsv.WrapModeR\bwrapMode\x12\x19\n" +
 	"\bwrap_key\x18\x14 \x01(\fR\awrapKey\x125\n" +
-	"\fwrap_ciphers\x18\x15 \x03(\x0e2\x12.wingsv.WrapCipherR\vwrapCiphersB\n" +
+	"\fwrap_ciphers\x18\x15 \x03(\x0e2\x12.wingsv.WrapCipherR\vwrapCiphers\x12C\n" +
+	"\x11wrap_key_delivery\x18\x16 \x01(\x0e2\x17.wingsv.WrapKeyDeliveryR\x0fwrapKeyDeliveryB\n" +
 	"\n" +
 	"\b_threadsB\n" +
 	"\n" +
@@ -3983,7 +4044,11 @@ const file_wingsv_proto_rawDesc = "" +
 	"TunnelMode\x12\x1b\n" +
 	"\x17TUNNEL_MODE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15TUNNEL_MODE_WIREGUARD\x10\x01\x12\x19\n" +
-	"\x15TUNNEL_MODE_AMNEZIAWG\x10\x02*i\n" +
+	"\x15TUNNEL_MODE_AMNEZIAWG\x10\x02*n\n" +
+	"\x0fWrapKeyDelivery\x12!\n" +
+	"\x1dWRAP_KEY_DELIVERY_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19WRAP_KEY_DELIVERY_IN_BAND\x10\x01\x12\x19\n" +
+	"\x15WRAP_KEY_DELIVERY_OFF\x10\x02*i\n" +
 	"\bWrapMode\x12\x19\n" +
 	"\x15WRAP_MODE_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rWRAP_MODE_OFF\x10\x01\x12\x17\n" +
@@ -4089,107 +4154,109 @@ func file_wingsv_proto_rawDescGZIP() []byte {
 	return file_wingsv_proto_rawDescData
 }
 
-var file_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 21)
+var file_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 22)
 var file_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_wingsv_proto_goTypes = []any{
 	(ConfigType)(0),             // 0: wingsv.ConfigType
 	(GuardianSyncMode)(0),       // 1: wingsv.GuardianSyncMode
 	(BackendType)(0),            // 2: wingsv.BackendType
 	(TunnelMode)(0),             // 3: wingsv.TunnelMode
-	(WrapMode)(0),               // 4: wingsv.WrapMode
-	(WrapCipher)(0),             // 5: wingsv.WrapCipher
-	(TurnSessionMode)(0),        // 6: wingsv.TurnSessionMode
-	(ProxyRuntimeMode)(0),       // 7: wingsv.ProxyRuntimeMode
-	(XrayRoutingMatchType)(0),   // 8: wingsv.XrayRoutingMatchType
-	(XrayRoutingAction)(0),      // 9: wingsv.XrayRoutingAction
-	(WakeProbeMode)(0),          // 10: wingsv.WakeProbeMode
-	(XrayTransportMode)(0),      // 11: wingsv.XrayTransportMode
-	(XposedProcfsHookMode)(0),   // 12: wingsv.XposedProcfsHookMode
-	(XposedIcmpSpoofingMode)(0), // 13: wingsv.XposedIcmpSpoofingMode
-	(ThemeMode)(0),              // 14: wingsv.ThemeMode
-	(DnsMode)(0),                // 15: wingsv.DnsMode
-	(SharingMasqueradeMode)(0),  // 16: wingsv.SharingMasqueradeMode
-	(SharingWifiLock)(0),        // 17: wingsv.SharingWifiLock
-	(SharingIpMonitorMode)(0),   // 18: wingsv.SharingIpMonitorMode
-	(ByeDpiHostsMode)(0),        // 19: wingsv.ByeDpiHostsMode
-	(ByeDpiDesyncMethod)(0),     // 20: wingsv.ByeDpiDesyncMethod
-	(*Config)(nil),              // 21: wingsv.Config
-	(*Guardian)(nil),            // 22: wingsv.Guardian
-	(*WbStream)(nil),            // 23: wingsv.WbStream
-	(*AmneziaWG)(nil),           // 24: wingsv.AmneziaWG
-	(*Endpoint)(nil),            // 25: wingsv.Endpoint
-	(*Cidr)(nil),                // 26: wingsv.Cidr
-	(*Turn)(nil),                // 27: wingsv.Turn
-	(*WireGuard)(nil),           // 28: wingsv.WireGuard
-	(*Interface)(nil),           // 29: wingsv.Interface
-	(*Peer)(nil),                // 30: wingsv.Peer
-	(*Xray)(nil),                // 31: wingsv.Xray
-	(*AppRouting)(nil),          // 32: wingsv.AppRouting
-	(*XrayRouting)(nil),         // 33: wingsv.XrayRouting
-	(*XrayRoutingRule)(nil),     // 34: wingsv.XrayRoutingRule
-	(*Subscription)(nil),        // 35: wingsv.Subscription
-	(*VlessProfile)(nil),        // 36: wingsv.VlessProfile
-	(*XraySettings)(nil),        // 37: wingsv.XraySettings
-	(*Xposed)(nil),              // 38: wingsv.Xposed
-	(*RootSettings)(nil),        // 39: wingsv.RootSettings
-	(*AppPreferences)(nil),      // 40: wingsv.AppPreferences
-	(*SubscriptionHwid)(nil),    // 41: wingsv.SubscriptionHwid
-	(*Sharing)(nil),             // 42: wingsv.Sharing
-	(*ByeDpi)(nil),              // 43: wingsv.ByeDpi
+	(WrapKeyDelivery)(0),        // 4: wingsv.WrapKeyDelivery
+	(WrapMode)(0),               // 5: wingsv.WrapMode
+	(WrapCipher)(0),             // 6: wingsv.WrapCipher
+	(TurnSessionMode)(0),        // 7: wingsv.TurnSessionMode
+	(ProxyRuntimeMode)(0),       // 8: wingsv.ProxyRuntimeMode
+	(XrayRoutingMatchType)(0),   // 9: wingsv.XrayRoutingMatchType
+	(XrayRoutingAction)(0),      // 10: wingsv.XrayRoutingAction
+	(WakeProbeMode)(0),          // 11: wingsv.WakeProbeMode
+	(XrayTransportMode)(0),      // 12: wingsv.XrayTransportMode
+	(XposedProcfsHookMode)(0),   // 13: wingsv.XposedProcfsHookMode
+	(XposedIcmpSpoofingMode)(0), // 14: wingsv.XposedIcmpSpoofingMode
+	(ThemeMode)(0),              // 15: wingsv.ThemeMode
+	(DnsMode)(0),                // 16: wingsv.DnsMode
+	(SharingMasqueradeMode)(0),  // 17: wingsv.SharingMasqueradeMode
+	(SharingWifiLock)(0),        // 18: wingsv.SharingWifiLock
+	(SharingIpMonitorMode)(0),   // 19: wingsv.SharingIpMonitorMode
+	(ByeDpiHostsMode)(0),        // 20: wingsv.ByeDpiHostsMode
+	(ByeDpiDesyncMethod)(0),     // 21: wingsv.ByeDpiDesyncMethod
+	(*Config)(nil),              // 22: wingsv.Config
+	(*Guardian)(nil),            // 23: wingsv.Guardian
+	(*WbStream)(nil),            // 24: wingsv.WbStream
+	(*AmneziaWG)(nil),           // 25: wingsv.AmneziaWG
+	(*Endpoint)(nil),            // 26: wingsv.Endpoint
+	(*Cidr)(nil),                // 27: wingsv.Cidr
+	(*Turn)(nil),                // 28: wingsv.Turn
+	(*WireGuard)(nil),           // 29: wingsv.WireGuard
+	(*Interface)(nil),           // 30: wingsv.Interface
+	(*Peer)(nil),                // 31: wingsv.Peer
+	(*Xray)(nil),                // 32: wingsv.Xray
+	(*AppRouting)(nil),          // 33: wingsv.AppRouting
+	(*XrayRouting)(nil),         // 34: wingsv.XrayRouting
+	(*XrayRoutingRule)(nil),     // 35: wingsv.XrayRoutingRule
+	(*Subscription)(nil),        // 36: wingsv.Subscription
+	(*VlessProfile)(nil),        // 37: wingsv.VlessProfile
+	(*XraySettings)(nil),        // 38: wingsv.XraySettings
+	(*Xposed)(nil),              // 39: wingsv.Xposed
+	(*RootSettings)(nil),        // 40: wingsv.RootSettings
+	(*AppPreferences)(nil),      // 41: wingsv.AppPreferences
+	(*SubscriptionHwid)(nil),    // 42: wingsv.SubscriptionHwid
+	(*Sharing)(nil),             // 43: wingsv.Sharing
+	(*ByeDpi)(nil),              // 44: wingsv.ByeDpi
 }
 var file_wingsv_proto_depIdxs = []int32{
 	0,  // 0: wingsv.Config.type:type_name -> wingsv.ConfigType
-	27, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
-	28, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
+	28, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
+	29, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
 	2,  // 3: wingsv.Config.backend:type_name -> wingsv.BackendType
-	31, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
-	24, // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
-	32, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
-	23, // 7: wingsv.Config.wb_stream:type_name -> wingsv.WbStream
-	38, // 8: wingsv.Config.xposed:type_name -> wingsv.Xposed
-	39, // 9: wingsv.Config.root:type_name -> wingsv.RootSettings
-	40, // 10: wingsv.Config.app_preferences:type_name -> wingsv.AppPreferences
-	41, // 11: wingsv.Config.subscription_hwid:type_name -> wingsv.SubscriptionHwid
-	42, // 12: wingsv.Config.sharing:type_name -> wingsv.Sharing
-	43, // 13: wingsv.Config.bye_dpi:type_name -> wingsv.ByeDpi
-	22, // 14: wingsv.Config.guardian:type_name -> wingsv.Guardian
+	32, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
+	25, // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
+	33, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
+	24, // 7: wingsv.Config.wb_stream:type_name -> wingsv.WbStream
+	39, // 8: wingsv.Config.xposed:type_name -> wingsv.Xposed
+	40, // 9: wingsv.Config.root:type_name -> wingsv.RootSettings
+	41, // 10: wingsv.Config.app_preferences:type_name -> wingsv.AppPreferences
+	42, // 11: wingsv.Config.subscription_hwid:type_name -> wingsv.SubscriptionHwid
+	43, // 12: wingsv.Config.sharing:type_name -> wingsv.Sharing
+	44, // 13: wingsv.Config.bye_dpi:type_name -> wingsv.ByeDpi
+	23, // 14: wingsv.Config.guardian:type_name -> wingsv.Guardian
 	1,  // 15: wingsv.Guardian.sync_mode:type_name -> wingsv.GuardianSyncMode
 	3,  // 16: wingsv.WbStream.tunnel_mode:type_name -> wingsv.TunnelMode
-	25, // 17: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
-	25, // 18: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
-	6,  // 19: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
-	7,  // 20: wingsv.Turn.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
+	26, // 17: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
+	26, // 18: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
+	7,  // 19: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
+	8,  // 20: wingsv.Turn.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
 	3,  // 21: wingsv.Turn.tunnel_mode:type_name -> wingsv.TunnelMode
-	4,  // 22: wingsv.Turn.wrap_mode:type_name -> wingsv.WrapMode
-	5,  // 23: wingsv.Turn.wrap_ciphers:type_name -> wingsv.WrapCipher
-	29, // 24: wingsv.WireGuard.iface:type_name -> wingsv.Interface
-	30, // 25: wingsv.WireGuard.peer:type_name -> wingsv.Peer
-	25, // 26: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
-	26, // 27: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
-	36, // 28: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
-	35, // 29: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
-	37, // 30: wingsv.Xray.settings:type_name -> wingsv.XraySettings
-	33, // 31: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
-	34, // 32: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
-	8,  // 33: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
-	9,  // 34: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
-	11, // 35: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
-	7,  // 36: wingsv.XraySettings.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
-	10, // 37: wingsv.XraySettings.wake_probe_mode:type_name -> wingsv.WakeProbeMode
-	12, // 38: wingsv.Xposed.procfs_hook_mode:type_name -> wingsv.XposedProcfsHookMode
-	13, // 39: wingsv.Xposed.icmp_spoofing_mode:type_name -> wingsv.XposedIcmpSpoofingMode
-	14, // 40: wingsv.AppPreferences.theme_mode:type_name -> wingsv.ThemeMode
-	15, // 41: wingsv.AppPreferences.dns_mode:type_name -> wingsv.DnsMode
-	16, // 42: wingsv.Sharing.masquerade_mode:type_name -> wingsv.SharingMasqueradeMode
-	17, // 43: wingsv.Sharing.wifi_lock:type_name -> wingsv.SharingWifiLock
-	18, // 44: wingsv.Sharing.ip_monitor_mode:type_name -> wingsv.SharingIpMonitorMode
-	19, // 45: wingsv.ByeDpi.hosts_mode:type_name -> wingsv.ByeDpiHostsMode
-	20, // 46: wingsv.ByeDpi.desync_method:type_name -> wingsv.ByeDpiDesyncMethod
-	47, // [47:47] is the sub-list for method output_type
-	47, // [47:47] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	5,  // 22: wingsv.Turn.wrap_mode:type_name -> wingsv.WrapMode
+	6,  // 23: wingsv.Turn.wrap_ciphers:type_name -> wingsv.WrapCipher
+	4,  // 24: wingsv.Turn.wrap_key_delivery:type_name -> wingsv.WrapKeyDelivery
+	30, // 25: wingsv.WireGuard.iface:type_name -> wingsv.Interface
+	31, // 26: wingsv.WireGuard.peer:type_name -> wingsv.Peer
+	26, // 27: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
+	27, // 28: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
+	37, // 29: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
+	36, // 30: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
+	38, // 31: wingsv.Xray.settings:type_name -> wingsv.XraySettings
+	34, // 32: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
+	35, // 33: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
+	9,  // 34: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
+	10, // 35: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
+	12, // 36: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
+	8,  // 37: wingsv.XraySettings.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
+	11, // 38: wingsv.XraySettings.wake_probe_mode:type_name -> wingsv.WakeProbeMode
+	13, // 39: wingsv.Xposed.procfs_hook_mode:type_name -> wingsv.XposedProcfsHookMode
+	14, // 40: wingsv.Xposed.icmp_spoofing_mode:type_name -> wingsv.XposedIcmpSpoofingMode
+	15, // 41: wingsv.AppPreferences.theme_mode:type_name -> wingsv.ThemeMode
+	16, // 42: wingsv.AppPreferences.dns_mode:type_name -> wingsv.DnsMode
+	17, // 43: wingsv.Sharing.masquerade_mode:type_name -> wingsv.SharingMasqueradeMode
+	18, // 44: wingsv.Sharing.wifi_lock:type_name -> wingsv.SharingWifiLock
+	19, // 45: wingsv.Sharing.ip_monitor_mode:type_name -> wingsv.SharingIpMonitorMode
+	20, // 46: wingsv.ByeDpi.hosts_mode:type_name -> wingsv.ByeDpiHostsMode
+	21, // 47: wingsv.ByeDpi.desync_method:type_name -> wingsv.ByeDpiDesyncMethod
+	48, // [48:48] is the sub-list for method output_type
+	48, // [48:48] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_wingsv_proto_init() }
@@ -4217,7 +4284,7 @@ func file_wingsv_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wingsv_proto_rawDesc), len(file_wingsv_proto_rawDesc)),
-			NumEnums:      21,
+			NumEnums:      22,
 			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
