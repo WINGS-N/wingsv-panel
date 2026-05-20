@@ -327,10 +327,14 @@ func (WrapMode) EnumDescriptor() ([]byte, []int) {
 type WrapCipher int32
 
 const (
-	WrapCipher_WRAP_CIPHER_UNSPECIFIED  WrapCipher = 0
-	WrapCipher_WRAP_CIPHER_NONE         WrapCipher = 1
-	WrapCipher_WRAP_CIPHER_AES_256_CTR  WrapCipher = 2
-	WrapCipher_WRAP_CIPHER_CHACHA20_XOR WrapCipher = 3
+	WrapCipher_WRAP_CIPHER_UNSPECIFIED WrapCipher = 0
+	WrapCipher_WRAP_CIPHER_NONE        WrapCipher = 1
+	// SRTP-mimicry AEAD wire format
+	// ([12B RTP header | 12B nonce | AEAD ciphertext | 16B tag]).
+	// VK TURN forwards SRTP-shaped ChannelData on its fast path; plain
+	// stream-cipher wraps are dropped by the content filter.
+	WrapCipher_WRAP_CIPHER_SRTP_AES_256_GCM       WrapCipher = 2
+	WrapCipher_WRAP_CIPHER_SRTP_CHACHA20_POLY1305 WrapCipher = 3
 )
 
 // Enum value maps for WrapCipher.
@@ -338,14 +342,14 @@ var (
 	WrapCipher_name = map[int32]string{
 		0: "WRAP_CIPHER_UNSPECIFIED",
 		1: "WRAP_CIPHER_NONE",
-		2: "WRAP_CIPHER_AES_256_CTR",
-		3: "WRAP_CIPHER_CHACHA20_XOR",
+		2: "WRAP_CIPHER_SRTP_AES_256_GCM",
+		3: "WRAP_CIPHER_SRTP_CHACHA20_POLY1305",
 	}
 	WrapCipher_value = map[string]int32{
-		"WRAP_CIPHER_UNSPECIFIED":  0,
-		"WRAP_CIPHER_NONE":         1,
-		"WRAP_CIPHER_AES_256_CTR":  2,
-		"WRAP_CIPHER_CHACHA20_XOR": 3,
+		"WRAP_CIPHER_UNSPECIFIED":            0,
+		"WRAP_CIPHER_NONE":                   1,
+		"WRAP_CIPHER_SRTP_AES_256_GCM":       2,
+		"WRAP_CIPHER_SRTP_CHACHA20_POLY1305": 3,
 	}
 )
 
@@ -3984,13 +3988,13 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x15WRAP_MODE_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rWRAP_MODE_OFF\x10\x01\x12\x17\n" +
 	"\x13WRAP_MODE_PREFERRED\x10\x02\x12\x16\n" +
-	"\x12WRAP_MODE_REQUIRED\x10\x03*z\n" +
+	"\x12WRAP_MODE_REQUIRED\x10\x03*\x89\x01\n" +
 	"\n" +
 	"WrapCipher\x12\x1b\n" +
 	"\x17WRAP_CIPHER_UNSPECIFIED\x10\x00\x12\x14\n" +
-	"\x10WRAP_CIPHER_NONE\x10\x01\x12\x1b\n" +
-	"\x17WRAP_CIPHER_AES_256_CTR\x10\x02\x12\x1c\n" +
-	"\x18WRAP_CIPHER_CHACHA20_XOR\x10\x03*\x8b\x01\n" +
+	"\x10WRAP_CIPHER_NONE\x10\x01\x12 \n" +
+	"\x1cWRAP_CIPHER_SRTP_AES_256_GCM\x10\x02\x12&\n" +
+	"\"WRAP_CIPHER_SRTP_CHACHA20_POLY1305\x10\x03*\x8b\x01\n" +
 	"\x0fTurnSessionMode\x12!\n" +
 	"\x1dTURN_SESSION_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16TURN_SESSION_MODE_AUTO\x10\x01\x12\x1e\n" +
