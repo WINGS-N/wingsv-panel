@@ -5,22 +5,22 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed } from 'vue';
 
 const props = defineProps({
   /** online | offline | neutral — maps to .admin-pill .is-* */
-  variant: { type: String, default: "neutral" },
+  variant: { type: String, default: 'neutral' },
 });
 
 const classNames = computed(() => {
   switch (props.variant) {
-    case "online":
-      return "admin-pill is-online";
-    case "offline":
-      return "admin-pill is-offline";
-    case "neutral":
+    case 'online':
+      return 'admin-pill is-online';
+    case 'offline':
+      return 'admin-pill is-offline';
+    case 'neutral':
     default:
-      return "admin-pill";
+      return 'admin-pill';
   }
 });
 </script>

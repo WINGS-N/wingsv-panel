@@ -1,12 +1,6 @@
 <template>
   <div class="copyable-link">
-    <textarea
-      ref="textareaRef"
-      class="link-input copyable-link-text"
-      :rows="rows"
-      readonly
-      :value="value"
-    />
+    <textarea ref="textareaRef" class="link-input copyable-link-text" :rows="rows" readonly :value="value" />
     <button type="button" class="button-secondary copyable-link-button" @click="copy">
       <SamsungLoader v-if="busy" />
       <span>{{ label }}</span>
@@ -15,8 +9,8 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import SamsungLoader from "@/components/layout/SamsungLoader.vue";
+import { ref } from 'vue';
+import SamsungLoader from '@/components/layout/SamsungLoader.vue';
 
 const props = defineProps({
   value: { type: String, required: true },
@@ -24,7 +18,7 @@ const props = defineProps({
 });
 
 const busy = ref(false);
-const label = ref("Скопировать");
+const label = ref('Скопировать');
 const textareaRef = ref(null);
 
 async function copy() {
@@ -34,16 +28,16 @@ async function copy() {
       await navigator.clipboard.writeText(props.value);
     } else if (textareaRef.value) {
       textareaRef.value.select();
-      document.execCommand("copy");
+      document.execCommand('copy');
     }
-    label.value = "Скопировано";
+    label.value = 'Скопировано';
     setTimeout(() => {
-      label.value = "Скопировать";
+      label.value = 'Скопировать';
     }, 1500);
   } catch (err) {
-    label.value = "Ошибка";
+    label.value = 'Ошибка';
     setTimeout(() => {
-      label.value = "Скопировать";
+      label.value = 'Скопировать';
     }, 1500);
   } finally {
     busy.value = false;

@@ -15,17 +15,17 @@
 
 <script setup>
 defineProps({
-  modelValue: { type: String, default: "" },
-  label: { type: String, default: "" },
-  placeholder: { type: String, default: "" },
-  error: { type: String, default: "" },
+  modelValue: { type: String, default: '' },
+  label: { type: String, default: '' },
+  placeholder: { type: String, default: '' },
+  error: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   spellcheck: { type: Boolean, default: true },
   rows: { type: [Number, String], default: 3 },
 });
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(['update:modelValue']);
 function onInput(event) {
-  emit("update:modelValue", event.target.value);
+  emit('update:modelValue', event.target.value);
 }
 </script>

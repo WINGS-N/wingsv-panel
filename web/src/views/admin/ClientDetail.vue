@@ -10,20 +10,17 @@
           <div>
             <router-link class="admin-back-link" :to="{ name: 'admin-clients' }">← Все клиенты</router-link>
             <h1 class="admin-card-title">{{ detail?.client?.name || id }}</h1>
-            <div
-              v-if="detail"
-              class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-wings-muted"
-            >
+            <div v-if="detail" class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-wings-muted">
               <SamsungPill :variant="detail.client?.online ? 'online' : 'offline'">
-                {{ detail.client?.online ? "Онлайн" : "Оффлайн" }}
+                {{ detail.client?.online ? 'Онлайн' : 'Оффлайн' }}
               </SamsungPill>
               <span v-if="detail.client?.backend_type">{{ detail.client.backend_type }}</span>
               <span>·</span>
               <code class="admin-mono">{{ id }}</code>
               <span>·</span>
-              <span>{{ detail.client?.device_model || "—" }}</span>
+              <span>{{ detail.client?.device_model || '—' }}</span>
               <span>·</span>
-              <span>WINGS V {{ detail.client?.app_version || "—" }}</span>
+              <span>WINGS V {{ detail.client?.app_version || '—' }}</span>
               <span v-if="detail.client?.created_at">·</span>
               <span v-if="detail.client?.created_at">Добавлен {{ formatDate(detail.client.created_at) }}</span>
             </div>
@@ -63,7 +60,9 @@
           :key="tab.id"
           :class="['admin-tab', activeTab === tab.id ? 'is-active' : '']"
           @click="setActiveTab(tab.id)"
-        >{{ tab.label }}</button>
+        >
+          {{ tab.label }}
+        </button>
       </div>
     </section>
 
@@ -74,17 +73,17 @@
         <dl class="keyvals mt-6">
           <template v-for="row in connectionFacts" :key="row.label">
             <dt>{{ row.label }}</dt>
-            <dd :class="row.mono ? 'mono' : ''">{{ row.value || "—" }}</dd>
+            <dd :class="row.mono ? 'mono' : ''">{{ row.value || '—' }}</dd>
           </template>
         </dl>
         <div class="actions-row mt-6">
           <SamsungButton @click="copyLinkInline">
             <template #icon><Copy class="button-icon" aria-hidden="true" /></template>
-            {{ copiedLink ? "Скопировано" : "Скопировать ссылку" }}
+            {{ copiedLink ? 'Скопировано' : 'Скопировать ссылку' }}
           </SamsungButton>
           <SamsungButton variant="secondary" :busy="busyRotate" @click="onRotateToken">
             <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-            {{ busyRotate ? "Ротируем…" : "Ротировать токен" }}
+            {{ busyRotate ? 'Ротируем…' : 'Ротировать токен' }}
           </SamsungButton>
         </div>
       </div>
@@ -109,10 +108,13 @@
     </section>
 
     <section v-if="activeTab === 'config'" class="surface-card">
-
       <div class="config-mode-tabs">
-        <button :class="['admin-tab', configMode === 'form' ? 'is-active' : '']" @click="setConfigMode('form')">Форма</button>
-        <button :class="['admin-tab', configMode === 'json' ? 'is-active' : '']" @click="setConfigMode('json')">JSON</button>
+        <button :class="['admin-tab', configMode === 'form' ? 'is-active' : '']" @click="setConfigMode('form')">
+          Форма
+        </button>
+        <button :class="['admin-tab', configMode === 'json' ? 'is-active' : '']" @click="setConfigMode('json')">
+          JSON
+        </button>
         <span class="admin-follow-toggle">
           <OneuiSwitch :model-value="followClient" @change="setFollowClient($event)" />
           <span class="admin-follow-label">Следить за клиентом</span>
@@ -141,7 +143,7 @@
         <div class="actions-row mt-2">
           <SamsungButton variant="secondary" :busy="busyImport" :disabled="!importLinkDraft" @click="importFromLink">
             <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-            {{ busyImport ? "Распаковываем…" : "Подставить" }}
+            {{ busyImport ? 'Распаковываем…' : 'Подставить' }}
           </SamsungButton>
         </div>
       </details>
@@ -156,7 +158,7 @@
       <div class="actions-row mt-4">
         <SamsungButton :busy="busyPush" @click="pushConfig">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? "Отправляем…" : "Применить (Push)" }}
+          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
         </SamsungButton>
         <SamsungButton variant="secondary" @click="resetConfigDraft">
           <template #icon><RotateCcw class="button-icon" aria-hidden="true" /></template>
@@ -170,17 +172,27 @@
         <p class="admin-muted">Правила маршрутизации Xray (порядок имеет значение — первое совпадение применяется).</p>
         <SamsungButton :busy="busyPush" @click="pushConfig">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? "Отправляем…" : "Применить (Push)" }}
+          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
         </SamsungButton>
       </div>
       <div class="form-section mt-3">
         <div class="form-row form-row-stack">
           <label class="form-label">GeoIP URL</label>
-          <input class="text-input" :value="xrayRouting.geoipUrl || ''" @input="setXrayRouting('geoipUrl', $event.target.value)" placeholder="https://...geoip.dat" />
+          <input
+            class="text-input"
+            :value="xrayRouting.geoipUrl || ''"
+            @input="setXrayRouting('geoipUrl', $event.target.value)"
+            placeholder="https://...geoip.dat"
+          />
         </div>
         <div class="form-row form-row-stack">
           <label class="form-label">GeoSite URL</label>
-          <input class="text-input" :value="xrayRouting.geositeUrl || ''" @input="setXrayRouting('geositeUrl', $event.target.value)" placeholder="https://...geosite.dat" />
+          <input
+            class="text-input"
+            :value="xrayRouting.geositeUrl || ''"
+            @input="setXrayRouting('geositeUrl', $event.target.value)"
+            placeholder="https://...geosite.dat"
+          />
         </div>
       </div>
       <div class="actions-row mt-3">
@@ -193,7 +205,11 @@
         <li
           v-for="(rule, idx) in xrayRules"
           :key="rule.id || idx"
-          :class="['admin-rule-card', dragOverIdx === idx ? 'is-drag-over' : '', draggingIdx === idx ? 'is-dragging' : '']"
+          :class="[
+            'admin-rule-card',
+            dragOverIdx === idx ? 'is-drag-over' : '',
+            draggingIdx === idx ? 'is-dragging' : '',
+          ]"
           draggable="true"
           @dragstart="onRuleDragStart(idx, $event)"
           @dragover.prevent="onRuleDragOver(idx, $event)"
@@ -207,15 +223,28 @@
           <div class="admin-rule-body">
             <div class="form-row">
               <label class="form-label">Тип</label>
-              <OneuiSelect :model-value="rule.matchType || 'XRAY_ROUTING_MATCH_UNSPECIFIED'" :options="matchTypeOptions" @change="patchRule(idx, 'matchType', $event)" />
+              <OneuiSelect
+                :model-value="rule.matchType || 'XRAY_ROUTING_MATCH_UNSPECIFIED'"
+                :options="matchTypeOptions"
+                @change="patchRule(idx, 'matchType', $event)"
+              />
             </div>
             <div class="form-row form-row-stack">
               <label class="form-label">{{ matchCodeLabel(rule.matchType) }}</label>
-              <input class="text-input" :value="rule.code || ''" @input="patchRule(idx, 'code', $event.target.value)" :placeholder="matchCodePlaceholder(rule.matchType)" />
+              <input
+                class="text-input"
+                :value="rule.code || ''"
+                @input="patchRule(idx, 'code', $event.target.value)"
+                :placeholder="matchCodePlaceholder(rule.matchType)"
+              />
             </div>
             <div class="form-row">
               <label class="form-label">Действие</label>
-              <OneuiSelect :model-value="rule.action || 'XRAY_ROUTING_ACTION_UNSPECIFIED'" :options="actionOptions" @change="patchRule(idx, 'action', $event)" />
+              <OneuiSelect
+                :model-value="rule.action || 'XRAY_ROUTING_ACTION_UNSPECIFIED'"
+                :options="actionOptions"
+                @change="patchRule(idx, 'action', $event)"
+              />
             </div>
             <div class="form-row">
               <label class="form-label">Включено</label>
@@ -237,7 +266,7 @@
         <p class="admin-muted">Per-app routing: какие приложения идут через тунель.</p>
         <SamsungButton :busy="busyPush" @click="pushConfig">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? "Отправляем…" : "Применить (Push)" }}
+          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
         </SamsungButton>
       </div>
       <div class="form-section mt-3">
@@ -255,13 +284,11 @@
           </SamsungButton>
         </div>
         <p v-if="installedAppsUpdated" class="admin-muted">Получено: {{ formatTs(installedAppsUpdated) }}</p>
-        <p v-else class="admin-muted">Список ещё не получен с устройства. Нажмите «Обновить список» — клиент должен быть онлайн.</p>
+        <p v-else class="admin-muted">
+          Список ещё не получен с устройства. Нажмите «Обновить список» — клиент должен быть онлайн.
+        </p>
         <div v-if="installedApps.length" class="mt-3">
-          <OneuiRadioGroup
-            v-model="appsKindFilter"
-            :options="appsKindFilterOptions"
-            variant="pill"
-          />
+          <OneuiRadioGroup v-model="appsKindFilter" :options="appsKindFilterOptions" variant="pill" />
         </div>
         <div v-if="installedApps.length" class="form-row form-row-stack mt-3">
           <input class="text-input" v-model.trim="appsFilter" placeholder="Фильтр по имени или пакету" />
@@ -274,7 +301,7 @@
           >
             <img v-if="app.icon" :src="app.icon" alt="" class="admin-apps-icon" />
             <div v-else class="admin-apps-icon admin-apps-icon-fallback" aria-hidden="true">
-              {{ (app.label || app.package || "?").slice(0, 1).toUpperCase() }}
+              {{ (app.label || app.package || '?').slice(0, 1).toUpperCase() }}
             </div>
             <div class="admin-apps-text">
               <strong>{{ app.label || app.package }}</strong>
@@ -307,7 +334,9 @@
     <div v-if="activeTab === 'state'" class="surface-card admin-tab-pane">
       <div class="form-section">
         <h3 class="form-section-title">Режим синхронизации</h3>
-        <p class="admin-muted">Если клиент онлайн — изменения применяются мгновенно. Иначе подхватятся при следующем коннекте.</p>
+        <p class="admin-muted">
+          Если клиент онлайн — изменения применяются мгновенно. Иначе подхватятся при следующем коннекте.
+        </p>
         <div class="admin-pill-row mt-2">
           <button
             v-for="opt in syncModeOptions"
@@ -347,7 +376,8 @@
           :key="stream.id"
           :model-value="logToggles[stream.id]"
           @change="toggleLog(stream.id, $event)"
-        >{{ stream.label }}</OneuiCheckbox>
+          >{{ stream.label }}</OneuiCheckbox
+        >
       </div>
       <div class="admin-log-tabs">
         <button
@@ -355,28 +385,31 @@
           :key="stream.id"
           :class="['admin-tab', activeLogTab === stream.id ? 'is-active' : '']"
           @click="activeLogTab = stream.id"
-        >{{ stream.label }}</button>
+        >
+          {{ stream.label }}
+        </button>
       </div>
       <div class="actions-row mt-2">
-        <SamsungButton
-          variant="secondary"
-          :disabled="!logsText[activeLogTab]"
-          @click="clearActiveLog"
-        >
+        <SamsungButton variant="secondary" :disabled="!logsText[activeLogTab]" @click="clearActiveLog">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
           Очистить лог
         </SamsungButton>
       </div>
-      <pre v-if="logToggles[activeLogTab]" class="admin-log-pane">{{ logsText[activeLogTab] || "(пусто)" }}</pre>
+      <pre v-if="logToggles[activeLogTab]" class="admin-log-pane">{{ logsText[activeLogTab] || '(пусто)' }}</pre>
       <p v-else class="admin-muted">Поток отключён администратором — переключите чекбокс выше, чтобы возобновить.</p>
     </div>
 
-    <div v-for="backend in backendTabIds" :key="backend" v-show="activeTab === backend" class="surface-card admin-tab-pane">
+    <div
+      v-for="backend in backendTabIds"
+      :key="backend"
+      v-show="activeTab === backend"
+      class="surface-card admin-tab-pane"
+    >
       <div class="admin-sticky-bar">
         <p class="admin-muted">Настройки только для {{ backendTabLabel(backend) }}.</p>
         <SamsungButton :busy="busyPush" @click="pushConfig">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? "Отправляем…" : "Применить (Push)" }}
+          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
         </SamsungButton>
       </div>
       <ConfigFormEditor
@@ -392,7 +425,7 @@
         <p class="admin-muted">VLESS-профили клиента.</p>
         <SamsungButton :busy="busyPush" @click="pushConfig">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? "Отправляем…" : "Применить (Push)" }}
+          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
         </SamsungButton>
       </div>
       <details class="admin-config-import">
@@ -413,7 +446,7 @@
             @click="importProfile"
           >
             <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-            {{ busyProfileImport ? "Распаковываем…" : "Добавить" }}
+            {{ busyProfileImport ? 'Распаковываем…' : 'Добавить' }}
           </SamsungButton>
         </div>
       </details>
@@ -421,11 +454,7 @@
         Активный профиль применится на устройстве после нажатия «Применить (Push)».
       </p>
       <div v-if="xrayProfileFilterOptions.length > 1" class="mt-3">
-        <OneuiRadioGroup
-          v-model="xrayActiveFilter"
-          :options="xrayProfileFilterOptions"
-          variant="pill"
-        />
+        <OneuiRadioGroup v-model="xrayActiveFilter" :options="xrayProfileFilterOptions" variant="pill" />
       </div>
       <div v-if="xraySubscriptions.length" class="actions-row mt-3 mb-4">
         <SamsungButton
@@ -452,7 +481,7 @@
           <div class="admin-profile-text">
             <strong>{{ profile.title || profile.address || profile.id }}</strong>
             <span class="admin-muted">
-              {{ profile.address || "—" }}<template v-if="profile.port">:{{ profile.port }}</template>
+              {{ profile.address || '—' }}<template v-if="profile.port">:{{ profile.port }}</template>
             </span>
           </div>
           <span class="admin-radio" :class="{ 'is-selected': xrayActiveProfileId === profile.id }" aria-hidden="true">
@@ -508,11 +537,19 @@
           <div class="form-section subscription-card">
             <div class="form-row form-row-stack">
               <label class="form-label">Имя</label>
-              <input class="text-input" :value="sub.title || ''" @input="patchSubscription(idx, 'title', $event.target.value)" />
+              <input
+                class="text-input"
+                :value="sub.title || ''"
+                @input="patchSubscription(idx, 'title', $event.target.value)"
+              />
             </div>
             <div class="form-row form-row-stack">
               <label class="form-label">URL</label>
-              <input class="text-input" :value="sub.url || ''" @input="patchSubscription(idx, 'url', $event.target.value)" />
+              <input
+                class="text-input"
+                :value="sub.url || ''"
+                @input="patchSubscription(idx, 'url', $event.target.value)"
+              />
             </div>
             <div class="form-row">
               <label class="form-label">Авто-обновление</label>
@@ -546,7 +583,8 @@
     <div v-if="activeTab === 'commands'" class="surface-card admin-tab-pane">
       <p class="admin-muted">
         Тунель сейчас:
-        <strong>{{ runtimeStateLabel }}</strong>{{ detail?.client?.online ? "" : " · клиент оффлайн, команды не дойдут" }}
+        <strong>{{ runtimeStateLabel }}</strong
+        >{{ detail?.client?.online ? '' : ' · клиент оффлайн, команды не дойдут' }}
       </p>
       <div class="admin-cmd-grid">
         <SamsungButton :busy="busyCmd" :disabled="!canStart" @click="sendCommand('start_tunnel')">
@@ -576,13 +614,11 @@
 
     <section class="danger-card">
       <h2 class="font-sharp text-[18px] font-bold text-wings-text">Опасная зона</h2>
-      <p class="body-copy mt-2">
-        Удаление клиента отзывает токен и стирает его конфигурацию. Действие необратимое.
-      </p>
+      <p class="body-copy mt-2">Удаление клиента отзывает токен и стирает его конфигурацию. Действие необратимое.</p>
       <div class="actions-row mt-4">
         <SamsungButton variant="danger" :busy="busyDelete" @click="onDelete">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          {{ busyDelete ? "Удаляем…" : "Удалить клиента" }}
+          {{ busyDelete ? 'Удаляем…' : 'Удалить клиента' }}
         </SamsungButton>
       </div>
     </section>
@@ -590,101 +626,126 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
-import { Activity, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, Eye, GripVertical, Infinity as InfinityIcon, Link2, Play, Plus, RefreshCw, RotateCcw, RotateCw, Square, Trash2, UploadCloud, X } from "lucide-vue-next";
-import OneuiCheckbox from "@/components/controls/OneuiCheckbox.vue";
-import OneuiRadioGroup from "@/components/controls/OneuiRadioGroup.vue";
-import OneuiSelect from "@/components/controls/OneuiSelect.vue";
-import OneuiSwitch from "@/components/controls/OneuiSwitch.vue";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
-import SamsungIconButton from "@/components/layout/SamsungIconButton.vue";
-import SamsungLoader from "@/components/layout/SamsungLoader.vue";
-import SamsungModal from "@/components/layout/SamsungModal.vue";
-import SamsungPill from "@/components/layout/SamsungPill.vue";
-import ConfigFormEditor from "@/components/domain/ConfigFormEditor.vue";
-import CopyableLink from "@/components/domain/CopyableLink.vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import {
+  Activity,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Copy,
+  Download,
+  Eye,
+  GripVertical,
+  Infinity as InfinityIcon,
+  Link2,
+  Play,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
+  Square,
+  Trash2,
+  UploadCloud,
+  X,
+} from 'lucide-vue-next';
+import OneuiCheckbox from '@/components/controls/OneuiCheckbox.vue';
+import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
+import OneuiSelect from '@/components/controls/OneuiSelect.vue';
+import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
+import SamsungLoader from '@/components/layout/SamsungLoader.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
+import SamsungPill from '@/components/layout/SamsungPill.vue';
+import ConfigFormEditor from '@/components/domain/ConfigFormEditor.vue';
+import CopyableLink from '@/components/domain/CopyableLink.vue';
 // CodeMirror — отдельный chunk; грузим только когда юзер реально открыл JSON-таб.
-const JsonEditor = defineAsyncComponent(() => import("@/components/domain/JsonEditor.vue"));
-import { connectAdminSocket } from "@/stores/admin-socket.js";
+const JsonEditor = defineAsyncComponent(() => import('@/components/domain/JsonEditor.vue'));
+import { connectAdminSocket } from '@/stores/admin-socket.js';
 
-const props = defineProps({ id: { type: String, required: true }, tab: { type: String, default: "" } });
+const props = defineProps({ id: { type: String, required: true }, tab: { type: String, default: '' } });
 const router = useRouter();
 
 const tabs = [
-  { id: "config", label: "Конфигурация" },
-  { id: "vk_turn", label: "VK TURN" },
-  { id: "xray", label: "Xray" },
-  { id: "xray_profiles", label: "Xray профили" },
-  { id: "xray_subscriptions", label: "Xray подписки" },
-  { id: "xray_rules", label: "Xray правила" },
-  { id: "wireguard", label: "WireGuard" },
-  { id: "amneziawg", label: "AmneziaWG" },
-  { id: "wb_stream", label: "WB Stream" },
-  { id: "app_routing", label: "Per-app routing" },
-  { id: "state", label: "Состояние" },
-  { id: "logs", label: "Логи" },
-  { id: "commands", label: "Команды" },
+  { id: 'config', label: 'Конфигурация' },
+  { id: 'vk_turn', label: 'VK TURN' },
+  { id: 'xray', label: 'Xray' },
+  { id: 'xray_profiles', label: 'Xray профили' },
+  { id: 'xray_subscriptions', label: 'Xray подписки' },
+  { id: 'xray_rules', label: 'Xray правила' },
+  { id: 'wireguard', label: 'WireGuard' },
+  { id: 'amneziawg', label: 'AmneziaWG' },
+  { id: 'wb_stream', label: 'WB Stream' },
+  { id: 'app_routing', label: 'Per-app routing' },
+  { id: 'state', label: 'Состояние' },
+  { id: 'logs', label: 'Логи' },
+  { id: 'commands', label: 'Команды' },
 ];
 
 const backendTabSections = {
-  vk_turn: ["vk_turn"],
-  xray: ["xray"],
-  wireguard: ["wireguard"],
-  amneziawg: ["amneziawg"],
-  wb_stream: ["wb_stream"],
+  vk_turn: ['vk_turn'],
+  xray: ['xray'],
+  wireguard: ['wireguard'],
+  amneziawg: ['amneziawg'],
+  wb_stream: ['wb_stream'],
 };
 const logStreams = [
-  { id: "runtime", label: "Runtime" },
-  { id: "proxy", label: "Proxy" },
-  { id: "xray", label: "Xray" },
+  { id: 'runtime', label: 'Runtime' },
+  { id: 'proxy', label: 'Proxy' },
+  { id: 'xray', label: 'Xray' },
 ];
 
 const validTabIds = tabs.map((t) => t.id);
-const activeTab = computed(() => (validTabIds.includes(props.tab) ? props.tab : "config"));
+const activeTab = computed(() => (validTabIds.includes(props.tab) ? props.tab : 'config'));
 function setActiveTab(tabId) {
-  if (!validTabIds.includes(tabId)) tabId = "config";
-  router.replace({ name: "admin-client-detail", params: { id: props.id, tab: tabId } });
+  if (!validTabIds.includes(tabId)) tabId = 'config';
+  router.replace({ name: 'admin-client-detail', params: { id: props.id, tab: tabId } });
 }
-const configMode = ref("form");
+const configMode = ref('form');
 const followClient = ref(true);
-const activeLogTab = ref("runtime");
-const profileImportDraft = ref("");
-const profileImportError = ref("");
+const activeLogTab = ref('runtime');
+const profileImportDraft = ref('');
+const profileImportError = ref('');
 const busyProfileImport = ref(false);
-const copiedProfileId = ref("");
-const busyRefresh = ref("");
+const copiedProfileId = ref('');
+const busyRefresh = ref('');
 const detail = ref(null);
-const loadError = ref("");
-const configDraft = ref("");
-const configError = ref("");
+const loadError = ref('');
+const configDraft = ref('');
+const configError = ref('');
 const busyPush = ref(false);
 const busyCmd = ref(false);
 const busyDelete = ref(false);
 const busyLink = ref(false);
-const wingsvLink = ref("");
-const wingsvLinkQR = ref("");
+const wingsvLink = ref('');
+const wingsvLinkQR = ref('');
 const showLinkModal = ref(false);
 const copiedLink = ref(false);
 const busyRotate = ref(false);
 
 async function onRotateToken() {
   if (busyRotate.value) return;
-  if (!confirm("Ротировать токен клиента? Текущая wingsv:// ссылка станет недействительной — устройство потеряет связь с панелью, пока новая ссылка не будет применена.")) {
+  if (
+    !confirm(
+      'Ротировать токен клиента? Текущая wingsv:// ссылка станет недействительной — устройство потеряет связь с панелью, пока новая ссылка не будет применена.',
+    )
+  ) {
     return;
   }
   busyRotate.value = true;
   try {
     const res = await fetch(`/api/admin/clients/${id.value}/rotate-token`, {
-      method: "POST",
-      credentials: "include",
+      method: 'POST',
+      credentials: 'include',
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось ротировать токен");
+      throw new Error(body.message || 'Не удалось ротировать токен');
     }
     const body = await res.json();
-    wingsvLink.value = body.wingsv_link || "";
+    wingsvLink.value = body.wingsv_link || '';
     showLinkModal.value = true;
   } catch (err) {
     loadError.value = err.message;
@@ -694,10 +755,10 @@ async function onRotateToken() {
 }
 
 const wingsvLinkPreview = computed(() => {
-  const link = wingsvLink.value || "";
-  if (!link) return "wingsv://...";
+  const link = wingsvLink.value || '';
+  if (!link) return 'wingsv://...';
   if (link.length <= 56) return link;
-  return link.slice(0, 28) + "…" + link.slice(-16);
+  return link.slice(0, 28) + '…' + link.slice(-16);
 });
 
 async function copyLinkInline() {
@@ -714,8 +775,8 @@ async function copyLinkInline() {
 }
 
 const headerInitials = computed(() => {
-  const value = (detail.value?.client?.name || id.value || "").trim();
-  if (!value) return "·";
+  const value = (detail.value?.client?.name || id.value || '').trim();
+  if (!value) return '·';
   const parts = value.split(/[\s._-]+/).filter(Boolean);
   if (parts.length === 0) return value.slice(0, 2).toUpperCase();
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -723,9 +784,9 @@ const headerInitials = computed(() => {
 });
 
 function formatDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString("ru-RU");
+    return new Date(iso).toLocaleDateString('ru-RU');
   } catch {
     return iso;
   }
@@ -733,78 +794,93 @@ function formatDate(iso) {
 
 const connectionTitle = computed(() => {
   const backend = detail.value?.client?.backend_type;
-  return backend ? backend : "Конфигурация клиента";
+  return backend ? backend : 'Конфигурация клиента';
 });
 
 const connectionFacts = computed(() => {
   const cfg = detail.value?.reported_config || detail.value?.desired_config || {};
   const client = detail.value?.client || {};
   const rows = [];
-  rows.push({ label: "Бэкенд", value: client.backend_type || "—" });
-  const backend = String(client.backend_type || "").toLowerCase();
-  if (backend.includes("xray")) {
+  rows.push({ label: 'Бэкенд', value: client.backend_type || '—' });
+  const backend = String(client.backend_type || '').toLowerCase();
+  if (backend.includes('xray')) {
     const xray = cfg.xray || {};
     const profiles = xray.profiles || [];
     const active = profiles.find((p) => p.id === xray.activeProfileId) || profiles[0];
     if (active) {
-      rows.push({ label: "Профиль", value: active.title || active.id });
-      if (active.address) rows.push({ label: "Address", value: `${active.address}${active.port ? ":" + active.port : ""}`, mono: true });
+      rows.push({ label: 'Профиль', value: active.title || active.id });
+      if (active.address)
+        rows.push({ label: 'Address', value: `${active.address}${active.port ? ':' + active.port : ''}`, mono: true });
     }
     const subs = xray.subscriptions || [];
-    if (subs.length) rows.push({ label: "Подписок", value: String(subs.length) });
-  } else if (backend.includes("vk turn") || backend.includes("vk_turn")) {
+    if (subs.length) rows.push({ label: 'Подписок', value: String(subs.length) });
+  } else if (backend.includes('vk turn') || backend.includes('vk_turn')) {
     const turn = cfg.turn || {};
-    if (turn.endpoint?.host) rows.push({ label: "Endpoint", value: `${turn.endpoint.host}${turn.endpoint.port ? ":" + turn.endpoint.port : ""}`, mono: true });
+    if (turn.endpoint?.host)
+      rows.push({
+        label: 'Endpoint',
+        value: `${turn.endpoint.host}${turn.endpoint.port ? ':' + turn.endpoint.port : ''}`,
+        mono: true,
+      });
     const linkCount = (turn.links || []).length + (turn.link ? 1 : 0);
-    rows.push({ label: "VK ссылок", value: String(linkCount) });
-    if (turn.threads) rows.push({ label: "Threads", value: String(turn.threads) });
-  } else if (backend.includes("wireguard") || backend.includes("amneziawg")) {
-    const wg = backend.includes("amneziawg") ? cfg.amneziawg : cfg.wireguard;
+    rows.push({ label: 'VK ссылок', value: String(linkCount) });
+    if (turn.threads) rows.push({ label: 'Threads', value: String(turn.threads) });
+  } else if (backend.includes('wireguard') || backend.includes('amneziawg')) {
+    const wg = backend.includes('amneziawg') ? cfg.amneziawg : cfg.wireguard;
     const peer = wg?.peer || {};
     const iface = wg?.iface || {};
-    if (peer.endpoint?.host) rows.push({ label: "Peer", value: `${peer.endpoint.host}${peer.endpoint.port ? ":" + peer.endpoint.port : ""}`, mono: true });
-    if (iface.privateKey) rows.push({ label: "Iface key", value: shortKey(iface.privateKey), mono: true });
-    if (peer.publicKey) rows.push({ label: "Peer key", value: shortKey(peer.publicKey), mono: true });
-  } else if (backend.includes("wb stream")) {
+    if (peer.endpoint?.host)
+      rows.push({
+        label: 'Peer',
+        value: `${peer.endpoint.host}${peer.endpoint.port ? ':' + peer.endpoint.port : ''}`,
+        mono: true,
+      });
+    if (iface.privateKey) rows.push({ label: 'Iface key', value: shortKey(iface.privateKey), mono: true });
+    if (peer.publicKey) rows.push({ label: 'Peer key', value: shortKey(peer.publicKey), mono: true });
+  } else if (backend.includes('wb stream')) {
     const wb = cfg.wbStream || {};
-    if (wb.roomId) rows.push({ label: "Room", value: wb.roomId, mono: true });
-    if (wb.displayName) rows.push({ label: "Имя", value: wb.displayName });
+    if (wb.roomId) rows.push({ label: 'Room', value: wb.roomId, mono: true });
+    if (wb.displayName) rows.push({ label: 'Имя', value: wb.displayName });
   }
-  rows.push({ label: "Sync", value: syncModeLabel(client.sync_mode) });
-  if (client.sync_mode === "periodic") rows.push({ label: "Интервал", value: `${client.periodic_interval_minutes} мин` });
-  rows.push({ label: "Создан", value: formatDate(client.created_at) });
-  rows.push({ label: "ID", value: client.id, mono: true });
+  rows.push({ label: 'Sync', value: syncModeLabel(client.sync_mode) });
+  if (client.sync_mode === 'periodic')
+    rows.push({ label: 'Интервал', value: `${client.periodic_interval_minutes} мин` });
+  rows.push({ label: 'Создан', value: formatDate(client.created_at) });
+  rows.push({ label: 'ID', value: client.id, mono: true });
   return rows;
 });
 
 function shortKey(value) {
-  const v = String(value || "").trim();
+  const v = String(value || '').trim();
   if (v.length <= 14) return v;
-  return v.slice(0, 6) + "…" + v.slice(-6);
+  return v.slice(0, 6) + '…' + v.slice(-6);
 }
 
 function syncModeLabel(mode) {
   switch (mode) {
-    case "periodic": return "Периодически";
-    case "foreground": return "Только пока открыто";
-    default: return "Всегда в фоне";
+    case 'periodic':
+      return 'Периодически';
+    case 'foreground':
+      return 'Только пока открыто';
+    default:
+      return 'Всегда в фоне';
   }
 }
-const importLinkDraft = ref("");
-const importError = ref("");
+const importLinkDraft = ref('');
+const importError = ref('');
 const busyImport = ref(false);
 const lastCmdAck = ref(null);
 const logToggles = ref({ runtime: true, proxy: true, xray: true });
-const logsText = ref({ runtime: "", proxy: "", xray: "" });
+const logsText = ref({ runtime: '', proxy: '', xray: '' });
 
 let socketHandle = null;
 
 const id = computed(() => props.id);
 
 async function loadDetail() {
-  loadError.value = "";
+  loadError.value = '';
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}`, { credentials: "include" });
+    const res = await fetch(`/api/admin/clients/${id.value}`, { credentials: 'include' });
     if (!res.ok) throw new Error(await res.text());
     detail.value = await res.json();
     if (detail.value.client) {
@@ -813,7 +889,7 @@ async function loadDetail() {
         proxy: !!detail.value.client.log_proxy_enabled,
         xray: !!detail.value.client.log_xray_enabled,
       };
-      syncModeDraft.value = detail.value.client.sync_mode || "always";
+      syncModeDraft.value = detail.value.client.sync_mode || 'always';
       syncIntervalDraft.value = detail.value.client.periodic_interval_minutes || 30;
     }
     // Default to the actual current state when the detail page opens — admins
@@ -823,7 +899,7 @@ async function loadDetail() {
     if (followClient.value && detail.value.reported_config) {
       configDraft.value = formatJson(detail.value.reported_config);
     } else {
-      configDraft.value = formatJson(detail.value.desired_config) || "{}";
+      configDraft.value = formatJson(detail.value.desired_config) || '{}';
     }
     // Lazy-load the wingsv:// link so the QR card on Конфигурация has data
     // without requiring the admin to click "Показать ссылку" first.
@@ -831,7 +907,7 @@ async function loadDetail() {
       ensureLink().catch(() => {});
     }
   } catch (err) {
-    loadError.value = err.message || "Не удалось загрузить клиента";
+    loadError.value = err.message || 'Не удалось загрузить клиента';
   }
 }
 
@@ -843,7 +919,7 @@ function setFollowClient(value) {
 }
 
 function formatJson(value) {
-  if (value == null) return "";
+  if (value == null) return '';
   try {
     return JSON.stringify(value, null, 2);
   } catch (err) {
@@ -852,22 +928,22 @@ function formatJson(value) {
 }
 
 function formatTs(iso) {
-  if (!iso || iso.startsWith("1970")) return "—";
+  if (!iso || iso.startsWith('1970')) return '—';
   try {
-    return new Date(iso).toLocaleString("ru-RU");
+    return new Date(iso).toLocaleString('ru-RU');
   } catch {
     return iso;
   }
 }
 
 function resetConfigDraft() {
-  configDraft.value = formatJson(detail.value?.desired_config) || "{}";
-  configError.value = "";
+  configDraft.value = formatJson(detail.value?.desired_config) || '{}';
+  configError.value = '';
 }
 
 const formValue = computed(() => {
   try {
-    return JSON.parse(configDraft.value || "{}");
+    return JSON.parse(configDraft.value || '{}');
   } catch {
     return {};
   }
@@ -876,13 +952,13 @@ const formValue = computed(() => {
 function onFormChanged(next) {
   followClient.value = false;
   configDraft.value = JSON.stringify(next, null, 2);
-  configError.value = "";
+  configError.value = '';
 }
 
 // Stop following the moment the admin types into the JSON area — we don't
 // want the next live update to wipe their in-progress edit.
 watch(configDraft, () => {
-  if (configMode.value === "json" && followClient.value && detail.value?.reported_config) {
+  if (configMode.value === 'json' && followClient.value && detail.value?.reported_config) {
     const reported = formatJson(detail.value.reported_config);
     if (configDraft.value !== reported) {
       followClient.value = false;
@@ -892,14 +968,14 @@ watch(configDraft, () => {
 
 const runtimeStateLabel = computed(() => {
   const r = detail.value?.runtime;
-  if (!r) return "не получено";
+  if (!r) return 'не получено';
   if (r.tunnelActive) {
-    if (r.phase && r.phase !== "TUNNEL_PHASE_UNSPECIFIED") {
-      return r.phase.replace("TUNNEL_PHASE_", "").toLowerCase();
+    if (r.phase && r.phase !== 'TUNNEL_PHASE_UNSPECIFIED') {
+      return r.phase.replace('TUNNEL_PHASE_', '').toLowerCase();
     }
-    return "running";
+    return 'running';
   }
-  return "off";
+  return 'off';
 });
 
 const canStart = computed(() => {
@@ -920,22 +996,22 @@ function backendTabLabel(id) {
 }
 
 const xrayProfiles = computed(() => formValue.value?.xray?.profiles || []);
-const xrayActiveProfileId = computed(() => formValue.value?.xray?.activeProfileId || "");
+const xrayActiveProfileId = computed(() => formValue.value?.xray?.activeProfileId || '');
 const xraySubscriptions = computed(() => formValue.value?.xray?.subscriptions || []);
 
-const xrayActiveFilter = ref("all");
+const xrayActiveFilter = ref('all');
 const xrayProfilesPage = ref(0);
 const xrayProfilesPageSize = 50;
 const installedApps = ref([]);
-const installedAppsUpdated = ref("");
-const syncModeDraft = ref("always");
+const installedAppsUpdated = ref('');
+const syncModeDraft = ref('always');
 const syncIntervalDraft = ref(30);
 let syncSaveTimer = null;
 
 const syncModeOptions = [
-  { id: "always", label: "Всегда в фоне", icon: InfinityIcon },
-  { id: "periodic", label: "Периодически", icon: Clock },
-  { id: "foreground", label: "Только пока открыто", icon: Eye },
+  { id: 'always', label: 'Всегда в фоне', icon: InfinityIcon },
+  { id: 'periodic', label: 'Периодически', icon: Clock },
+  { id: 'foreground', label: 'Только пока открыто', icon: Eye },
 ];
 
 function setSyncMode(mode) {
@@ -943,7 +1019,7 @@ function setSyncMode(mode) {
   syncModeDraft.value = mode;
   saveSyncSettings();
 }
-const appsFilter = ref("");
+const appsFilter = ref('');
 const busyAppsRefresh = ref(false);
 
 const appRouting = computed(() => formValue.value?.appRouting || {});
@@ -954,46 +1030,58 @@ const draggingIdx = ref(-1);
 const dragOverIdx = ref(-1);
 
 const matchTypeOptions = [
-  { value: "XRAY_ROUTING_MATCH_UNSPECIFIED", label: "—" },
-  { value: "XRAY_ROUTING_MATCH_GEOIP", label: "GeoIP" },
-  { value: "XRAY_ROUTING_MATCH_GEOSITE", label: "GeoSite" },
-  { value: "XRAY_ROUTING_MATCH_DOMAIN", label: "Домен" },
-  { value: "XRAY_ROUTING_MATCH_IP", label: "IP / CIDR" },
-  { value: "XRAY_ROUTING_MATCH_PORT", label: "Порт" },
+  { value: 'XRAY_ROUTING_MATCH_UNSPECIFIED', label: '—' },
+  { value: 'XRAY_ROUTING_MATCH_GEOIP', label: 'GeoIP' },
+  { value: 'XRAY_ROUTING_MATCH_GEOSITE', label: 'GeoSite' },
+  { value: 'XRAY_ROUTING_MATCH_DOMAIN', label: 'Домен' },
+  { value: 'XRAY_ROUTING_MATCH_IP', label: 'IP / CIDR' },
+  { value: 'XRAY_ROUTING_MATCH_PORT', label: 'Порт' },
 ];
 
 const actionOptions = [
-  { value: "XRAY_ROUTING_ACTION_UNSPECIFIED", label: "—" },
-  { value: "XRAY_ROUTING_ACTION_PROXY", label: "Через тунель" },
-  { value: "XRAY_ROUTING_ACTION_DIRECT", label: "Напрямую" },
-  { value: "XRAY_ROUTING_ACTION_BLOCK", label: "Блокировать" },
+  { value: 'XRAY_ROUTING_ACTION_UNSPECIFIED', label: '—' },
+  { value: 'XRAY_ROUTING_ACTION_PROXY', label: 'Через тунель' },
+  { value: 'XRAY_ROUTING_ACTION_DIRECT', label: 'Напрямую' },
+  { value: 'XRAY_ROUTING_ACTION_BLOCK', label: 'Блокировать' },
 ];
 
 function matchCodeLabel(matchType) {
   switch (matchType) {
-    case "XRAY_ROUTING_MATCH_GEOIP": return "GeoIP код (например, geoip:cn)";
-    case "XRAY_ROUTING_MATCH_GEOSITE": return "GeoSite код (например, geosite:google)";
-    case "XRAY_ROUTING_MATCH_DOMAIN": return "Домен";
-    case "XRAY_ROUTING_MATCH_IP": return "IP или CIDR";
-    case "XRAY_ROUTING_MATCH_PORT": return "Порт или диапазон (например, 80,443,8000-9000)";
-    default: return "Значение";
+    case 'XRAY_ROUTING_MATCH_GEOIP':
+      return 'GeoIP код (например, geoip:cn)';
+    case 'XRAY_ROUTING_MATCH_GEOSITE':
+      return 'GeoSite код (например, geosite:google)';
+    case 'XRAY_ROUTING_MATCH_DOMAIN':
+      return 'Домен';
+    case 'XRAY_ROUTING_MATCH_IP':
+      return 'IP или CIDR';
+    case 'XRAY_ROUTING_MATCH_PORT':
+      return 'Порт или диапазон (например, 80,443,8000-9000)';
+    default:
+      return 'Значение';
   }
 }
 
 function matchCodePlaceholder(matchType) {
   switch (matchType) {
-    case "XRAY_ROUTING_MATCH_GEOIP": return "cn";
-    case "XRAY_ROUTING_MATCH_GEOSITE": return "google";
-    case "XRAY_ROUTING_MATCH_DOMAIN": return "example.com";
-    case "XRAY_ROUTING_MATCH_IP": return "10.0.0.0/8";
-    case "XRAY_ROUTING_MATCH_PORT": return "443";
-    default: return "";
+    case 'XRAY_ROUTING_MATCH_GEOIP':
+      return 'cn';
+    case 'XRAY_ROUTING_MATCH_GEOSITE':
+      return 'google';
+    case 'XRAY_ROUTING_MATCH_DOMAIN':
+      return 'example.com';
+    case 'XRAY_ROUTING_MATCH_IP':
+      return '10.0.0.0/8';
+    case 'XRAY_ROUTING_MATCH_PORT':
+      return '443';
+    default:
+      return '';
   }
 }
 
 function setXrayRouting(key, value) {
   const next = { ...xrayRouting.value };
-  if (value === undefined || value === null || value === "") delete next[key];
+  if (value === undefined || value === null || value === '') delete next[key];
   else next[key] = value;
   patchXray({ routing: next });
 }
@@ -1003,18 +1091,21 @@ function setXrayRules(rules) {
 }
 
 function generateRuleId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  return "r-" + Math.random().toString(36).slice(2, 10);
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'r-' + Math.random().toString(36).slice(2, 10);
 }
 
 function addRule() {
-  const next = [...xrayRules.value, {
-    id: generateRuleId(),
-    matchType: "XRAY_ROUTING_MATCH_DOMAIN",
-    code: "",
-    action: "XRAY_ROUTING_ACTION_PROXY",
-    enabled: true,
-  }];
+  const next = [
+    ...xrayRules.value,
+    {
+      id: generateRuleId(),
+      matchType: 'XRAY_ROUTING_MATCH_DOMAIN',
+      code: '',
+      action: 'XRAY_ROUTING_ACTION_PROXY',
+      enabled: true,
+    },
+  ];
   setXrayRules(next);
 }
 
@@ -1027,7 +1118,7 @@ function patchRule(idx, key, value) {
   const next = xrayRules.value.map((r, i) => {
     if (i !== idx) return r;
     const updated = { ...r };
-    if (value === undefined || value === null || value === "") delete updated[key];
+    if (value === undefined || value === null || value === '') delete updated[key];
     else updated[key] = value;
     return updated;
   });
@@ -1037,14 +1128,14 @@ function patchRule(idx, key, value) {
 function onRuleDragStart(idx, ev) {
   draggingIdx.value = idx;
   if (ev.dataTransfer) {
-    ev.dataTransfer.effectAllowed = "move";
-    ev.dataTransfer.setData("text/plain", String(idx));
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', String(idx));
   }
 }
 
 function onRuleDragOver(idx, ev) {
   if (draggingIdx.value < 0 || draggingIdx.value === idx) return;
-  ev.dataTransfer.dropEffect = "move";
+  ev.dataTransfer.dropEffect = 'move';
   dragOverIdx.value = idx;
 }
 
@@ -1068,17 +1159,17 @@ function onRuleDragEnd() {
 
 function setAppRoutingField(key, value) {
   const next = { ...appRouting.value };
-  if (value === undefined || value === null || value === "") delete next[key];
+  if (value === undefined || value === null || value === '') delete next[key];
   else next[key] = value;
   onFormChanged({ ...(formValue.value || {}), appRouting: next });
 }
 
 function setAppRoutingPackages(text) {
-  const arr = String(text || "")
+  const arr = String(text || '')
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  setAppRoutingField("packages", arr.length ? arr : undefined);
+  setAppRoutingField('packages', arr.length ? arr : undefined);
 }
 
 function isPackageRouted(pkg) {
@@ -1089,10 +1180,10 @@ function togglePackageRouted(pkg, on) {
   const cur = new Set(appRouting.value.packages || []);
   if (on) cur.add(pkg);
   else cur.delete(pkg);
-  setAppRoutingField("packages", cur.size ? [...cur] : undefined);
+  setAppRoutingField('packages', cur.size ? [...cur] : undefined);
 }
 
-const appsKindFilter = ref("all");
+const appsKindFilter = ref('all');
 
 const installedAppsCounts = computed(() => {
   const all = installedApps.value;
@@ -1105,23 +1196,23 @@ const installedAppsCounts = computed(() => {
 });
 
 const appsKindFilterOptions = computed(() => [
-  { value: "all", label: "Все", count: installedAppsCounts.value.all },
-  { value: "recommended", label: "Рекомендуемые", count: installedAppsCounts.value.recommended },
-  { value: "user", label: "Пользовательские", count: installedAppsCounts.value.user },
-  { value: "system", label: "Системные", count: installedAppsCounts.value.system },
+  { value: 'all', label: 'Все', count: installedAppsCounts.value.all },
+  { value: 'recommended', label: 'Рекомендуемые', count: installedAppsCounts.value.recommended },
+  { value: 'user', label: 'Пользовательские', count: installedAppsCounts.value.user },
+  { value: 'system', label: 'Системные', count: installedAppsCounts.value.system },
 ]);
 
 const filteredInstalledApps = computed(() => {
   const filter = appsFilter.value.toLowerCase();
   const kind = appsKindFilter.value;
   return installedApps.value.filter((app) => {
-    if (kind === "recommended" && !app.recommended) return false;
-    if (kind === "user" && app.system) return false;
-    if (kind === "system" && !app.system) return false;
+    if (kind === 'recommended' && !app.recommended) return false;
+    if (kind === 'user' && app.system) return false;
+    if (kind === 'system' && !app.system) return false;
     if (
       filter &&
-      !(app.label || "").toLowerCase().includes(filter) &&
-      !(app.package || "").toLowerCase().includes(filter)
+      !(app.label || '').toLowerCase().includes(filter) &&
+      !(app.package || '').toLowerCase().includes(filter)
     ) {
       return false;
     }
@@ -1134,27 +1225,27 @@ function saveSyncSettings() {
   syncSaveTimer = setTimeout(async () => {
     try {
       await fetch(`/api/admin/clients/${id.value}/sync`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sync_mode: syncModeDraft.value,
           periodic_interval_minutes: Math.max(15, Number(syncIntervalDraft.value) || 30),
         }),
       });
     } catch (err) {
-      console.warn("saveSyncSettings", err);
+      console.warn('saveSyncSettings', err);
     }
   }, 300);
 }
 
 async function loadInstalledApps() {
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}/installed-apps`, { credentials: "include" });
+    const res = await fetch(`/api/admin/clients/${id.value}/installed-apps`, { credentials: 'include' });
     if (!res.ok) return;
     const body = await res.json();
     installedApps.value = body.apps || [];
-    installedAppsUpdated.value = body.updated_at || "";
+    installedAppsUpdated.value = body.updated_at || '';
   } catch {}
 }
 
@@ -1163,11 +1254,12 @@ async function refreshInstalledApps() {
   busyAppsRefresh.value = true;
   try {
     await fetch(`/api/admin/clients/${id.value}/installed-apps/refresh`, {
-      method: "POST",
-      credentials: "include",
+      method: 'POST',
+      credentials: 'include',
     });
     setTimeout(loadInstalledApps, 1500);
-  } catch {} finally {
+  } catch {
+  } finally {
     busyAppsRefresh.value = false;
   }
 }
@@ -1179,9 +1271,9 @@ const xrayProfileFilterOptions = computed(() => {
     if (!p.subscriptionId) continue;
     subCounts.set(p.subscriptionId, (subCounts.get(p.subscriptionId) || 0) + 1);
   }
-  const opts = [{ value: "all", label: "Все", count: xrayProfiles.value.length }];
+  const opts = [{ value: 'all', label: 'Все', count: xrayProfiles.value.length }];
   if (standaloneCount > 0) {
-    opts.push({ value: "__standalone", label: "Без подписки", count: standaloneCount });
+    opts.push({ value: '__standalone', label: 'Без подписки', count: standaloneCount });
   }
   for (const sub of xraySubscriptions.value) {
     opts.push({ value: sub.id, label: sub.title || sub.id, count: subCounts.get(sub.id) || 0 });
@@ -1190,15 +1282,15 @@ const xrayProfileFilterOptions = computed(() => {
 });
 
 const filteredXrayProfiles = computed(() => {
-  if (xrayActiveFilter.value === "all") return xrayProfiles.value;
-  if (xrayActiveFilter.value === "__standalone") {
+  if (xrayActiveFilter.value === 'all') return xrayProfiles.value;
+  if (xrayActiveFilter.value === '__standalone') {
     return xrayProfiles.value.filter((p) => !p.subscriptionId);
   }
   return xrayProfiles.value.filter((p) => p.subscriptionId === xrayActiveFilter.value);
 });
 
 const xrayProfilesTotalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredXrayProfiles.value.length / xrayProfilesPageSize))
+  Math.max(1, Math.ceil(filteredXrayProfiles.value.length / xrayProfilesPageSize)),
 );
 
 const paginatedXrayProfiles = computed(() => {
@@ -1217,9 +1309,9 @@ watch(xrayProfilesTotalPages, (total) => {
 function pluralProfiles(n) {
   const mod10 = n % 10;
   const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return "профиль";
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "профиля";
-  return "профилей";
+  if (mod10 === 1 && mod100 !== 11) return 'профиль';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'профиля';
+  return 'профилей';
 }
 
 async function copyProfileLink(profile) {
@@ -1228,19 +1320,19 @@ async function copyProfileLink(profile) {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(profile.rawLink);
     } else {
-      const ta = document.createElement("textarea");
+      const ta = document.createElement('textarea');
       ta.value = profile.rawLink;
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand("copy");
+      document.execCommand('copy');
       document.body.removeChild(ta);
     }
     copiedProfileId.value = profile.id;
     setTimeout(() => {
-      if (copiedProfileId.value === profile.id) copiedProfileId.value = "";
+      if (copiedProfileId.value === profile.id) copiedProfileId.value = '';
     }, 1200);
   } catch (err) {
-    console.warn("copyProfileLink", err);
+    console.warn('copyProfileLink', err);
   }
 }
 
@@ -1248,39 +1340,39 @@ async function refreshSubscription(subscriptionId) {
   busyRefresh.value = subscriptionId;
   try {
     const res = await fetch(`/api/admin/clients/${id.value}/refresh-subscription`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription_id: subscriptionId }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось отправить команду");
+      throw new Error(body.message || 'Не удалось отправить команду');
     }
   } catch (err) {
     loadError.value = err.message;
   } finally {
-    busyRefresh.value = "";
+    busyRefresh.value = '';
   }
 }
 
 async function refreshAllSubscriptions() {
-  busyRefresh.value = "all";
+  busyRefresh.value = 'all';
   try {
     const res = await fetch(`/api/admin/clients/${id.value}/refresh-subscription`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось отправить команду");
+      throw new Error(body.message || 'Не удалось отправить команду');
     }
   } catch (err) {
     loadError.value = err.message;
   } finally {
-    busyRefresh.value = "";
+    busyRefresh.value = '';
   }
 }
 
@@ -1297,29 +1389,29 @@ function setActiveProfile(id) {
 function removeProfile(id) {
   const profiles = xrayProfiles.value.filter((p) => p.id !== id);
   const next = { ...(formValue.value?.xray || {}), profiles };
-  if (next.activeProfileId === id) next.activeProfileId = profiles[0]?.id || "";
+  if (next.activeProfileId === id) next.activeProfileId = profiles[0]?.id || '';
   patchXray(next);
 }
 
 async function importProfile() {
   if (!profileImportDraft.value || busyProfileImport.value) return;
   busyProfileImport.value = true;
-  profileImportError.value = "";
+  profileImportError.value = '';
   try {
-    const res = await fetch("/api/admin/decode-link", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/admin/decode-link', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ link: profileImportDraft.value }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось распаковать ссылку");
+      throw new Error(body.message || 'Не удалось распаковать ссылку');
     }
     const body = await res.json();
     const newProfiles = body.config?.xray?.profiles || [];
     if (!newProfiles.length) {
-      throw new Error("Ссылка не содержит Xray-профилей");
+      throw new Error('Ссылка не содержит Xray-профилей');
     }
     const merged = [...xrayProfiles.value];
     for (const p of newProfiles) {
@@ -1331,7 +1423,7 @@ async function importProfile() {
     };
     if (!xray.activeProfileId && merged.length) xray.activeProfileId = merged[0].id;
     patchXray(xray);
-    profileImportDraft.value = "";
+    profileImportDraft.value = '';
   } catch (err) {
     profileImportError.value = err.message;
   } finally {
@@ -1340,8 +1432,11 @@ async function importProfile() {
 }
 
 function addSubscription() {
-  const id = "sub_" + Math.random().toString(36).slice(2, 10);
-  const subs = [...xraySubscriptions.value, { id, title: "Новая подписка", url: "", autoUpdate: false, refreshIntervalMinutes: 60 }];
+  const id = 'sub_' + Math.random().toString(36).slice(2, 10);
+  const subs = [
+    ...xraySubscriptions.value,
+    { id, title: 'Новая подписка', url: '', autoUpdate: false, refreshIntervalMinutes: 60 },
+  ];
   patchXray({ subscriptions: subs });
 }
 
@@ -1354,7 +1449,7 @@ function patchSubscription(idx, key, value) {
   const subs = xraySubscriptions.value.map((s, i) => {
     if (i !== idx) return s;
     const next = { ...s };
-    if (value === undefined || value === null || value === "") delete next[key];
+    if (value === undefined || value === null || value === '') delete next[key];
     else next[key] = value;
     return next;
   });
@@ -1362,54 +1457,54 @@ function patchSubscription(idx, key, value) {
 }
 
 function toIntOrUndef(text) {
-  if (text === "" || text == null) return undefined;
+  if (text === '' || text == null) return undefined;
   const n = Number(text);
   return Number.isFinite(n) ? n : undefined;
 }
 
 function setConfigMode(mode) {
-  if (mode === "form") {
+  if (mode === 'form') {
     // Validate the JSON before switching — fall back to JSON view if invalid.
     try {
-      JSON.parse(configDraft.value || "{}");
+      JSON.parse(configDraft.value || '{}');
     } catch (err) {
-      configError.value = "JSON невалиден, переключение в форму невозможно: " + err.message;
+      configError.value = 'JSON невалиден, переключение в форму невозможно: ' + err.message;
       return;
     }
   }
   configMode.value = mode;
-  configError.value = "";
+  configError.value = '';
 }
 
 function loadFromReported() {
   if (!detail.value?.reported_config) {
-    configError.value = "Клиент ещё не присылал свою конфигурацию";
+    configError.value = 'Клиент ещё не присылал свою конфигурацию';
     return;
   }
   configDraft.value = formatJson(detail.value.reported_config);
-  configError.value = "";
+  configError.value = '';
 }
 
 async function pushConfig() {
-  configError.value = "";
+  configError.value = '';
   let parsed;
   try {
-    parsed = JSON.parse(configDraft.value || "{}");
+    parsed = JSON.parse(configDraft.value || '{}');
   } catch (err) {
-    configError.value = "Невалидный JSON: " + err.message;
+    configError.value = 'Невалидный JSON: ' + err.message;
     return;
   }
   busyPush.value = true;
   try {
     const res = await fetch(`/api/admin/clients/${id.value}/config`, {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ config: parsed }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось применить");
+      throw new Error(body.message || 'Не удалось применить');
     }
     await loadDetail();
   } catch (err) {
@@ -1424,14 +1519,14 @@ async function sendCommand(type) {
   lastCmdAck.value = null;
   try {
     const res = await fetch(`/api/admin/clients/${id.value}/command`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Команда отклонена");
+      throw new Error(body.message || 'Команда отклонена');
     }
     lastCmdAck.value = await res.json();
   } catch (err) {
@@ -1445,9 +1540,9 @@ async function toggleLog(streamId, enabled) {
   logToggles.value = { ...logToggles.value, [streamId]: enabled };
   try {
     await fetch(`/api/admin/clients/${id.value}/log-control`, {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         runtime: logToggles.value.runtime,
         proxy: logToggles.value.proxy,
@@ -1455,20 +1550,20 @@ async function toggleLog(streamId, enabled) {
       }),
     });
   } catch (err) {
-    console.warn("toggleLog", err);
+    console.warn('toggleLog', err);
   }
 }
 
 async function onDelete() {
-  if (!confirm("Удалить клиента и отозвать его токен?")) return;
+  if (!confirm('Удалить клиента и отозвать его токен?')) return;
   busyDelete.value = true;
   try {
     const res = await fetch(`/api/admin/clients/${id.value}`, {
-      method: "DELETE",
-      credentials: "include",
+      method: 'DELETE',
+      credentials: 'include',
     });
     if (!res.ok) throw new Error(await res.text());
-    router.push({ name: "admin-clients" });
+    router.push({ name: 'admin-clients' });
   } catch (err) {
     loadError.value = err.message;
   } finally {
@@ -1490,10 +1585,10 @@ async function showLink() {
 
 async function ensureLink() {
   if (wingsvLink.value) return wingsvLink.value;
-  const res = await fetch(`/api/admin/clients/${id.value}/wingsv-link`, { credentials: "include" });
+  const res = await fetch(`/api/admin/clients/${id.value}/wingsv-link`, { credentials: 'include' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || "Ссылка недоступна");
+    throw new Error(body.message || 'Ссылка недоступна');
   }
   const data = await res.json();
   wingsvLink.value = data.wingsv_link;
@@ -1505,21 +1600,21 @@ function dismissLink() {
 }
 
 async function generateQR(link) {
-  if (!link) return "";
-  const QR = await import("qrcode");
-  const canvas = document.createElement("canvas");
+  if (!link) return '';
+  const QR = await import('qrcode');
+  const canvas = document.createElement('canvas');
   canvas.width = 320;
   canvas.height = 320;
   await QR.toCanvas(canvas, link, {
-    errorCorrectionLevel: "H",
+    errorCorrectionLevel: 'H',
     width: 320,
     margin: 1,
-    color: { dark: "#000000", light: "#ffffff" },
+    color: { dark: '#000000', light: '#ffffff' },
   });
   // Overlay WINGS V app icon in the center.
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext('2d');
   const icon = new Image();
-  icon.src = "/img/wingsv-icon.webp";
+  icon.src = '/img/wingsv-icon.webp';
   await new Promise((resolve) => {
     icon.onload = resolve;
     icon.onerror = resolve;
@@ -1527,7 +1622,7 @@ async function generateQR(link) {
   const size = 64;
   const x = (canvas.width - size) / 2;
   const y = (canvas.height - size) / 2;
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = '#ffffff';
   ctx.beginPath();
   ctx.roundRect(x - 6, y - 6, size + 12, size + 12, 16);
   ctx.fill();
@@ -1537,38 +1632,38 @@ async function generateQR(link) {
   ctx.clip();
   ctx.drawImage(icon, x, y, size, size);
   ctx.restore();
-  return canvas.toDataURL("image/png");
+  return canvas.toDataURL('image/png');
 }
 
 watch(wingsvLink, async (link) => {
-  wingsvLinkQR.value = link ? await generateQR(link) : "";
+  wingsvLinkQR.value = link ? await generateQR(link) : '';
 });
 
 async function importFromLink() {
   if (!importLinkDraft.value || busyImport.value) return;
   busyImport.value = true;
-  importError.value = "";
+  importError.value = '';
   try {
-    const res = await fetch("/api/admin/decode-link", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/admin/decode-link', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ link: importLinkDraft.value }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось распаковать ссылку");
+      throw new Error(body.message || 'Не удалось распаковать ссылку');
     }
     const body = await res.json();
     let current = {};
     try {
-      current = JSON.parse(configDraft.value || "{}");
+      current = JSON.parse(configDraft.value || '{}');
     } catch {
       current = {};
     }
     const merged = mergeConfig(current, body.config || {});
     configDraft.value = JSON.stringify(merged, null, 2);
-    importLinkDraft.value = "";
+    importLinkDraft.value = '';
   } catch (err) {
     importError.value = err.message;
   } finally {
@@ -1579,15 +1674,15 @@ async function importFromLink() {
 function mergeConfig(base, patch) {
   if (patch == null) return base;
   if (Array.isArray(patch)) return patch;
-  if (typeof patch !== "object") return patch;
-  if (base == null || typeof base !== "object" || Array.isArray(base)) {
+  if (typeof patch !== 'object') return patch;
+  if (base == null || typeof base !== 'object' || Array.isArray(base)) {
     return { ...patch };
   }
   const out = { ...base };
   for (const key of Object.keys(patch)) {
     const pv = patch[key];
     if (pv === undefined) continue;
-    if (pv && typeof pv === "object" && !Array.isArray(pv)) {
+    if (pv && typeof pv === 'object' && !Array.isArray(pv)) {
       out[key] = mergeConfig(base[key], pv);
     } else {
       out[key] = pv;
@@ -1599,15 +1694,15 @@ function mergeConfig(base, patch) {
 function clearActiveLog() {
   // Чистим только локальный буфер — устройство продолжит присылать новые
   // log_chunk-события и панель снова заполнится с текущей точки.
-  logsText.value = { ...logsText.value, [activeLogTab.value]: "" };
+  logsText.value = { ...logsText.value, [activeLogTab.value]: '' };
 }
 
 function appendLogChunk(streamName, chunk) {
   if (!logToggles.value[streamName]) return;
-  const lines = (chunk?.lines || []).map((l) => l.text).join("\n");
+  const lines = (chunk?.lines || []).map((l) => l.text).join('\n');
   if (!lines) return;
-  const tail = logsText.value[streamName] || "";
-  const next = tail ? tail + "\n" + lines : lines;
+  const tail = logsText.value[streamName] || '';
+  const next = tail ? tail + '\n' + lines : lines;
   // Keep only the last ~64 KB of text per stream so the textarea stays snappy.
   logsText.value = { ...logsText.value, [streamName]: next.slice(-65536) };
 }
@@ -1615,14 +1710,14 @@ function appendLogChunk(streamName, chunk) {
 function streamFromInt(value) {
   switch (value) {
     case 1:
-    case "LOG_STREAM_RUNTIME":
-      return "runtime";
+    case 'LOG_STREAM_RUNTIME':
+      return 'runtime';
     case 2:
-    case "LOG_STREAM_PROXY":
-      return "proxy";
+    case 'LOG_STREAM_PROXY':
+      return 'proxy';
     case 3:
-    case "LOG_STREAM_XRAY":
-      return "xray";
+    case 'LOG_STREAM_XRAY':
+      return 'xray';
     default:
       return null;
   }
@@ -1638,16 +1733,16 @@ onMounted(() => {
   loadInstalledApps();
   socketHandle = connectAdminSocket((event) => {
     if (event.client_id !== id.value) return;
-    if (event.kind === "status_update" || event.kind === "error") {
+    if (event.kind === 'status_update' || event.kind === 'error') {
       loadDetail();
-    } else if (event.kind === "state_report") {
+    } else if (event.kind === 'state_report') {
       loadDetail();
-    } else if (event.kind === "log_chunk") {
+    } else if (event.kind === 'log_chunk') {
       const streamName = streamFromInt(event.payload?.stream);
       if (streamName) appendLogChunk(streamName, event.payload);
-    } else if (event.kind === "command_ack") {
+    } else if (event.kind === 'command_ack') {
       lastCmdAck.value = event.payload;
-    } else if (event.kind === "installed_apps") {
+    } else if (event.kind === 'installed_apps') {
       loadInstalledApps();
     }
   });

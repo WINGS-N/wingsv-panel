@@ -1,12 +1,6 @@
 <template>
   <label class="oneui-checkbox" :class="{ 'is-disabled': disabled }">
-    <input
-      type="checkbox"
-      class="oneui-checkbox-input"
-      :checked="modelValue"
-      :disabled="disabled"
-      @change="onChange"
-    />
+    <input type="checkbox" class="oneui-checkbox-input" :checked="modelValue" :disabled="disabled" @change="onChange" />
     <span class="oneui-checkbox-box" aria-hidden="true">
       <Check class="oneui-checkbox-tick" v-if="modelValue" />
     </span>
@@ -15,16 +9,16 @@
 </template>
 
 <script setup>
-import { Check } from "lucide-vue-next";
+import { Check } from 'lucide-vue-next';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(["update:modelValue", "change"]);
+const emit = defineEmits(['update:modelValue', 'change']);
 
 function onChange(event) {
-  emit("update:modelValue", event.target.checked);
-  emit("change", event.target.checked);
+  emit('update:modelValue', event.target.checked);
+  emit('change', event.target.checked);
 }
 </script>

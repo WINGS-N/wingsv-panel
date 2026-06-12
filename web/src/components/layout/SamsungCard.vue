@@ -1,14 +1,8 @@
 <template>
   <section :class="['surface-card', $attrs.class]">
-    <header
-      v-if="kicker || title || $slots.title || $slots.actions"
-      class="admin-card-header"
-    >
+    <header v-if="kicker || title || $slots.title || $slots.actions" class="admin-card-header">
       <div>
-        <div
-          v-if="kicker"
-          class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker"
-        >
+        <div v-if="kicker" class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker">
           {{ kicker }}
         </div>
         <slot name="title">
@@ -27,9 +21,9 @@
 
 <script setup>
 defineProps({
-  kicker: { type: String, default: "" },
-  title: { type: String, default: "" },
-  subtitle: { type: String, default: "" },
+  kicker: { type: String, default: '' },
+  title: { type: String, default: '' },
+  subtitle: { type: String, default: '' },
 });
 defineOptions({ inheritAttrs: false });
 </script>

@@ -15,6 +15,6 @@
 <script setup>
 defineProps({
   /** Optional helper text shown beneath the loader. */
-  label: { type: String, default: "" },
+  label: { type: String, default: '' },
 });
 </script>

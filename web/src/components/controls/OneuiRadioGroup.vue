@@ -21,11 +21,7 @@
     </button>
   </div>
   <div v-else class="seed-mode-row">
-    <label
-      v-for="opt in options"
-      :key="String(opt.value)"
-      class="seed-mode-option"
-    >
+    <label v-for="opt in options" :key="String(opt.value)" class="seed-mode-option">
       <input
         type="radio"
         :name="groupName"
@@ -40,24 +36,22 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed } from 'vue';
 
 const props = defineProps({
-  modelValue: { type: [String, Number, Boolean], default: "" },
+  modelValue: { type: [String, Number, Boolean], default: '' },
   options: { type: Array, required: true },
-  name: { type: String, default: "" },
+  name: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   /** "default" | "pill" — visual style; same options shape. */
-  variant: { type: String, default: "default" },
+  variant: { type: String, default: 'default' },
 });
-const emit = defineEmits(["update:modelValue", "change"]);
+const emit = defineEmits(['update:modelValue', 'change']);
 
-const groupName = computed(
-  () => props.name || `oneui-radio-${Math.random().toString(36).slice(2, 8)}`,
-);
+const groupName = computed(() => props.name || `oneui-radio-${Math.random().toString(36).slice(2, 8)}`);
 
 function onChange(value) {
-  emit("update:modelValue", value);
-  emit("change", value);
+  emit('update:modelValue', value);
+  emit('change', value);
 }
 </script>

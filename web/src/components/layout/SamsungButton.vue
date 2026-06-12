@@ -18,44 +18,44 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import SamsungLoader from "@/components/layout/SamsungLoader.vue";
+import { computed } from 'vue';
+import SamsungLoader from '@/components/layout/SamsungLoader.vue';
 
 const props = defineProps({
   /** primary | secondary | ghost | text | danger */
-  variant: { type: String, default: "primary" },
-  label: { type: String, default: "" },
+  variant: { type: String, default: 'primary' },
+  label: { type: String, default: '' },
   busy: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   /** native button type — submit / button / reset */
-  type: { type: String, default: "button" },
+  type: { type: String, default: 'button' },
   /** if set — render as <router-link to=...> */
   to: { type: [String, Object], default: undefined },
   /** if set — render as <a href=...> */
   href: { type: String, default: undefined },
 });
-const emit = defineEmits(["click"]);
+const emit = defineEmits(['click']);
 
 const tag = computed(() => {
-  if (props.to) return "router-link";
-  if (props.href) return "a";
-  return "button";
+  if (props.to) return 'router-link';
+  if (props.href) return 'a';
+  return 'button';
 });
-const isButton = computed(() => tag.value === "button");
+const isButton = computed(() => tag.value === 'button');
 
 const classNames = computed(() => {
   switch (props.variant) {
-    case "secondary":
-      return "button-secondary";
-    case "ghost":
-      return "button-ghost";
-    case "text":
-      return "button-text";
-    case "danger":
-      return "button-primary admin-row-action-danger";
-    case "primary":
+    case 'secondary':
+      return 'button-secondary';
+    case 'ghost':
+      return 'button-ghost';
+    case 'text':
+      return 'button-text';
+    case 'danger':
+      return 'button-primary admin-row-action-danger';
+    case 'primary':
     default:
-      return "button-primary";
+      return 'button-primary';
   }
 });
 
@@ -65,6 +65,6 @@ function onClick(event) {
     event.stopPropagation?.();
     return;
   }
-  emit("click", event);
+  emit('click', event);
 }
 </script>

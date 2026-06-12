@@ -8,9 +8,7 @@
       <router-link class="samsung-topbar-brand" to="/">
         <span class="wordmark-inline">WINGS V</span>
       </router-link>
-      <router-link class="samsung-topbar-link" :to="{ name: 'login' }">
-        Войти в панель
-      </router-link>
+      <router-link class="samsung-topbar-link" :to="{ name: 'login' }"> Войти в панель </router-link>
     </header>
 
     <!-- Big-headline hero. Headline + sub-line on the left, primary
@@ -23,8 +21,7 @@
             <span class="wordmark-inline">WINGS V</span> в одной панели
           </h1>
           <p class="landing-hero-sub">
-            Единый клиент для Xray, VK TURN, WireGuard и AmneziaWG —
-            теперь с удобным удалённым управлением.
+            Единый клиент для Xray, VK TURN, WireGuard и AmneziaWG — теперь с удобным удалённым управлением.
           </p>
           <div class="landing-hero-actions">
             <SamsungButton :to="{ name: 'login' }">Вход</SamsungButton>
@@ -44,8 +41,8 @@
       <section class="surface-card">
         <h2 class="hero-title">Открытие ссылок</h2>
         <p class="body-copy mt-3">
-          Откройте ссылку в <span class="wordmark-inline">WINGS V</span>, посмотрите её содержимое перед импортом
-          или скачайте приложение, если оно ещё не установлено.
+          Откройте ссылку в <span class="wordmark-inline">WINGS V</span>, посмотрите её содержимое перед импортом или
+          скачайте приложение, если оно ещё не установлено.
         </p>
 
         <div class="entry-card">
@@ -62,7 +59,7 @@
           <div class="actions-row">
             <SamsungButton :busy="previewLoading" :disabled="!linkInput" @click="loadPreview">
               <template #icon><Eye class="button-icon" aria-hidden="true" /></template>
-              {{ previewLoading ? "Проверяем…" : "Предпросмотр" }}
+              {{ previewLoading ? 'Проверяем…' : 'Предпросмотр' }}
             </SamsungButton>
             <SamsungButton variant="secondary" :disabled="!openLink" @click="openInApp">
               <template #icon><ExternalLink class="button-icon" aria-hidden="true" /></template>
@@ -103,13 +100,11 @@
           <div>
             <div class="section-kicker">Скачать WINGS V</div>
             <h2 class="section-title"><span class="wordmark-inline">WINGS V</span> для Android</h2>
-            <p class="body-copy mt-3">
-              Загрузите актуальную версию приложения для Android и установите её вручную.
-            </p>
+            <p class="body-copy mt-3">Загрузите актуальную версию приложения для Android и установите её вручную.</p>
           </div>
           <SamsungButton variant="ghost" :busy="releaseLoading" @click="loadRelease">
             <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-            {{ releaseLoading ? "Обновляем…" : "Обновить" }}
+            {{ releaseLoading ? 'Обновляем…' : 'Обновить' }}
           </SamsungButton>
         </div>
 
@@ -118,11 +113,11 @@
           <div class="release-topline">
             <div>
               <div class="release-tag">{{ release.tagName || release.name }}</div>
-              <div class="release-meta">
-                {{ release.asset?.name }} · {{ formatBytes(release.asset?.size || 0) }}
-              </div>
+              <div class="release-meta">{{ release.asset?.name }} · {{ formatBytes(release.asset?.size || 0) }}</div>
             </div>
-            <SamsungButton variant="ghost" :href="release.htmlUrl" target="_blank" rel="noreferrer">GitHub</SamsungButton>
+            <SamsungButton variant="ghost" :href="release.htmlUrl" target="_blank" rel="noreferrer"
+              >GitHub</SamsungButton
+            >
           </div>
 
           <div class="download-block">
@@ -139,7 +134,7 @@
                   <CheckCircle2 v-if="cacheReady" class="button-icon" aria-hidden="true" />
                   <Download v-else class="button-icon" aria-hidden="true" />
                 </template>
-                {{ downloading ? "Скачиваем…" : cacheReady ? "Установить" : "Скачать APK" }}
+                {{ downloading ? 'Скачиваем…' : cacheReady ? 'Установить' : 'Скачать APK' }}
               </SamsungButton>
               <SamsungButton variant="secondary" :disabled="!openLink" @click="openInApp">
                 <template #icon><ExternalLink class="button-icon" aria-hidden="true" /></template>
@@ -160,33 +155,33 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
-import { CheckCircle2, Download, ExternalLink, Eye, RefreshCw } from "lucide-vue-next";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
-import SamsungSectionLoader from "@/components/layout/SamsungSectionLoader.vue";
-import PreviewFacts from "@/components/domain/PreviewFacts.vue";
-import PreviewSection from "@/components/domain/PreviewSection.vue";
+import { computed, onMounted, reactive, ref } from 'vue';
+import { CheckCircle2, Download, ExternalLink, Eye, RefreshCw } from 'lucide-vue-next';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
+import PreviewFacts from '@/components/domain/PreviewFacts.vue';
+import PreviewSection from '@/components/domain/PreviewSection.vue';
 
-const CACHE_NAME = "wingsv-download-cache-v1";
-const RELEASE_API_URL = "/api/releases/latest";
-const RELEASE_DOWNLOAD_URL = "/api/download/latest";
-const APK_CONTENT_TYPE = "application/vnd.android.package-archive";
+const CACHE_NAME = 'wingsv-download-cache-v1';
+const RELEASE_API_URL = '/api/releases/latest';
+const RELEASE_DOWNLOAD_URL = '/api/download/latest';
+const APK_CONTENT_TYPE = 'application/vnd.android.package-archive';
 
 const params = new URLSearchParams(window.location.search);
-const initialLink = params.get("link") || "";
+const initialLink = params.get('link') || '';
 
 const linkInput = ref(initialLink);
 const preview = ref(null);
-const previewError = ref("");
+const previewError = ref('');
 const previewLoading = ref(false);
 
 const release = ref(null);
-const releaseError = ref("");
+const releaseError = ref('');
 const releaseLoading = ref(false);
 const downloading = ref(false);
 const cacheReady = ref(false);
 const downloadState = reactive({
-  label: "Готово к скачиванию",
+  label: 'Готово к скачиванию',
   percent: 0,
 });
 
@@ -194,7 +189,7 @@ const year = computed(() => new Date().getFullYear());
 
 const openLink = computed(() => {
   const raw = linkInput.value?.trim();
-  return raw ? raw : "";
+  return raw ? raw : '';
 });
 
 onMounted(async () => {
@@ -207,17 +202,17 @@ onMounted(async () => {
 
 async function loadPreview() {
   previewLoading.value = true;
-  previewError.value = "";
+  previewError.value = '';
   preview.value = null;
   try {
     const response = await fetch(`/api/preview?link=${encodeURIComponent(linkInput.value)}`);
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload.message || "Не удалось прочитать ссылку");
+      throw new Error(payload.message || 'Не удалось прочитать ссылку');
     }
     preview.value = payload;
   } catch (error) {
-    previewError.value = error.message || "Не удалось показать preview";
+    previewError.value = error.message || 'Не удалось показать preview';
   } finally {
     previewLoading.value = false;
   }
@@ -225,16 +220,16 @@ async function loadPreview() {
 
 async function loadRelease() {
   releaseLoading.value = true;
-  releaseError.value = "";
+  releaseError.value = '';
   try {
     const response = await fetch(RELEASE_API_URL);
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload.message || "Не удалось получить релиз");
+      throw new Error(payload.message || 'Не удалось получить релиз');
     }
     const asset = payload.asset || {};
     if (!asset.name) {
-      throw new Error("Не удалось найти APK");
+      throw new Error('Не удалось найти APK');
     }
     release.value = {
       tagName: payload.tagName,
@@ -251,7 +246,7 @@ async function loadRelease() {
       },
     };
   } catch (error) {
-    releaseError.value = error.message || "Не удалось получить релиз";
+    releaseError.value = error.message || 'Не удалось получить релиз';
   } finally {
     releaseLoading.value = false;
   }
@@ -268,18 +263,18 @@ async function downloadLatest() {
     return;
   }
   downloading.value = true;
-  downloadState.label = "Скачиваем APK";
+  downloadState.label = 'Скачиваем APK';
   downloadState.percent = 0;
   try {
     const downloadUrl = currentDownloadUrl();
     const cacheKey = currentCacheKey();
-    if (!downloadUrl || !cacheKey) throw new Error("Не удалось найти APK");
+    if (!downloadUrl || !cacheKey) throw new Error('Не удалось найти APK');
     const response = await fetch(downloadUrl);
-    if (!response.ok || !response.body) throw new Error("Не удалось скачать APK");
+    if (!response.ok || !response.body) throw new Error('Не удалось скачать APK');
 
     // Prefer the asset size known from the release metadata over Content-Length:
     // proxies (Traefik / HTTP/2) often strip the latter, leaving the bar stuck at 0.
-    const headerTotal = Number(response.headers.get("Content-Length") || "0");
+    const headerTotal = Number(response.headers.get('Content-Length') || '0');
     const assetTotal = Number(release.value?.asset?.size || 0);
     const total = headerTotal > 0 ? headerTotal : assetTotal;
     const reader = response.body.getReader();
@@ -297,18 +292,18 @@ async function downloadLatest() {
         downloadState.percent = Math.min(95, Math.floor(received / (1024 * 1024)) * 5);
       }
     }
-    const blob = new Blob(chunks, { type: response.headers.get("Content-Type") || APK_CONTENT_TYPE });
+    const blob = new Blob(chunks, { type: response.headers.get('Content-Type') || APK_CONTENT_TYPE });
     const cachedResponse = new Response(blob, {
-      headers: { "Content-Type": blob.type, "Content-Length": String(blob.size) },
+      headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) },
     });
     const cache = await caches.open(CACHE_NAME);
     await pruneOtherCachedVersions(cache, cacheKey);
     await cache.put(cacheKey, cachedResponse.clone());
     cacheReady.value = true;
-    downloadState.label = "APK готов к установке";
+    downloadState.label = 'APK готов к установке';
     downloadState.percent = 100;
   } catch (error) {
-    downloadState.label = error.message || "Скачивание не удалось";
+    downloadState.label = error.message || 'Скачивание не удалось';
     downloadState.percent = 0;
   } finally {
     downloading.value = false;
@@ -319,7 +314,7 @@ async function installFromCache() {
   const cacheKey = currentCacheKey();
   if (!cacheKey) {
     cacheReady.value = false;
-    downloadState.label = "Не удалось найти APK";
+    downloadState.label = 'Не удалось найти APK';
     downloadState.percent = 0;
     return;
   }
@@ -327,14 +322,14 @@ async function installFromCache() {
   const response = await cache.match(cacheKey);
   if (!response) {
     cacheReady.value = false;
-    downloadState.label = "Кеш не найден, скачайте файл заново";
+    downloadState.label = 'Кеш не найден, скачайте файл заново';
     downloadState.percent = 0;
     return;
   }
   const blob = await response.blob();
-  downloadState.label = "APK открыт из browser cache";
+  downloadState.label = 'APK открыт из browser cache';
   downloadState.percent = 100;
-  await triggerBlobDownload(blob, release.value?.asset?.name || "WINGSV.apk");
+  await triggerBlobDownload(blob, release.value?.asset?.name || 'WINGSV.apk');
 }
 
 async function checkCachedAsset() {
@@ -349,7 +344,7 @@ async function checkCachedAsset() {
   const response = await cache.match(cacheKey);
   cacheReady.value = Boolean(response);
   if (cacheReady.value) {
-    downloadState.label = "APK готов к установке";
+    downloadState.label = 'APK готов к установке';
     downloadState.percent = 100;
   }
 }
@@ -358,7 +353,7 @@ async function pruneOtherCachedVersions(cache, currentKey) {
   try {
     const keys = await cache.keys();
     for (const req of keys) {
-      if (req.url && !req.url.endsWith(currentKey) && currentKey.startsWith("/")) {
+      if (req.url && !req.url.endsWith(currentKey) && currentKey.startsWith('/')) {
         // Compare by full pathname so we don't collide with origin in prefix.
         const url = new URL(req.url);
         const target = new URL(currentKey, url.origin);
@@ -373,19 +368,19 @@ async function pruneOtherCachedVersions(cache, currentKey) {
 }
 
 function currentDownloadUrl() {
-  return release.value?.asset?.downloadUrl || "";
+  return release.value?.asset?.downloadUrl || '';
 }
 
 function currentCacheKey() {
   const downloadUrl = currentDownloadUrl();
-  if (!downloadUrl) return "";
-  const tag = release.value?.tagName || "unknown";
+  if (!downloadUrl) return '';
+  const tag = release.value?.tagName || 'unknown';
   return `${downloadUrl}?v=${encodeURIComponent(tag)}`;
 }
 
 async function triggerBlobDownload(blob, fileName) {
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
+  const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;
   anchor.click();
@@ -393,8 +388,8 @@ async function triggerBlobDownload(blob, fileName) {
 }
 
 function formatBytes(size) {
-  if (!size) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
+  if (!size) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
   let index = 0;
   let value = size;
   while (value >= 1024 && index < units.length - 1) {
@@ -447,7 +442,7 @@ function formatBytes(size) {
 }
 
 .landing-hero-headline {
-  font-family: "SamsungSharpSans", "SamsungOne", sans-serif;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
   font-weight: 700;
   font-size: clamp(34px, 5vw, 60px);
   line-height: 1.04;
@@ -499,7 +494,7 @@ function formatBytes(size) {
   justify-content: space-between;
   gap: 12px;
   padding: 32px 40px 40px;
-  font-family: "SamsungSharpSans", "SamsungOne", sans-serif;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
   font-size: 18px;
   color: rgba(252, 252, 252, 0.4);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -507,7 +502,7 @@ function formatBytes(size) {
 }
 
 .landing-footer-meta {
-  font-family: "SamsungOne", sans-serif;
+  font-family: 'SamsungOne', sans-serif;
   font-size: 12px;
 }
 

@@ -21,14 +21,16 @@
         <tr v-for="c in clients" :key="c.id" class="admin-row" @click="openClient(c.id)">
           <td>
             <div class="admin-row-name">{{ c.name }}</div>
-            <div class="admin-muted"><code class="admin-mono">{{ c.id }}</code></div>
+            <div class="admin-muted">
+              <code class="admin-mono">{{ c.id }}</code>
+            </div>
           </td>
           <td>{{ c.owner_username }}</td>
-          <td>{{ c.device_model || "—" }}</td>
-          <td>{{ c.os_version || "—" }} · {{ c.app_version || "—" }}</td>
+          <td>{{ c.device_model || '—' }}</td>
+          <td>{{ c.os_version || '—' }} · {{ c.app_version || '—' }}</td>
           <td>
             <SamsungPill :variant="c.online ? 'online' : 'offline'">
-              {{ c.online ? "Онлайн" : "Оффлайн" }}
+              {{ c.online ? 'Онлайн' : 'Оффлайн' }}
             </SamsungPill>
           </td>
           <td>{{ formatTs(c.last_seen_at) }}</td>
@@ -40,20 +42,20 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import SamsungCard from "@/components/layout/SamsungCard.vue";
-import SamsungPill from "@/components/layout/SamsungPill.vue";
-import SamsungSectionLoader from "@/components/layout/SamsungSectionLoader.vue";
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import SamsungCard from '@/components/layout/SamsungCard.vue';
+import SamsungPill from '@/components/layout/SamsungPill.vue';
+import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 
 const router = useRouter();
 const clients = ref([]);
 const loaded = ref(false);
-const loadError = ref("");
+const loadError = ref('');
 
 async function load() {
   try {
-    const res = await fetch("/api/owner/clients", { credentials: "include" });
+    const res = await fetch('/api/owner/clients', { credentials: 'include' });
     if (!res.ok) throw new Error(await res.text());
     const body = await res.json();
     clients.value = body.clients || [];
@@ -65,13 +67,13 @@ async function load() {
 }
 
 function openClient(id) {
-  router.push({ name: "admin-client-detail", params: { id } });
+  router.push({ name: 'admin-client-detail', params: { id } });
 }
 
 function formatTs(iso) {
-  if (!iso || iso.startsWith("1970")) return "—";
+  if (!iso || iso.startsWith('1970')) return '—';
   try {
-    return new Date(iso).toLocaleString("ru-RU");
+    return new Date(iso).toLocaleString('ru-RU');
   } catch {
     return iso;
   }

@@ -19,11 +19,11 @@
 
 <script setup>
 defineProps({
-  modelValue: { type: [String, Number], default: "" },
-  type: { type: String, default: "text" },
-  label: { type: String, default: "" },
-  placeholder: { type: String, default: "" },
-  error: { type: String, default: "" },
+  modelValue: { type: [String, Number], default: '' },
+  type: { type: String, default: 'text' },
+  label: { type: String, default: '' },
+  placeholder: { type: String, default: '' },
+  error: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   narrow: { type: Boolean, default: false },
@@ -33,9 +33,9 @@ defineProps({
   max: { type: [String, Number], default: undefined },
   step: { type: [String, Number], default: undefined },
 });
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(['update:modelValue']);
 function onInput(event) {
   const raw = event.target.value;
-  emit("update:modelValue", raw);
+  emit('update:modelValue', raw);
 }
 </script>

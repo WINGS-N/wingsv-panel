@@ -27,7 +27,9 @@
       </thead>
       <tbody>
         <tr v-for="a in admins" :key="a.id" class="admin-row">
-          <td data-label="Логин"><strong>{{ a.username }}</strong></td>
+          <td data-label="Логин">
+            <strong>{{ a.username }}</strong>
+          </td>
           <td data-label="Роль">
             <SamsungPill :variant="a.role === 'owner' ? 'online' : 'offline'">
               {{ a.role }}
@@ -108,7 +110,7 @@
       <template #actions>
         <SamsungButton :busy="creating" :disabled="!canCreate" @click="onCreateAdmin">
           <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          {{ creating ? "Создаём…" : "Создать" }}
+          {{ creating ? 'Создаём…' : 'Создать' }}
         </SamsungButton>
         <SamsungButton variant="secondary" @click="closeCreate">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>
@@ -124,24 +126,16 @@
       @update:model-value="cancelDelete"
     >
       <p v-if="confirmDelete" class="body-copy">
-        Аккаунт <strong>{{ confirmDelete.username }}</strong> будет удалён. Каскадно удалятся все
-        принадлежащие ему клиенты, их конфигурации и журналы. Действие необратимо.
+        Аккаунт <strong>{{ confirmDelete.username }}</strong> будет удалён. Каскадно удалятся все принадлежащие ему
+        клиенты, их конфигурации и журналы. Действие необратимо.
       </p>
       <p v-if="deleteError" class="state-error mt-3">{{ deleteError }}</p>
       <template #actions>
-        <SamsungButton
-          variant="danger"
-          :busy="deletingId === confirmDelete?.id"
-          @click="performDelete"
-        >
+        <SamsungButton variant="danger" :busy="deletingId === confirmDelete?.id" @click="performDelete">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          {{ deletingId === confirmDelete?.id ? "Удаляем…" : "Удалить" }}
+          {{ deletingId === confirmDelete?.id ? 'Удаляем…' : 'Удалить' }}
         </SamsungButton>
-        <SamsungButton
-          variant="secondary"
-          :disabled="deletingId === confirmDelete?.id"
-          @click="cancelDelete"
-        >
+        <SamsungButton variant="secondary" :disabled="deletingId === confirmDelete?.id" @click="cancelDelete">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>
           Отмена
         </SamsungButton>
@@ -153,18 +147,12 @@
       :title="resetTarget ? `Сменить пароль · ${resetTarget.username}` : ''"
       @update:model-value="resetTarget = null"
     >
-      <OneuiInput
-        v-model="resetPassword"
-        label="Новый пароль"
-        type="text"
-        autocomplete="off"
-        class="mt-4"
-      />
+      <OneuiInput v-model="resetPassword" label="Новый пароль" type="text" autocomplete="off" class="mt-4" />
       <p v-if="resetError" class="state-error mt-3">{{ resetError }}</p>
       <template #actions>
         <SamsungButton :busy="resetting" :disabled="!resetPassword" @click="onResetSubmit">
           <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
-          {{ resetting ? "Меняем…" : "Сменить" }}
+          {{ resetting ? 'Меняем…' : 'Сменить' }}
         </SamsungButton>
         <SamsungButton variant="secondary" @click="resetTarget = null">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>
@@ -176,46 +164,46 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
-import { Clock, Copy, Eye, KeyRound, Plus, Trash2, X, Infinity as InfinityIcon } from "lucide-vue-next";
-import { registrationState, refreshRegistrationStatus } from "@/stores/auth.js";
-import OneuiInput from "@/components/controls/OneuiInput.vue";
-import OneuiRadioGroup from "@/components/controls/OneuiRadioGroup.vue";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
-import SamsungCard from "@/components/layout/SamsungCard.vue";
-import SamsungIconButton from "@/components/layout/SamsungIconButton.vue";
-import SamsungModal from "@/components/layout/SamsungModal.vue";
-import SamsungPill from "@/components/layout/SamsungPill.vue";
-import SamsungSectionLoader from "@/components/layout/SamsungSectionLoader.vue";
+import { computed, onMounted, ref } from 'vue';
+import { Clock, Copy, Eye, KeyRound, Plus, Trash2, X, Infinity as InfinityIcon } from 'lucide-vue-next';
+import { registrationState, refreshRegistrationStatus } from '@/stores/auth.js';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
+import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungCard from '@/components/layout/SamsungCard.vue';
+import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
+import SamsungPill from '@/components/layout/SamsungPill.vue';
+import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 
 const admins = ref([]);
 const adminsLoaded = ref(false);
 const invites = ref([]);
-const loadError = ref("");
+const loadError = ref('');
 const showCreate = ref(false);
-const newUsername = ref("");
-const newPassword = ref("");
+const newUsername = ref('');
+const newPassword = ref('');
 const creating = ref(false);
-const createError = ref("");
+const createError = ref('');
 const resetTarget = ref(null);
-const resetPassword = ref("");
+const resetPassword = ref('');
 const resetting = ref(false);
-const resetError = ref("");
+const resetError = ref('');
 const confirmDelete = ref(null);
 const deletingId = ref(0);
-const deleteError = ref("");
+const deleteError = ref('');
 
 const canCreate = computed(() => newUsername.value && newPassword.value && newPassword.value.length >= 8);
 
 const regOptions = [
-  { value: "open", label: "Открытая", icon: InfinityIcon },
-  { value: "invite", label: "По invite", icon: Eye },
-  { value: "closed", label: "Закрытая", icon: Clock },
+  { value: 'open', label: 'Открытая', icon: InfinityIcon },
+  { value: 'invite', label: 'По invite', icon: Eye },
+  { value: 'closed', label: 'Закрытая', icon: Clock },
 ];
 
 async function loadAdmins() {
   try {
-    const res = await fetch("/api/owner/admins", { credentials: "include" });
+    const res = await fetch('/api/owner/admins', { credentials: 'include' });
     if (!res.ok) throw new Error(await res.text());
     const body = await res.json();
     admins.value = body.admins || [];
@@ -228,7 +216,7 @@ async function loadAdmins() {
 
 async function loadInvites() {
   try {
-    const res = await fetch("/api/owner/invites", { credentials: "include" });
+    const res = await fetch('/api/owner/invites', { credentials: 'include' });
     if (res.ok) {
       const body = await res.json();
       invites.value = body.invites || [];
@@ -237,9 +225,9 @@ async function loadInvites() {
 }
 
 function openCreate() {
-  newUsername.value = "";
-  newPassword.value = "";
-  createError.value = "";
+  newUsername.value = '';
+  newPassword.value = '';
+  createError.value = '';
   showCreate.value = true;
 }
 
@@ -250,17 +238,17 @@ function closeCreate() {
 async function onCreateAdmin() {
   if (!canCreate.value || creating.value) return;
   creating.value = true;
-  createError.value = "";
+  createError.value = '';
   try {
-    const res = await fetch("/api/owner/admins", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/owner/admins', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: newUsername.value, password: newPassword.value }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось создать");
+      throw new Error(body.message || 'Не удалось создать');
     }
     closeCreate();
     await loadAdmins();
@@ -273,33 +261,33 @@ async function onCreateAdmin() {
 
 function askDelete(admin) {
   confirmDelete.value = { id: admin.id, username: admin.username };
-  deleteError.value = "";
+  deleteError.value = '';
 }
 
 function cancelDelete() {
   if (deletingId.value) return;
   confirmDelete.value = null;
-  deleteError.value = "";
+  deleteError.value = '';
 }
 
 async function performDelete() {
   if (!confirmDelete.value) return;
   const target = confirmDelete.value;
   deletingId.value = target.id;
-  deleteError.value = "";
+  deleteError.value = '';
   try {
     const res = await fetch(`/api/owner/admins/${target.id}`, {
-      method: "DELETE",
-      credentials: "include",
+      method: 'DELETE',
+      credentials: 'include',
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось удалить");
+      throw new Error(body.message || 'Не удалось удалить');
     }
     confirmDelete.value = null;
     await loadAdmins();
   } catch (err) {
-    deleteError.value = err.message || "Не удалось удалить";
+    deleteError.value = err.message || 'Не удалось удалить';
   } finally {
     deletingId.value = 0;
   }
@@ -307,24 +295,24 @@ async function performDelete() {
 
 function openReset(admin) {
   resetTarget.value = admin;
-  resetPassword.value = "";
-  resetError.value = "";
+  resetPassword.value = '';
+  resetError.value = '';
 }
 
 async function onResetSubmit() {
   if (!resetTarget.value || !resetPassword.value) return;
   resetting.value = true;
-  resetError.value = "";
+  resetError.value = '';
   try {
     const res = await fetch(`/api/owner/admins/${resetTarget.value.id}/reset-password`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ new_password: resetPassword.value }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось");
+      throw new Error(body.message || 'Не удалось');
     }
     resetTarget.value = null;
   } catch (err) {
@@ -337,15 +325,15 @@ async function onResetSubmit() {
 async function setRegistrationMode(mode) {
   if (registrationState.value.mode === mode) return;
   try {
-    const res = await fetch("/api/owner/settings", {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/owner/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ registration_mode: mode }),
     });
     if (!res.ok) throw new Error(await res.text());
     registrationState.value = { mode, loaded: true };
-    if (mode === "invite") loadInvites();
+    if (mode === 'invite') loadInvites();
   } catch (err) {
     loadError.value = err.message;
   }
@@ -353,10 +341,10 @@ async function setRegistrationMode(mode) {
 
 async function onCreateInvite() {
   try {
-    const res = await fetch("/api/owner/invites", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+    const res = await fetch('/api/owner/invites', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ttl_hours: 168 }),
     });
     if (!res.ok) throw new Error(await res.text());
@@ -368,7 +356,7 @@ async function onCreateInvite() {
 
 async function onDeleteInvite(token) {
   try {
-    await fetch(`/api/owner/invites/${token}`, { method: "DELETE", credentials: "include" });
+    await fetch(`/api/owner/invites/${token}`, { method: 'DELETE', credentials: 'include' });
     await loadInvites();
   } catch {}
 }
@@ -380,9 +368,9 @@ async function copyInvite(token) {
 }
 
 function formatTs(iso) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString("ru-RU");
+    return new Date(iso).toLocaleString('ru-RU');
   } catch {
     return iso;
   }

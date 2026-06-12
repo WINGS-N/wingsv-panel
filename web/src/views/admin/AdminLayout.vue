@@ -49,12 +49,7 @@
             <UserCog class="admin-nav-icon" aria-hidden="true" />
             <span>Аккаунт</span>
           </router-link>
-          <router-link
-            v-if="isOwner"
-            class="admin-nav-link"
-            :to="{ name: 'owner-overview' }"
-            active-class="is-active"
-          >
+          <router-link v-if="isOwner" class="admin-nav-link" :to="{ name: 'owner-overview' }" active-class="is-active">
             <Crown class="admin-nav-icon" aria-hidden="true" />
             <span>Owner Console</span>
           </router-link>
@@ -76,11 +71,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import { Crown, LogOut, SlidersHorizontal, UserCog, Users } from "lucide-vue-next";
-import { authState, isOwner, logout, myAvatarUrl, refreshSession } from "@/stores/auth.js";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { Crown, LogOut, SlidersHorizontal, UserCog, Users } from 'lucide-vue-next';
+import { authState, isOwner, logout, myAvatarUrl, refreshSession } from '@/stores/auth.js';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
 const busy = ref(false);
@@ -88,9 +83,12 @@ const admin = computed(() => authState.value.admin);
 
 // Two-letter monogram for the account chip (e.g. "NK" for "Nikita Kim").
 const avatarInitials = computed(() => {
-  const username = admin.value?.username || "";
-  const parts = username.trim().split(/[\s._-]+/).filter(Boolean);
-  if (parts.length === 0) return "·";
+  const username = admin.value?.username || '';
+  const parts = username
+    .trim()
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+  if (parts.length === 0) return '·';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 });
@@ -107,7 +105,7 @@ async function onLogout() {
     await logout();
   } finally {
     busy.value = false;
-    router.push({ name: "login" });
+    router.push({ name: 'login' });
   }
 }
 </script>

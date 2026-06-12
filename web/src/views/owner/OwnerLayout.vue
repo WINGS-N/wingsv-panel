@@ -65,20 +65,23 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
-import { ArrowLeft, ClipboardList, LayoutDashboard, LogOut, Smartphone, UsersRound } from "lucide-vue-next";
-import { authState, logout, myAvatarUrl } from "@/stores/auth.js";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { ArrowLeft, ClipboardList, LayoutDashboard, LogOut, Smartphone, UsersRound } from 'lucide-vue-next';
+import { authState, logout, myAvatarUrl } from '@/stores/auth.js';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
 const busy = ref(false);
 const admin = computed(() => authState.value.admin);
 
 const avatarInitials = computed(() => {
-  const username = admin.value?.username || "";
-  const parts = username.trim().split(/[\s._-]+/).filter(Boolean);
-  if (parts.length === 0) return "·";
+  const username = admin.value?.username || '';
+  const parts = username
+    .trim()
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+  if (parts.length === 0) return '·';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 });
@@ -89,7 +92,7 @@ async function onLogout() {
     await logout();
   } finally {
     busy.value = false;
-    router.push({ name: "login" });
+    router.push({ name: 'login' });
   }
 }
 </script>

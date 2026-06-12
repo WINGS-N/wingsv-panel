@@ -1,7 +1,9 @@
 <template>
   <section class="admin-card">
     <h1 class="admin-card-title">Аккаунт администратора</h1>
-    <p class="admin-muted">Имя пользователя: <strong>{{ admin?.username || "—" }}</strong></p>
+    <p class="admin-muted">
+      Имя пользователя: <strong>{{ admin?.username || '—' }}</strong>
+    </p>
 
     <h2 class="admin-section-subtitle mt-5">Аватар</h2>
     <div class="avatar-row">
@@ -18,14 +20,9 @@
         />
         <SamsungButton variant="secondary" :busy="avatarBusy" @click="fileInput?.click()">
           <template #icon><Camera class="button-icon" aria-hidden="true" /></template>
-          {{ avatarBusy ? "Загружаем…" : "Загрузить" }}
+          {{ avatarBusy ? 'Загружаем…' : 'Загрузить' }}
         </SamsungButton>
-        <SamsungButton
-          v-if="hasCustomAvatar"
-          variant="secondary"
-          :disabled="avatarBusy"
-          @click="removeAvatar"
-        >
+        <SamsungButton v-if="hasCustomAvatar" variant="secondary" :disabled="avatarBusy" @click="removeAvatar">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
           Сбросить
         </SamsungButton>
@@ -36,34 +33,19 @@
 
     <h2 class="admin-section-subtitle mt-6">Сменить пароль</h2>
     <form class="admin-account-form" @submit.prevent="onSubmit">
-      <OneuiInput
-        v-model="oldPassword"
-        label="Текущий пароль"
-        type="password"
-        autocomplete="current-password"
-      />
+      <OneuiInput v-model="oldPassword" label="Текущий пароль" type="password" autocomplete="current-password" />
       <div class="mt-3">
-        <OneuiInput
-          v-model="newPassword"
-          label="Новый пароль"
-          type="password"
-          autocomplete="new-password"
-        />
+        <OneuiInput v-model="newPassword" label="Новый пароль" type="password" autocomplete="new-password" />
       </div>
       <div class="mt-3">
-        <OneuiInput
-          v-model="newPassword2"
-          label="Повтор"
-          type="password"
-          autocomplete="new-password"
-        />
+        <OneuiInput v-model="newPassword2" label="Повтор" type="password" autocomplete="new-password" />
       </div>
       <p v-if="error" class="admin-error mt-3">{{ error }}</p>
       <p v-if="ok" class="admin-success mt-3">Пароль обновлён.</p>
       <div class="actions-row mt-4">
         <SamsungButton type="submit" :busy="busy" :disabled="!canSubmit">
           <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
-          {{ busy ? "Сохраняем…" : "Сменить пароль" }}
+          {{ busy ? 'Сохраняем…' : 'Сменить пароль' }}
         </SamsungButton>
       </div>
     </form>
@@ -71,43 +53,43 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { Camera, KeyRound, Trash2 } from "lucide-vue-next";
-import { authState, changePassword, myAvatarUrl, refreshSession } from "@/stores/auth.js";
-import OneuiInput from "@/components/controls/OneuiInput.vue";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
+import { computed, ref } from 'vue';
+import { Camera, KeyRound, Trash2 } from 'lucide-vue-next';
+import { authState, changePassword, myAvatarUrl, refreshSession } from '@/stores/auth.js';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const admin = computed(() => authState.value.admin);
-const oldPassword = ref("");
-const newPassword = ref("");
-const newPassword2 = ref("");
+const oldPassword = ref('');
+const newPassword = ref('');
+const newPassword2 = ref('');
 const busy = ref(false);
-const error = ref("");
+const error = ref('');
 const ok = ref(false);
 
 const fileInput = ref(null);
 const avatarBusy = ref(false);
-const avatarError = ref("");
+const avatarError = ref('');
 const hasCustomAvatar = computed(() => (admin.value?.avatar_version || 0) > 0);
 
 const canSubmit = computed(() => oldPassword.value && newPassword.value && newPassword.value === newPassword2.value);
 
 async function onSubmit() {
   if (!canSubmit.value) {
-    error.value = "Новый пароль и повтор не совпадают";
+    error.value = 'Новый пароль и повтор не совпадают';
     return;
   }
   busy.value = true;
-  error.value = "";
+  error.value = '';
   ok.value = false;
   try {
     await changePassword(oldPassword.value, newPassword.value);
     ok.value = true;
-    oldPassword.value = "";
-    newPassword.value = "";
-    newPassword2.value = "";
+    oldPassword.value = '';
+    newPassword.value = '';
+    newPassword2.value = '';
   } catch (err) {
-    error.value = err.message || "Не удалось сменить пароль";
+    error.value = err.message || 'Не удалось сменить пароль';
   } finally {
     busy.value = false;
   }
@@ -115,25 +97,25 @@ async function onSubmit() {
 
 async function onFilePicked(e) {
   const file = e.target.files?.[0];
-  e.target.value = "";
+  e.target.value = '';
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) {
-    avatarError.value = "Файл слишком большой (макс. 2 МБ)";
+    avatarError.value = 'Файл слишком большой (макс. 2 МБ)';
     return;
   }
-  avatarError.value = "";
+  avatarError.value = '';
   avatarBusy.value = true;
   try {
     const form = new FormData();
-    form.append("avatar", file);
-    const res = await fetch("/api/admin/me/avatar", {
-      method: "POST",
-      credentials: "include",
+    form.append('avatar', file);
+    const res = await fetch('/api/admin/me/avatar', {
+      method: 'POST',
+      credentials: 'include',
       body: form,
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Не удалось загрузить");
+      throw new Error(body.message || 'Не удалось загрузить');
     }
     await refreshSession();
   } catch (err) {
@@ -145,9 +127,9 @@ async function onFilePicked(e) {
 
 async function removeAvatar() {
   avatarBusy.value = true;
-  avatarError.value = "";
+  avatarError.value = '';
   try {
-    await fetch("/api/admin/me/avatar", { method: "DELETE", credentials: "include" });
+    await fetch('/api/admin/me/avatar', { method: 'DELETE', credentials: 'include' });
     await refreshSession();
   } catch (err) {
     avatarError.value = err.message;

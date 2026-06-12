@@ -8,15 +8,15 @@
 </template>
 
 <script setup>
-import { ChevronDown } from "lucide-vue-next";
+import { ChevronDown } from 'lucide-vue-next';
 defineProps({
-  modelValue: { type: [String, Number], default: "" },
+  modelValue: { type: [String, Number], default: '' },
   options: { type: Array, required: true },
   disabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(["update:modelValue", "change"]);
+const emit = defineEmits(['update:modelValue', 'change']);
 function onChange(event) {
-  emit("update:modelValue", event.target.value);
-  emit("change", event.target.value);
+  emit('update:modelValue', event.target.value);
+  emit('change', event.target.value);
 }
 </script>

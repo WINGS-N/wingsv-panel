@@ -27,12 +27,7 @@
           </div>
 
           <div class="input-field">
-            <OneuiInput
-              v-model="password"
-              label="Пароль"
-              type="password"
-              autocomplete="new-password"
-            />
+            <OneuiInput v-model="password" label="Пароль" type="password" autocomplete="new-password" />
           </div>
 
           <div class="input-field">
@@ -45,11 +40,7 @@
           </div>
 
           <div v-if="registrationState.mode === 'invite'" class="input-field">
-            <OneuiInput
-              v-model.trim="inviteToken"
-              label="Invite-токен"
-              autocomplete="off"
-            />
+            <OneuiInput v-model.trim="inviteToken" label="Invite-токен" autocomplete="off" />
           </div>
 
           <p v-if="registrationState.mode === 'closed'" class="state-error">
@@ -65,12 +56,10 @@
             :disabled="!canSubmit || registrationState.mode === 'closed'"
           >
             <template #icon><UserPlus class="button-icon" aria-hidden="true" /></template>
-            {{ busy ? "Создаём…" : "Создать аккаунт" }}
+            {{ busy ? 'Создаём…' : 'Создать аккаунт' }}
           </SamsungButton>
 
-          <router-link class="login-back-link" :to="{ name: 'login' }">
-            Уже есть аккаунт — войти
-          </router-link>
+          <router-link class="login-back-link" :to="{ name: 'login' }"> Уже есть аккаунт — войти </router-link>
         </form>
       </section>
     </main>
@@ -83,37 +72,37 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { useRouter } from "vue-router";
-import { UserPlus } from "lucide-vue-next";
-import { register, registrationState } from "@/stores/auth.js";
-import OneuiInput from "@/components/controls/OneuiInput.vue";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { UserPlus } from 'lucide-vue-next';
+import { register, registrationState } from '@/stores/auth.js';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
-const username = ref("");
-const password = ref("");
-const passwordConfirm = ref("");
-const inviteToken = ref("");
-const error = ref("");
+const username = ref('');
+const password = ref('');
+const passwordConfirm = ref('');
+const inviteToken = ref('');
+const error = ref('');
 const busy = ref(false);
 const year = computed(() => new Date().getFullYear());
 
 const canSubmit = computed(() => {
   if (!username.value || !password.value || !passwordConfirm.value) return false;
-  if (registrationState.value.mode === "invite" && !inviteToken.value) return false;
+  if (registrationState.value.mode === 'invite' && !inviteToken.value) return false;
   return true;
 });
 
 async function onSubmit() {
   if (busy.value) return;
-  error.value = "";
+  error.value = '';
   if (password.value !== passwordConfirm.value) {
-    error.value = "Пароли не совпадают";
+    error.value = 'Пароли не совпадают';
     return;
   }
   if (password.value.length < 8) {
-    error.value = "Пароль должен содержать не менее 8 символов";
+    error.value = 'Пароль должен содержать не менее 8 символов';
     return;
   }
   busy.value = true;
@@ -123,9 +112,9 @@ async function onSubmit() {
       password: password.value,
       inviteToken: inviteToken.value,
     });
-    router.push("/admin/clients");
+    router.push('/admin/clients');
   } catch (err) {
-    error.value = err.message || "Не удалось создать аккаунт";
+    error.value = err.message || 'Не удалось создать аккаунт';
   } finally {
     busy.value = false;
   }
@@ -161,7 +150,7 @@ async function onSubmit() {
 
 .login-headline {
   text-align: center;
-  font-family: "SamsungSharpSans", "SamsungOne", sans-serif;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
   font-weight: 700;
   font-size: clamp(22px, 2.8vw, 28px);
   line-height: 1.25;
@@ -210,13 +199,13 @@ async function onSubmit() {
   justify-content: space-between;
   gap: 12px;
   padding: 24px 40px 32px;
-  font-family: "SamsungSharpSans", "SamsungOne", sans-serif;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
   font-size: 18px;
   color: rgba(252, 252, 252, 0.4);
 }
 
 .login-footer-meta {
-  font-family: "SamsungOne", sans-serif;
+  font-family: 'SamsungOne', sans-serif;
   font-size: 12px;
 }
 

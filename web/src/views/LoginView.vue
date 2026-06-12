@@ -24,39 +24,23 @@
 
         <form class="login-form" @submit.prevent="onSubmit">
           <div class="input-field">
-            <OneuiInput
-              v-model.trim="username"
-              label="Логин"
-              autocomplete="username"
-            />
+            <OneuiInput v-model.trim="username" label="Логин" autocomplete="username" />
           </div>
 
           <div class="input-field">
-            <OneuiInput
-              v-model="password"
-              label="Пароль"
-              type="password"
-              autocomplete="current-password"
-            />
+            <OneuiInput v-model="password" label="Пароль" type="password" autocomplete="current-password" />
           </div>
 
           <p v-if="error" class="state-error">{{ error }}</p>
 
-          <SamsungButton
-            class="login-submit"
-            type="submit"
-            :busy="busy"
-            :disabled="!username || !password"
-          >
+          <SamsungButton class="login-submit" type="submit" :busy="busy" :disabled="!username || !password">
             <template #icon><LogIn class="button-icon" aria-hidden="true" /></template>
-            {{ busy ? "Входим…" : "Войти" }}
+            {{ busy ? 'Входим…' : 'Войти' }}
           </SamsungButton>
 
-          <router-link
-            v-if="registrationState.mode !== 'closed'"
-            class="login-back-link"
-            :to="{ name: 'register' }"
-          >Создать аккаунт</router-link>
+          <router-link v-if="registrationState.mode !== 'closed'" class="login-back-link" :to="{ name: 'register' }"
+            >Создать аккаунт</router-link
+          >
         </form>
       </section>
     </main>
@@ -69,31 +53,31 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import { LogIn } from "lucide-vue-next";
-import { login, registrationState } from "@/stores/auth.js";
-import OneuiInput from "@/components/controls/OneuiInput.vue";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
+import { computed, ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { LogIn } from 'lucide-vue-next';
+import { login, registrationState } from '@/stores/auth.js';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
 const route = useRoute();
-const username = ref("");
-const password = ref("");
-const error = ref("");
+const username = ref('');
+const password = ref('');
+const error = ref('');
 const busy = ref(false);
 const year = computed(() => new Date().getFullYear());
 
 async function onSubmit() {
   if (busy.value) return;
   busy.value = true;
-  error.value = "";
+  error.value = '';
   try {
     await login(username.value, password.value);
-    const target = typeof route.query.redirect === "string" ? route.query.redirect : "/admin/clients";
+    const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients';
     router.push(target);
   } catch (err) {
-    error.value = err.message || "Не удалось войти";
+    error.value = err.message || 'Не удалось войти';
   } finally {
     busy.value = false;
   }
@@ -129,7 +113,7 @@ async function onSubmit() {
 
 .login-headline {
   text-align: center;
-  font-family: "SamsungSharpSans", "SamsungOne", sans-serif;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
   font-weight: 700;
   font-size: clamp(22px, 2.8vw, 28px);
   line-height: 1.25;
@@ -178,13 +162,13 @@ async function onSubmit() {
   justify-content: space-between;
   gap: 12px;
   padding: 24px 40px 32px;
-  font-family: "SamsungSharpSans", "SamsungOne", sans-serif;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
   font-size: 18px;
   color: rgba(252, 252, 252, 0.4);
 }
 
 .login-footer-meta {
-  font-family: "SamsungOne", sans-serif;
+  font-family: 'SamsungOne', sans-serif;
   font-size: 12px;
 }
 

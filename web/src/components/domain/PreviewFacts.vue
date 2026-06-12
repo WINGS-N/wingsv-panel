@@ -6,7 +6,9 @@
       class="min-w-0 overflow-hidden rounded-[26px] border border-[rgba(255,255,255,0.07)] bg-wings-chip px-5 py-[18px]"
     >
       <div class="mb-2 text-[13px] leading-[1.35] text-[rgba(245,247,255,0.58)]">{{ fact.label }}</div>
-      <div class="text-[17px] font-semibold leading-[1.35] text-wings-text [overflow-wrap:anywhere] [word-break:break-word]">
+      <div
+        class="text-[17px] font-semibold leading-[1.35] text-wings-text [overflow-wrap:anywhere] [word-break:break-word]"
+      >
         {{ fact.value }}
       </div>
     </div>

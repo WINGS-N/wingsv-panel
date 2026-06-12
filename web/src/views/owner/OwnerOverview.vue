@@ -31,13 +31,13 @@
         <span class="keyval-label">База данных</span>
         <span class="keyval-value">
           <SamsungPill :variant="stats?.db_ok ? 'online' : 'offline'">
-            {{ stats?.db_ok ? "OK" : "ERROR" }}
+            {{ stats?.db_ok ? 'OK' : 'ERROR' }}
           </SamsungPill>
         </span>
       </div>
       <div class="keyval">
         <span class="keyval-label">Версия</span>
-        <span class="keyval-value font-mono">{{ stats?.version || "—" }}</span>
+        <span class="keyval-value font-mono">{{ stats?.version || '—' }}</span>
       </div>
       <div class="keyval">
         <span class="keyval-label">Режим регистрации</span>
@@ -82,7 +82,7 @@
     <ul class="admin-list mt-4">
       <li v-for="e in audit" :key="e.id" class="session-row">
         <div>
-          <strong class="session-row-actor">{{ e.actor_username || "—" }}</strong>
+          <strong class="session-row-actor">{{ e.actor_username || '—' }}</strong>
           <code class="admin-mono ml-2">{{ e.action }}</code>
           <span v-if="e.message" class="admin-muted ml-2">{{ e.message }}</span>
         </div>
@@ -93,21 +93,21 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
-import { ClipboardList, UsersRound } from "lucide-vue-next";
-import { registrationState, refreshRegistrationStatus } from "@/stores/auth.js";
-import SamsungButton from "@/components/layout/SamsungButton.vue";
-import SamsungCard from "@/components/layout/SamsungCard.vue";
-import SamsungPill from "@/components/layout/SamsungPill.vue";
-import SamsungSectionLoader from "@/components/layout/SamsungSectionLoader.vue";
+import { computed, onMounted, ref } from 'vue';
+import { ClipboardList, UsersRound } from 'lucide-vue-next';
+import { registrationState, refreshRegistrationStatus } from '@/stores/auth.js';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungCard from '@/components/layout/SamsungCard.vue';
+import SamsungPill from '@/components/layout/SamsungPill.vue';
+import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 
 const stats = ref(null);
 const admins = ref([]);
 const audit = ref([]);
-const loadError = ref("");
+const loadError = ref('');
 
 const uptimeText = computed(() => {
-  if (!stats.value) return "—";
+  if (!stats.value) return '—';
   const s = stats.value.uptime_seconds;
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
@@ -118,17 +118,21 @@ const uptimeText = computed(() => {
 
 const registrationLabel = computed(() => {
   switch (registrationState.value.mode) {
-    case "open": return "Открытая";
-    case "invite": return "По invite-токену";
-    case "closed": return "Закрытая";
-    default: return registrationState.value.mode || "—";
+    case 'open':
+      return 'Открытая';
+    case 'invite':
+      return 'По invite-токену';
+    case 'closed':
+      return 'Закрытая';
+    default:
+      return registrationState.value.mode || '—';
   }
 });
 
 function formatTs(iso) {
-  if (!iso) return "—";
+  if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString("ru-RU");
+    return new Date(iso).toLocaleString('ru-RU');
   } catch {
     return iso;
   }
@@ -136,17 +140,17 @@ function formatTs(iso) {
 
 async function loadStats() {
   try {
-    const res = await fetch("/api/owner/stats", { credentials: "include" });
+    const res = await fetch('/api/owner/stats', { credentials: 'include' });
     if (!res.ok) throw new Error(await res.text());
     stats.value = await res.json();
   } catch (err) {
-    loadError.value = err.message || "Не удалось загрузить статистику";
+    loadError.value = err.message || 'Не удалось загрузить статистику';
   }
 }
 
 async function loadAdminsPreview() {
   try {
-    const res = await fetch("/api/owner/admins", { credentials: "include" });
+    const res = await fetch('/api/owner/admins', { credentials: 'include' });
     if (res.ok) {
       const body = await res.json();
       admins.value = (body.admins || []).slice(0, 5);
@@ -156,7 +160,7 @@ async function loadAdminsPreview() {
 
 async function loadAuditPreview() {
   try {
-    const res = await fetch("/api/owner/audit?limit=8", { credentials: "include" });
+    const res = await fetch('/api/owner/audit?limit=8', { credentials: 'include' });
     if (res.ok) {
       const body = await res.json();
       audit.value = body.entries || [];
