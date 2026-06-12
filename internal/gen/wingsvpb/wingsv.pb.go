@@ -2964,11 +2964,8 @@ type RootSettings struct {
 	KernelWireguard *bool                  `protobuf:"varint,2,opt,name=kernel_wireguard,json=kernelWireguard,proto3,oneof" json:"kernel_wireguard,omitempty"`
 	XrayTproxyMode  *bool                  `protobuf:"varint,3,opt,name=xray_tproxy_mode,json=xrayTproxyMode,proto3,oneof" json:"xray_tproxy_mode,omitempty"`
 	WgInterfaceName string                 `protobuf:"bytes,4,opt,name=wg_interface_name,json=wgInterfaceName,proto3" json:"wg_interface_name,omitempty"`
-	// Включает iptables OUTPUT REJECT для исключённых из туннеля приложений,
-	// пытающихся достучаться до tun-интерфейса. На клиенте по умолчанию on.
-	SplitTunnelLockdown *bool `protobuf:"varint,5,opt,name=split_tunnel_lockdown,json=splitTunnelLockdown,proto3,oneof" json:"split_tunnel_lockdown,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *RootSettings) Reset() {
@@ -3027,13 +3024,6 @@ func (x *RootSettings) GetWgInterfaceName() string {
 		return x.WgInterfaceName
 	}
 	return ""
-}
-
-func (x *RootSettings) GetSplitTunnelLockdown() bool {
-	if x != nil && x.SplitTunnelLockdown != nil {
-		return *x.SplitTunnelLockdown
-	}
-	return false
 }
 
 type AppPreferences struct {
@@ -3885,18 +3875,16 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x14_native_hook_enabledB\x17\n" +
 	"\x15_inline_hooks_enabledB\x10\n" +
 	"\x0e_hide_vpn_appsB\x14\n" +
-	"\x12_hide_from_dumpsys\"\xc1\x02\n" +
+	"\x12_hide_from_dumpsys\"\x8b\x02\n" +
 	"\fRootSettings\x12\x1d\n" +
 	"\aenabled\x18\x01 \x01(\bH\x00R\aenabled\x88\x01\x01\x12.\n" +
 	"\x10kernel_wireguard\x18\x02 \x01(\bH\x01R\x0fkernelWireguard\x88\x01\x01\x12-\n" +
 	"\x10xray_tproxy_mode\x18\x03 \x01(\bH\x02R\x0exrayTproxyMode\x88\x01\x01\x12*\n" +
-	"\x11wg_interface_name\x18\x04 \x01(\tR\x0fwgInterfaceName\x127\n" +
-	"\x15split_tunnel_lockdown\x18\x05 \x01(\bH\x03R\x13splitTunnelLockdown\x88\x01\x01B\n" +
+	"\x11wg_interface_name\x18\x04 \x01(\tR\x0fwgInterfaceNameB\n" +
 	"\n" +
 	"\b_enabledB\x13\n" +
 	"\x11_kernel_wireguardB\x13\n" +
-	"\x11_xray_tproxy_modeB\x18\n" +
-	"\x16_split_tunnel_lockdown\"\xb7\x01\n" +
+	"\x11_xray_tproxy_modeJ\x04\b\x05\x10\x06R\x15split_tunnel_lockdown\"\xb7\x01\n" +
 	"\x0eAppPreferences\x120\n" +
 	"\n" +
 	"theme_mode\x18\x01 \x01(\x0e2\x11.wingsv.ThemeModeR\tthemeMode\x120\n" +
