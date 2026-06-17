@@ -87,6 +87,7 @@ type adminView struct {
 	MustChangePassword bool   `json:"must_change_password"`
 	LastLoginAt        string `json:"last_login_at"`
 	CreatedAt          string `json:"created_at"`
+	AvatarVersion      int64  `json:"avatar_version"`
 	ClientsTotal       int    `json:"clients_total"`
 	ClientsOnline      int    `json:"clients_online"`
 }
@@ -106,6 +107,7 @@ func (h *Handler) respondListAdmins(w http.ResponseWriter) {
 			MustChangePassword: a.MustChangePassword,
 			LastLoginAt:        formatTS(a.LastLoginAt),
 			CreatedAt:          formatTS(a.CreatedAt),
+			AvatarVersion:      a.AvatarVersion,
 		}
 		if cnt, err := h.store.CountClientsByOwner(a.ID); err == nil {
 			view.ClientsTotal = cnt.Total
@@ -127,9 +129,16 @@ func (h *Handler) respondCreateAdmin(w http.ResponseWriter, r *http.Request, own
 		writeError(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	username := strings.TrimSpace(req.Username)
-	if len(username) < auth.MinUsernameLen {
-		writeError(w, http.StatusBadRequest, "username too short")
+	username, err := auth.ValidateNewUsername(req.Username)
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrUsernameTooShort):
+			writeError(w, http.StatusBadRequest, "username too short")
+		case errors.Is(err, auth.ErrUsernameInvalid):
+			writeError(w, http.StatusBadRequest, "username must be alphanumeric (a-z, 0-9)")
+		default:
+			writeError(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 	if len(req.Password) < auth.MinPasswordLen {
@@ -259,16 +268,17 @@ func (h *Handler) respondResetPassword(w http.ResponseWriter, r *http.Request, o
 // ===== /api/owner/clients =====
 
 type clientView struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	OwnerID     int64  `json:"owner_admin_id"`
-	OwnerName   string `json:"owner_username"`
-	Online      bool   `json:"online"`
-	LastSeenAt  string `json:"last_seen_at"`
-	CreatedAt   string `json:"created_at"`
-	DeviceModel string `json:"device_model"`
-	OSVersion   string `json:"os_version"`
-	AppVersion  string `json:"app_version"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	OwnerID            int64  `json:"owner_admin_id"`
+	OwnerName          string `json:"owner_username"`
+	OwnerAvatarVersion int64  `json:"owner_avatar_version"`
+	Online             bool   `json:"online"`
+	LastSeenAt         string `json:"last_seen_at"`
+	CreatedAt          string `json:"created_at"`
+	DeviceModel        string `json:"device_model"`
+	OSVersion          string `json:"os_version"`
+	AppVersion         string `json:"app_version"`
 }
 
 func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
@@ -281,9 +291,13 @@ func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ sto
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	nameByID := make(map[int64]string, len(admins))
+	type adminBrief struct {
+		name      string
+		avatarVer int64
+	}
+	briefByID := make(map[int64]adminBrief, len(admins))
 	for _, a := range admins {
-		nameByID[a.ID] = a.Username
+		briefByID[a.ID] = adminBrief{name: a.Username, avatarVer: a.AvatarVersion}
 	}
 	clients, err := h.store.ListAllClients()
 	if err != nil {
@@ -292,17 +306,19 @@ func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ sto
 	}
 	out := make([]clientView, 0, len(clients))
 	for _, c := range clients {
+		brief := briefByID[c.OwnerAdminID]
 		out = append(out, clientView{
-			ID:          c.ID,
-			Name:        c.Name,
-			OwnerID:     c.OwnerAdminID,
-			OwnerName:   nameByID[c.OwnerAdminID],
-			Online:      c.Online,
-			LastSeenAt:  formatTS(c.LastSeenAt),
-			CreatedAt:   formatTS(c.CreatedAt),
-			DeviceModel: c.DeviceModel,
-			OSVersion:   c.OSVersion,
-			AppVersion:  c.AppVersion,
+			ID:                 c.ID,
+			Name:               c.Name,
+			OwnerID:            c.OwnerAdminID,
+			OwnerName:          brief.name,
+			OwnerAvatarVersion: brief.avatarVer,
+			Online:             c.Online,
+			LastSeenAt:         formatTS(c.LastSeenAt),
+			CreatedAt:          formatTS(c.CreatedAt),
+			DeviceModel:        c.DeviceModel,
+			OSVersion:          c.OSVersion,
+			AppVersion:         c.AppVersion,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"clients": out})

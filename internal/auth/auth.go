@@ -33,10 +33,35 @@ var (
 	ErrUsernameTaken      = errors.New("auth: username taken")
 	ErrPasswordTooShort   = errors.New("auth: password too short")
 	ErrUsernameTooShort   = errors.New("auth: username too short")
+	ErrUsernameInvalid    = errors.New("auth: username must be alphanumeric (a-z, 0-9)")
 	ErrRegistrationClosed = errors.New("auth: registration closed")
 	ErrRegistrationInvite = errors.New("auth: invite token required")
 	ErrInviteTokenInvalid = errors.New("auth: invite token invalid or expired")
 )
+
+// NormalizeUsername strips whitespace and lowercases the input. Login lookups
+// run the user input through this so that mixed-case typing still finds the
+// account; the storage migration backfills lowercase for every existing row.
+func NormalizeUsername(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
+
+// ValidateNewUsername enforces alphanumeric-only usernames (a-z, 0-9) for new
+// registrations. Existing accounts created before this constraint may contain
+// other characters; they keep working for login because the lookup path only
+// normalizes (lowercase+trim) without re-validating.
+func ValidateNewUsername(username string) (string, error) {
+	normalized := NormalizeUsername(username)
+	if len(normalized) < MinUsernameLen {
+		return "", ErrUsernameTooShort
+	}
+	for _, r := range normalized {
+		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')) {
+			return "", ErrUsernameInvalid
+		}
+	}
+	return normalized, nil
+}
 
 type Service struct {
 	store        *storage.Store
@@ -62,7 +87,7 @@ func (s *Service) Bootstrap(username, password string) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.store.CreateAdmin(username, hash, true, storage.RoleOwner)
+	_, err = s.store.CreateAdmin(NormalizeUsername(username), hash, true, storage.RoleOwner)
 	return err
 }
 
@@ -86,7 +111,7 @@ func VerifyPassword(hash, password string) bool {
 }
 
 func (s *Service) Login(username, password string) (storage.Admin, storage.AdminSession, error) {
-	admin, err := s.store.FindAdminByUsername(strings.TrimSpace(username))
+	admin, err := s.store.FindAdminByUsername(NormalizeUsername(username))
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return storage.Admin{}, storage.AdminSession{}, ErrInvalidCredentials
@@ -152,10 +177,11 @@ func (s *Service) ChangePassword(adminID int64, oldPassword, newPassword string)
 // Register creates a new admin honouring the platform's registration mode.
 // inviteToken may be empty for open mode; required for invite mode.
 func (s *Service) Register(username, password, inviteToken string) (storage.Admin, storage.AdminSession, error) {
-	username = strings.TrimSpace(username)
-	if len(username) < MinUsernameLen {
-		return storage.Admin{}, storage.AdminSession{}, ErrUsernameTooShort
+	normalized, err := ValidateNewUsername(username)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
 	}
+	username = normalized
 	if len(password) < MinPasswordLen {
 		return storage.Admin{}, storage.AdminSession{}, ErrPasswordTooShort
 	}

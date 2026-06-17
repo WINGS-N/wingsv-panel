@@ -25,7 +25,12 @@
               <code class="admin-mono">{{ c.id }}</code>
             </div>
           </td>
-          <td>{{ c.owner_username }}</td>
+          <td>
+            <div class="owner-cell">
+              <img class="owner-cell-avatar" :src="ownerAvatarUrl(c)" :alt="`Аватар ${c.owner_username}`" />
+              <span>{{ c.owner_username }}</span>
+            </div>
+          </td>
           <td>{{ c.device_model || '—' }}</td>
           <td>{{ c.os_version || '—' }} · {{ c.app_version || '—' }}</td>
           <td>
@@ -44,9 +49,14 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { avatarUrlFor } from '@/stores/auth.js';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import SamsungPill from '@/components/layout/SamsungPill.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
+
+function ownerAvatarUrl(client) {
+  return avatarUrlFor({ id: client.owner_admin_id, avatar_version: client.owner_avatar_version });
+}
 
 const router = useRouter();
 const clients = ref([]);
@@ -81,3 +91,20 @@ function formatTs(iso) {
 
 onMounted(load);
 </script>
+
+<style scoped>
+.owner-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-cell-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--samsung-surface-elevated, #2a3140);
+}
+</style>

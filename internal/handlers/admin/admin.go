@@ -105,6 +105,8 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, auth.ErrUsernameTooShort):
 			writeError(w, http.StatusBadRequest, "username too short")
+		case errors.Is(err, auth.ErrUsernameInvalid):
+			writeError(w, http.StatusBadRequest, "username must be alphanumeric (a-z, 0-9)")
 		case errors.Is(err, auth.ErrPasswordTooShort):
 			writeError(w, http.StatusBadRequest, "password too short")
 		case errors.Is(err, auth.ErrUsernameTaken):

@@ -73,7 +73,7 @@ async function onSubmit() {
   busy.value = true;
   error.value = '';
   try {
-    await login(username.value, password.value);
+    await login(username.value.trim().toLowerCase(), password.value);
     const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients';
     router.push(target);
   } catch (err) {

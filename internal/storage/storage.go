@@ -53,7 +53,62 @@ func Open(dbPath string) (*Store, error) {
 			}
 		}
 	}
+	if err := migrateAdminUsernamesToLower(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("storage: migrate admin usernames: %w", err)
+	}
 	return &Store{db: db}, nil
+}
+
+// migrateAdminUsernamesToLower lowercases every existing admin username so the
+// case-insensitive login flow (auth.NormalizeUsername) lines up with what's in
+// the table. Run on every startup but only touches rows that actually differ,
+// so it's a no-op after the first migration. Collisions (two admins differing
+// only in case) abort the migration and surface a clear error rather than
+// silently merging the rows.
+func migrateAdminUsernamesToLower(db *sql.DB) error {
+	rows, err := db.Query(`SELECT id, username FROM admins WHERE username <> lower(username)`)
+	if err != nil {
+		return err
+	}
+	type pending struct {
+		id       int64
+		lowered  string
+		original string
+	}
+	var todo []pending
+	for rows.Next() {
+		var p pending
+		if err := rows.Scan(&p.id, &p.original); err != nil {
+			rows.Close()
+			return err
+		}
+		p.lowered = strings.ToLower(p.original)
+		todo = append(todo, p)
+	}
+	rows.Close()
+	if len(todo) == 0 {
+		return nil
+	}
+	for _, p := range todo {
+		var collidingID int64
+		err := db.QueryRow(
+			`SELECT id FROM admins WHERE lower(username) = ? AND id <> ?`,
+			p.lowered, p.id,
+		).Scan(&collidingID)
+		if err == nil {
+			return fmt.Errorf(
+				"username collision when lowercasing admin id=%d %q: row id=%d already owns %q",
+				p.id, p.original, collidingID, p.lowered,
+			)
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		if _, err := db.Exec(`UPDATE admins SET username = ? WHERE id = ?`, p.lowered, p.id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Store) Close() error {

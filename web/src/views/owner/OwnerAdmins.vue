@@ -28,7 +28,10 @@
       <tbody>
         <tr v-for="a in admins" :key="a.id" class="admin-row">
           <td data-label="Логин">
-            <strong>{{ a.username }}</strong>
+            <div class="admin-identity">
+              <img class="admin-identity-avatar" :src="avatarUrlFor(a)" :alt="`Аватар ${a.username}`" />
+              <strong>{{ a.username }}</strong>
+            </div>
           </td>
           <td data-label="Роль">
             <SamsungPill :variant="a.role === 'owner' ? 'online' : 'offline'">
@@ -101,7 +104,12 @@
     </div>
 
     <SamsungModal v-model="showCreate" title="Новый админ">
-      <OneuiInput v-model.trim="newUsername" label="Логин" class="mt-4" />
+      <OneuiInput
+        v-model="newUsername"
+        label="Логин (только a-z, 0-9)"
+        class="mt-4"
+        @update:model-value="onNewUsernameInput"
+      />
       <div class="mt-3">
         <OneuiInput v-model="newPassword" label="Пароль" type="text" autocomplete="off" />
       </div>
@@ -166,7 +174,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { Clock, Copy, Eye, KeyRound, Plus, Trash2, X, Infinity as InfinityIcon } from 'lucide-vue-next';
-import { registrationState, refreshRegistrationStatus } from '@/stores/auth.js';
+import { registrationState, refreshRegistrationStatus, avatarUrlFor } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
@@ -194,6 +202,15 @@ const deletingId = ref(0);
 const deleteError = ref('');
 
 const canCreate = computed(() => newUsername.value && newPassword.value && newPassword.value.length >= 8);
+
+function onNewUsernameInput(value) {
+  const filtered = String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  if (filtered !== newUsername.value) {
+    newUsername.value = filtered;
+  }
+}
 
 const regOptions = [
   { value: 'open', label: 'Открытая', icon: InfinityIcon },
@@ -382,3 +399,20 @@ onMounted(() => {
   loadInvites();
 });
 </script>
+
+<style scoped>
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-identity-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--samsung-surface-elevated, #2a3140);
+}
+</style>

@@ -23,7 +23,12 @@
 
         <form class="login-form" @submit.prevent="onSubmit">
           <div class="input-field">
-            <OneuiInput v-model.trim="username" label="Логин" autocomplete="username" />
+            <OneuiInput
+              v-model="username"
+              label="Логин (только a-z, 0-9)"
+              autocomplete="username"
+              @update:model-value="onUsernameInput"
+            />
           </div>
 
           <div class="input-field">
@@ -93,6 +98,18 @@ const canSubmit = computed(() => {
   if (registrationState.value.mode === 'invite' && !inviteToken.value) return false;
   return true;
 });
+
+function onUsernameInput(value) {
+  // Force the input to the server-side username invariant (lowercase
+  // alphanumeric only) so the user can't accidentally submit something the
+  // backend will reject with a generic 400.
+  const filtered = String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  if (filtered !== username.value) {
+    username.value = filtered;
+  }
+}
 
 async function onSubmit() {
   if (busy.value) return;
