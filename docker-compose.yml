@@ -12,5 +12,4 @@ services:
       PUBLIC_BASE_URL: "https://v.wingsnet.org"
       GITHUB_REPO: "WINGS-N/WINGSV"
       RELEASE_ASSET_SUFFIX: ".apk"
-      STATIC_DIR: "/app/web/dist"
     restart: unless-stopped
