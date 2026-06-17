@@ -240,6 +240,9 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 			ClientName:              name,
 			SyncMode:                syncModeToProto(syncMode),
 			PeriodicIntervalMinutes: uint32(periodic),
+			AdminUsername:           admin.Username,
+			AdminId:                 admin.ID,
+			AdminAvatarVersion:      admin.AvatarVersion,
 		},
 	})
 	if err != nil {
@@ -411,6 +414,9 @@ func (h *Handler) respondWingsvLink(w http.ResponseWriter, client storage.Client
 			ClientName:              client.Name,
 			SyncMode:                syncModeToProto(client.SyncMode),
 			PeriodicIntervalMinutes: uint32(client.PeriodicIntervalMinutes),
+			AdminUsername:           admin.Username,
+			AdminId:                 admin.ID,
+			AdminAvatarVersion:      admin.AvatarVersion,
 		},
 	})
 	if err != nil {
@@ -445,6 +451,9 @@ func (h *Handler) respondRotateToken(w http.ResponseWriter, r *http.Request, cli
 			ClientName:              client.Name,
 			SyncMode:                syncModeToProto(client.SyncMode),
 			PeriodicIntervalMinutes: uint32(client.PeriodicIntervalMinutes),
+			AdminUsername:           admin.Username,
+			AdminId:                 admin.ID,
+			AdminAvatarVersion:      admin.AvatarVersion,
 		},
 	})
 	if err != nil {
