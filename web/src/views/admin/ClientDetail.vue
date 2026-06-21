@@ -270,12 +270,29 @@
         </SamsungButton>
       </div>
       <div class="form-section mt-3">
-        <div class="form-row">
-          <label class="form-label">Режим bypass (исключать вместо включать)</label>
-          <OneuiSwitch :model-value="!!appRouting.bypass" @change="setAppRoutingField('bypass', $event)" />
+        <div class="form-row form-row-stack">
+          <label class="form-label">Режим маршрутизации</label>
+          <div class="routing-mode-picker" role="radiogroup" aria-label="Routing mode">
+            <button
+              v-for="opt in appRoutingModeOptions"
+              :key="opt.value"
+              type="button"
+              class="routing-mode-item"
+              :class="{ 'is-active': appRoutingMode === opt.value }"
+              role="radio"
+              :aria-checked="appRoutingMode === opt.value"
+              @click="setAppRoutingMode(opt.value)"
+            >
+              <span class="routing-mode-circle">
+                <component :is="opt.icon" class="h-6 w-6" aria-hidden="true" />
+              </span>
+              <span class="routing-mode-label">{{ opt.label }}</span>
+            </button>
+          </div>
+          <p class="admin-muted mt-2">{{ appRoutingModeHint }}</p>
         </div>
       </div>
-      <div class="form-section mt-3">
+      <div v-if="appRoutingMode !== 'off'" class="form-section mt-3">
         <div class="form-row">
           <h3 class="form-section-title m-0">Установленные приложения</h3>
           <SamsungButton variant="secondary" :busy="busyAppsRefresh" @click="refreshInstalledApps">
@@ -318,14 +335,14 @@
           </li>
         </ul>
       </div>
-      <details class="admin-config-import mt-3">
+      <details v-if="appRoutingMode !== 'off'" class="admin-config-import mt-3">
         <summary>Редактировать список текстом</summary>
         <textarea
           class="text-input mt-2"
           rows="6"
           spellcheck="false"
-          :value="(appRouting.packages || []).join('\n')"
-          @input="setAppRoutingPackages($event.target.value)"
+          :value="(activeAppRoutingPackages || []).join('\n')"
+          @input="setActiveAppRoutingPackages($event.target.value)"
           placeholder="com.example.app"
         ></textarea>
       </details>
@@ -642,9 +659,12 @@ import {
   Link2,
   Play,
   Plus,
+  PowerOff,
   RefreshCw,
   RotateCcw,
   RotateCw,
+  ShieldCheck,
+  Split,
   Square,
   Trash2,
   UploadCloud,
@@ -1164,23 +1184,75 @@ function setAppRoutingField(key, value) {
   onFormChanged({ ...(formValue.value || {}), appRouting: next });
 }
 
-function setAppRoutingPackages(text) {
+const appRoutingModeOptions = [
+  { value: 'off', label: 'Off', icon: PowerOff },
+  { value: 'bypass', label: 'Bypass', icon: Split },
+  { value: 'whitelist', label: 'Whitelist', icon: ShieldCheck },
+];
+
+const appRoutingMode = computed(() => normalizeAppRoutingMode(appRouting.value));
+
+const appRoutingModeHint = computed(() => {
+  switch (appRoutingMode.value) {
+    case 'off':
+      return 'Все приложения идут через VPN. Список и счётчик скрыты.';
+    case 'whitelist':
+      return 'Через VPN идут только выбранные приложения, остальные — напрямую.';
+    default:
+      return 'Выбранные приложения идут в обход VPN, остальные — через него.';
+  }
+});
+
+function normalizeAppRoutingMode(routing) {
+  if (!routing) return 'bypass';
+  const m = routing.mode;
+  if (m === 'off' || m === 'APP_ROUTING_MODE_OFF') return 'off';
+  if (m === 'whitelist' || m === 'APP_ROUTING_MODE_WHITELIST') return 'whitelist';
+  if (m === 'bypass' || m === 'APP_ROUTING_MODE_BYPASS') return 'bypass';
+  if (typeof routing.bypass === 'boolean') return routing.bypass ? 'bypass' : 'whitelist';
+  return 'bypass';
+}
+
+function setAppRoutingMode(value) {
+  const next = { ...appRouting.value, mode: value };
+  if (value === 'whitelist') next.bypass = false;
+  else if (value === 'bypass') next.bypass = true;
+  else delete next.bypass;
+  onFormChanged({ ...(formValue.value || {}), appRouting: next });
+}
+
+const activeAppRoutingPackagesKey = computed(() =>
+  appRoutingMode.value === 'whitelist' ? 'whitelistPackages' : 'bypassPackages',
+);
+
+const activeAppRoutingPackages = computed(() => {
+  if (appRoutingMode.value === 'off') return [];
+  const explicit = appRouting.value[activeAppRoutingPackagesKey.value];
+  if (Array.isArray(explicit)) return explicit;
+  // legacy: fall back to single `packages` list if matching mode wasn't migrated yet.
+  if (Array.isArray(appRouting.value.packages)) return appRouting.value.packages;
+  return [];
+});
+
+function setActiveAppRoutingPackages(text) {
+  if (appRoutingMode.value === 'off') return;
   const arr = String(text || '')
     .split(/[\s,]+/)
     .map((s) => s.trim())
     .filter(Boolean);
-  setAppRoutingField('packages', arr.length ? arr : undefined);
+  setAppRoutingField(activeAppRoutingPackagesKey.value, arr.length ? arr : undefined);
 }
 
 function isPackageRouted(pkg) {
-  return Array.isArray(appRouting.value.packages) && appRouting.value.packages.includes(pkg);
+  return activeAppRoutingPackages.value.includes(pkg);
 }
 
 function togglePackageRouted(pkg, on) {
-  const cur = new Set(appRouting.value.packages || []);
+  if (appRoutingMode.value === 'off') return;
+  const cur = new Set(activeAppRoutingPackages.value);
   if (on) cur.add(pkg);
   else cur.delete(pkg);
-  setAppRoutingField('packages', cur.size ? [...cur] : undefined);
+  setAppRoutingField(activeAppRoutingPackagesKey.value, cur.size ? [...cur] : undefined);
 }
 
 const appsKindFilter = ref('all');

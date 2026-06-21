@@ -435,18 +435,45 @@
     <!-- App routing -->
     <section v-if="show('app_routing')" class="form-section">
       <h3 class="form-section-title">Per-app routing</h3>
-      <div class="form-row">
-        <label class="form-label">Режим bypass</label>
-        <OneuiSwitch :model-value="!!appRouting.bypass" @change="setAppRouting('bypass', $event)" />
-      </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Пакеты (через запятую или с новой строки)</label>
+        <label class="form-label">Режим маршрутизации</label>
+        <div class="routing-mode-picker" role="radiogroup" aria-label="Routing mode">
+          <button
+            v-for="opt in appRoutingModeOptions"
+            :key="opt.value"
+            type="button"
+            class="routing-mode-item"
+            :class="{ 'is-active': appRoutingMode === opt.value }"
+            role="radio"
+            :aria-checked="appRoutingMode === opt.value"
+            @click="setAppRoutingMode(opt.value)"
+          >
+            <span class="routing-mode-circle">
+              <component :is="opt.icon" class="h-6 w-6" aria-hidden="true" />
+            </span>
+            <span class="routing-mode-label">{{ opt.label }}</span>
+          </button>
+        </div>
+        <p class="form-hint">{{ appRoutingModeHint }}</p>
+      </div>
+      <div v-if="appRoutingMode === 'bypass'" class="form-row form-row-stack">
+        <label class="form-label">Bypass-пакеты (через запятую или с новой строки)</label>
         <textarea
           class="text-input"
           rows="5"
           spellcheck="false"
-          :value="(appRouting.packages || []).join('\n')"
-          @input="setAppRoutingArray('packages', $event.target.value)"
+          :value="(appRouting.bypassPackages || []).join('\n')"
+          @input="setAppRoutingArray('bypassPackages', $event.target.value)"
+        />
+      </div>
+      <div v-if="appRoutingMode === 'whitelist'" class="form-row form-row-stack">
+        <label class="form-label">Whitelist-пакеты (через запятую или с новой строки)</label>
+        <textarea
+          class="text-input"
+          rows="5"
+          spellcheck="false"
+          :value="(appRouting.whitelistPackages || []).join('\n')"
+          @input="setAppRoutingArray('whitelistPackages', $event.target.value)"
         />
       </div>
     </section>
@@ -852,7 +879,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Plus, Trash2 } from 'lucide-vue-next';
+import { Plus, PowerOff, ShieldCheck, Split, Trash2 } from 'lucide-vue-next';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
 
@@ -1247,6 +1274,44 @@ function setAppRoutingArray(key, text) {
     .map((s) => s.trim())
     .filter(Boolean);
   setAppRouting(key, arr.length ? arr : undefined);
+}
+
+const appRoutingModeOptions = [
+  { value: 'off', label: 'Off', icon: PowerOff },
+  { value: 'bypass', label: 'Bypass', icon: Split },
+  { value: 'whitelist', label: 'Whitelist', icon: ShieldCheck },
+];
+
+const appRoutingMode = computed(() => normalizeAppRoutingMode(appRouting.value));
+
+const appRoutingModeHint = computed(() => {
+  switch (appRoutingMode.value) {
+    case 'off':
+      return 'Все приложения идут через VPN.';
+    case 'whitelist':
+      return 'Через VPN идут только выбранные приложения, остальные напрямую.';
+    default:
+      return 'Выбранные приложения идут в обход VPN, остальные через него.';
+  }
+});
+
+function normalizeAppRoutingMode(routing) {
+  if (!routing) return 'bypass';
+  const m = routing.mode;
+  if (m === 'off' || m === 'APP_ROUTING_MODE_OFF') return 'off';
+  if (m === 'whitelist' || m === 'APP_ROUTING_MODE_WHITELIST') return 'whitelist';
+  if (m === 'bypass' || m === 'APP_ROUTING_MODE_BYPASS') return 'bypass';
+  if (typeof routing.bypass === 'boolean') return routing.bypass ? 'bypass' : 'whitelist';
+  return 'bypass';
+}
+
+function setAppRoutingMode(value) {
+  const next = { ...appRouting.value, mode: value };
+  // legacy bypass field for older importers
+  if (value === 'whitelist') next.bypass = false;
+  else if (value === 'bypass') next.bypass = true;
+  else delete next.bypass;
+  emitMerge({ appRouting: next });
 }
 
 function setXposed(key, value) {

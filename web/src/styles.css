@@ -803,6 +803,55 @@
     @apply rounded-full bg-white/10 px-1.5 py-0.5 text-[11px] text-wings-muted;
   }
 
+  .segmented-control {
+    @apply inline-flex w-full max-w-md gap-1 rounded-full border border-wings-border p-1;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .segmented-control-pill {
+    @apply flex-1 rounded-full px-4 py-2 text-[13px] text-wings-muted transition-colors;
+  }
+
+  .segmented-control-pill:hover {
+    @apply text-wings-text;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .segmented-control-pill.is-active {
+    @apply text-wings-text;
+    background: rgba(18, 89, 209, 0.22);
+  }
+
+  .routing-mode-picker {
+    @apply flex w-full max-w-md items-start justify-around gap-2;
+  }
+
+  .routing-mode-item {
+    @apply flex flex-1 cursor-pointer flex-col items-center gap-2 rounded-xl py-2 text-wings-muted transition-colors;
+  }
+
+  .routing-mode-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .routing-mode-item.is-active {
+    @apply text-wings-text;
+  }
+
+  .routing-mode-circle {
+    @apply flex h-14 w-14 items-center justify-center rounded-full transition-colors;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .routing-mode-item.is-active .routing-mode-circle {
+    background: rgba(18, 89, 209, 0.85);
+    color: #fff;
+  }
+
+  .routing-mode-label {
+    @apply text-[13px];
+  }
+
   .admin-pagination {
     @apply mt-4 flex items-center justify-between gap-3;
   }
