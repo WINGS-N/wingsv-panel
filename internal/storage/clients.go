@@ -25,6 +25,7 @@ type Client struct {
 	SyncMode                string
 	PeriodicIntervalMinutes int
 	HasRootAccess           bool
+	VkOAuthAuthorized       bool
 }
 
 func (s *Store) CreateClient(id string, ownerAdminID int64, name, tokenHash string, tokenPlain []byte) (Client, error) {
@@ -103,7 +104,7 @@ func (s *Store) FindClientByID(id string) (Client, error) {
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
 		       sync_mode, periodic_interval_minutes,
-		       has_root_access
+		       has_root_access, vk_oauth_authorized
 		FROM clients WHERE id = ?`, id)
 	return scanClient(row)
 }
@@ -114,7 +115,7 @@ func (s *Store) ListClientsByOwner(ownerAdminID int64) ([]Client, error) {
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
 		       sync_mode, periodic_interval_minutes,
-		       has_root_access
+		       has_root_access, vk_oauth_authorized
 		FROM clients WHERE owner_admin_id = ? ORDER BY created_at DESC`, ownerAdminID)
 	if err != nil {
 		return nil, err
@@ -137,7 +138,7 @@ func (s *Store) ListAllClients() ([]Client, error) {
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
 		       sync_mode, periodic_interval_minutes,
-		       has_root_access
+		       has_root_access, vk_oauth_authorized
 		FROM clients ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -236,6 +237,15 @@ func (s *Store) UpdateClientRootAccess(id string, hasRoot bool) error {
 	return err
 }
 
+// UpdateClientVkOAuthAuthorized persists the latest vk_oauth_authorized signal
+// the device sent in its RuntimeState. Panel uses this to gate the
+// "Generate VK link" admin button - without an active VK OAuth token on the
+// device the command would just bounce with an error.
+func (s *Store) UpdateClientVkOAuthAuthorized(id string, authorized bool) error {
+	_, err := s.db.Exec(`UPDATE clients SET vk_oauth_authorized = ? WHERE id = ?`, boolToInt(authorized), id)
+	return err
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }
@@ -255,14 +265,14 @@ func scanClientRows(rows *sql.Rows) (Client, error) {
 func scanClientFromScanner(scanner rowScanner) (Client, error) {
 	var c Client
 	var createdAt, lastSeenAt int64
-	var online, logRuntime, logProxy, logXRay, hasRoot int
+	var online, logRuntime, logProxy, logXRay, hasRoot, vkAuth int
 	err := scanner.Scan(
 		&c.ID, &c.OwnerAdminID, &c.Name, &c.TokenHash,
 		&c.HWID, &c.DeviceName, &c.DeviceModel, &c.OSVersion, &c.AppVersion,
 		&createdAt, &lastSeenAt, &online,
 		&logRuntime, &logProxy, &logXRay,
 		&c.SyncMode, &c.PeriodicIntervalMinutes,
-		&hasRoot,
+		&hasRoot, &vkAuth,
 	)
 	if err != nil {
 		return Client{}, err
@@ -274,6 +284,7 @@ func scanClientFromScanner(scanner rowScanner) (Client, error) {
 	c.LogProxyEnabled = logProxy != 0
 	c.LogXRayEnabled = logXRay != 0
 	c.HasRootAccess = hasRoot != 0
+	c.VkOAuthAuthorized = vkAuth != 0
 	if c.SyncMode == "" {
 		c.SyncMode = "always"
 	}

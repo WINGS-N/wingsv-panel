@@ -87,6 +87,20 @@ CREATE TABLE IF NOT EXISTS client_installed_apps (
     updated_at INTEGER NOT NULL
 );
 
+-- Pending guardian commands queued while the device was offline. Replayed on
+-- the next welcome handshake. Only stores commands that make sense
+-- regardless of when they fire (refresh_*, generate_vk_link) - state-of-the-
+-- moment commands like start/stop/reconnect bypass the queue entirely.
+CREATE TABLE IF NOT EXISTS pending_commands (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    command_type INTEGER NOT NULL,
+    subscription_id TEXT NOT NULL DEFAULT '',
+    queued_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pending_commands_client ON pending_commands(client_id, queued_at);
+
 CREATE TABLE IF NOT EXISTS package_metadata (
     package TEXT PRIMARY KEY,
     label TEXT NOT NULL DEFAULT '',
