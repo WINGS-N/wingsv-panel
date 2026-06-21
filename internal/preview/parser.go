@@ -279,9 +279,11 @@ func buildPreview(raw string, config *wingsvpb.Config) *Preview {
 	case wingsvpb.ConfigType_CONFIG_TYPE_APP_ROUTING:
 		preview.Title = "Per-app routing"
 		if app := config.GetAppRouting(); app != nil {
-			mode := boolLabel(app.GetBypass(), "Bypass", "Только выбранные")
-			pkgCount := len(app.GetPackages())
-			preview.Subtitle = fmt.Sprintf("%s · %d приложений", mode, pkgCount)
+			preview.Subtitle = fmt.Sprintf(
+				"%s · %d приложений",
+				appRoutingModeLabel(app),
+				appRoutingActivePackageCount(app),
+			)
 		}
 		titleSetByConfigType = true
 	case wingsvpb.ConfigType_CONFIG_TYPE_XRAY_ROUTING:
@@ -645,7 +647,6 @@ func buildXposedSection(x *wingsvpb.Xposed) *PreviewSection {
 	if x.Enabled == nil &&
 		x.AllApps == nil &&
 		x.NativeHookEnabled == nil &&
-		x.InlineHooksEnabled == nil &&
 		x.HideVpnApps == nil &&
 		x.HideFromDumpsys == nil &&
 		x.GetProcfsHookMode() == wingsvpb.XposedProcfsHookMode_XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED &&
@@ -670,9 +671,6 @@ func buildXposedSection(x *wingsvpb.Xposed) *PreviewSection {
 	}
 	if x.NativeHookEnabled != nil {
 		appendFact("Native hook", boolLabel(x.GetNativeHookEnabled(), "Включён", "Выключен"))
-	}
-	if x.InlineHooksEnabled != nil {
-		appendFact("Inline hooks", boolLabel(x.GetInlineHooksEnabled(), "Включены", "Выключены"))
 	}
 	if x.HideVpnApps != nil {
 		appendFact("Скрывать VPN-приложения", boolLabel(x.GetHideVpnApps(), "Да", "Нет"))
@@ -1077,39 +1075,109 @@ func buildAppRoutingSection(app *wingsvpb.AppRouting) *PreviewSection {
 	if app == nil {
 		return nil
 	}
-	if app.Bypass == nil && len(app.GetPackages()) == 0 {
+	mode := resolveAppRoutingMode(app)
+	bypassPkgs := appRoutingBypassPackages(app)
+	whitelistPkgs := appRoutingWhitelistPackages(app)
+	if mode == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED && len(bypassPkgs) == 0 && len(whitelistPkgs) == 0 {
 		return nil
 	}
 	section := PreviewSection{Title: "Per-app routing"}
-	if app.Bypass != nil {
-		section.Facts = append(section.Facts, PreviewFact{
-			Label: "Режим",
-			Value: boolLabel(app.GetBypass(), "Bypass", "Только эти приложения"),
-		})
-	}
-	pkgs := app.GetPackages()
-	if len(pkgs) > 0 {
-		section.Facts = append(section.Facts, PreviewFact{
-			Label: "Пакетов",
-			Value: fmt.Sprintf("%d", len(pkgs)),
-		})
-		preview := pkgs
-		const maxPreview = 8
-		truncated := false
-		if len(preview) > maxPreview {
-			preview = preview[:maxPreview]
-			truncated = true
-		}
-		joined := strings.Join(preview, ", ")
-		if truncated {
-			joined = fmt.Sprintf("%s … +%d", joined, len(pkgs)-maxPreview)
-		}
-		section.Facts = append(section.Facts, PreviewFact{
-			Label: "Список",
-			Value: joined,
-		})
-	}
+	section.Facts = append(section.Facts, PreviewFact{
+		Label: "Режим",
+		Value: appRoutingModeLabel(app),
+	})
+	addPackageFacts(&section, "Bypass", bypassPkgs)
+	addPackageFacts(&section, "Whitelist", whitelistPkgs)
 	return &section
+}
+
+func addPackageFacts(section *PreviewSection, label string, pkgs []string) {
+	if len(pkgs) == 0 {
+		return
+	}
+	section.Facts = append(section.Facts, PreviewFact{
+		Label: label + " пакетов",
+		Value: fmt.Sprintf("%d", len(pkgs)),
+	})
+	preview := pkgs
+	const maxPreview = 8
+	truncated := false
+	if len(preview) > maxPreview {
+		preview = preview[:maxPreview]
+		truncated = true
+	}
+	joined := strings.Join(preview, ", ")
+	if truncated {
+		joined = fmt.Sprintf("%s … +%d", joined, len(pkgs)-maxPreview)
+	}
+	section.Facts = append(section.Facts, PreviewFact{
+		Label: label,
+		Value: joined,
+	})
+}
+
+func resolveAppRoutingMode(app *wingsvpb.AppRouting) wingsvpb.AppRoutingMode {
+	if app == nil {
+		return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED
+	}
+	if app.GetMode() != wingsvpb.AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED {
+		return app.GetMode()
+	}
+	if app.Bypass != nil {
+		if app.GetBypass() {
+			return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS
+		}
+		return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST
+	}
+	return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED
+}
+
+func appRoutingModeLabel(app *wingsvpb.AppRouting) string {
+	switch resolveAppRoutingMode(app) {
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_OFF:
+		return "Off"
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST:
+		return "Whitelist"
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS:
+		return "Bypass"
+	}
+	return "Не задан"
+}
+
+func appRoutingBypassPackages(app *wingsvpb.AppRouting) []string {
+	if app == nil {
+		return nil
+	}
+	if pkgs := app.GetBypassPackages(); len(pkgs) > 0 {
+		return pkgs
+	}
+	if resolveAppRoutingMode(app) == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS {
+		return app.GetPackages()
+	}
+	return nil
+}
+
+func appRoutingWhitelistPackages(app *wingsvpb.AppRouting) []string {
+	if app == nil {
+		return nil
+	}
+	if pkgs := app.GetWhitelistPackages(); len(pkgs) > 0 {
+		return pkgs
+	}
+	if resolveAppRoutingMode(app) == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST {
+		return app.GetPackages()
+	}
+	return nil
+}
+
+func appRoutingActivePackageCount(app *wingsvpb.AppRouting) int {
+	switch resolveAppRoutingMode(app) {
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS:
+		return len(appRoutingBypassPackages(app))
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST:
+		return len(appRoutingWhitelistPackages(app))
+	}
+	return 0
 }
 
 func normalizeBase64(value string) string {

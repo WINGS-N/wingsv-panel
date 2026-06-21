@@ -231,8 +231,23 @@ message Xray {
 }
 
 message AppRouting {
+  // bypass поле унаследовано от старой версии: true -> BYPASS, false -> WHITELIST.
+  // Используется только для миграции и совместимости со старыми экспортами.
+  // Новые клиенты должны выставлять mode и соответствующий *_packages.
   optional bool bypass = 1;
+  // Унаследованный единый список пакетов. При импорте кладётся в bypass_packages
+  // или whitelist_packages в зависимости от mode/bypass.
   repeated string packages = 2;
+  AppRoutingMode mode = 3;
+  repeated string bypass_packages = 4;
+  repeated string whitelist_packages = 5;
+}
+
+enum AppRoutingMode {
+  APP_ROUTING_MODE_UNSPECIFIED = 0;
+  APP_ROUTING_MODE_OFF = 1;
+  APP_ROUTING_MODE_BYPASS = 2;
+  APP_ROUTING_MODE_WHITELIST = 3;
 }
 
 message XrayRouting {
@@ -332,7 +347,9 @@ message Xposed {
   optional bool enabled = 1;
   optional bool all_apps = 2;
   optional bool native_hook_enabled = 3;
-  optional bool inline_hooks_enabled = 4;
+  // Tag 4 (inline_hooks_enabled) is reserved: shadowhook backend was removed.
+  reserved 4;
+  reserved "inline_hooks_enabled";
   optional bool hide_vpn_apps = 5;
   optional bool hide_from_dumpsys = 6;
   XposedProcfsHookMode procfs_hook_mode = 7;
