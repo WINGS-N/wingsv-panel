@@ -146,6 +146,10 @@ const (
 	CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION      CommandType = 5
 	CommandType_COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS CommandType = 6
 	CommandType_COMMAND_TYPE_REFRESH_INSTALLED_APPS    CommandType = 7
+	// Просит устройство сгенерировать новый VK-link через VkCallsApi,
+	// добавить его в settings.vkLinks и отослать свежий StateReport.
+	// Работает только если на устройстве выполнен VK OAuth.
+	CommandType_COMMAND_TYPE_GENERATE_VK_LINK CommandType = 8
 )
 
 // Enum value maps for CommandType.
@@ -159,6 +163,7 @@ var (
 		5: "COMMAND_TYPE_REFRESH_SUBSCRIPTION",
 		6: "COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS",
 		7: "COMMAND_TYPE_REFRESH_INSTALLED_APPS",
+		8: "COMMAND_TYPE_GENERATE_VK_LINK",
 	}
 	CommandType_value = map[string]int32{
 		"COMMAND_TYPE_UNSPECIFIED":               0,
@@ -169,6 +174,7 @@ var (
 		"COMMAND_TYPE_REFRESH_SUBSCRIPTION":      5,
 		"COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS": 6,
 		"COMMAND_TYPE_REFRESH_INSTALLED_APPS":    7,
+		"COMMAND_TYPE_GENERATE_VK_LINK":          8,
 	}
 )
 
@@ -719,8 +725,12 @@ type RuntimeState struct {
 	// использует это чтобы прятать root/sharing/xposed/kernel-WG секции в UI и
 	// молча обнулять их при push'е конфига клиенту без рута.
 	HasRootAccess bool `protobuf:"varint,5,opt,name=has_root_access,json=hasRootAccess,proto3" json:"has_root_access,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Сигнал устройства: VK OAuth выполнен и токен в силе. Без этого панель
+	// не показывает кнопку "Сгенерировать VK link" (и device-side команда
+	// GENERATE_VK_LINK ответит ошибкой).
+	VkOauthAuthorized bool `protobuf:"varint,6,opt,name=vk_oauth_authorized,json=vkOauthAuthorized,proto3" json:"vk_oauth_authorized,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RuntimeState) Reset() {
@@ -784,6 +794,13 @@ func (x *RuntimeState) GetErrorMessage() string {
 func (x *RuntimeState) GetHasRootAccess() bool {
 	if x != nil {
 		return x.HasRootAccess
+	}
+	return false
+}
+
+func (x *RuntimeState) GetVkOauthAuthorized() bool {
+	if x != nil {
+		return x.VkOauthAuthorized
 	}
 	return false
 }
@@ -1402,13 +1419,14 @@ const file_guardian_proto_rawDesc = "" +
 	"\x05ts_ms\x18\x01 \x01(\x03R\x04tsMs\"r\n" +
 	"\vStateReport\x12*\n" +
 	"\bsnapshot\x18\x01 \x01(\v2\x0e.wingsv.ConfigR\bsnapshot\x127\n" +
-	"\aruntime\x18\x02 \x01(\v2\x1d.wingsv.guardian.RuntimeStateR\aruntime\"\xdb\x01\n" +
+	"\aruntime\x18\x02 \x01(\v2\x1d.wingsv.guardian.RuntimeStateR\aruntime\"\x8b\x02\n" +
 	"\fRuntimeState\x12#\n" +
 	"\rtunnel_active\x18\x01 \x01(\bR\ftunnelActive\x122\n" +
 	"\x05phase\x18\x02 \x01(\x0e2\x1c.wingsv.guardian.TunnelPhaseR\x05phase\x12%\n" +
 	"\x0eactive_backend\x18\x03 \x01(\tR\ractiveBackend\x12#\n" +
 	"\rerror_message\x18\x04 \x01(\tR\ferrorMessage\x12&\n" +
-	"\x0fhas_root_access\x18\x05 \x01(\bR\rhasRootAccess\"P\n" +
+	"\x0fhas_root_access\x18\x05 \x01(\bR\rhasRootAccess\x12.\n" +
+	"\x13vk_oauth_authorized\x18\x06 \x01(\bR\x11vkOauthAuthorized\"P\n" +
 	"\n" +
 	"ConfigPush\x12&\n" +
 	"\x06config\x18\x01 \x01(\v2\x0e.wingsv.ConfigR\x06config\x12\x1a\n" +
@@ -1460,7 +1478,7 @@ const file_guardian_proto_rawDesc = "" +
 	"\x16LOG_STREAM_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12LOG_STREAM_RUNTIME\x10\x01\x12\x14\n" +
 	"\x10LOG_STREAM_PROXY\x10\x02\x12\x13\n" +
-	"\x0fLOG_STREAM_XRAY\x10\x03*\x9d\x02\n" +
+	"\x0fLOG_STREAM_XRAY\x10\x03*\xc0\x02\n" +
 	"\vCommandType\x12\x1c\n" +
 	"\x18COMMAND_TYPE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19COMMAND_TYPE_START_TUNNEL\x10\x01\x12\x1c\n" +
@@ -1469,7 +1487,8 @@ const file_guardian_proto_rawDesc = "" +
 	"\x17COMMAND_TYPE_REPORT_NOW\x10\x04\x12%\n" +
 	"!COMMAND_TYPE_REFRESH_SUBSCRIPTION\x10\x05\x12*\n" +
 	"&COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS\x10\x06\x12'\n" +
-	"#COMMAND_TYPE_REFRESH_INSTALLED_APPS\x10\aBH\n" +
+	"#COMMAND_TYPE_REFRESH_INSTALLED_APPS\x10\a\x12!\n" +
+	"\x1dCOMMAND_TYPE_GENERATE_VK_LINK\x10\bBH\n" +
 	"\rwings.v.protoB\rGuardianProtoH\x03Z&v.wingsnet.org/internal/gen/guardianpbb\x06proto3"
 
 var (
