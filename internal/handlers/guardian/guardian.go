@@ -197,6 +197,30 @@ func (h *Handler) runSession(ctx context.Context, conn *websocket.Conn, client s
 			}
 		}
 	}
+	// Drain pending commands queued by the admin while the device was offline,
+	// AFTER the welcome ConfigPush. Order matters for generate_vk_link: the
+	// command mutates settings.vkLinks on the device, and ConfigPush carries
+	// the server's desired list which would otherwise clobber the just-
+	// generated link before the device reports it back. ConfigPush first ->
+	// device applies admin's desired state -> then deferred commands layer
+	// their mutations on top -> StateReport reflects the full result.
+	if pending, perr := h.store.DrainPendingCommands(client.ID); perr == nil {
+		for _, pc := range pending {
+			cmdID, idErr := auth.GenerateClientID()
+			if idErr != nil {
+				continue
+			}
+			_ = sess.SendFrame(&guardianpb.Frame{
+				Payload: &guardianpb.Frame_Command{
+					Command: &guardianpb.Command{
+						Type:           guardianpb.CommandType(pc.CommandType),
+						Id:             cmdID,
+						SubscriptionId: pc.SubscriptionID,
+					},
+				},
+			})
+		}
+	}
 
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
 	defer heartbeatTicker.Stop()
@@ -277,6 +301,7 @@ func (h *Handler) handleClientFrame(frame *guardianpb.Frame, sess *session) {
 				_ = h.store.UpsertClientRuntime(sess.client.ID, b)
 			}
 			_ = h.store.UpdateClientRootAccess(sess.client.ID, runtime.GetHasRootAccess())
+			_ = h.store.UpdateClientVkOAuthAuthorized(sess.client.ID, runtime.GetVkOauthAuthorized())
 		}
 		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
 	case *guardianpb.Frame_LogChunk:
@@ -294,6 +319,7 @@ func (h *Handler) handleClientFrame(frame *guardianpb.Frame, sess *session) {
 				_ = h.store.UpsertClientRuntime(sess.client.ID, b)
 			}
 			_ = h.store.UpdateClientRootAccess(sess.client.ID, runtime.GetHasRootAccess())
+			_ = h.store.UpdateClientVkOAuthAuthorized(sess.client.ID, runtime.GetVkOauthAuthorized())
 		}
 		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
 	case *guardianpb.Frame_CommandAck:

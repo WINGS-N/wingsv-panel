@@ -69,6 +69,7 @@ type clientView struct {
 	PeriodicIntervalMinutes int    `json:"periodic_interval_minutes"`
 	BackendType             string `json:"backend_type"`
 	HasRootAccess           bool   `json:"has_root_access"`
+	VkOAuthAuthorized       bool   `json:"vk_oauth_authorized"`
 }
 
 func toClientView(c storage.Client) clientView {
@@ -89,6 +90,7 @@ func toClientView(c storage.Client) clientView {
 		SyncMode:                c.SyncMode,
 		PeriodicIntervalMinutes: c.PeriodicIntervalMinutes,
 		HasRootAccess:           c.HasRootAccess,
+		VkOAuthAuthorized:       c.VkOAuthAuthorized,
 	}
 }
 
@@ -633,6 +635,23 @@ func (h *Handler) respondLogControl(w http.ResponseWriter, r *http.Request, clie
 
 type commandRequest struct {
 	Type string `json:"type"`
+	// Only used for generate_vk_link when the client is offline: admin can
+	// enqueue several link generations to fire when the device reconnects.
+	// Defaults to 1. Capped at 50 to keep the queue sane.
+	Count int `json:"count,omitempty"`
+}
+
+const maxQueuedGenerateVkLinkCount = 50
+
+// queueableCommands lists command types that survive an offline client and get
+// replayed at the next welcome. Fire-and-forget commands (start/stop/reconnect/
+// report_now) stay 503 when offline — running them an hour later would surprise
+// the user.
+var queueableCommands = map[guardianpb.CommandType]bool{
+	guardianpb.CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION:      true,
+	guardianpb.CommandType_COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS: true,
+	guardianpb.CommandType_COMMAND_TYPE_REFRESH_INSTALLED_APPS:    true,
+	guardianpb.CommandType_COMMAND_TYPE_GENERATE_VK_LINK:          true,
 }
 
 func (h *Handler) respondCommand(w http.ResponseWriter, r *http.Request, client storage.Client) {
@@ -648,7 +667,16 @@ func (h *Handler) respondCommand(w http.ResponseWriter, r *http.Request, client 
 	}
 	sink := h.hub.ClientSink(client.ID)
 	if sink == nil {
-		writeError(w, http.StatusServiceUnavailable, "client offline")
+		if !queueableCommands[cmdType] {
+			writeError(w, http.StatusServiceUnavailable, "client offline")
+			return
+		}
+		queued, err := h.enqueueOfflineCommand(client.ID, cmdType, "", req.Count)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{"queued": true, "queued_count": queued})
 		return
 	}
 	id, err := auth.GenerateClientID()
@@ -667,6 +695,44 @@ func (h *Handler) respondCommand(w http.ResponseWriter, r *http.Request, client 
 	writeJSON(w, http.StatusAccepted, map[string]any{"id": id})
 }
 
+// enqueueOfflineCommand persists a queueable command (or several) for an
+// offline client. For generate_vk_link the admin may pass a count > 1 so a
+// burst lands when the device reconnects. The refresh_* commands are
+// idempotent so we dedup them to one pending row.
+func (h *Handler) enqueueOfflineCommand(clientID string, cmdType guardianpb.CommandType, subscriptionID string, count int) (int, error) {
+	switch cmdType {
+	case guardianpb.CommandType_COMMAND_TYPE_GENERATE_VK_LINK:
+		if count <= 0 {
+			count = 1
+		}
+		if count > maxQueuedGenerateVkLinkCount {
+			count = maxQueuedGenerateVkLinkCount
+		}
+		queued := 0
+		for i := 0; i < count; i++ {
+			if _, err := h.store.EnqueuePendingCommand(clientID, int32(cmdType), subscriptionID); err != nil {
+				return queued, err
+			}
+			queued++
+		}
+		return queued, nil
+	case
+		guardianpb.CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION,
+		guardianpb.CommandType_COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS,
+		guardianpb.CommandType_COMMAND_TYPE_REFRESH_INSTALLED_APPS:
+		_, inserted, err := h.store.EnqueuePendingCommandDedup(clientID, int32(cmdType), subscriptionID)
+		if err != nil {
+			return 0, err
+		}
+		if inserted {
+			return 1, nil
+		}
+		return 0, nil
+	default:
+		return 0, nil
+	}
+}
+
 func parseCommandType(name string) (guardianpb.CommandType, bool) {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "start_tunnel", "start":
@@ -681,6 +747,10 @@ func parseCommandType(name string) (guardianpb.CommandType, bool) {
 		return guardianpb.CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION, true
 	case "refresh_all_subscriptions":
 		return guardianpb.CommandType_COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS, true
+	case "refresh_installed_apps":
+		return guardianpb.CommandType_COMMAND_TYPE_REFRESH_INSTALLED_APPS, true
+	case "generate_vk_link":
+		return guardianpb.CommandType_COMMAND_TYPE_GENERATE_VK_LINK, true
 	}
 	return 0, false
 }
@@ -692,9 +762,19 @@ type refreshSubscriptionRequest struct {
 func (h *Handler) respondRefreshSubscription(w http.ResponseWriter, r *http.Request, client storage.Client) {
 	var req refreshSubscriptionRequest
 	_ = json.NewDecoder(r.Body).Decode(&req)
+	cmdType := guardianpb.CommandType_COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS
+	subID := strings.TrimSpace(req.SubscriptionID)
+	if subID != "" {
+		cmdType = guardianpb.CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION
+	}
 	sink := h.hub.ClientSink(client.ID)
 	if sink == nil {
-		writeError(w, http.StatusServiceUnavailable, "client offline")
+		queued, err := h.enqueueOfflineCommand(client.ID, cmdType, subID, 0)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{"queued": true, "queued_count": queued})
 		return
 	}
 	id, err := auth.GenerateClientID()
@@ -702,13 +782,9 @@ func (h *Handler) respondRefreshSubscription(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	cmdType := guardianpb.CommandType_COMMAND_TYPE_REFRESH_ALL_SUBSCRIPTIONS
-	if strings.TrimSpace(req.SubscriptionID) != "" {
-		cmdType = guardianpb.CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION
-	}
 	if err := sink.SendFrame(&guardianpb.Frame{
 		Payload: &guardianpb.Frame_Command{
-			Command: &guardianpb.Command{Type: cmdType, Id: id, SubscriptionId: req.SubscriptionID},
+			Command: &guardianpb.Command{Type: cmdType, Id: id, SubscriptionId: subID},
 		},
 	}); err != nil {
 		writeError(w, http.StatusServiceUnavailable, err.Error())
