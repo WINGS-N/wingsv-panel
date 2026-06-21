@@ -35,6 +35,33 @@
       </header>
 
       <SamsungModal
+        :model-value="showQueueVkLinkModal"
+        title="Клиент оффлайн"
+        @update:model-value="(v) => (showQueueVkLinkModal = v)"
+      >
+        <p class="body-copy">
+          Сколько VK-ссылок поставить в очередь? Они сгенерируются на устройстве при следующем подключении (TTL 24 часа).
+        </p>
+        <input
+          class="text-input mt-3"
+          type="number"
+          min="1"
+          max="50"
+          v-model.number="queueVkLinkCount"
+        />
+        <template #actions>
+          <SamsungButton @click="confirmQueueVkLink">
+            <template #icon><Sparkles class="button-icon" aria-hidden="true" /></template>
+            Поставить в очередь
+          </SamsungButton>
+          <SamsungButton variant="secondary" @click="showQueueVkLinkModal = false">
+            <template #icon><X class="button-icon" aria-hidden="true" /></template>
+            Отмена
+          </SamsungButton>
+        </template>
+      </SamsungModal>
+
+      <SamsungModal
         :model-value="showLinkModal && !!wingsvLink"
         title="Ссылка на клиент"
         @update:model-value="dismissLink"
@@ -151,7 +178,11 @@
         v-if="configMode === 'form'"
         :model-value="formValue"
         :has-root-access="!!detail.client?.has_root_access"
+        :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
+        :per-client-actions="true"
+        :generate-vk-link-busy="busyGenerateVkLink"
         @update:model-value="onFormChanged"
+        @generate-vk-link="generateVkLink"
       />
       <JsonEditor v-else v-model="configDraft" height="fixed" />
       <p v-if="configError" class="admin-error">{{ configError }}</p>
@@ -433,7 +464,11 @@
         :model-value="formValue"
         :sections="backendTabSections[backend]"
         :has-root-access="!!detail.client?.has_root_access"
+        :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
+        :per-client-actions="true"
+        :generate-vk-link-busy="busyGenerateVkLink"
         @update:model-value="onFormChanged"
+        @generate-vk-link="generateVkLink"
       />
     </div>
 
@@ -664,6 +699,7 @@ import {
   RotateCcw,
   RotateCw,
   ShieldCheck,
+  Sparkles,
   Split,
   Square,
   Trash2,
@@ -736,6 +772,9 @@ const loadError = ref('');
 const configDraft = ref('');
 const configError = ref('');
 const busyPush = ref(false);
+const busyGenerateVkLink = ref(false);
+const showQueueVkLinkModal = ref(false);
+const queueVkLinkCount = ref(1);
 const busyCmd = ref(false);
 const busyDelete = ref(false);
 const busyLink = ref(false);
@@ -1584,6 +1623,48 @@ async function pushConfig() {
   } finally {
     busyPush.value = false;
   }
+}
+
+async function generateVkLink() {
+  if (busyGenerateVkLink.value) return;
+  // Online: один клик -> одна ссылка через текущую сессию. Offline: модалка
+  // спрашивает сколько генераций поставить в очередь до возвращения клиента;
+  // сервер дропает очередь через 24ч и проигрывает её на welcome.
+  if (!detail.value?.client?.online) {
+    showQueueVkLinkModal.value = true;
+    return;
+  }
+  await sendGenerateVkLink(1);
+}
+
+async function sendGenerateVkLink(count) {
+  busyGenerateVkLink.value = true;
+  try {
+    const res = await fetch(`/api/admin/clients/${id.value}/command`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'generate_vk_link', count }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Запрос отклонён');
+    }
+    const ack = await res.json().catch(() => ({}));
+    if (ack.queued) {
+      lastCmdAck.value = { ok: true, queued: ack.queued_count };
+    }
+  } catch (err) {
+    lastCmdAck.value = { ok: false, error: err.message };
+  } finally {
+    busyGenerateVkLink.value = false;
+  }
+}
+
+function confirmQueueVkLink() {
+  const value = Math.max(1, Math.min(50, parseInt(queueVkLinkCount.value, 10) || 1));
+  showQueueVkLinkModal.value = false;
+  sendGenerateVkLink(value);
 }
 
 async function sendCommand(type) {

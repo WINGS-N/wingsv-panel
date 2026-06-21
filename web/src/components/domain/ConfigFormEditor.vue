@@ -75,6 +75,17 @@
             <Plus class="button-icon" aria-hidden="true" />
             <span>Добавить ссылку</span>
           </button>
+          <button
+            v-if="perClientActions"
+            class="button-secondary"
+            type="button"
+            :disabled="!vkOauthAuthorized || generateVkLinkBusy"
+            :title="vkOauthAuthorized ? '' : 'На устройстве нет активного VK OAuth токена'"
+            @click="$emit('generate-vk-link')"
+          >
+            <Sparkles class="button-icon" aria-hidden="true" />
+            <span>{{ generateVkLinkBusy ? 'Запрос на устройство…' : 'Сгенерировать VK link' }}</span>
+          </button>
         </div>
       </div>
       <div class="form-row form-row-stack">
@@ -879,7 +890,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Plus, PowerOff, ShieldCheck, Split, Trash2 } from 'lucide-vue-next';
+import { Plus, PowerOff, ShieldCheck, Sparkles, Split, Trash2 } from 'lucide-vue-next';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
 
@@ -891,8 +902,18 @@ const props = defineProps({
   // hidden when this is false so we don't offer settings that would freeze a
   // non-rooted device on import.
   hasRootAccess: { type: Boolean, default: false },
+  // Whether the target client has reported a valid VK OAuth token. Enables
+  // the "Generate VK link" button in the VK TURN section. Only relevant in
+  // per-client editing context (ClientDetail). In master config mode this
+  // stays false and the button stays hidden.
+  vkOauthAuthorized: { type: Boolean, default: false },
+  // True when the per-client editor wants to surface client-level actions
+  // (Generate VK link). Master config editor stays false.
+  perClientActions: { type: Boolean, default: false },
+  // True while a generate-vk-link command is in flight (button busy state).
+  generateVkLinkBusy: { type: Boolean, default: false },
 });
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'generate-vk-link']);
 
 const ROOT_ONLY_SECTIONS = new Set(['root', 'sharing', 'xposed']);
 
