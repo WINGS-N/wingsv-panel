@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -26,7 +27,14 @@ func Open(dbPath string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("storage: open: %w", err)
 	}
-	db.SetMaxOpenConns(1)
+	// WAL allows many concurrent readers alongside a single writer, so a single
+	// pooled connection (the old SetMaxOpenConns(1)) is needlessly serializing
+	// the whole panel: one guardian welcome flow or a reconnect storm could
+	// starve every admin request. Allow real read concurrency; writes still
+	// serialize at the SQLite level and wait out contention via busy_timeout.
+	db.SetMaxOpenConns(16)
+	db.SetMaxIdleConns(16)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 	if _, err := db.Exec(schemaSQL); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("storage: apply schema: %w", err)
