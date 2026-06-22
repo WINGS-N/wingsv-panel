@@ -32,8 +32,8 @@ func Open(dbPath string) (*Store, error) {
 	// the whole panel: one guardian welcome flow or a reconnect storm could
 	// starve every admin request. Allow real read concurrency; writes still
 	// serialize at the SQLite level and wait out contention via busy_timeout.
-	db.SetMaxOpenConns(16)
-	db.SetMaxIdleConns(16)
+	db.SetMaxOpenConns(24)
+	db.SetMaxIdleConns(24)
 	db.SetConnMaxIdleTime(5 * time.Minute)
 	if _, err := db.Exec(schemaSQL); err != nil {
 		_ = db.Close()
