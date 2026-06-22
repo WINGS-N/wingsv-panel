@@ -772,6 +772,10 @@ function setActiveTab(tabId) {
 }
 const configMode = ref('form');
 const followClient = ref(true);
+// Whether configDraft has been seeded for the current client. Prevents loadDetail
+// (called on every live state_report) from re-seeding and wiping an in-progress
+// edit once followClient is off.
+const configDraftSeeded = ref(false);
 const activeLogTab = ref('runtime');
 const profileImportDraft = ref('');
 const profileImportError = ref('');
@@ -967,10 +971,17 @@ async function loadDetail() {
     // overwhelmingly want to see "what does the device have right now" rather
     // than "what did I last push", and the client never streams its desired
     // state back. While followClient is on we keep mirroring it.
+    //
+    // Crucially, when followClient is OFF (the admin is editing) we must NOT
+    // touch configDraft on every incoming state_report refresh - that would
+    // clobber the in-progress draft. Seed the editing buffer from desired only
+    // on the first load; afterwards leave the admin's draft alone.
     if (followClient.value && detail.value.reported_config) {
       configDraft.value = formatJson(detail.value.reported_config);
-    } else {
+      configDraftSeeded.value = true;
+    } else if (!configDraftSeeded.value) {
       configDraft.value = formatJson(detail.value.desired_config) || '{}';
+      configDraftSeeded.value = true;
     }
     // Lazy-load the wingsv:// link so the QR card on Конфигурация has data
     // without requiring the admin to click "Показать ссылку" first.
@@ -1939,6 +1950,8 @@ watch(id, () => {
   // Reset so the loader shows while switching to another client (the socket-
   // driven loadDetail() calls keep the current detail to avoid loader flicker).
   detail.value = null;
+  followClient.value = true;
+  configDraftSeeded.value = false;
   loadDetail();
   loadInstalledApps();
 });
