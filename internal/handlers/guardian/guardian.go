@@ -29,6 +29,12 @@ const (
 	helloTimeout             = 10 * time.Second
 	writeTimeout             = 5 * time.Second
 	heartbeatInterval        = 25 * time.Second
+	// Liveness is tracked via application-level Heartbeat data frames (the client
+	// sends one every 25s), NOT WS Ping/Pong control frames: some HTTP/2 ingresses
+	// mangle control frames, which made the old conn.Ping watchdog kill healthy
+	// sessions every ~20s. If no frame arrives within this window the read times
+	// out and the session is recycled.
+	frameReadTimeout = 75 * time.Second
 )
 
 type Handler struct {
@@ -239,30 +245,11 @@ func (h *Handler) runSession(ctx context.Context, conn *websocket.Conn, client s
 		}
 	}()
 
-	// Server-side WS ping watchdog: a missing pong within 20s marks the TCP
-	// dead and forces close, instead of waiting for OS-level TCP timeout
-	// (which can be many minutes on idle cellular sockets).
-	pingTicker := time.NewTicker(20 * time.Second)
-	defer pingTicker.Stop()
-	go func() {
-		for {
-			select {
-			case <-sess.closed:
-				return
-			case <-ctx.Done():
-				return
-			case <-pingTicker.C:
-				pingCtx, cancelPing := context.WithTimeout(ctx, 20*time.Second)
-				if err := conn.Ping(pingCtx); err != nil {
-					cancelPing()
-					log.Printf("guardian: ping failed client=%s err=%v", client.ID, err)
-					_ = conn.Close(websocket.StatusGoingAway, "ping timeout")
-					return
-				}
-				cancelPing()
-			}
-		}
-	}()
+	// Dead-connection detection is the read deadline below (frameReadTimeout):
+	// the client heartbeats every 25s, so a 75s silence means the socket is gone.
+	// We deliberately do NOT use WS Ping/Pong here - the HTTP/2 ingress in front
+	// of the panel mangles control frames, so conn.Ping was timing out on healthy
+	// sessions and recycling them every ~20s.
 
 	for {
 		select {
@@ -272,7 +259,9 @@ func (h *Handler) runSession(ctx context.Context, conn *websocket.Conn, client s
 			return
 		default:
 		}
-		frame, err := readFrame(ctx, conn)
+		readCtx, cancelRead := context.WithTimeout(ctx, frameReadTimeout)
+		frame, err := readFrame(readCtx, conn)
+		cancelRead()
 		if err != nil {
 			log.Printf("guardian: session read err client=%s err=%v lifetime=%s",
 				client.ID, err, time.Since(connectedAt).Truncate(time.Second))
