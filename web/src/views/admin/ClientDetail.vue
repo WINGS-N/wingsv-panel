@@ -88,587 +88,602 @@
       </div>
     </section>
 
-    <section v-if="activeTab === 'config'" class="client-grid">
-      <div class="surface-card">
-        <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker">Подключение</div>
-        <h3 class="font-sharp text-[22px] font-bold mt-2">{{ connectionTitle }}</h3>
-        <dl class="keyvals mt-6">
-          <template v-for="row in connectionFacts" :key="row.label">
-            <dt>{{ row.label }}</dt>
-            <dd :class="row.mono ? 'mono' : ''">{{ row.value || '—' }}</dd>
-          </template>
-        </dl>
-        <div class="actions-row mt-6">
-          <SamsungButton @click="copyLinkInline">
-            <template #icon><Copy class="button-icon" aria-hidden="true" /></template>
-            {{ copiedLink ? 'Скопировано' : 'Скопировать ссылку' }}
-          </SamsungButton>
-          <SamsungButton variant="secondary" :busy="busyRotate" @click="onRotateToken">
-            <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-            {{ busyRotate ? 'Ротируем…' : 'Ротировать токен' }}
-          </SamsungButton>
-        </div>
-      </div>
-
-      <div class="surface-card">
-        <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker">Поделиться</div>
-        <div class="qr-block">
-          <div class="qr-frame">
-            <img v-if="wingsvLinkQR" :src="wingsvLinkQR" alt="QR-код wingsv-ссылки" />
-            <div v-else class="qr-placeholder">
-              <div class="samsung-loader">
-                <span class="samsung-loader-dot samsung-loader-dot-top"></span>
-                <span class="samsung-loader-dot samsung-loader-dot-right"></span>
-                <span class="samsung-loader-dot samsung-loader-dot-bottom"></span>
-                <span class="samsung-loader-dot samsung-loader-dot-left"></span>
-              </div>
-            </div>
-          </div>
-          <div class="font-bold admin-mono text-center">{{ wingsvLinkPreview }}</div>
-        </div>
-      </div>
+    <section v-if="!detail && !loadError" class="surface-card admin-tab-pane">
+      <div class="flex justify-center py-12"><SamsungLoader /></div>
     </section>
 
-    <section v-if="activeTab === 'config'" class="surface-card">
-      <div class="config-mode-tabs">
-        <button :class="['admin-tab', configMode === 'form' ? 'is-active' : '']" @click="setConfigMode('form')">
-          Форма
-        </button>
-        <button :class="['admin-tab', configMode === 'json' ? 'is-active' : '']" @click="setConfigMode('json')">
-          JSON
-        </button>
-        <span class="admin-follow-toggle">
-          <OneuiSwitch :model-value="followClient" @change="setFollowClient($event)" />
-          <span class="admin-follow-label">Следить за клиентом</span>
-        </span>
-      </div>
-      <div class="actions-row mt-3">
-        <SamsungButton variant="secondary" :disabled="!detail?.reported_config" @click="loadFromReported">
-          <template #icon><Download class="button-icon" aria-hidden="true" /></template>
-          Загрузить текущий с клиента
-        </SamsungButton>
-      </div>
-      <details class="admin-config-import">
-        <summary>Импорт из wingsv:// или vless:// ссылки</summary>
-        <p class="admin-muted">
-          Вставьте ссылку <code class="font-sharp">wingsv://</code> или <code class="font-sharp">vless://</code>
-          — её содержимое заменит текущий черновик. Изменения не отправятся клиенту, пока вы не нажмёте «Применить».
-        </p>
-        <textarea
-          v-model.trim="importLinkDraft"
-          class="text-input admin-import-area"
-          rows="3"
-          spellcheck="false"
-          placeholder="wingsv://... или vless://..."
-        />
-        <p v-if="importError" class="admin-error">{{ importError }}</p>
-        <div class="actions-row mt-2">
-          <SamsungButton variant="secondary" :busy="busyImport" :disabled="!importLinkDraft" @click="importFromLink">
-            <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-            {{ busyImport ? 'Распаковываем…' : 'Подставить' }}
-          </SamsungButton>
+    <template v-if="detail">
+      <section v-if="activeTab === 'config'" class="client-grid">
+        <div class="surface-card">
+          <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker">Подключение</div>
+          <h3 class="font-sharp text-[22px] font-bold mt-2">{{ connectionTitle }}</h3>
+          <dl class="keyvals mt-6">
+            <template v-for="row in connectionFacts" :key="row.label">
+              <dt>{{ row.label }}</dt>
+              <dd :class="row.mono ? 'mono' : ''">{{ row.value || '—' }}</dd>
+            </template>
+          </dl>
+          <div class="actions-row mt-6">
+            <SamsungButton @click="copyLinkInline">
+              <template #icon><Copy class="button-icon" aria-hidden="true" /></template>
+              {{ copiedLink ? 'Скопировано' : 'Скопировать ссылку' }}
+            </SamsungButton>
+            <SamsungButton variant="secondary" :busy="busyRotate" @click="onRotateToken">
+              <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
+              {{ busyRotate ? 'Ротируем…' : 'Ротировать токен' }}
+            </SamsungButton>
+          </div>
         </div>
-      </details>
-      <ConfigFormEditor
-        v-if="configMode === 'form'"
-        :model-value="formValue"
-        :has-root-access="!!detail.client?.has_root_access"
-        :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
-        :per-client-actions="true"
-        :generate-vk-link-busy="busyGenerateVkLink"
-        @update:model-value="onFormChanged"
-        @generate-vk-link="generateVkLink"
-      />
-      <JsonEditor v-else v-model="configDraft" height="fixed" />
-      <p v-if="configError" class="admin-error">{{ configError }}</p>
-      <div class="actions-row mt-4">
-        <SamsungButton :busy="busyPush" @click="pushConfig">
-          <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
-        </SamsungButton>
-        <SamsungButton variant="secondary" @click="resetConfigDraft">
-          <template #icon><RotateCcw class="button-icon" aria-hidden="true" /></template>
-          Сбросить правки
-        </SamsungButton>
-      </div>
-    </section>
 
-    <div v-if="activeTab === 'xray_rules'" class="surface-card admin-tab-pane">
-      <div class="admin-sticky-bar">
-        <p class="admin-muted">Правила маршрутизации Xray (порядок имеет значение — первое совпадение применяется).</p>
-        <SamsungButton :busy="busyPush" @click="pushConfig">
-          <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
-        </SamsungButton>
-      </div>
-      <div class="form-section mt-3">
-        <div class="form-row form-row-stack">
-          <label class="form-label">GeoIP URL</label>
-          <input
-            class="text-input"
-            :value="xrayRouting.geoipUrl || ''"
-            @input="setXrayRouting('geoipUrl', $event.target.value)"
-            placeholder="https://...geoip.dat"
-          />
-        </div>
-        <div class="form-row form-row-stack">
-          <label class="form-label">GeoSite URL</label>
-          <input
-            class="text-input"
-            :value="xrayRouting.geositeUrl || ''"
-            @input="setXrayRouting('geositeUrl', $event.target.value)"
-            placeholder="https://...geosite.dat"
-          />
-        </div>
-      </div>
-      <div class="actions-row mt-3">
-        <SamsungButton variant="secondary" @click="addRule">
-          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          Добавить правило
-        </SamsungButton>
-      </div>
-      <ul v-if="xrayRules.length" class="admin-list mt-3">
-        <li
-          v-for="(rule, idx) in xrayRules"
-          :key="rule.id || idx"
-          :class="[
-            'admin-rule-card',
-            dragOverIdx === idx ? 'is-drag-over' : '',
-            draggingIdx === idx ? 'is-dragging' : '',
-          ]"
-          draggable="true"
-          @dragstart="onRuleDragStart(idx, $event)"
-          @dragover.prevent="onRuleDragOver(idx, $event)"
-          @dragleave="dragOverIdx = -1"
-          @drop.prevent="onRuleDrop(idx)"
-          @dragend="onRuleDragEnd"
-        >
-          <div class="admin-rule-handle" aria-hidden="true">
-            <GripVertical class="button-icon" />
-          </div>
-          <div class="admin-rule-body">
-            <div class="form-row">
-              <label class="form-label">Тип</label>
-              <OneuiSelect
-                :model-value="rule.matchType || 'XRAY_ROUTING_MATCH_UNSPECIFIED'"
-                :options="matchTypeOptions"
-                @change="patchRule(idx, 'matchType', $event)"
-              />
-            </div>
-            <div class="form-row form-row-stack">
-              <label class="form-label">{{ matchCodeLabel(rule.matchType) }}</label>
-              <input
-                class="text-input"
-                :value="rule.code || ''"
-                @input="patchRule(idx, 'code', $event.target.value)"
-                :placeholder="matchCodePlaceholder(rule.matchType)"
-              />
-            </div>
-            <div class="form-row">
-              <label class="form-label">Действие</label>
-              <OneuiSelect
-                :model-value="rule.action || 'XRAY_ROUTING_ACTION_UNSPECIFIED'"
-                :options="actionOptions"
-                @change="patchRule(idx, 'action', $event)"
-              />
-            </div>
-            <div class="form-row">
-              <label class="form-label">Включено</label>
-              <OneuiSwitch :model-value="rule.enabled !== false" @change="patchRule(idx, 'enabled', $event)" />
-            </div>
-          </div>
-          <div class="admin-rule-actions">
-            <SamsungIconButton size="small" :title="'Удалить'" @click="removeRule(idx)">
-              <Trash2 class="button-icon" aria-hidden="true" />
-            </SamsungIconButton>
-          </div>
-        </li>
-      </ul>
-      <p v-else class="admin-muted mt-3">Правил нет.</p>
-    </div>
-
-    <div v-if="activeTab === 'app_routing'" class="surface-card admin-tab-pane">
-      <div class="admin-sticky-bar">
-        <p class="admin-muted">Per-app routing: какие приложения идут через тунель.</p>
-        <SamsungButton :busy="busyPush" @click="pushConfig">
-          <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
-        </SamsungButton>
-      </div>
-      <div class="form-section mt-3">
-        <div class="form-row form-row-stack">
-          <label class="form-label">Режим маршрутизации</label>
-          <div class="routing-mode-picker" role="radiogroup" aria-label="Routing mode">
-            <button
-              v-for="opt in appRoutingModeOptions"
-              :key="opt.value"
-              type="button"
-              class="routing-mode-item"
-              :class="{ 'is-active': appRoutingMode === opt.value }"
-              role="radio"
-              :aria-checked="appRoutingMode === opt.value"
-              @click="setAppRoutingMode(opt.value)"
-            >
-              <span class="routing-mode-circle">
-                <component :is="opt.icon" class="h-6 w-6" aria-hidden="true" />
-              </span>
-              <span class="routing-mode-label">{{ opt.label }}</span>
-            </button>
-          </div>
-          <p class="admin-muted mt-2">{{ appRoutingModeHint }}</p>
-        </div>
-      </div>
-      <div v-if="appRoutingMode !== 'off'" class="form-section mt-3">
-        <div class="form-row">
-          <h3 class="form-section-title m-0">Установленные приложения</h3>
-          <SamsungButton variant="secondary" :busy="busyAppsRefresh" @click="refreshInstalledApps">
-            <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
-            Обновить список
-          </SamsungButton>
-        </div>
-        <p v-if="installedAppsUpdated" class="admin-muted">Получено: {{ formatTs(installedAppsUpdated) }}</p>
-        <p v-else class="admin-muted">
-          Список ещё не получен с устройства. Нажмите «Обновить список» — клиент должен быть онлайн.
-        </p>
-        <div v-if="installedApps.length" class="mt-3">
-          <OneuiRadioGroup v-model="appsKindFilter" :options="appsKindFilterOptions" variant="pill" />
-        </div>
-        <div v-if="installedApps.length" class="form-row form-row-stack mt-3">
-          <input class="text-input" v-model.trim="appsFilter" placeholder="Фильтр по имени или пакету" />
-        </div>
-        <ul v-if="filteredInstalledApps.length" class="admin-list mt-3 admin-apps-grid">
-          <li
-            v-for="app in filteredInstalledApps"
-            :key="app.package"
-            :class="['admin-apps-item', isPackageRouted(app.package) ? 'is-routed' : '']"
-          >
-            <img v-if="app.icon" :src="app.icon" alt="" class="admin-apps-icon" />
-            <div v-else class="admin-apps-icon admin-apps-icon-fallback" aria-hidden="true">
-              {{ (app.label || app.package || '?').slice(0, 1).toUpperCase() }}
-            </div>
-            <div class="admin-apps-text">
-              <strong>{{ app.label || app.package }}</strong>
-              <span class="admin-muted">{{ app.package }}</span>
-              <div class="mt-1 flex flex-wrap gap-1">
-                <SamsungPill v-if="app.recommended" variant="online">Рекомендуется</SamsungPill>
-                <SamsungPill v-if="app.system" variant="offline">Системное</SamsungPill>
+        <div class="surface-card">
+          <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker">Поделиться</div>
+          <div class="qr-block">
+            <div class="qr-frame">
+              <img v-if="wingsvLinkQR" :src="wingsvLinkQR" alt="QR-код wingsv-ссылки" />
+              <div v-else class="qr-placeholder">
+                <div class="samsung-loader">
+                  <span class="samsung-loader-dot samsung-loader-dot-top"></span>
+                  <span class="samsung-loader-dot samsung-loader-dot-right"></span>
+                  <span class="samsung-loader-dot samsung-loader-dot-bottom"></span>
+                  <span class="samsung-loader-dot samsung-loader-dot-left"></span>
+                </div>
               </div>
             </div>
-            <OneuiSwitch
-              :model-value="isPackageRouted(app.package)"
-              @change="togglePackageRouted(app.package, $event)"
-            />
-          </li>
-        </ul>
-      </div>
-      <details v-if="appRoutingMode !== 'off'" class="admin-config-import mt-3">
-        <summary>Редактировать список текстом</summary>
-        <textarea
-          class="text-input mt-2"
-          rows="6"
-          spellcheck="false"
-          :value="(activeAppRoutingPackages || []).join('\n')"
-          @input="setActiveAppRoutingPackages($event.target.value)"
-          placeholder="com.example.app"
-        ></textarea>
-      </details>
-    </div>
+            <div class="font-bold admin-mono text-center">{{ wingsvLinkPreview }}</div>
+          </div>
+        </div>
+      </section>
 
-    <div v-if="activeTab === 'state'" class="surface-card admin-tab-pane">
-      <div class="form-section">
-        <h3 class="form-section-title">Режим синхронизации</h3>
-        <p class="admin-muted">
-          Если клиент онлайн — изменения применяются мгновенно. Иначе подхватятся при следующем коннекте.
-        </p>
-        <div class="admin-pill-row mt-2">
-          <button
-            v-for="opt in syncModeOptions"
-            :key="opt.id"
-            type="button"
-            :class="['admin-pill-button', syncModeDraft === opt.id ? 'is-active' : '']"
-            @click="setSyncMode(opt.id)"
-          >
-            <component :is="opt.icon" class="button-icon" aria-hidden="true" />
-            <span>{{ opt.label }}</span>
+      <section v-if="activeTab === 'config'" class="surface-card">
+        <div class="config-mode-tabs">
+          <button :class="['admin-tab', configMode === 'form' ? 'is-active' : '']" @click="setConfigMode('form')">
+            Форма
           </button>
+          <button :class="['admin-tab', configMode === 'json' ? 'is-active' : '']" @click="setConfigMode('json')">
+            JSON
+          </button>
+          <span class="admin-follow-toggle">
+            <OneuiSwitch :model-value="followClient" @change="setFollowClient($event)" />
+            <span class="admin-follow-label">Следить за клиентом</span>
+          </span>
         </div>
-        <div v-if="syncModeDraft === 'periodic'" class="form-row form-row-stack mt-3">
-          <label class="form-label">Интервал (мин, минимум 15)</label>
-          <input
-            v-model.number="syncIntervalDraft"
-            class="text-input form-input-narrow"
-            type="number"
-            min="15"
-            @change="saveSyncSettings"
-          />
-        </div>
-      </div>
-
-      <h2 class="admin-section-subtitle mt-5">Runtime</h2>
-      <pre class="admin-code">{{ formatJson(detail?.runtime) }}</pre>
-      <p class="admin-muted">Обновлено: {{ formatTs(detail?.runtime_updated) }}</p>
-      <h2 class="admin-section-subtitle mt-5">Что репортит клиент</h2>
-      <pre class="admin-code">{{ formatJson(detail?.reported_config) }}</pre>
-      <p class="admin-muted">Обновлено: {{ formatTs(detail?.reported_config_updated) }}</p>
-    </div>
-
-    <div v-if="activeTab === 'logs'" class="surface-card admin-tab-pane">
-      <div class="admin-log-controls">
-        <OneuiCheckbox
-          v-for="stream in logStreams"
-          :key="stream.id"
-          :model-value="logToggles[stream.id]"
-          @change="toggleLog(stream.id, $event)"
-          >{{ stream.label }}</OneuiCheckbox
-        >
-      </div>
-      <div class="admin-log-tabs">
-        <button
-          v-for="stream in logStreams"
-          :key="stream.id"
-          :class="['admin-tab', activeLogTab === stream.id ? 'is-active' : '']"
-          @click="activeLogTab = stream.id"
-        >
-          {{ stream.label }}
-        </button>
-      </div>
-      <div class="actions-row mt-2">
-        <SamsungButton variant="secondary" :disabled="!logsText[activeLogTab]" @click="clearActiveLog">
-          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          Очистить лог
-        </SamsungButton>
-      </div>
-      <pre v-if="logToggles[activeLogTab]" class="admin-log-pane">{{ logsText[activeLogTab] || '(пусто)' }}</pre>
-      <p v-else class="admin-muted">Поток отключён администратором — переключите чекбокс выше, чтобы возобновить.</p>
-    </div>
-
-    <div
-      v-for="backend in backendTabIds"
-      :key="backend"
-      v-show="activeTab === backend"
-      class="surface-card admin-tab-pane"
-    >
-      <div class="admin-sticky-bar">
-        <p class="admin-muted">Настройки только для {{ backendTabLabel(backend) }}.</p>
-        <SamsungButton :busy="busyPush" @click="pushConfig">
-          <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
-        </SamsungButton>
-      </div>
-      <ConfigFormEditor
-        :model-value="formValue"
-        :sections="backendTabSections[backend]"
-        :has-root-access="!!detail.client?.has_root_access"
-        :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
-        :per-client-actions="true"
-        :generate-vk-link-busy="busyGenerateVkLink"
-        @update:model-value="onFormChanged"
-        @generate-vk-link="generateVkLink"
-      />
-    </div>
-
-    <div v-if="activeTab === 'xray_profiles'" class="surface-card admin-tab-pane">
-      <div class="admin-sticky-bar">
-        <p class="admin-muted">VLESS-профили клиента.</p>
-        <SamsungButton :busy="busyPush" @click="pushConfig">
-          <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
-        </SamsungButton>
-      </div>
-      <details class="admin-config-import">
-        <summary>Добавить из vless:// или wingsv://</summary>
-        <textarea
-          v-model.trim="profileImportDraft"
-          class="text-input admin-import-area"
-          rows="3"
-          spellcheck="false"
-          placeholder="vless://... или wingsv://..."
-        />
-        <p v-if="profileImportError" class="admin-error">{{ profileImportError }}</p>
-        <div class="actions-row mt-2">
+        <div class="actions-row mt-3">
           <SamsungButton
             variant="secondary"
-            :busy="busyProfileImport"
-            :disabled="!profileImportDraft"
-            @click="importProfile"
+            :busy="busyLoadReported"
+            :disabled="!detail?.reported_config"
+            @click="loadFromReported"
           >
-            <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-            {{ busyProfileImport ? 'Распаковываем…' : 'Добавить' }}
+            <template #icon><Download class="button-icon" aria-hidden="true" /></template>
+            Загрузить текущий с клиента
           </SamsungButton>
         </div>
-      </details>
-      <p class="admin-muted mt-3" v-if="xrayProfiles.length">
-        Активный профиль применится на устройстве после нажатия «Применить (Push)».
-      </p>
-      <div v-if="xrayProfileFilterOptions.length > 1" class="mt-3">
-        <OneuiRadioGroup v-model="xrayActiveFilter" :options="xrayProfileFilterOptions" variant="pill" />
+        <details class="admin-config-import">
+          <summary>Импорт из wingsv:// или vless:// ссылки</summary>
+          <p class="admin-muted">
+            Вставьте ссылку <code class="font-sharp">wingsv://</code> или <code class="font-sharp">vless://</code>
+            — её содержимое заменит текущий черновик. Изменения не отправятся клиенту, пока вы не нажмёте «Применить».
+          </p>
+          <textarea
+            v-model.trim="importLinkDraft"
+            class="text-input admin-import-area"
+            rows="3"
+            spellcheck="false"
+            placeholder="wingsv://... или vless://..."
+          />
+          <p v-if="importError" class="admin-error">{{ importError }}</p>
+          <div class="actions-row mt-2">
+            <SamsungButton variant="secondary" :busy="busyImport" :disabled="!importLinkDraft" @click="importFromLink">
+              <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
+              {{ busyImport ? 'Распаковываем…' : 'Подставить' }}
+            </SamsungButton>
+          </div>
+        </details>
+        <ConfigFormEditor
+          v-if="configMode === 'form'"
+          :model-value="formValue"
+          :has-root-access="!!detail.client?.has_root_access"
+          :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
+          :per-client-actions="true"
+          :generate-vk-link-busy="busyGenerateVkLink"
+          @update:model-value="onFormChanged"
+          @generate-vk-link="generateVkLink"
+        />
+        <JsonEditor v-else v-model="configDraft" height="fixed" />
+        <p v-if="configError" class="admin-error">{{ configError }}</p>
+        <div class="actions-row mt-4">
+          <SamsungButton :busy="busyPush" @click="pushConfig">
+            <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
+            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+          </SamsungButton>
+          <SamsungButton variant="secondary" @click="resetConfigDraft">
+            <template #icon><RotateCcw class="button-icon" aria-hidden="true" /></template>
+            Сбросить правки
+          </SamsungButton>
+        </div>
+      </section>
+
+      <div v-if="activeTab === 'xray_rules'" class="surface-card admin-tab-pane">
+        <div class="admin-sticky-bar">
+          <p class="admin-muted">
+            Правила маршрутизации Xray (порядок имеет значение — первое совпадение применяется).
+          </p>
+          <SamsungButton :busy="busyPush" @click="pushConfig">
+            <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
+            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+          </SamsungButton>
+        </div>
+        <div class="form-section mt-3">
+          <div class="form-row form-row-stack">
+            <label class="form-label">GeoIP URL</label>
+            <input
+              class="text-input"
+              :value="xrayRouting.geoipUrl || ''"
+              @input="setXrayRouting('geoipUrl', $event.target.value)"
+              placeholder="https://...geoip.dat"
+            />
+          </div>
+          <div class="form-row form-row-stack">
+            <label class="form-label">GeoSite URL</label>
+            <input
+              class="text-input"
+              :value="xrayRouting.geositeUrl || ''"
+              @input="setXrayRouting('geositeUrl', $event.target.value)"
+              placeholder="https://...geosite.dat"
+            />
+          </div>
+        </div>
+        <div class="actions-row mt-3">
+          <SamsungButton variant="secondary" @click="addRule">
+            <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+            Добавить правило
+          </SamsungButton>
+        </div>
+        <ul v-if="xrayRules.length" class="admin-list mt-3">
+          <li
+            v-for="(rule, idx) in xrayRules"
+            :key="rule.id || idx"
+            :class="[
+              'admin-rule-card',
+              dragOverIdx === idx ? 'is-drag-over' : '',
+              draggingIdx === idx ? 'is-dragging' : '',
+            ]"
+            draggable="true"
+            @dragstart="onRuleDragStart(idx, $event)"
+            @dragover.prevent="onRuleDragOver(idx, $event)"
+            @dragleave="dragOverIdx = -1"
+            @drop.prevent="onRuleDrop(idx)"
+            @dragend="onRuleDragEnd"
+          >
+            <div class="admin-rule-handle" aria-hidden="true">
+              <GripVertical class="button-icon" />
+            </div>
+            <div class="admin-rule-body">
+              <div class="form-row">
+                <label class="form-label">Тип</label>
+                <OneuiSelect
+                  :model-value="rule.matchType || 'XRAY_ROUTING_MATCH_UNSPECIFIED'"
+                  :options="matchTypeOptions"
+                  @change="patchRule(idx, 'matchType', $event)"
+                />
+              </div>
+              <div class="form-row form-row-stack">
+                <label class="form-label">{{ matchCodeLabel(rule.matchType) }}</label>
+                <input
+                  class="text-input"
+                  :value="rule.code || ''"
+                  @input="patchRule(idx, 'code', $event.target.value)"
+                  :placeholder="matchCodePlaceholder(rule.matchType)"
+                />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Действие</label>
+                <OneuiSelect
+                  :model-value="rule.action || 'XRAY_ROUTING_ACTION_UNSPECIFIED'"
+                  :options="actionOptions"
+                  @change="patchRule(idx, 'action', $event)"
+                />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Включено</label>
+                <OneuiSwitch :model-value="rule.enabled !== false" @change="patchRule(idx, 'enabled', $event)" />
+              </div>
+            </div>
+            <div class="admin-rule-actions">
+              <SamsungIconButton size="small" :title="'Удалить'" @click="removeRule(idx)">
+                <Trash2 class="button-icon" aria-hidden="true" />
+              </SamsungIconButton>
+            </div>
+          </li>
+        </ul>
+        <p v-else class="admin-muted mt-3">Правил нет.</p>
       </div>
-      <div v-if="xraySubscriptions.length" class="actions-row mt-3 mb-4">
-        <SamsungButton
-          v-if="xrayActiveFilter !== 'all' && xrayActiveFilter !== '__standalone'"
-          variant="secondary"
-          :busy="busyRefresh === xrayActiveFilter"
-          @click="refreshSubscription(xrayActiveFilter)"
-        >
-          <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
-          Обновить эту подписку
-        </SamsungButton>
-        <SamsungButton variant="secondary" :busy="busyRefresh === 'all'" @click="refreshAllSubscriptions">
-          <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
-          Обновить все
-        </SamsungButton>
+
+      <div v-if="activeTab === 'app_routing'" class="surface-card admin-tab-pane">
+        <div class="admin-sticky-bar">
+          <p class="admin-muted">Per-app routing: какие приложения идут через тунель.</p>
+          <SamsungButton :busy="busyPush" @click="pushConfig">
+            <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
+            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+          </SamsungButton>
+        </div>
+        <div class="form-section mt-3">
+          <div class="form-row form-row-stack">
+            <label class="form-label">Режим маршрутизации</label>
+            <div class="routing-mode-picker" role="radiogroup" aria-label="Routing mode">
+              <button
+                v-for="opt in appRoutingModeOptions"
+                :key="opt.value"
+                type="button"
+                class="routing-mode-item"
+                :class="{ 'is-active': appRoutingMode === opt.value }"
+                role="radio"
+                :aria-checked="appRoutingMode === opt.value"
+                @click="setAppRoutingMode(opt.value)"
+              >
+                <span class="routing-mode-circle">
+                  <component :is="opt.icon" class="h-6 w-6" aria-hidden="true" />
+                </span>
+                <span class="routing-mode-label">{{ opt.label }}</span>
+              </button>
+            </div>
+            <p class="admin-muted mt-2">{{ appRoutingModeHint }}</p>
+          </div>
+        </div>
+        <div v-if="appRoutingMode !== 'off'" class="form-section mt-3">
+          <div class="form-row">
+            <h3 class="form-section-title m-0">Установленные приложения</h3>
+            <SamsungButton variant="secondary" :busy="busyAppsRefresh" @click="refreshInstalledApps">
+              <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
+              Обновить список
+            </SamsungButton>
+          </div>
+          <p v-if="installedAppsUpdated" class="admin-muted">Получено: {{ formatTs(installedAppsUpdated) }}</p>
+          <p v-else class="admin-muted">
+            Список ещё не получен с устройства. Нажмите «Обновить список» — клиент должен быть онлайн.
+          </p>
+          <div v-if="installedApps.length" class="mt-3">
+            <OneuiRadioGroup v-model="appsKindFilter" :options="appsKindFilterOptions" variant="pill" />
+          </div>
+          <div v-if="installedApps.length" class="form-row form-row-stack mt-3">
+            <input class="text-input" v-model.trim="appsFilter" placeholder="Фильтр по имени или пакету" />
+          </div>
+          <ul v-if="filteredInstalledApps.length" class="admin-list mt-3 admin-apps-grid">
+            <li
+              v-for="app in filteredInstalledApps"
+              :key="app.package"
+              :class="['admin-apps-item', isPackageRouted(app.package) ? 'is-routed' : '']"
+            >
+              <img v-if="app.icon" :src="app.icon" alt="" class="admin-apps-icon" />
+              <div v-else class="admin-apps-icon admin-apps-icon-fallback" aria-hidden="true">
+                {{ (app.label || app.package || '?').slice(0, 1).toUpperCase() }}
+              </div>
+              <div class="admin-apps-text">
+                <strong>{{ app.label || app.package }}</strong>
+                <span class="admin-muted">{{ app.package }}</span>
+                <div class="mt-1 flex flex-wrap gap-1">
+                  <SamsungPill v-if="app.recommended" variant="online">Рекомендуется</SamsungPill>
+                  <SamsungPill v-if="app.system" variant="offline">Системное</SamsungPill>
+                </div>
+              </div>
+              <OneuiSwitch
+                :model-value="isPackageRouted(app.package)"
+                @change="togglePackageRouted(app.package, $event)"
+              />
+            </li>
+          </ul>
+        </div>
+        <details v-if="appRoutingMode !== 'off'" class="admin-config-import mt-3">
+          <summary>Редактировать список текстом</summary>
+          <textarea
+            class="text-input mt-2"
+            rows="6"
+            spellcheck="false"
+            :value="(activeAppRoutingPackages || []).join('\n')"
+            @input="setActiveAppRoutingPackages($event.target.value)"
+            placeholder="com.example.app"
+          ></textarea>
+        </details>
       </div>
-      <ul v-if="paginatedXrayProfiles.length" class="admin-list">
-        <li
-          v-for="profile in paginatedXrayProfiles"
-          :key="profile.id"
-          :class="['admin-list-item admin-profile-row', xrayActiveProfileId === profile.id ? 'is-selected' : '']"
-          @click="setActiveProfile(profile.id)"
-        >
-          <div class="admin-profile-text">
-            <strong>{{ profile.title || profile.address || profile.id }}</strong>
-            <span class="admin-muted">
-              {{ profile.address || '—' }}<template v-if="profile.port">:{{ profile.port }}</template>
+
+      <div v-if="activeTab === 'state'" class="surface-card admin-tab-pane">
+        <div class="form-section">
+          <h3 class="form-section-title">Режим синхронизации</h3>
+          <p class="admin-muted">
+            Если клиент онлайн — изменения применяются мгновенно. Иначе подхватятся при следующем коннекте.
+          </p>
+          <div class="admin-pill-row mt-2">
+            <button
+              v-for="opt in syncModeOptions"
+              :key="opt.id"
+              type="button"
+              :class="['admin-pill-button', syncModeDraft === opt.id ? 'is-active' : '']"
+              @click="setSyncMode(opt.id)"
+            >
+              <component :is="opt.icon" class="button-icon" aria-hidden="true" />
+              <span>{{ opt.label }}</span>
+            </button>
+          </div>
+          <div v-if="syncModeDraft === 'periodic'" class="form-row form-row-stack mt-3">
+            <label class="form-label">Интервал (мин, минимум 15)</label>
+            <input
+              v-model.number="syncIntervalDraft"
+              class="text-input form-input-narrow"
+              type="number"
+              min="15"
+              @change="saveSyncSettings"
+            />
+          </div>
+        </div>
+
+        <h2 class="admin-section-subtitle mt-5">Runtime</h2>
+        <pre class="admin-code">{{ formatJson(detail?.runtime) }}</pre>
+        <p class="admin-muted">Обновлено: {{ formatTs(detail?.runtime_updated) }}</p>
+        <h2 class="admin-section-subtitle mt-5">Что репортит клиент</h2>
+        <pre class="admin-code">{{ formatJson(detail?.reported_config) }}</pre>
+        <p class="admin-muted">Обновлено: {{ formatTs(detail?.reported_config_updated) }}</p>
+      </div>
+
+      <div v-if="activeTab === 'logs'" class="surface-card admin-tab-pane">
+        <div class="admin-log-controls">
+          <OneuiCheckbox
+            v-for="stream in logStreams"
+            :key="stream.id"
+            :model-value="logToggles[stream.id]"
+            @change="toggleLog(stream.id, $event)"
+            >{{ stream.label }}</OneuiCheckbox
+          >
+        </div>
+        <div class="admin-log-tabs">
+          <button
+            v-for="stream in logStreams"
+            :key="stream.id"
+            :class="['admin-tab', activeLogTab === stream.id ? 'is-active' : '']"
+            @click="activeLogTab = stream.id"
+          >
+            {{ stream.label }}
+          </button>
+        </div>
+        <div class="actions-row mt-2">
+          <SamsungButton variant="secondary" :disabled="!logsText[activeLogTab]" @click="clearActiveLog">
+            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+            Очистить лог
+          </SamsungButton>
+        </div>
+        <pre v-if="logToggles[activeLogTab]" class="admin-log-pane">{{ logsText[activeLogTab] || '(пусто)' }}</pre>
+        <p v-else class="admin-muted">Поток отключён администратором — переключите чекбокс выше, чтобы возобновить.</p>
+      </div>
+
+      <div
+        v-for="backend in backendTabIds"
+        :key="backend"
+        v-show="activeTab === backend"
+        class="surface-card admin-tab-pane"
+      >
+        <div class="admin-sticky-bar">
+          <p class="admin-muted">Настройки только для {{ backendTabLabel(backend) }}.</p>
+          <SamsungButton :busy="busyPush" @click="pushConfig">
+            <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
+            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+          </SamsungButton>
+        </div>
+        <ConfigFormEditor
+          :model-value="formValue"
+          :sections="backendTabSections[backend]"
+          :has-root-access="!!detail.client?.has_root_access"
+          :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
+          :per-client-actions="true"
+          :generate-vk-link-busy="busyGenerateVkLink"
+          @update:model-value="onFormChanged"
+          @generate-vk-link="generateVkLink"
+        />
+      </div>
+
+      <div v-if="activeTab === 'xray_profiles'" class="surface-card admin-tab-pane">
+        <div class="admin-sticky-bar">
+          <p class="admin-muted">VLESS-профили клиента.</p>
+          <SamsungButton :busy="busyPush" @click="pushConfig">
+            <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
+            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+          </SamsungButton>
+        </div>
+        <details class="admin-config-import">
+          <summary>Добавить из vless:// или wingsv://</summary>
+          <textarea
+            v-model.trim="profileImportDraft"
+            class="text-input admin-import-area"
+            rows="3"
+            spellcheck="false"
+            placeholder="vless://... или wingsv://..."
+          />
+          <p v-if="profileImportError" class="admin-error">{{ profileImportError }}</p>
+          <div class="actions-row mt-2">
+            <SamsungButton
+              variant="secondary"
+              :busy="busyProfileImport"
+              :disabled="!profileImportDraft"
+              @click="importProfile"
+            >
+              <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
+              {{ busyProfileImport ? 'Распаковываем…' : 'Добавить' }}
+            </SamsungButton>
+          </div>
+        </details>
+        <p class="admin-muted mt-3" v-if="xrayProfiles.length">
+          Активный профиль применится на устройстве после нажатия «Применить (Push)».
+        </p>
+        <div v-if="xrayProfileFilterOptions.length > 1" class="mt-3">
+          <OneuiRadioGroup v-model="xrayActiveFilter" :options="xrayProfileFilterOptions" variant="pill" />
+        </div>
+        <div v-if="xraySubscriptions.length" class="actions-row mt-3 mb-4">
+          <SamsungButton
+            v-if="xrayActiveFilter !== 'all' && xrayActiveFilter !== '__standalone'"
+            variant="secondary"
+            :busy="busyRefresh === xrayActiveFilter"
+            @click="refreshSubscription(xrayActiveFilter)"
+          >
+            <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
+            Обновить эту подписку
+          </SamsungButton>
+          <SamsungButton variant="secondary" :busy="busyRefresh === 'all'" @click="refreshAllSubscriptions">
+            <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
+            Обновить все
+          </SamsungButton>
+        </div>
+        <ul v-if="paginatedXrayProfiles.length" class="admin-list">
+          <li
+            v-for="profile in paginatedXrayProfiles"
+            :key="profile.id"
+            :class="['admin-list-item admin-profile-row', xrayActiveProfileId === profile.id ? 'is-selected' : '']"
+            @click="setActiveProfile(profile.id)"
+          >
+            <div class="admin-profile-text">
+              <strong>{{ profile.title || profile.address || profile.id }}</strong>
+              <span class="admin-muted">
+                {{ profile.address || '—' }}<template v-if="profile.port">:{{ profile.port }}</template>
+              </span>
+            </div>
+            <span class="admin-radio" :class="{ 'is-selected': xrayActiveProfileId === profile.id }" aria-hidden="true">
+              <span class="admin-radio-dot"></span>
             </span>
-          </div>
-          <span class="admin-radio" :class="{ 'is-selected': xrayActiveProfileId === profile.id }" aria-hidden="true">
-            <span class="admin-radio-dot"></span>
+            <div class="admin-list-actions" @click.stop>
+              <SamsungIconButton size="small" :title="'Скопировать ссылку'" @click="copyProfileLink(profile)">
+                <Check v-if="copiedProfileId === profile.id" class="button-icon" aria-hidden="true" />
+                <Copy v-else class="button-icon" aria-hidden="true" />
+              </SamsungIconButton>
+              <SamsungIconButton size="small" :title="'Удалить'" @click="removeProfile(profile.id)">
+                <Trash2 class="button-icon" aria-hidden="true" />
+              </SamsungIconButton>
+            </div>
+          </li>
+        </ul>
+        <div v-if="filteredXrayProfiles.length > xrayProfilesPageSize" class="admin-pagination">
+          <SamsungButton
+            variant="secondary"
+            :disabled="xrayProfilesPage === 0"
+            @click="xrayProfilesPage = Math.max(0, xrayProfilesPage - 1)"
+          >
+            <template #icon><ChevronLeft class="button-icon" aria-hidden="true" /></template>
+            Назад
+          </SamsungButton>
+          <span class="admin-muted">
+            {{ xrayProfilesPage + 1 }} / {{ xrayProfilesTotalPages }}
+            ·
+            {{ filteredXrayProfiles.length }} {{ pluralProfiles(filteredXrayProfiles.length) }}
           </span>
-          <div class="admin-list-actions" @click.stop>
-            <SamsungIconButton size="small" :title="'Скопировать ссылку'" @click="copyProfileLink(profile)">
-              <Check v-if="copiedProfileId === profile.id" class="button-icon" aria-hidden="true" />
-              <Copy v-else class="button-icon" aria-hidden="true" />
-            </SamsungIconButton>
-            <SamsungIconButton size="small" :title="'Удалить'" @click="removeProfile(profile.id)">
-              <Trash2 class="button-icon" aria-hidden="true" />
-            </SamsungIconButton>
-          </div>
-        </li>
-      </ul>
-      <div v-if="filteredXrayProfiles.length > xrayProfilesPageSize" class="admin-pagination">
-        <SamsungButton
-          variant="secondary"
-          :disabled="xrayProfilesPage === 0"
-          @click="xrayProfilesPage = Math.max(0, xrayProfilesPage - 1)"
-        >
-          <template #icon><ChevronLeft class="button-icon" aria-hidden="true" /></template>
-          Назад
-        </SamsungButton>
-        <span class="admin-muted">
-          {{ xrayProfilesPage + 1 }} / {{ xrayProfilesTotalPages }}
-          ·
-          {{ filteredXrayProfiles.length }} {{ pluralProfiles(filteredXrayProfiles.length) }}
-        </span>
-        <SamsungButton
-          variant="secondary"
-          :disabled="xrayProfilesPage + 1 >= xrayProfilesTotalPages"
-          @click="xrayProfilesPage = Math.min(xrayProfilesTotalPages - 1, xrayProfilesPage + 1)"
-        >
-          Вперёд
-          <ChevronRight class="button-icon" aria-hidden="true" />
-        </SamsungButton>
+          <SamsungButton
+            variant="secondary"
+            :disabled="xrayProfilesPage + 1 >= xrayProfilesTotalPages"
+            @click="xrayProfilesPage = Math.min(xrayProfilesTotalPages - 1, xrayProfilesPage + 1)"
+          >
+            Вперёд
+            <ChevronRight class="button-icon" aria-hidden="true" />
+          </SamsungButton>
+        </div>
+        <p v-if="!filteredXrayProfiles.length" class="admin-muted mt-3">Профилей нет.</p>
       </div>
-      <p v-if="!filteredXrayProfiles.length" class="admin-muted mt-3">Профилей нет.</p>
-    </div>
 
-    <div v-if="activeTab === 'xray_subscriptions'" class="surface-card admin-tab-pane">
-      <p class="admin-muted">Подписки на Xray-профили (refresh-интервал в минутах, авто-обновление).</p>
-      <div class="actions-row mt-3">
-        <SamsungButton variant="secondary" @click="addSubscription">
-          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          Добавить подписку
-        </SamsungButton>
+      <div v-if="activeTab === 'xray_subscriptions'" class="surface-card admin-tab-pane">
+        <p class="admin-muted">Подписки на Xray-профили (refresh-интервал в минутах, авто-обновление).</p>
+        <div class="actions-row mt-3">
+          <SamsungButton variant="secondary" @click="addSubscription">
+            <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+            Добавить подписку
+          </SamsungButton>
+        </div>
+        <ul v-if="xraySubscriptions.length" class="admin-list mt-3">
+          <li v-for="(sub, idx) in xraySubscriptions" :key="sub.id || idx" class="admin-list-item">
+            <div class="form-section subscription-card">
+              <div class="form-row form-row-stack">
+                <label class="form-label">Имя</label>
+                <input
+                  class="text-input"
+                  :value="sub.title || ''"
+                  @input="patchSubscription(idx, 'title', $event.target.value)"
+                />
+              </div>
+              <div class="form-row form-row-stack">
+                <label class="form-label">URL</label>
+                <input
+                  class="text-input"
+                  :value="sub.url || ''"
+                  @input="patchSubscription(idx, 'url', $event.target.value)"
+                />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Авто-обновление</label>
+                <OneuiSwitch :model-value="!!sub.autoUpdate" @change="patchSubscription(idx, 'autoUpdate', $event)" />
+              </div>
+              <div class="form-row">
+                <label class="form-label">Интервал (минут)</label>
+                <input
+                  class="text-input form-input-narrow"
+                  :value="sub.refreshIntervalMinutes || ''"
+                  @input="patchSubscription(idx, 'refreshIntervalMinutes', toIntOrUndef($event.target.value))"
+                  inputmode="numeric"
+                />
+              </div>
+              <div class="form-row" v-if="sub.lastUpdatedAt">
+                <label class="form-label">Последнее обновление</label>
+                <span class="admin-muted">{{
+                  formatTs(new Date(Number(sub.lastUpdatedAt) * 1000).toISOString())
+                }}</span>
+              </div>
+              <div class="actions-row mt-2">
+                <SamsungButton variant="secondary" @click="removeSubscription(idx)">
+                  <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+                  Удалить
+                </SamsungButton>
+              </div>
+            </div>
+          </li>
+        </ul>
+        <p v-else class="admin-muted mt-3">Подписок нет.</p>
       </div>
-      <ul v-if="xraySubscriptions.length" class="admin-list mt-3">
-        <li v-for="(sub, idx) in xraySubscriptions" :key="sub.id || idx" class="admin-list-item">
-          <div class="form-section subscription-card">
-            <div class="form-row form-row-stack">
-              <label class="form-label">Имя</label>
-              <input
-                class="text-input"
-                :value="sub.title || ''"
-                @input="patchSubscription(idx, 'title', $event.target.value)"
-              />
-            </div>
-            <div class="form-row form-row-stack">
-              <label class="form-label">URL</label>
-              <input
-                class="text-input"
-                :value="sub.url || ''"
-                @input="patchSubscription(idx, 'url', $event.target.value)"
-              />
-            </div>
-            <div class="form-row">
-              <label class="form-label">Авто-обновление</label>
-              <OneuiSwitch :model-value="!!sub.autoUpdate" @change="patchSubscription(idx, 'autoUpdate', $event)" />
-            </div>
-            <div class="form-row">
-              <label class="form-label">Интервал (минут)</label>
-              <input
-                class="text-input form-input-narrow"
-                :value="sub.refreshIntervalMinutes || ''"
-                @input="patchSubscription(idx, 'refreshIntervalMinutes', toIntOrUndef($event.target.value))"
-                inputmode="numeric"
-              />
-            </div>
-            <div class="form-row" v-if="sub.lastUpdatedAt">
-              <label class="form-label">Последнее обновление</label>
-              <span class="admin-muted">{{ formatTs(new Date(Number(sub.lastUpdatedAt) * 1000).toISOString()) }}</span>
-            </div>
-            <div class="actions-row mt-2">
-              <SamsungButton variant="secondary" @click="removeSubscription(idx)">
-                <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-                Удалить
-              </SamsungButton>
-            </div>
-          </div>
-        </li>
-      </ul>
-      <p v-else class="admin-muted mt-3">Подписок нет.</p>
-    </div>
 
-    <div v-if="activeTab === 'commands'" class="surface-card admin-tab-pane">
-      <p class="admin-muted">
-        Тунель сейчас:
-        <strong>{{ runtimeStateLabel }}</strong
-        >{{ detail?.client?.online ? '' : ' · клиент оффлайн, команды не дойдут' }}
-      </p>
-      <div class="admin-cmd-grid">
-        <SamsungButton :busy="busyCmd" :disabled="!canStart" @click="sendCommand('start_tunnel')">
-          <template #icon><Play class="button-icon" aria-hidden="true" /></template>
-          Старт тунеля
-        </SamsungButton>
-        <SamsungButton variant="secondary" :busy="busyCmd" :disabled="!canStop" @click="sendCommand('stop_tunnel')">
-          <template #icon><Square class="button-icon" aria-hidden="true" /></template>
-          Стоп тунеля
-        </SamsungButton>
-        <SamsungButton variant="secondary" :busy="busyCmd" :disabled="!canStop" @click="sendCommand('reconnect')">
-          <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
-          Переподключение
-        </SamsungButton>
-        <SamsungButton
-          variant="secondary"
-          :busy="busyCmd"
-          :disabled="!detail?.client?.online"
-          @click="sendCommand('report_now')"
-        >
-          <template #icon><Activity class="button-icon" aria-hidden="true" /></template>
-          Запросить state
-        </SamsungButton>
+      <div v-if="activeTab === 'commands'" class="surface-card admin-tab-pane">
+        <p class="admin-muted">
+          Тунель сейчас:
+          <strong>{{ runtimeStateLabel }}</strong
+          >{{ detail?.client?.online ? '' : ' · клиент оффлайн, команды не дойдут' }}
+        </p>
+        <div class="admin-cmd-grid">
+          <SamsungButton :busy="busyCmd" :disabled="!canStart" @click="sendCommand('start_tunnel')">
+            <template #icon><Play class="button-icon" aria-hidden="true" /></template>
+            Старт тунеля
+          </SamsungButton>
+          <SamsungButton variant="secondary" :busy="busyCmd" :disabled="!canStop" @click="sendCommand('stop_tunnel')">
+            <template #icon><Square class="button-icon" aria-hidden="true" /></template>
+            Стоп тунеля
+          </SamsungButton>
+          <SamsungButton variant="secondary" :busy="busyCmd" :disabled="!canStop" @click="sendCommand('reconnect')">
+            <template #icon><RotateCw class="button-icon" aria-hidden="true" /></template>
+            Переподключение
+          </SamsungButton>
+          <SamsungButton
+            variant="secondary"
+            :busy="busyCmd"
+            :disabled="!detail?.client?.online"
+            @click="sendCommand('report_now')"
+          >
+            <template #icon><Activity class="button-icon" aria-hidden="true" /></template>
+            Запросить state
+          </SamsungButton>
+        </div>
+        <p v-if="lastCmdAck" class="admin-muted mt-4">Последний ответ: {{ JSON.stringify(lastCmdAck) }}</p>
       </div>
-      <p v-if="lastCmdAck" class="admin-muted mt-4">Последний ответ: {{ JSON.stringify(lastCmdAck) }}</p>
-    </div>
 
-    <section class="danger-card">
-      <h2 class="font-sharp text-[18px] font-bold text-wings-text">Опасная зона</h2>
-      <p class="body-copy mt-2">Удаление клиента отзывает токен и стирает его конфигурацию. Действие необратимое.</p>
-      <div class="actions-row mt-4">
-        <SamsungButton variant="danger" :busy="busyDelete" @click="onDelete">
-          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          {{ busyDelete ? 'Удаляем…' : 'Удалить клиента' }}
-        </SamsungButton>
-      </div>
-    </section>
+      <section class="danger-card">
+        <h2 class="font-sharp text-[18px] font-bold text-wings-text">Опасная зона</h2>
+        <p class="body-copy mt-2">Удаление клиента отзывает токен и стирает его конфигурацию. Действие необратимое.</p>
+        <div class="actions-row mt-4">
+          <SamsungButton variant="danger" :busy="busyDelete" @click="onDelete">
+            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+            {{ busyDelete ? 'Удаляем…' : 'Удалить клиента' }}
+          </SamsungButton>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -694,6 +709,7 @@ import {
   RotateCcw,
   RotateCw,
   ShieldCheck,
+  Shuffle,
   Sparkles,
   Split,
   Square,
@@ -767,6 +783,7 @@ const loadError = ref('');
 const configDraft = ref('');
 const configError = ref('');
 const busyPush = ref(false);
+const busyLoadReported = ref(false);
 const busyGenerateVkLink = ref(false);
 const showQueueVkLinkModal = ref(false);
 const queueVkLinkCount = ref(1);
@@ -1221,8 +1238,18 @@ function setAppRoutingField(key, value) {
 const appRoutingModeOptions = [
   { value: 'off', label: 'Off', icon: PowerOff },
   { value: 'bypass', label: 'Bypass', icon: Split },
+  { value: 'xbypass', label: 'XBypass', icon: Shuffle },
   { value: 'whitelist', label: 'Whitelist', icon: ShieldCheck },
 ];
+
+// UI keeps lowercase tokens, but the saved config writes the proto enum name so
+// protojson parses it (a bare "bypass" is silently dropped to UNSPECIFIED).
+const appRoutingModeEnum = {
+  off: 'APP_ROUTING_MODE_OFF',
+  bypass: 'APP_ROUTING_MODE_BYPASS',
+  xbypass: 'APP_ROUTING_MODE_XBYPASS',
+  whitelist: 'APP_ROUTING_MODE_WHITELIST',
+};
 
 const appRoutingMode = computed(() => normalizeAppRoutingMode(appRouting.value));
 
@@ -1232,25 +1259,28 @@ const appRoutingModeHint = computed(() => {
       return 'Все приложения идут через VPN. Список и счётчик скрыты.';
     case 'whitelist':
       return 'Через VPN идут только выбранные приложения, остальные — напрямую.';
+    case 'xbypass':
+      return 'Bypass, но через Xray (gVisor): весь трафик заходит в туннель, выбранные приложения Xray уводит напрямую. Закрывает утечки и неопознанный UID. Только на Xray и VK TURN + Xray-WG, иначе деградирует в обычный Bypass.';
     default:
-      return 'Выбранные приложения идут в обход VPN, остальные — через него.';
+      return 'Выбранные приложения исключаются из VPN на уровне Android и идут напрямую. Просто, но приложение может обойти туннель прямым биндом к интерфейсу.';
   }
 });
 
 function normalizeAppRoutingMode(routing) {
-  if (!routing) return 'bypass';
+  if (!routing) return 'xbypass';
   const m = routing.mode;
   if (m === 'off' || m === 'APP_ROUTING_MODE_OFF') return 'off';
   if (m === 'whitelist' || m === 'APP_ROUTING_MODE_WHITELIST') return 'whitelist';
+  if (m === 'xbypass' || m === 'APP_ROUTING_MODE_XBYPASS') return 'xbypass';
   if (m === 'bypass' || m === 'APP_ROUTING_MODE_BYPASS') return 'bypass';
-  if (typeof routing.bypass === 'boolean') return routing.bypass ? 'bypass' : 'whitelist';
-  return 'bypass';
+  if (typeof routing.bypass === 'boolean') return routing.bypass ? 'xbypass' : 'whitelist';
+  return 'xbypass';
 }
 
 function setAppRoutingMode(value) {
-  const next = { ...appRouting.value, mode: value };
+  const next = { ...appRouting.value, mode: appRoutingModeEnum[value] || value };
   if (value === 'whitelist') next.bypass = false;
-  else if (value === 'bypass') next.bypass = true;
+  else if (value === 'bypass' || value === 'xbypass') next.bypass = true;
   else delete next.bypass;
   onFormChanged({ ...(formValue.value || {}), appRouting: next });
 }
@@ -1583,12 +1613,19 @@ function setConfigMode(mode) {
 }
 
 function loadFromReported() {
+  if (busyLoadReported.value) return;
   if (!detail.value?.reported_config) {
     configError.value = 'Клиент ещё не присылал свою конфигурацию';
     return;
   }
+  // The copy is instant; flash a short busy state so the click is visibly
+  // acknowledged and it's clear the draft was replaced.
+  busyLoadReported.value = true;
   configDraft.value = formatJson(detail.value.reported_config);
   configError.value = '';
+  setTimeout(() => {
+    busyLoadReported.value = false;
+  }, 400);
 }
 
 async function pushConfig() {
@@ -1620,6 +1657,23 @@ async function pushConfig() {
   }
 }
 
+const VK_LINK_WAIT_TIMEOUT_MS = 60_000;
+let vkLinkWaitTimer = null;
+function clearVkLinkWait() {
+  if (vkLinkWaitTimer) {
+    clearTimeout(vkLinkWaitTimer);
+    vkLinkWaitTimer = null;
+  }
+}
+// The device generates the link asynchronously and reports it back via a
+// state_report; resolve the button's busy state when that arrives.
+function resolveVkLinkWait() {
+  if (busyGenerateVkLink.value) {
+    busyGenerateVkLink.value = false;
+    clearVkLinkWait();
+  }
+}
+
 async function generateVkLink() {
   if (busyGenerateVkLink.value) return;
   // Online: один клик -> одна ссылка через текущую сессию. Offline: модалка
@@ -1634,6 +1688,7 @@ async function generateVkLink() {
 
 async function sendGenerateVkLink(count) {
   busyGenerateVkLink.value = true;
+  clearVkLinkWait();
   try {
     const res = await fetch(`/api/admin/clients/${id.value}/command`, {
       method: 'POST',
@@ -1647,11 +1702,20 @@ async function sendGenerateVkLink(count) {
     }
     const ack = await res.json().catch(() => ({}));
     if (ack.queued) {
+      // Offline: queued until the device's next welcome — nothing to wait for.
       lastCmdAck.value = { ok: true, queued: ack.queued_count };
+      busyGenerateVkLink.value = false;
+    } else {
+      // Online: keep the button busy until the device reports the new link back
+      // (resolveVkLinkWait on the next state_report). Safety timeout so it never
+      // sticks if the device goes silent.
+      vkLinkWaitTimer = setTimeout(() => {
+        vkLinkWaitTimer = null;
+        busyGenerateVkLink.value = false;
+      }, VK_LINK_WAIT_TIMEOUT_MS);
     }
   } catch (err) {
     lastCmdAck.value = { ok: false, error: err.message };
-  } finally {
     busyGenerateVkLink.value = false;
   }
 }
@@ -1872,6 +1936,9 @@ function streamFromInt(value) {
 }
 
 watch(id, () => {
+  // Reset so the loader shows while switching to another client (the socket-
+  // driven loadDetail() calls keep the current detail to avoid loader flicker).
+  detail.value = null;
   loadDetail();
   loadInstalledApps();
 });
@@ -1884,6 +1951,7 @@ onMounted(() => {
     if (event.kind === 'status_update' || event.kind === 'error') {
       loadDetail();
     } else if (event.kind === 'state_report') {
+      resolveVkLinkWait();
       loadDetail();
     } else if (event.kind === 'log_chunk') {
       const streamName = streamFromInt(event.payload?.stream);
