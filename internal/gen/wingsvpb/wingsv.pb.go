@@ -535,8 +535,14 @@ type AppRoutingMode int32
 const (
 	AppRoutingMode_APP_ROUTING_MODE_UNSPECIFIED AppRoutingMode = 0
 	AppRoutingMode_APP_ROUTING_MODE_OFF         AppRoutingMode = 1
-	AppRoutingMode_APP_ROUTING_MODE_BYPASS      AppRoutingMode = 2
-	AppRoutingMode_APP_ROUTING_MODE_WHITELIST   AppRoutingMode = 3
+	// BYPASS excludes the selected apps at the Android VpnService layer
+	// (addDisallowedApplication). XBYPASS keeps them inside the tunnel and diverts
+	// them to direct at the xray-core gVisor level (closes the unknown-UID leak);
+	// it falls back to plain BYPASS where the gVisor path is unavailable. Both
+	// share the bypass_packages list.
+	AppRoutingMode_APP_ROUTING_MODE_BYPASS    AppRoutingMode = 2
+	AppRoutingMode_APP_ROUTING_MODE_WHITELIST AppRoutingMode = 3
+	AppRoutingMode_APP_ROUTING_MODE_XBYPASS   AppRoutingMode = 4
 )
 
 // Enum value maps for AppRoutingMode.
@@ -546,12 +552,14 @@ var (
 		1: "APP_ROUTING_MODE_OFF",
 		2: "APP_ROUTING_MODE_BYPASS",
 		3: "APP_ROUTING_MODE_WHITELIST",
+		4: "APP_ROUTING_MODE_XBYPASS",
 	}
 	AppRoutingMode_value = map[string]int32{
 		"APP_ROUTING_MODE_UNSPECIFIED": 0,
 		"APP_ROUTING_MODE_OFF":         1,
 		"APP_ROUTING_MODE_BYPASS":      2,
 		"APP_ROUTING_MODE_WHITELIST":   3,
+		"APP_ROUTING_MODE_XBYPASS":     4,
 	}
 )
 
@@ -4161,12 +4169,13 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x10ProxyRuntimeMode\x12\"\n" +
 	"\x1ePROXY_RUNTIME_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PROXY_RUNTIME_MODE_VPN\x10\x01\x12\x1c\n" +
-	"\x18PROXY_RUNTIME_MODE_PROXY\x10\x02*\x89\x01\n" +
+	"\x18PROXY_RUNTIME_MODE_PROXY\x10\x02*\xa7\x01\n" +
 	"\x0eAppRoutingMode\x12 \n" +
 	"\x1cAPP_ROUTING_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14APP_ROUTING_MODE_OFF\x10\x01\x12\x1b\n" +
 	"\x17APP_ROUTING_MODE_BYPASS\x10\x02\x12\x1e\n" +
-	"\x1aAPP_ROUTING_MODE_WHITELIST\x10\x03*\xcf\x01\n" +
+	"\x1aAPP_ROUTING_MODE_WHITELIST\x10\x03\x12\x1c\n" +
+	"\x18APP_ROUTING_MODE_XBYPASS\x10\x04*\xcf\x01\n" +
 	"\x14XrayRoutingMatchType\x12\"\n" +
 	"\x1eXRAY_ROUTING_MATCH_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18XRAY_ROUTING_MATCH_GEOIP\x10\x01\x12\x1e\n" +

@@ -1124,8 +1124,10 @@ func resolveAppRoutingMode(app *wingsvpb.AppRouting) wingsvpb.AppRoutingMode {
 		return app.GetMode()
 	}
 	if app.Bypass != nil {
+		// Legacy bool predates the bypass split; the device treats it as the
+		// gVisor-direct default (XBYPASS), so the preview matches.
 		if app.GetBypass() {
-			return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS
+			return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XBYPASS
 		}
 		return wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST
 	}
@@ -1138,6 +1140,8 @@ func appRoutingModeLabel(app *wingsvpb.AppRouting) string {
 		return "Off"
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST:
 		return "Whitelist"
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XBYPASS:
+		return "XBypass"
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS:
 		return "Bypass"
 	}
@@ -1151,7 +1155,8 @@ func appRoutingBypassPackages(app *wingsvpb.AppRouting) []string {
 	if pkgs := app.GetBypassPackages(); len(pkgs) > 0 {
 		return pkgs
 	}
-	if resolveAppRoutingMode(app) == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS {
+	if m := resolveAppRoutingMode(app); m == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS ||
+		m == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XBYPASS {
 		return app.GetPackages()
 	}
 	return nil
@@ -1172,7 +1177,8 @@ func appRoutingWhitelistPackages(app *wingsvpb.AppRouting) []string {
 
 func appRoutingActivePackageCount(app *wingsvpb.AppRouting) int {
 	switch resolveAppRoutingMode(app) {
-	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS:
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS,
+		wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XBYPASS:
 		return len(appRoutingBypassPackages(app))
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST:
 		return len(appRoutingWhitelistPackages(app))

@@ -40,15 +40,10 @@
         @update:model-value="(v) => (showQueueVkLinkModal = v)"
       >
         <p class="body-copy">
-          Сколько VK-ссылок поставить в очередь? Они сгенерируются на устройстве при следующем подключении (TTL 24 часа).
+          Сколько VK-ссылок поставить в очередь? Они сгенерируются на устройстве при следующем подключении (TTL 24
+          часа).
         </p>
-        <input
-          class="text-input mt-3"
-          type="number"
-          min="1"
-          max="50"
-          v-model.number="queueVkLinkCount"
-        />
+        <input class="text-input mt-3" type="number" min="1" max="50" v-model.number="queueVkLinkCount" />
         <template #actions>
           <SamsungButton @click="confirmQueueVkLink">
             <template #icon><Sparkles class="button-icon" aria-hidden="true" /></template>

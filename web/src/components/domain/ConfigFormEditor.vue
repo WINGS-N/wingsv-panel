@@ -467,7 +467,7 @@
         </div>
         <p class="form-hint">{{ appRoutingModeHint }}</p>
       </div>
-      <div v-if="appRoutingMode === 'bypass'" class="form-row form-row-stack">
+      <div v-if="appRoutingMode === 'bypass' || appRoutingMode === 'xbypass'" class="form-row form-row-stack">
         <label class="form-label">Bypass-пакеты (через запятую или с новой строки)</label>
         <textarea
           class="text-input"
@@ -890,7 +890,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Plus, PowerOff, ShieldCheck, Sparkles, Split, Trash2 } from 'lucide-vue-next';
+import { Plus, PowerOff, ShieldCheck, Shuffle, Sparkles, Split, Trash2 } from 'lucide-vue-next';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
 
@@ -1300,8 +1300,18 @@ function setAppRoutingArray(key, text) {
 const appRoutingModeOptions = [
   { value: 'off', label: 'Off', icon: PowerOff },
   { value: 'bypass', label: 'Bypass', icon: Split },
+  { value: 'xbypass', label: 'XBypass', icon: Shuffle },
   { value: 'whitelist', label: 'Whitelist', icon: ShieldCheck },
 ];
+
+// UI keeps lowercase mode tokens, but the saved config writes the proto enum name
+// so protojson parses it (a bare "bypass" is silently dropped to UNSPECIFIED).
+const appRoutingModeEnum = {
+  off: 'APP_ROUTING_MODE_OFF',
+  bypass: 'APP_ROUTING_MODE_BYPASS',
+  xbypass: 'APP_ROUTING_MODE_XBYPASS',
+  whitelist: 'APP_ROUTING_MODE_WHITELIST',
+};
 
 const appRoutingMode = computed(() => normalizeAppRoutingMode(appRouting.value));
 
@@ -1311,26 +1321,29 @@ const appRoutingModeHint = computed(() => {
       return 'Все приложения идут через VPN.';
     case 'whitelist':
       return 'Через VPN идут только выбранные приложения, остальные напрямую.';
+    case 'xbypass':
+      return 'Bypass, но через Xray (gVisor): весь трафик заходит в туннель, выбранные приложения Xray уводит напрямую. Закрывает утечки и неопознанный UID. Только на Xray и VK TURN + Xray-WG, иначе деградирует в обычный Bypass.';
     default:
-      return 'Выбранные приложения идут в обход VPN, остальные через него.';
+      return 'Выбранные приложения исключаются из VPN на уровне Android и идут напрямую. Просто, но приложение может обойти туннель прямым биндом к интерфейсу.';
   }
 });
 
 function normalizeAppRoutingMode(routing) {
-  if (!routing) return 'bypass';
+  if (!routing) return 'xbypass';
   const m = routing.mode;
   if (m === 'off' || m === 'APP_ROUTING_MODE_OFF') return 'off';
   if (m === 'whitelist' || m === 'APP_ROUTING_MODE_WHITELIST') return 'whitelist';
+  if (m === 'xbypass' || m === 'APP_ROUTING_MODE_XBYPASS') return 'xbypass';
   if (m === 'bypass' || m === 'APP_ROUTING_MODE_BYPASS') return 'bypass';
-  if (typeof routing.bypass === 'boolean') return routing.bypass ? 'bypass' : 'whitelist';
-  return 'bypass';
+  if (typeof routing.bypass === 'boolean') return routing.bypass ? 'xbypass' : 'whitelist';
+  return 'xbypass';
 }
 
 function setAppRoutingMode(value) {
-  const next = { ...appRouting.value, mode: value };
-  // legacy bypass field for older importers
+  const next = { ...appRouting.value, mode: appRoutingModeEnum[value] || value };
+  // legacy bypass field for older importers (true for the whole bypass family)
   if (value === 'whitelist') next.bypass = false;
-  else if (value === 'bypass') next.bypass = true;
+  else if (value === 'bypass' || value === 'xbypass') next.bypass = true;
   else delete next.bypass;
   emitMerge({ appRouting: next });
 }
