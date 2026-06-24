@@ -477,7 +477,7 @@
           @input="setAppRoutingArray('bypassPackages', $event.target.value)"
         />
       </div>
-      <div v-if="appRoutingMode === 'whitelist'" class="form-row form-row-stack">
+      <div v-if="appRoutingMode === 'whitelist' || appRoutingMode === 'xwhitelist'" class="form-row form-row-stack">
         <label class="form-label">Whitelist-пакеты (через запятую или с новой строки)</label>
         <textarea
           class="text-input"
@@ -890,7 +890,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { Plus, PowerOff, ShieldCheck, Shuffle, Sparkles, Split, Trash2 } from 'lucide-vue-next';
+import { Plus, PowerOff, ShieldCheck, ShieldHalf, Shuffle, Sparkles, Split, Trash2 } from 'lucide-vue-next';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
 
@@ -1302,6 +1302,7 @@ const appRoutingModeOptions = [
   { value: 'bypass', label: 'Bypass', icon: Split },
   { value: 'xbypass', label: 'XBypass', icon: Shuffle },
   { value: 'whitelist', label: 'Whitelist', icon: ShieldCheck },
+  { value: 'xwhitelist', label: 'XWhitelist', icon: ShieldHalf },
 ];
 
 // UI keeps lowercase mode tokens, but the saved config writes the proto enum name
@@ -1311,6 +1312,7 @@ const appRoutingModeEnum = {
   bypass: 'APP_ROUTING_MODE_BYPASS',
   xbypass: 'APP_ROUTING_MODE_XBYPASS',
   whitelist: 'APP_ROUTING_MODE_WHITELIST',
+  xwhitelist: 'APP_ROUTING_MODE_XWHITELIST',
 };
 
 const appRoutingMode = computed(() => normalizeAppRoutingMode(appRouting.value));
@@ -1323,6 +1325,8 @@ const appRoutingModeHint = computed(() => {
       return 'Через VPN идут только выбранные приложения, остальные напрямую.';
     case 'xbypass':
       return 'Bypass, но через Xray (gVisor): весь трафик заходит в туннель, выбранные приложения Xray уводит напрямую. Закрывает утечки и неопознанный UID. Только на Xray и VK TURN + Xray-WG, иначе деградирует в обычный Bypass.';
+    case 'xwhitelist':
+      return 'Whitelist, но через Xray (gVisor): весь трафик заходит в туннель, Xray туннелирует только выбранные приложения, остальные уводит напрямую. Закрывает утечки у невыбранных приложений. Только на Xray и VK TURN + Xray-WG, иначе деградирует в обычный Whitelist.';
     default:
       return 'Выбранные приложения исключаются из VPN на уровне Android и идут напрямую. Просто, но приложение может обойти туннель прямым биндом к интерфейсу.';
   }
@@ -1333,6 +1337,7 @@ function normalizeAppRoutingMode(routing) {
   const m = routing.mode;
   if (m === 'off' || m === 'APP_ROUTING_MODE_OFF') return 'off';
   if (m === 'whitelist' || m === 'APP_ROUTING_MODE_WHITELIST') return 'whitelist';
+  if (m === 'xwhitelist' || m === 'APP_ROUTING_MODE_XWHITELIST') return 'xwhitelist';
   if (m === 'xbypass' || m === 'APP_ROUTING_MODE_XBYPASS') return 'xbypass';
   if (m === 'bypass' || m === 'APP_ROUTING_MODE_BYPASS') return 'bypass';
   if (typeof routing.bypass === 'boolean') return routing.bypass ? 'xbypass' : 'whitelist';
@@ -1342,7 +1347,7 @@ function normalizeAppRoutingMode(routing) {
 function setAppRoutingMode(value) {
   const next = { ...appRouting.value, mode: appRoutingModeEnum[value] || value };
   // legacy bypass field for older importers (true for the whole bypass family)
-  if (value === 'whitelist') next.bypass = false;
+  if (value === 'whitelist' || value === 'xwhitelist') next.bypass = false;
   else if (value === 'bypass' || value === 'xbypass') next.bypass = true;
   else delete next.bypass;
   emitMerge({ appRouting: next });

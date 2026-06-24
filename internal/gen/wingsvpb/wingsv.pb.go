@@ -543,6 +543,11 @@ const (
 	AppRoutingMode_APP_ROUTING_MODE_BYPASS    AppRoutingMode = 2
 	AppRoutingMode_APP_ROUTING_MODE_WHITELIST AppRoutingMode = 3
 	AppRoutingMode_APP_ROUTING_MODE_XBYPASS   AppRoutingMode = 4
+	// XWHITELIST is the inverse of XBYPASS: it keeps every app inside the tunnel
+	// but tunnels only the selected apps and diverts the rest to direct at the
+	// xray-core gVisor level. It falls back to plain WHITELIST where the gVisor
+	// path is unavailable. Shares the whitelist_packages list with WHITELIST.
+	AppRoutingMode_APP_ROUTING_MODE_XWHITELIST AppRoutingMode = 5
 )
 
 // Enum value maps for AppRoutingMode.
@@ -553,6 +558,7 @@ var (
 		2: "APP_ROUTING_MODE_BYPASS",
 		3: "APP_ROUTING_MODE_WHITELIST",
 		4: "APP_ROUTING_MODE_XBYPASS",
+		5: "APP_ROUTING_MODE_XWHITELIST",
 	}
 	AppRoutingMode_value = map[string]int32{
 		"APP_ROUTING_MODE_UNSPECIFIED": 0,
@@ -560,6 +566,7 @@ var (
 		"APP_ROUTING_MODE_BYPASS":      2,
 		"APP_ROUTING_MODE_WHITELIST":   3,
 		"APP_ROUTING_MODE_XBYPASS":     4,
+		"APP_ROUTING_MODE_XWHITELIST":  5,
 	}
 )
 
@@ -4169,13 +4176,14 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x10ProxyRuntimeMode\x12\"\n" +
 	"\x1ePROXY_RUNTIME_MODE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PROXY_RUNTIME_MODE_VPN\x10\x01\x12\x1c\n" +
-	"\x18PROXY_RUNTIME_MODE_PROXY\x10\x02*\xa7\x01\n" +
+	"\x18PROXY_RUNTIME_MODE_PROXY\x10\x02*\xc8\x01\n" +
 	"\x0eAppRoutingMode\x12 \n" +
 	"\x1cAPP_ROUTING_MODE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14APP_ROUTING_MODE_OFF\x10\x01\x12\x1b\n" +
 	"\x17APP_ROUTING_MODE_BYPASS\x10\x02\x12\x1e\n" +
 	"\x1aAPP_ROUTING_MODE_WHITELIST\x10\x03\x12\x1c\n" +
-	"\x18APP_ROUTING_MODE_XBYPASS\x10\x04*\xcf\x01\n" +
+	"\x18APP_ROUTING_MODE_XBYPASS\x10\x04\x12\x1f\n" +
+	"\x1bAPP_ROUTING_MODE_XWHITELIST\x10\x05*\xcf\x01\n" +
 	"\x14XrayRoutingMatchType\x12\"\n" +
 	"\x1eXRAY_ROUTING_MATCH_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18XRAY_ROUTING_MATCH_GEOIP\x10\x01\x12\x1e\n" +

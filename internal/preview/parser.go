@@ -1140,6 +1140,8 @@ func appRoutingModeLabel(app *wingsvpb.AppRouting) string {
 		return "Off"
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST:
 		return "Whitelist"
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XWHITELIST:
+		return "XWhitelist"
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XBYPASS:
 		return "XBypass"
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS:
@@ -1169,7 +1171,8 @@ func appRoutingWhitelistPackages(app *wingsvpb.AppRouting) []string {
 	if pkgs := app.GetWhitelistPackages(); len(pkgs) > 0 {
 		return pkgs
 	}
-	if resolveAppRoutingMode(app) == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST {
+	if m := resolveAppRoutingMode(app); m == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST ||
+		m == wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XWHITELIST {
 		return app.GetPackages()
 	}
 	return nil
@@ -1180,7 +1183,8 @@ func appRoutingActivePackageCount(app *wingsvpb.AppRouting) int {
 	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_BYPASS,
 		wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XBYPASS:
 		return len(appRoutingBypassPackages(app))
-	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST:
+	case wingsvpb.AppRoutingMode_APP_ROUTING_MODE_WHITELIST,
+		wingsvpb.AppRoutingMode_APP_ROUTING_MODE_XWHITELIST:
 		return len(appRoutingWhitelistPackages(app))
 	}
 	return 0
