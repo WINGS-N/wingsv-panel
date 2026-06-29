@@ -479,13 +479,16 @@
         />
       </div>
 
-      <div v-if="activeTab === 'xray_profiles'" class="surface-card admin-tab-pane">
+      <div v-if="activeTab === 'profiles'" class="surface-card admin-tab-pane">
         <div class="admin-sticky-bar">
-          <p class="admin-muted">VLESS-профили клиента.</p>
+          <p class="admin-muted">Профили клиента по сетевому бэкенду.</p>
           <SamsungButton :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
             {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
           </SamsungButton>
+        </div>
+        <div class="mt-3">
+          <OneuiRadioGroup v-model="profileBackend" :options="profileBackendOptions" variant="pill" />
         </div>
         <details class="admin-config-import">
           <summary>Добавить из vless:// или wingsv://</summary>
@@ -509,13 +512,13 @@
             </SamsungButton>
           </div>
         </details>
-        <p class="admin-muted mt-3" v-if="xrayProfiles.length">
+        <p class="admin-muted mt-3" v-if="currentProfiles.length">
           Активный профиль применится на устройстве после нажатия «Применить (Push)».
         </p>
-        <div v-if="xrayProfileFilterOptions.length > 1" class="mt-3">
+        <div v-if="isXrayProfiles && xrayProfileFilterOptions.length > 1" class="mt-3">
           <OneuiRadioGroup v-model="xrayActiveFilter" :options="xrayProfileFilterOptions" variant="pill" />
         </div>
-        <div v-if="xraySubscriptions.length" class="actions-row mt-3 mb-4">
+        <div v-if="isXrayProfiles && xraySubscriptions.length" class="actions-row mt-3 mb-4">
           <SamsungButton
             v-if="xrayActiveFilter !== 'all' && xrayActiveFilter !== '__standalone'"
             variant="secondary"
@@ -530,34 +533,41 @@
             Обновить все
           </SamsungButton>
         </div>
-        <ul v-if="paginatedXrayProfiles.length" class="admin-list">
+        <ul v-if="displayProfiles.length" class="admin-list">
           <li
-            v-for="profile in paginatedXrayProfiles"
+            v-for="profile in displayProfiles"
             :key="profile.id"
-            :class="['admin-list-item admin-profile-row', xrayActiveProfileId === profile.id ? 'is-selected' : '']"
-            @click="setActiveProfile(profile.id)"
+            :class="['admin-list-item admin-profile-row', currentActiveProfileId === profile.id ? 'is-selected' : '']"
+            @click="setActiveProfileGeneric(profile.id)"
           >
             <div class="admin-profile-text">
-              <strong>{{ profile.title || profile.address || profile.id }}</strong>
-              <span class="admin-muted">
-                {{ profile.address || '—' }}<template v-if="profile.port">:{{ profile.port }}</template>
-              </span>
+              <strong>{{ profilePrimary(profile) }}</strong>
+              <span class="admin-muted">{{ profileSecondary(profile) }}</span>
             </div>
-            <span class="admin-radio" :class="{ 'is-selected': xrayActiveProfileId === profile.id }" aria-hidden="true">
+            <span
+              class="admin-radio"
+              :class="{ 'is-selected': currentActiveProfileId === profile.id }"
+              aria-hidden="true"
+            >
               <span class="admin-radio-dot"></span>
             </span>
             <div class="admin-list-actions" @click.stop>
-              <SamsungIconButton size="small" :title="'Скопировать ссылку'" @click="copyProfileLink(profile)">
+              <SamsungIconButton
+                v-if="isXrayProfiles && profile.rawLink"
+                size="small"
+                :title="'Скопировать ссылку'"
+                @click="copyProfileLink(profile)"
+              >
                 <Check v-if="copiedProfileId === profile.id" class="button-icon" aria-hidden="true" />
                 <Copy v-else class="button-icon" aria-hidden="true" />
               </SamsungIconButton>
-              <SamsungIconButton size="small" :title="'Удалить'" @click="removeProfile(profile.id)">
+              <SamsungIconButton size="small" :title="'Удалить'" @click="removeProfileGeneric(profile.id)">
                 <Trash2 class="button-icon" aria-hidden="true" />
               </SamsungIconButton>
             </div>
           </li>
         </ul>
-        <div v-if="filteredXrayProfiles.length > xrayProfilesPageSize" class="admin-pagination">
+        <div v-if="isXrayProfiles && filteredXrayProfiles.length > xrayProfilesPageSize" class="admin-pagination">
           <SamsungButton
             variant="secondary"
             :disabled="xrayProfilesPage === 0"
@@ -580,11 +590,14 @@
             <ChevronRight class="button-icon" aria-hidden="true" />
           </SamsungButton>
         </div>
-        <p v-if="!filteredXrayProfiles.length" class="admin-muted mt-3">Профилей нет.</p>
+        <p v-if="!displayProfiles.length" class="admin-muted mt-3">Профилей нет.</p>
       </div>
 
-      <div v-if="activeTab === 'xray_subscriptions'" class="surface-card admin-tab-pane">
-        <p class="admin-muted">Подписки на Xray-профили (refresh-интервал в минутах, авто-обновление).</p>
+      <div v-if="activeTab === 'profiles' && isXrayProfiles" class="surface-card admin-tab-pane">
+        <p class="admin-muted">
+          Подписки на профили (refresh-интервал в минутах, авто-обновление). Одна подписка может приносить профили
+          нескольких бэкендов.
+        </p>
         <div class="actions-row mt-3">
           <SamsungButton variant="secondary" @click="addSubscription">
             <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
@@ -740,8 +753,7 @@ const tabs = [
   { id: 'config', label: 'Конфигурация' },
   { id: 'vk_turn', label: 'VK TURN' },
   { id: 'xray', label: 'Xray' },
-  { id: 'xray_profiles', label: 'Xray профили' },
-  { id: 'xray_subscriptions', label: 'Xray подписки' },
+  { id: 'profiles', label: 'Профили' },
   { id: 'xray_rules', label: 'Xray правила' },
   { id: 'wireguard', label: 'WireGuard' },
   { id: 'amneziawg', label: 'AmneziaWG' },
@@ -1537,15 +1549,47 @@ function patchXray(patch) {
   onFormChanged(next);
 }
 
-function setActiveProfile(id) {
-  patchXray({ activeProfileId: id });
-}
+// Unified Profiles tab: one list per network backend, selected via profileBackend.
+// Each backend section in the config carries profiles[] + activeProfileId (proto
+// keys turn/wg/awg/xray). Subscriptions stay an Xray-only shared concept.
+const profileBackend = ref('xray');
+const profileBackendOptions = [
+  { value: 'turn', label: 'VK TURN' },
+  { value: 'wg', label: 'WireGuard' },
+  { value: 'awg', label: 'AmneziaWG' },
+  { value: 'xray', label: 'Xray' },
+];
+const isXrayProfiles = computed(() => profileBackend.value === 'xray');
+const currentProfiles = computed(() => formValue.value?.[profileBackend.value]?.profiles || []);
+const currentActiveProfileId = computed(() => formValue.value?.[profileBackend.value]?.activeProfileId || '');
+const displayProfiles = computed(() => (isXrayProfiles.value ? paginatedXrayProfiles.value : currentProfiles.value));
 
-function removeProfile(id) {
-  const profiles = xrayProfiles.value.filter((p) => p.id !== id);
-  const next = { ...(formValue.value?.xray || {}), profiles };
-  if (next.activeProfileId === id) next.activeProfileId = profiles[0]?.id || '';
-  patchXray(next);
+function patchBackendSection(patch) {
+  const key = profileBackend.value;
+  const next = { ...(formValue.value || {}) };
+  next[key] = { ...(next[key] || {}), ...patch };
+  onFormChanged(next);
+}
+function setActiveProfileGeneric(pid) {
+  patchBackendSection({ activeProfileId: pid });
+}
+function removeProfileGeneric(pid) {
+  const profiles = currentProfiles.value.filter((p) => p.id !== pid);
+  const patch = { profiles };
+  if (currentActiveProfileId.value === pid) patch.activeProfileId = profiles[0]?.id || '';
+  patchBackendSection(patch);
+}
+function profilePrimary(p) {
+  return p.title || p.address || p.vkTurnEndpoint || p.id;
+}
+function profileSecondary(p) {
+  if (profileBackend.value === 'xray') return p.address ? p.address + (p.port ? ':' + p.port : '') : '—';
+  if (profileBackend.value === 'turn') return p.vkTurnEndpoint || '—';
+  if (profileBackend.value === 'wg') {
+    const ep = p.endpoint || {};
+    return ep.host ? ep.host + (ep.port ? ':' + ep.port : '') : '—';
+  }
+  return p.subscriptionTitle || '—';
 }
 
 async function importProfile() {
@@ -1564,20 +1608,17 @@ async function importProfile() {
       throw new Error(body.message || 'Не удалось распаковать ссылку');
     }
     const body = await res.json();
-    const newProfiles = body.config?.xray?.profiles || [];
+    const newProfiles = body.config?.[profileBackend.value]?.profiles || [];
     if (!newProfiles.length) {
-      throw new Error('Ссылка не содержит Xray-профилей');
+      throw new Error('Ссылка не содержит профилей выбранного бэкенда');
     }
-    const merged = [...xrayProfiles.value];
+    const merged = [...currentProfiles.value];
     for (const p of newProfiles) {
       if (!merged.some((existing) => existing.id === p.id)) merged.push(p);
     }
-    const xray = {
-      ...(formValue.value?.xray || {}),
-      profiles: merged,
-    };
-    if (!xray.activeProfileId && merged.length) xray.activeProfileId = merged[0].id;
-    patchXray(xray);
+    const patch = { profiles: merged };
+    if (!currentActiveProfileId.value && merged.length) patch.activeProfileId = merged[0].id;
+    patchBackendSection(patch);
     profileImportDraft.value = '';
   } catch (err) {
     profileImportError.value = err.message;
