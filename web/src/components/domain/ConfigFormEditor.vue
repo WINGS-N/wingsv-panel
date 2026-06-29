@@ -352,7 +352,7 @@
       <div class="form-row">
         <label class="form-label">Активный backend</label>
         <OneuiSelect
-          :model-value="modelValue.backend || 'BACKEND_TYPE_UNSPECIFIED'"
+          :model-value="normalizeBackend(modelValue.backend)"
           :options="backendOptions"
           @change="setRoot('backend', $event === 'BACKEND_TYPE_UNSPECIFIED' ? undefined : $event)"
         />
@@ -945,20 +945,31 @@ const sessionModeOptions = [
   { value: 'TURN_SESSION_MODE_MUX', label: 'MU' },
 ];
 
-// Top-level выбор. Legacy proto-значения (VK_TURN_WIREGUARD, AMNEZIAWG,
-// AMNEZIAWG_PLAIN) теперь представлены через сочетание top-level + sub-backend:
-// VK TURN → BACKEND_TYPE_VK_TURN_WIREGUARD (+ Turn.tunnelMode для AWG-варианта),
-// AmneziaWG plain → BACKEND_TYPE_AMNEZIAWG_PLAIN, WB Stream → BACKEND_TYPE_WB_STREAM
-// (+ WbStream.tunnelMode). Drop-down содержит 5 видимых опций; маппинг при save
-// делает topLevelToBackend ниже.
+// Top-level выбор (multi-profile модель). VK TURN кодируется как
+// BACKEND_TYPE_VK_TURN, а выбор WG vs AWG несёт Turn.tunnelMode; standalone
+// AmneziaWG — BACKEND_TYPE_AMNEZIAWG_TL. Legacy proto-значения
+// (VK_TURN_WIREGUARD=1, AMNEZIAWG=3, AMNEZIAWG_PLAIN=5) при загрузке ранее
+// сохранённого конфига приводятся к новым через normalizeBackend ниже.
 const backendOptions = [
   { value: 'BACKEND_TYPE_UNSPECIFIED', label: 'Не задан' },
-  { value: 'BACKEND_TYPE_VK_TURN_WIREGUARD', label: 'VK TURN' },
+  { value: 'BACKEND_TYPE_VK_TURN', label: 'VK TURN' },
   { value: 'BACKEND_TYPE_WB_STREAM', label: 'WB Stream' },
   { value: 'BACKEND_TYPE_WIREGUARD', label: 'WireGuard' },
-  { value: 'BACKEND_TYPE_AMNEZIAWG_PLAIN', label: 'AmneziaWG' },
+  { value: 'BACKEND_TYPE_AMNEZIAWG_TL', label: 'AmneziaWG' },
   { value: 'BACKEND_TYPE_XRAY', label: 'Xray' },
 ];
+
+// Старые (deprecated) proto-значения backend приводятся к новым, чтобы dropdown
+// корректно выбирался при редактировании ранее сохранённых конфигов.
+const legacyBackendAliases = {
+  BACKEND_TYPE_VK_TURN_WIREGUARD: 'BACKEND_TYPE_VK_TURN',
+  BACKEND_TYPE_AMNEZIAWG: 'BACKEND_TYPE_VK_TURN',
+  BACKEND_TYPE_AMNEZIAWG_PLAIN: 'BACKEND_TYPE_AMNEZIAWG_TL',
+};
+function normalizeBackend(value) {
+  const current = value || 'BACKEND_TYPE_UNSPECIFIED';
+  return legacyBackendAliases[current] || current;
+}
 
 const tunnelModeOptions = [
   { value: 'TUNNEL_MODE_WIREGUARD', label: 'WireGuard' },
