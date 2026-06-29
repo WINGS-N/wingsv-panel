@@ -34,33 +34,40 @@ const (
 	ConfigType_CONFIG_TYPE_WB_STREAM    ConfigType = 7
 	ConfigType_CONFIG_TYPE_XPOSED       ConfigType = 8
 	ConfigType_CONFIG_TYPE_GUARDIAN     ConfigType = 9
+	// Single VK TURN profile share link: carries Turn (with title + tunnel_mode)
+	// plus the referenced transport sub-config (wg OR awg) embedded in the same
+	// Config so the importer can fully reconstruct the profile on a device where
+	// the original transport id does not exist.
+	ConfigType_CONFIG_TYPE_VK_TURN_PROFILE ConfigType = 10
 )
 
 // Enum value maps for ConfigType.
 var (
 	ConfigType_name = map[int32]string{
-		0: "CONFIG_TYPE_UNSPECIFIED",
-		1: "CONFIG_TYPE_VK",
-		2: "CONFIG_TYPE_XRAY",
-		3: "CONFIG_TYPE_AMNEZIAWG",
-		4: "CONFIG_TYPE_ALL",
-		5: "CONFIG_TYPE_APP_ROUTING",
-		6: "CONFIG_TYPE_XRAY_ROUTING",
-		7: "CONFIG_TYPE_WB_STREAM",
-		8: "CONFIG_TYPE_XPOSED",
-		9: "CONFIG_TYPE_GUARDIAN",
+		0:  "CONFIG_TYPE_UNSPECIFIED",
+		1:  "CONFIG_TYPE_VK",
+		2:  "CONFIG_TYPE_XRAY",
+		3:  "CONFIG_TYPE_AMNEZIAWG",
+		4:  "CONFIG_TYPE_ALL",
+		5:  "CONFIG_TYPE_APP_ROUTING",
+		6:  "CONFIG_TYPE_XRAY_ROUTING",
+		7:  "CONFIG_TYPE_WB_STREAM",
+		8:  "CONFIG_TYPE_XPOSED",
+		9:  "CONFIG_TYPE_GUARDIAN",
+		10: "CONFIG_TYPE_VK_TURN_PROFILE",
 	}
 	ConfigType_value = map[string]int32{
-		"CONFIG_TYPE_UNSPECIFIED":  0,
-		"CONFIG_TYPE_VK":           1,
-		"CONFIG_TYPE_XRAY":         2,
-		"CONFIG_TYPE_AMNEZIAWG":    3,
-		"CONFIG_TYPE_ALL":          4,
-		"CONFIG_TYPE_APP_ROUTING":  5,
-		"CONFIG_TYPE_XRAY_ROUTING": 6,
-		"CONFIG_TYPE_WB_STREAM":    7,
-		"CONFIG_TYPE_XPOSED":       8,
-		"CONFIG_TYPE_GUARDIAN":     9,
+		"CONFIG_TYPE_UNSPECIFIED":     0,
+		"CONFIG_TYPE_VK":              1,
+		"CONFIG_TYPE_XRAY":            2,
+		"CONFIG_TYPE_AMNEZIAWG":       3,
+		"CONFIG_TYPE_ALL":             4,
+		"CONFIG_TYPE_APP_ROUTING":     5,
+		"CONFIG_TYPE_XRAY_ROUTING":    6,
+		"CONFIG_TYPE_WB_STREAM":       7,
+		"CONFIG_TYPE_XPOSED":          8,
+		"CONFIG_TYPE_GUARDIAN":        9,
+		"CONFIG_TYPE_VK_TURN_PROFILE": 10,
 	}
 )
 
@@ -1677,8 +1684,17 @@ func (x *WbStream) GetTunnelMode() TunnelMode {
 type AmneziaWG struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	AwgQuickConfig string                 `protobuf:"bytes,1,opt,name=awg_quick_config,json=awgQuickConfig,proto3" json:"awg_quick_config,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Optional profile title carried by single-profile share links (built from a
+	// saved AmneziaWG profile). Empty in legacy / full-settings exports; the
+	// importer synthesizes a title when this is empty.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// Multi-profile library for the standalone AmneziaWG backend (mirrors Xray).
+	// The active profile is projected onto the flat field above at runtime.
+	ActiveProfileId string            `protobuf:"bytes,3,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
+	Profiles        []*AmneziaProfile `protobuf:"bytes,4,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	MergeOnly       *bool             `protobuf:"varint,5,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AmneziaWG) Reset() {
@@ -1718,6 +1734,110 @@ func (x *AmneziaWG) GetAwgQuickConfig() string {
 	return ""
 }
 
+func (x *AmneziaWG) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *AmneziaWG) GetActiveProfileId() string {
+	if x != nil {
+		return x.ActiveProfileId
+	}
+	return ""
+}
+
+func (x *AmneziaWG) GetProfiles() []*AmneziaProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+func (x *AmneziaWG) GetMergeOnly() bool {
+	if x != nil && x.MergeOnly != nil {
+		return *x.MergeOnly
+	}
+	return false
+}
+
+type AmneziaProfile struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title             string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	AwgQuickConfig    string                 `protobuf:"bytes,3,opt,name=awg_quick_config,json=awgQuickConfig,proto3" json:"awg_quick_config,omitempty"`
+	SubscriptionId    string                 `protobuf:"bytes,4,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	SubscriptionTitle string                 `protobuf:"bytes,5,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AmneziaProfile) Reset() {
+	*x = AmneziaProfile{}
+	mi := &file_wingsv_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AmneziaProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AmneziaProfile) ProtoMessage() {}
+
+func (x *AmneziaProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AmneziaProfile.ProtoReflect.Descriptor instead.
+func (*AmneziaProfile) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AmneziaProfile) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetAwgQuickConfig() string {
+	if x != nil {
+		return x.AwgQuickConfig
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *AmneziaProfile) GetSubscriptionTitle() string {
+	if x != nil {
+		return x.SubscriptionTitle
+	}
+	return ""
+}
+
 type Endpoint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
@@ -1728,7 +1848,7 @@ type Endpoint struct {
 
 func (x *Endpoint) Reset() {
 	*x = Endpoint{}
-	mi := &file_wingsv_proto_msgTypes[4]
+	mi := &file_wingsv_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1740,7 +1860,7 @@ func (x *Endpoint) String() string {
 func (*Endpoint) ProtoMessage() {}
 
 func (x *Endpoint) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[4]
+	mi := &file_wingsv_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1753,7 +1873,7 @@ func (x *Endpoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Endpoint.ProtoReflect.Descriptor instead.
 func (*Endpoint) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{4}
+	return file_wingsv_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Endpoint) GetHost() string {
@@ -1780,7 +1900,7 @@ type Cidr struct {
 
 func (x *Cidr) Reset() {
 	*x = Cidr{}
-	mi := &file_wingsv_proto_msgTypes[5]
+	mi := &file_wingsv_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1792,7 +1912,7 @@ func (x *Cidr) String() string {
 func (*Cidr) ProtoMessage() {}
 
 func (x *Cidr) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[5]
+	mi := &file_wingsv_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1805,7 +1925,7 @@ func (x *Cidr) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Cidr.ProtoReflect.Descriptor instead.
 func (*Cidr) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{5}
+	return file_wingsv_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Cidr) GetAddr() []byte {
@@ -1865,13 +1985,23 @@ type Turn struct {
 	// По умолчанию (UNSPECIFIED) — true. ON_FALSE отключает передачу
 	// (сервер обязан иметь preset).
 	WrapKeyDelivery WrapKeyDelivery `protobuf:"varint,22,opt,name=wrap_key_delivery,json=wrapKeyDelivery,proto3,enum=wingsv.WrapKeyDelivery" json:"wrap_key_delivery,omitempty"`
+	// Optional profile title carried by single-profile share links (built from a
+	// saved VK TURN profile). Empty in legacy / full-settings exports; the
+	// importer synthesizes a title when this is empty. The referenced transport
+	// (WG or AWG sub-config) travels in the same Config alongside this Turn.
+	Title string `protobuf:"bytes,23,opt,name=title,proto3" json:"title,omitempty"`
+	// Multi-profile library for the VK TURN backend (mirrors Xray). The active
+	// profile is projected onto the flat fields above at runtime.
+	ActiveProfileId string         `protobuf:"bytes,24,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
+	Profiles        []*TurnProfile `protobuf:"bytes,25,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	MergeOnly       *bool          `protobuf:"varint,26,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Turn) Reset() {
 	*x = Turn{}
-	mi := &file_wingsv_proto_msgTypes[6]
+	mi := &file_wingsv_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1883,7 +2013,7 @@ func (x *Turn) String() string {
 func (*Turn) ProtoMessage() {}
 
 func (x *Turn) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[6]
+	mi := &file_wingsv_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1896,7 +2026,7 @@ func (x *Turn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Turn.ProtoReflect.Descriptor instead.
 func (*Turn) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{6}
+	return file_wingsv_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Turn) GetEndpoint() *Endpoint {
@@ -2053,18 +2183,161 @@ func (x *Turn) GetWrapKeyDelivery() WrapKeyDelivery {
 	return WrapKeyDelivery_WRAP_KEY_DELIVERY_UNSPECIFIED
 }
 
+func (x *Turn) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Turn) GetActiveProfileId() string {
+	if x != nil {
+		return x.ActiveProfileId
+	}
+	return ""
+}
+
+func (x *Turn) GetProfiles() []*TurnProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+func (x *Turn) GetMergeOnly() bool {
+	if x != nil && x.MergeOnly != nil {
+		return *x.MergeOnly
+	}
+	return false
+}
+
+type TurnProfile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// "wg" | "awg" - which transport the VK TURN proxy runs over.
+	TransportKind string `protobuf:"bytes,3,opt,name=transport_kind,json=transportKind,proto3" json:"transport_kind,omitempty"`
+	// Reference (by id) to the WireGuardProfile / AmneziaProfile that carries the
+	// transport. The referenced profile travels in the same Config's wg.profiles /
+	// awg.profiles - this is NOT an embedded copy.
+	TransportProfileId string `protobuf:"bytes,4,opt,name=transport_profile_id,json=transportProfileId,proto3" json:"transport_profile_id,omitempty"`
+	VkTurnEndpoint     string `protobuf:"bytes,5,opt,name=vk_turn_endpoint,json=vkTurnEndpoint,proto3" json:"vk_turn_endpoint,omitempty"`
+	// Per-profile VK TURN proxy settings (threads/wrap/dns/...). The inner Turn is
+	// never populated with its own profiles.
+	Config            *Turn  `protobuf:"bytes,6,opt,name=config,proto3" json:"config,omitempty"`
+	SubscriptionId    string `protobuf:"bytes,7,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	SubscriptionTitle string `protobuf:"bytes,8,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *TurnProfile) Reset() {
+	*x = TurnProfile{}
+	mi := &file_wingsv_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TurnProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TurnProfile) ProtoMessage() {}
+
+func (x *TurnProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TurnProfile.ProtoReflect.Descriptor instead.
+func (*TurnProfile) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TurnProfile) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetTransportKind() string {
+	if x != nil {
+		return x.TransportKind
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetTransportProfileId() string {
+	if x != nil {
+		return x.TransportProfileId
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetVkTurnEndpoint() string {
+	if x != nil {
+		return x.VkTurnEndpoint
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetConfig() *Turn {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+func (x *TurnProfile) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetSubscriptionTitle() string {
+	if x != nil {
+		return x.SubscriptionTitle
+	}
+	return ""
+}
+
 type WireGuard struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Iface         *Interface             `protobuf:"bytes,1,opt,name=iface,proto3" json:"iface,omitempty"`
-	Peer          *Peer                  `protobuf:"bytes,2,opt,name=peer,proto3" json:"peer,omitempty"`
-	Endpoint      *Endpoint              `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Iface    *Interface             `protobuf:"bytes,1,opt,name=iface,proto3" json:"iface,omitempty"`
+	Peer     *Peer                  `protobuf:"bytes,2,opt,name=peer,proto3" json:"peer,omitempty"`
+	Endpoint *Endpoint              `protobuf:"bytes,3,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	// Optional profile title carried by single-profile share links (built from a
+	// saved WireGuard profile). Empty in legacy / full-settings exports; the
+	// importer synthesizes a title when this is empty.
+	Title string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	// Multi-profile library for the standalone WireGuard backend (mirrors Xray).
+	// The active profile is projected onto the flat fields above at runtime.
+	ActiveProfileId string              `protobuf:"bytes,5,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
+	Profiles        []*WireGuardProfile `protobuf:"bytes,6,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	MergeOnly       *bool               `protobuf:"varint,7,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *WireGuard) Reset() {
 	*x = WireGuard{}
-	mi := &file_wingsv_proto_msgTypes[7]
+	mi := &file_wingsv_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2076,7 +2349,7 @@ func (x *WireGuard) String() string {
 func (*WireGuard) ProtoMessage() {}
 
 func (x *WireGuard) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[7]
+	mi := &file_wingsv_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2089,7 +2362,7 @@ func (x *WireGuard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WireGuard.ProtoReflect.Descriptor instead.
 func (*WireGuard) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{7}
+	return file_wingsv_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *WireGuard) GetIface() *Interface {
@@ -2113,6 +2386,126 @@ func (x *WireGuard) GetEndpoint() *Endpoint {
 	return nil
 }
 
+func (x *WireGuard) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *WireGuard) GetActiveProfileId() string {
+	if x != nil {
+		return x.ActiveProfileId
+	}
+	return ""
+}
+
+func (x *WireGuard) GetProfiles() []*WireGuardProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+func (x *WireGuard) GetMergeOnly() bool {
+	if x != nil && x.MergeOnly != nil {
+		return *x.MergeOnly
+	}
+	return false
+}
+
+type WireGuardProfile struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title             string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Iface             *Interface             `protobuf:"bytes,3,opt,name=iface,proto3" json:"iface,omitempty"`
+	Peer              *Peer                  `protobuf:"bytes,4,opt,name=peer,proto3" json:"peer,omitempty"`
+	Endpoint          *Endpoint              `protobuf:"bytes,5,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
+	SubscriptionId    string                 `protobuf:"bytes,6,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	SubscriptionTitle string                 `protobuf:"bytes,7,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *WireGuardProfile) Reset() {
+	*x = WireGuardProfile{}
+	mi := &file_wingsv_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WireGuardProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WireGuardProfile) ProtoMessage() {}
+
+func (x *WireGuardProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_wingsv_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WireGuardProfile.ProtoReflect.Descriptor instead.
+func (*WireGuardProfile) Descriptor() ([]byte, []int) {
+	return file_wingsv_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *WireGuardProfile) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WireGuardProfile) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *WireGuardProfile) GetIface() *Interface {
+	if x != nil {
+		return x.Iface
+	}
+	return nil
+}
+
+func (x *WireGuardProfile) GetPeer() *Peer {
+	if x != nil {
+		return x.Peer
+	}
+	return nil
+}
+
+func (x *WireGuardProfile) GetEndpoint() *Endpoint {
+	if x != nil {
+		return x.Endpoint
+	}
+	return nil
+}
+
+func (x *WireGuardProfile) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *WireGuardProfile) GetSubscriptionTitle() string {
+	if x != nil {
+		return x.SubscriptionTitle
+	}
+	return ""
+}
+
 type Interface struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	PrivateKey    []byte                 `protobuf:"bytes,1,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
@@ -2125,7 +2518,7 @@ type Interface struct {
 
 func (x *Interface) Reset() {
 	*x = Interface{}
-	mi := &file_wingsv_proto_msgTypes[8]
+	mi := &file_wingsv_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2137,7 +2530,7 @@ func (x *Interface) String() string {
 func (*Interface) ProtoMessage() {}
 
 func (x *Interface) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[8]
+	mi := &file_wingsv_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2150,7 +2543,7 @@ func (x *Interface) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Interface.ProtoReflect.Descriptor instead.
 func (*Interface) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{8}
+	return file_wingsv_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Interface) GetPrivateKey() []byte {
@@ -2192,7 +2585,7 @@ type Peer struct {
 
 func (x *Peer) Reset() {
 	*x = Peer{}
-	mi := &file_wingsv_proto_msgTypes[9]
+	mi := &file_wingsv_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2204,7 +2597,7 @@ func (x *Peer) String() string {
 func (*Peer) ProtoMessage() {}
 
 func (x *Peer) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[9]
+	mi := &file_wingsv_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2217,7 +2610,7 @@ func (x *Peer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peer.ProtoReflect.Descriptor instead.
 func (*Peer) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{9}
+	return file_wingsv_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Peer) GetPublicKey() []byte {
@@ -2256,7 +2649,7 @@ type Xray struct {
 
 func (x *Xray) Reset() {
 	*x = Xray{}
-	mi := &file_wingsv_proto_msgTypes[10]
+	mi := &file_wingsv_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2268,7 +2661,7 @@ func (x *Xray) String() string {
 func (*Xray) ProtoMessage() {}
 
 func (x *Xray) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[10]
+	mi := &file_wingsv_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2281,7 +2674,7 @@ func (x *Xray) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Xray.ProtoReflect.Descriptor instead.
 func (*Xray) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{10}
+	return file_wingsv_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Xray) GetActiveProfileId() string {
@@ -2351,7 +2744,7 @@ type AppRouting struct {
 
 func (x *AppRouting) Reset() {
 	*x = AppRouting{}
-	mi := &file_wingsv_proto_msgTypes[11]
+	mi := &file_wingsv_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2363,7 +2756,7 @@ func (x *AppRouting) String() string {
 func (*AppRouting) ProtoMessage() {}
 
 func (x *AppRouting) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[11]
+	mi := &file_wingsv_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2376,7 +2769,7 @@ func (x *AppRouting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppRouting.ProtoReflect.Descriptor instead.
 func (*AppRouting) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{11}
+	return file_wingsv_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AppRouting) GetBypass() bool {
@@ -2425,7 +2818,7 @@ type XrayRouting struct {
 
 func (x *XrayRouting) Reset() {
 	*x = XrayRouting{}
-	mi := &file_wingsv_proto_msgTypes[12]
+	mi := &file_wingsv_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2437,7 +2830,7 @@ func (x *XrayRouting) String() string {
 func (*XrayRouting) ProtoMessage() {}
 
 func (x *XrayRouting) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[12]
+	mi := &file_wingsv_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2450,7 +2843,7 @@ func (x *XrayRouting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XrayRouting.ProtoReflect.Descriptor instead.
 func (*XrayRouting) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{12}
+	return file_wingsv_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *XrayRouting) GetRules() []*XrayRoutingRule {
@@ -2487,7 +2880,7 @@ type XrayRoutingRule struct {
 
 func (x *XrayRoutingRule) Reset() {
 	*x = XrayRoutingRule{}
-	mi := &file_wingsv_proto_msgTypes[13]
+	mi := &file_wingsv_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2499,7 +2892,7 @@ func (x *XrayRoutingRule) String() string {
 func (*XrayRoutingRule) ProtoMessage() {}
 
 func (x *XrayRoutingRule) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[13]
+	mi := &file_wingsv_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2512,7 +2905,7 @@ func (x *XrayRoutingRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XrayRoutingRule.ProtoReflect.Descriptor instead.
 func (*XrayRoutingRule) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{13}
+	return file_wingsv_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *XrayRoutingRule) GetId() string {
@@ -2566,7 +2959,7 @@ type Subscription struct {
 
 func (x *Subscription) Reset() {
 	*x = Subscription{}
-	mi := &file_wingsv_proto_msgTypes[14]
+	mi := &file_wingsv_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2578,7 +2971,7 @@ func (x *Subscription) String() string {
 func (*Subscription) ProtoMessage() {}
 
 func (x *Subscription) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[14]
+	mi := &file_wingsv_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2591,7 +2984,7 @@ func (x *Subscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Subscription.ProtoReflect.Descriptor instead.
 func (*Subscription) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{14}
+	return file_wingsv_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *Subscription) GetId() string {
@@ -2665,7 +3058,7 @@ type VlessProfile struct {
 
 func (x *VlessProfile) Reset() {
 	*x = VlessProfile{}
-	mi := &file_wingsv_proto_msgTypes[15]
+	mi := &file_wingsv_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2677,7 +3070,7 @@ func (x *VlessProfile) String() string {
 func (*VlessProfile) ProtoMessage() {}
 
 func (x *VlessProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[15]
+	mi := &file_wingsv_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2690,7 +3083,7 @@ func (x *VlessProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VlessProfile.ProtoReflect.Descriptor instead.
 func (*VlessProfile) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{15}
+	return file_wingsv_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *VlessProfile) GetId() string {
@@ -2777,7 +3170,7 @@ type XraySettings struct {
 
 func (x *XraySettings) Reset() {
 	*x = XraySettings{}
-	mi := &file_wingsv_proto_msgTypes[16]
+	mi := &file_wingsv_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2789,7 +3182,7 @@ func (x *XraySettings) String() string {
 func (*XraySettings) ProtoMessage() {}
 
 func (x *XraySettings) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[16]
+	mi := &file_wingsv_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2802,7 +3195,7 @@ func (x *XraySettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use XraySettings.ProtoReflect.Descriptor instead.
 func (*XraySettings) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{16}
+	return file_wingsv_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *XraySettings) GetAllowLan() bool {
@@ -2983,7 +3376,7 @@ type Xposed struct {
 
 func (x *Xposed) Reset() {
 	*x = Xposed{}
-	mi := &file_wingsv_proto_msgTypes[17]
+	mi := &file_wingsv_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2995,7 +3388,7 @@ func (x *Xposed) String() string {
 func (*Xposed) ProtoMessage() {}
 
 func (x *Xposed) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[17]
+	mi := &file_wingsv_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3008,7 +3401,7 @@ func (x *Xposed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Xposed.ProtoReflect.Descriptor instead.
 func (*Xposed) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{17}
+	return file_wingsv_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Xposed) GetEnabled() bool {
@@ -3086,7 +3479,7 @@ type RootSettings struct {
 
 func (x *RootSettings) Reset() {
 	*x = RootSettings{}
-	mi := &file_wingsv_proto_msgTypes[18]
+	mi := &file_wingsv_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3098,7 +3491,7 @@ func (x *RootSettings) String() string {
 func (*RootSettings) ProtoMessage() {}
 
 func (x *RootSettings) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[18]
+	mi := &file_wingsv_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3111,7 +3504,7 @@ func (x *RootSettings) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RootSettings.ProtoReflect.Descriptor instead.
 func (*RootSettings) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{18}
+	return file_wingsv_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RootSettings) GetEnabled() bool {
@@ -3153,7 +3546,7 @@ type AppPreferences struct {
 
 func (x *AppPreferences) Reset() {
 	*x = AppPreferences{}
-	mi := &file_wingsv_proto_msgTypes[19]
+	mi := &file_wingsv_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3165,7 +3558,7 @@ func (x *AppPreferences) String() string {
 func (*AppPreferences) ProtoMessage() {}
 
 func (x *AppPreferences) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[19]
+	mi := &file_wingsv_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3178,7 +3571,7 @@ func (x *AppPreferences) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppPreferences.ProtoReflect.Descriptor instead.
 func (*AppPreferences) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{19}
+	return file_wingsv_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *AppPreferences) GetThemeMode() ThemeMode {
@@ -3216,7 +3609,7 @@ type SubscriptionHwid struct {
 
 func (x *SubscriptionHwid) Reset() {
 	*x = SubscriptionHwid{}
-	mi := &file_wingsv_proto_msgTypes[20]
+	mi := &file_wingsv_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3228,7 +3621,7 @@ func (x *SubscriptionHwid) String() string {
 func (*SubscriptionHwid) ProtoMessage() {}
 
 func (x *SubscriptionHwid) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[20]
+	mi := &file_wingsv_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3241,7 +3634,7 @@ func (x *SubscriptionHwid) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriptionHwid.ProtoReflect.Descriptor instead.
 func (*SubscriptionHwid) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{20}
+	return file_wingsv_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *SubscriptionHwid) GetEnabled() bool {
@@ -3305,7 +3698,7 @@ type Sharing struct {
 
 func (x *Sharing) Reset() {
 	*x = Sharing{}
-	mi := &file_wingsv_proto_msgTypes[21]
+	mi := &file_wingsv_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3317,7 +3710,7 @@ func (x *Sharing) String() string {
 func (*Sharing) ProtoMessage() {}
 
 func (x *Sharing) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[21]
+	mi := &file_wingsv_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3330,7 +3723,7 @@ func (x *Sharing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Sharing.ProtoReflect.Descriptor instead.
 func (*Sharing) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{21}
+	return file_wingsv_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *Sharing) GetAutoStartOnBoot() bool {
@@ -3459,7 +3852,7 @@ type ByeDpi struct {
 
 func (x *ByeDpi) Reset() {
 	*x = ByeDpi{}
-	mi := &file_wingsv_proto_msgTypes[22]
+	mi := &file_wingsv_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3471,7 +3864,7 @@ func (x *ByeDpi) String() string {
 func (*ByeDpi) ProtoMessage() {}
 
 func (x *ByeDpi) ProtoReflect() protoreflect.Message {
-	mi := &file_wingsv_proto_msgTypes[22]
+	mi := &file_wingsv_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3484,7 +3877,7 @@ func (x *ByeDpi) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ByeDpi.ProtoReflect.Descriptor instead.
 func (*ByeDpi) Descriptor() ([]byte, []int) {
-	return file_wingsv_proto_rawDescGZIP(), []int{22}
+	return file_wingsv_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ByeDpi) GetAutoStartWithXray() bool {
@@ -3822,15 +4215,27 @@ const file_wingsv_proto_rawDesc = "" +
 	"room_count\x18\x06 \x01(\rH\x00R\troomCount\x88\x01\x01\x123\n" +
 	"\vtunnel_mode\x18\a \x01(\x0e2\x12.wingsv.TunnelModeR\n" +
 	"tunnelModeB\r\n" +
-	"\v_room_count\"5\n" +
+	"\v_room_count\"\xde\x01\n" +
 	"\tAmneziaWG\x12(\n" +
-	"\x10awg_quick_config\x18\x01 \x01(\tR\x0eawgQuickConfig\"2\n" +
+	"\x10awg_quick_config\x18\x01 \x01(\tR\x0eawgQuickConfig\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
+	"\x11active_profile_id\x18\x03 \x01(\tR\x0factiveProfileId\x122\n" +
+	"\bprofiles\x18\x04 \x03(\v2\x16.wingsv.AmneziaProfileR\bprofiles\x12\"\n" +
+	"\n" +
+	"merge_only\x18\x05 \x01(\bH\x00R\tmergeOnly\x88\x01\x01B\r\n" +
+	"\v_merge_only\"\xb8\x01\n" +
+	"\x0eAmneziaProfile\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12(\n" +
+	"\x10awg_quick_config\x18\x03 \x01(\tR\x0eawgQuickConfig\x12'\n" +
+	"\x0fsubscription_id\x18\x04 \x01(\tR\x0esubscriptionId\x12-\n" +
+	"\x12subscription_title\x18\x05 \x01(\tR\x11subscriptionTitle\"2\n" +
 	"\bEndpoint\x12\x12\n" +
 	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
 	"\x04port\x18\x02 \x01(\rR\x04port\"2\n" +
 	"\x04Cidr\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\fR\x04addr\x12\x16\n" +
-	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xa8\b\n" +
+	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xce\t\n" +
 	"\x04Turn\x12,\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x12\n" +
 	"\x04link\x18\x02 \x01(\tR\x04link\x12\x1d\n" +
@@ -3855,7 +4260,12 @@ const file_wingsv_proto_rawDesc = "" +
 	"\twrap_mode\x18\x13 \x01(\x0e2\x10.wingsv.WrapModeR\bwrapMode\x12\x19\n" +
 	"\bwrap_key\x18\x14 \x01(\fR\awrapKey\x125\n" +
 	"\fwrap_ciphers\x18\x15 \x03(\x0e2\x12.wingsv.WrapCipherR\vwrapCiphers\x12C\n" +
-	"\x11wrap_key_delivery\x18\x16 \x01(\x0e2\x17.wingsv.WrapKeyDeliveryR\x0fwrapKeyDeliveryB\n" +
+	"\x11wrap_key_delivery\x18\x16 \x01(\x0e2\x17.wingsv.WrapKeyDeliveryR\x0fwrapKeyDelivery\x12\x14\n" +
+	"\x05title\x18\x17 \x01(\tR\x05title\x12*\n" +
+	"\x11active_profile_id\x18\x18 \x01(\tR\x0factiveProfileId\x12/\n" +
+	"\bprofiles\x18\x19 \x03(\v2\x13.wingsv.TurnProfileR\bprofiles\x12\"\n" +
+	"\n" +
+	"merge_only\x18\x1a \x01(\bH\aR\tmergeOnly\x88\x01\x01B\n" +
 	"\n" +
 	"\b_threadsB\n" +
 	"\n" +
@@ -3864,11 +4274,35 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x05_portB\x13\n" +
 	"\x11_creds_group_sizeB\x11\n" +
 	"\x0f_manual_captchaB\x1c\n" +
-	"\x1a_restart_on_network_change\"\x84\x01\n" +
+	"\x1a_restart_on_network_changeB\r\n" +
+	"\v_merge_only\"\xb4\x02\n" +
+	"\vTurnProfile\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
+	"\x0etransport_kind\x18\x03 \x01(\tR\rtransportKind\x120\n" +
+	"\x14transport_profile_id\x18\x04 \x01(\tR\x12transportProfileId\x12(\n" +
+	"\x10vk_turn_endpoint\x18\x05 \x01(\tR\x0evkTurnEndpoint\x12$\n" +
+	"\x06config\x18\x06 \x01(\v2\f.wingsv.TurnR\x06config\x12'\n" +
+	"\x0fsubscription_id\x18\a \x01(\tR\x0esubscriptionId\x12-\n" +
+	"\x12subscription_title\x18\b \x01(\tR\x11subscriptionTitle\"\xaf\x02\n" +
 	"\tWireGuard\x12'\n" +
 	"\x05iface\x18\x01 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
 	"\x04peer\x18\x02 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
-	"\bendpoint\x18\x03 \x01(\v2\x10.wingsv.EndpointR\bendpoint\"s\n" +
+	"\bendpoint\x18\x03 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12*\n" +
+	"\x11active_profile_id\x18\x05 \x01(\tR\x0factiveProfileId\x124\n" +
+	"\bprofiles\x18\x06 \x03(\v2\x18.wingsv.WireGuardProfileR\bprofiles\x12\"\n" +
+	"\n" +
+	"merge_only\x18\a \x01(\bH\x00R\tmergeOnly\x88\x01\x01B\r\n" +
+	"\v_merge_only\"\x89\x02\n" +
+	"\x10WireGuardProfile\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12'\n" +
+	"\x05iface\x18\x03 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
+	"\x04peer\x18\x04 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
+	"\bendpoint\x18\x05 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12'\n" +
+	"\x0fsubscription_id\x18\x06 \x01(\tR\x0esubscriptionId\x12-\n" +
+	"\x12subscription_title\x18\a \x01(\tR\x11subscriptionTitle\"s\n" +
 	"\tInterface\x12\x1f\n" +
 	"\vprivate_key\x18\x01 \x01(\fR\n" +
 	"privateKey\x12\x14\n" +
@@ -4120,7 +4554,7 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x13_proxytest_requestsB\x12\n" +
 	"\x10_proxytest_limitB\x14\n" +
 	"\x12_proxytest_timeoutB\"\n" +
-	" _proxytest_use_custom_strategies*\x8b\x02\n" +
+	" _proxytest_use_custom_strategies*\xac\x02\n" +
 	"\n" +
 	"ConfigType\x12\x1b\n" +
 	"\x17CONFIG_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
@@ -4132,7 +4566,9 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x18CONFIG_TYPE_XRAY_ROUTING\x10\x06\x12\x19\n" +
 	"\x15CONFIG_TYPE_WB_STREAM\x10\a\x12\x16\n" +
 	"\x12CONFIG_TYPE_XPOSED\x10\b\x12\x18\n" +
-	"\x14CONFIG_TYPE_GUARDIAN\x10\t*\x9e\x01\n" +
+	"\x14CONFIG_TYPE_GUARDIAN\x10\t\x12\x1f\n" +
+	"\x1bCONFIG_TYPE_VK_TURN_PROFILE\x10\n" +
+	"*\x9e\x01\n" +
 	"\x10GuardianSyncMode\x12\"\n" +
 	"\x1eGUARDIAN_SYNC_MODE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19GUARDIAN_SYNC_MODE_ALWAYS\x10\x01\x12\x1f\n" +
@@ -4270,7 +4706,7 @@ func file_wingsv_proto_rawDescGZIP() []byte {
 }
 
 var file_wingsv_proto_enumTypes = make([]protoimpl.EnumInfo, 23)
-var file_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_wingsv_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_wingsv_proto_goTypes = []any{
 	(ConfigType)(0),             // 0: wingsv.ConfigType
 	(GuardianSyncMode)(0),       // 1: wingsv.GuardianSyncMode
@@ -4299,81 +4735,91 @@ var file_wingsv_proto_goTypes = []any{
 	(*Guardian)(nil),            // 24: wingsv.Guardian
 	(*WbStream)(nil),            // 25: wingsv.WbStream
 	(*AmneziaWG)(nil),           // 26: wingsv.AmneziaWG
-	(*Endpoint)(nil),            // 27: wingsv.Endpoint
-	(*Cidr)(nil),                // 28: wingsv.Cidr
-	(*Turn)(nil),                // 29: wingsv.Turn
-	(*WireGuard)(nil),           // 30: wingsv.WireGuard
-	(*Interface)(nil),           // 31: wingsv.Interface
-	(*Peer)(nil),                // 32: wingsv.Peer
-	(*Xray)(nil),                // 33: wingsv.Xray
-	(*AppRouting)(nil),          // 34: wingsv.AppRouting
-	(*XrayRouting)(nil),         // 35: wingsv.XrayRouting
-	(*XrayRoutingRule)(nil),     // 36: wingsv.XrayRoutingRule
-	(*Subscription)(nil),        // 37: wingsv.Subscription
-	(*VlessProfile)(nil),        // 38: wingsv.VlessProfile
-	(*XraySettings)(nil),        // 39: wingsv.XraySettings
-	(*Xposed)(nil),              // 40: wingsv.Xposed
-	(*RootSettings)(nil),        // 41: wingsv.RootSettings
-	(*AppPreferences)(nil),      // 42: wingsv.AppPreferences
-	(*SubscriptionHwid)(nil),    // 43: wingsv.SubscriptionHwid
-	(*Sharing)(nil),             // 44: wingsv.Sharing
-	(*ByeDpi)(nil),              // 45: wingsv.ByeDpi
+	(*AmneziaProfile)(nil),      // 27: wingsv.AmneziaProfile
+	(*Endpoint)(nil),            // 28: wingsv.Endpoint
+	(*Cidr)(nil),                // 29: wingsv.Cidr
+	(*Turn)(nil),                // 30: wingsv.Turn
+	(*TurnProfile)(nil),         // 31: wingsv.TurnProfile
+	(*WireGuard)(nil),           // 32: wingsv.WireGuard
+	(*WireGuardProfile)(nil),    // 33: wingsv.WireGuardProfile
+	(*Interface)(nil),           // 34: wingsv.Interface
+	(*Peer)(nil),                // 35: wingsv.Peer
+	(*Xray)(nil),                // 36: wingsv.Xray
+	(*AppRouting)(nil),          // 37: wingsv.AppRouting
+	(*XrayRouting)(nil),         // 38: wingsv.XrayRouting
+	(*XrayRoutingRule)(nil),     // 39: wingsv.XrayRoutingRule
+	(*Subscription)(nil),        // 40: wingsv.Subscription
+	(*VlessProfile)(nil),        // 41: wingsv.VlessProfile
+	(*XraySettings)(nil),        // 42: wingsv.XraySettings
+	(*Xposed)(nil),              // 43: wingsv.Xposed
+	(*RootSettings)(nil),        // 44: wingsv.RootSettings
+	(*AppPreferences)(nil),      // 45: wingsv.AppPreferences
+	(*SubscriptionHwid)(nil),    // 46: wingsv.SubscriptionHwid
+	(*Sharing)(nil),             // 47: wingsv.Sharing
+	(*ByeDpi)(nil),              // 48: wingsv.ByeDpi
 }
 var file_wingsv_proto_depIdxs = []int32{
 	0,  // 0: wingsv.Config.type:type_name -> wingsv.ConfigType
-	29, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
-	30, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
+	30, // 1: wingsv.Config.turn:type_name -> wingsv.Turn
+	32, // 2: wingsv.Config.wg:type_name -> wingsv.WireGuard
 	2,  // 3: wingsv.Config.backend:type_name -> wingsv.BackendType
-	33, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
+	36, // 4: wingsv.Config.xray:type_name -> wingsv.Xray
 	26, // 5: wingsv.Config.awg:type_name -> wingsv.AmneziaWG
-	34, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
+	37, // 6: wingsv.Config.app_routing:type_name -> wingsv.AppRouting
 	25, // 7: wingsv.Config.wb_stream:type_name -> wingsv.WbStream
-	40, // 8: wingsv.Config.xposed:type_name -> wingsv.Xposed
-	41, // 9: wingsv.Config.root:type_name -> wingsv.RootSettings
-	42, // 10: wingsv.Config.app_preferences:type_name -> wingsv.AppPreferences
-	43, // 11: wingsv.Config.subscription_hwid:type_name -> wingsv.SubscriptionHwid
-	44, // 12: wingsv.Config.sharing:type_name -> wingsv.Sharing
-	45, // 13: wingsv.Config.bye_dpi:type_name -> wingsv.ByeDpi
+	43, // 8: wingsv.Config.xposed:type_name -> wingsv.Xposed
+	44, // 9: wingsv.Config.root:type_name -> wingsv.RootSettings
+	45, // 10: wingsv.Config.app_preferences:type_name -> wingsv.AppPreferences
+	46, // 11: wingsv.Config.subscription_hwid:type_name -> wingsv.SubscriptionHwid
+	47, // 12: wingsv.Config.sharing:type_name -> wingsv.Sharing
+	48, // 13: wingsv.Config.bye_dpi:type_name -> wingsv.ByeDpi
 	24, // 14: wingsv.Config.guardian:type_name -> wingsv.Guardian
 	1,  // 15: wingsv.Guardian.sync_mode:type_name -> wingsv.GuardianSyncMode
 	3,  // 16: wingsv.WbStream.tunnel_mode:type_name -> wingsv.TunnelMode
-	27, // 17: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
-	27, // 18: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
-	7,  // 19: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
-	8,  // 20: wingsv.Turn.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
-	3,  // 21: wingsv.Turn.tunnel_mode:type_name -> wingsv.TunnelMode
-	5,  // 22: wingsv.Turn.wrap_mode:type_name -> wingsv.WrapMode
-	6,  // 23: wingsv.Turn.wrap_ciphers:type_name -> wingsv.WrapCipher
-	4,  // 24: wingsv.Turn.wrap_key_delivery:type_name -> wingsv.WrapKeyDelivery
-	31, // 25: wingsv.WireGuard.iface:type_name -> wingsv.Interface
-	32, // 26: wingsv.WireGuard.peer:type_name -> wingsv.Peer
-	27, // 27: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
-	28, // 28: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
-	38, // 29: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
-	37, // 30: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
-	39, // 31: wingsv.Xray.settings:type_name -> wingsv.XraySettings
-	35, // 32: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
-	9,  // 33: wingsv.AppRouting.mode:type_name -> wingsv.AppRoutingMode
-	36, // 34: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
-	10, // 35: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
-	11, // 36: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
-	13, // 37: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
-	8,  // 38: wingsv.XraySettings.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
-	12, // 39: wingsv.XraySettings.wake_probe_mode:type_name -> wingsv.WakeProbeMode
-	14, // 40: wingsv.Xposed.procfs_hook_mode:type_name -> wingsv.XposedProcfsHookMode
-	15, // 41: wingsv.Xposed.icmp_spoofing_mode:type_name -> wingsv.XposedIcmpSpoofingMode
-	16, // 42: wingsv.AppPreferences.theme_mode:type_name -> wingsv.ThemeMode
-	17, // 43: wingsv.AppPreferences.dns_mode:type_name -> wingsv.DnsMode
-	18, // 44: wingsv.Sharing.masquerade_mode:type_name -> wingsv.SharingMasqueradeMode
-	19, // 45: wingsv.Sharing.wifi_lock:type_name -> wingsv.SharingWifiLock
-	20, // 46: wingsv.Sharing.ip_monitor_mode:type_name -> wingsv.SharingIpMonitorMode
-	21, // 47: wingsv.ByeDpi.hosts_mode:type_name -> wingsv.ByeDpiHostsMode
-	22, // 48: wingsv.ByeDpi.desync_method:type_name -> wingsv.ByeDpiDesyncMethod
-	49, // [49:49] is the sub-list for method output_type
-	49, // [49:49] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	27, // 17: wingsv.AmneziaWG.profiles:type_name -> wingsv.AmneziaProfile
+	28, // 18: wingsv.Turn.endpoint:type_name -> wingsv.Endpoint
+	28, // 19: wingsv.Turn.local_endpoint:type_name -> wingsv.Endpoint
+	7,  // 20: wingsv.Turn.session_mode:type_name -> wingsv.TurnSessionMode
+	8,  // 21: wingsv.Turn.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
+	3,  // 22: wingsv.Turn.tunnel_mode:type_name -> wingsv.TunnelMode
+	5,  // 23: wingsv.Turn.wrap_mode:type_name -> wingsv.WrapMode
+	6,  // 24: wingsv.Turn.wrap_ciphers:type_name -> wingsv.WrapCipher
+	4,  // 25: wingsv.Turn.wrap_key_delivery:type_name -> wingsv.WrapKeyDelivery
+	31, // 26: wingsv.Turn.profiles:type_name -> wingsv.TurnProfile
+	30, // 27: wingsv.TurnProfile.config:type_name -> wingsv.Turn
+	34, // 28: wingsv.WireGuard.iface:type_name -> wingsv.Interface
+	35, // 29: wingsv.WireGuard.peer:type_name -> wingsv.Peer
+	28, // 30: wingsv.WireGuard.endpoint:type_name -> wingsv.Endpoint
+	33, // 31: wingsv.WireGuard.profiles:type_name -> wingsv.WireGuardProfile
+	34, // 32: wingsv.WireGuardProfile.iface:type_name -> wingsv.Interface
+	35, // 33: wingsv.WireGuardProfile.peer:type_name -> wingsv.Peer
+	28, // 34: wingsv.WireGuardProfile.endpoint:type_name -> wingsv.Endpoint
+	29, // 35: wingsv.Peer.allowed_ips:type_name -> wingsv.Cidr
+	41, // 36: wingsv.Xray.profiles:type_name -> wingsv.VlessProfile
+	40, // 37: wingsv.Xray.subscriptions:type_name -> wingsv.Subscription
+	42, // 38: wingsv.Xray.settings:type_name -> wingsv.XraySettings
+	38, // 39: wingsv.Xray.routing:type_name -> wingsv.XrayRouting
+	9,  // 40: wingsv.AppRouting.mode:type_name -> wingsv.AppRoutingMode
+	39, // 41: wingsv.XrayRouting.rules:type_name -> wingsv.XrayRoutingRule
+	10, // 42: wingsv.XrayRoutingRule.match_type:type_name -> wingsv.XrayRoutingMatchType
+	11, // 43: wingsv.XrayRoutingRule.action:type_name -> wingsv.XrayRoutingAction
+	13, // 44: wingsv.XraySettings.transport_mode:type_name -> wingsv.XrayTransportMode
+	8,  // 45: wingsv.XraySettings.runtime_mode:type_name -> wingsv.ProxyRuntimeMode
+	12, // 46: wingsv.XraySettings.wake_probe_mode:type_name -> wingsv.WakeProbeMode
+	14, // 47: wingsv.Xposed.procfs_hook_mode:type_name -> wingsv.XposedProcfsHookMode
+	15, // 48: wingsv.Xposed.icmp_spoofing_mode:type_name -> wingsv.XposedIcmpSpoofingMode
+	16, // 49: wingsv.AppPreferences.theme_mode:type_name -> wingsv.ThemeMode
+	17, // 50: wingsv.AppPreferences.dns_mode:type_name -> wingsv.DnsMode
+	18, // 51: wingsv.Sharing.masquerade_mode:type_name -> wingsv.SharingMasqueradeMode
+	19, // 52: wingsv.Sharing.wifi_lock:type_name -> wingsv.SharingWifiLock
+	20, // 53: wingsv.Sharing.ip_monitor_mode:type_name -> wingsv.SharingIpMonitorMode
+	21, // 54: wingsv.ByeDpi.hosts_mode:type_name -> wingsv.ByeDpiHostsMode
+	22, // 55: wingsv.ByeDpi.desync_method:type_name -> wingsv.ByeDpiDesyncMethod
+	56, // [56:56] is the sub-list for method output_type
+	56, // [56:56] is the sub-list for method input_type
+	56, // [56:56] is the sub-list for extension type_name
+	56, // [56:56] is the sub-list for extension extendee
+	0,  // [0:56] is the sub-list for field type_name
 }
 
 func init() { file_wingsv_proto_init() }
@@ -4382,13 +4828,12 @@ func file_wingsv_proto_init() {
 		return
 	}
 	file_wingsv_proto_msgTypes[2].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[6].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[8].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[10].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[3].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[7].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[9].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[11].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[13].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[14].OneofWrappers = []any{}
-	file_wingsv_proto_msgTypes[15].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[16].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[17].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[18].OneofWrappers = []any{}
@@ -4396,13 +4841,16 @@ func file_wingsv_proto_init() {
 	file_wingsv_proto_msgTypes[20].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[21].OneofWrappers = []any{}
 	file_wingsv_proto_msgTypes[22].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[23].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[24].OneofWrappers = []any{}
+	file_wingsv_proto_msgTypes[25].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_wingsv_proto_rawDesc), len(file_wingsv_proto_rawDesc)),
 			NumEnums:      23,
-			NumMessages:   23,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
