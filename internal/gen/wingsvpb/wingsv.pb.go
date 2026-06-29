@@ -2227,8 +2227,14 @@ type TurnProfile struct {
 	Config            *Turn  `protobuf:"bytes,6,opt,name=config,proto3" json:"config,omitempty"`
 	SubscriptionId    string `protobuf:"bytes,7,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
 	SubscriptionTitle string `protobuf:"bytes,8,opt,name=subscription_title,json=subscriptionTitle,proto3" json:"subscription_title,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// "account" | "anonymous" - UI "Use VK ID" toggle. Not carried by the inner
+	// Turn message, so it lives here directly.
+	VkAuthMode string `protobuf:"bytes,9,opt,name=vk_auth_mode,json=vkAuthMode,proto3" json:"vk_auth_mode,omitempty"`
+	// "auto" | "udp" | "doh" - UI "DNS resolver" list (shared VK TURN / WB Stream
+	// setting). Not carried by the inner Turn message.
+	DnsMode       string `protobuf:"bytes,10,opt,name=dns_mode,json=dnsMode,proto3" json:"dns_mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TurnProfile) Reset() {
@@ -2313,6 +2319,20 @@ func (x *TurnProfile) GetSubscriptionId() string {
 func (x *TurnProfile) GetSubscriptionTitle() string {
 	if x != nil {
 		return x.SubscriptionTitle
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetVkAuthMode() string {
+	if x != nil {
+		return x.VkAuthMode
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetDnsMode() string {
+	if x != nil {
+		return x.DnsMode
 	}
 	return ""
 }
@@ -4275,7 +4295,7 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x11_creds_group_sizeB\x11\n" +
 	"\x0f_manual_captchaB\x1c\n" +
 	"\x1a_restart_on_network_changeB\r\n" +
-	"\v_merge_only\"\xb4\x02\n" +
+	"\v_merge_only\"\xf1\x02\n" +
 	"\vTurnProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4284,7 +4304,11 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x10vk_turn_endpoint\x18\x05 \x01(\tR\x0evkTurnEndpoint\x12$\n" +
 	"\x06config\x18\x06 \x01(\v2\f.wingsv.TurnR\x06config\x12'\n" +
 	"\x0fsubscription_id\x18\a \x01(\tR\x0esubscriptionId\x12-\n" +
-	"\x12subscription_title\x18\b \x01(\tR\x11subscriptionTitle\"\xaf\x02\n" +
+	"\x12subscription_title\x18\b \x01(\tR\x11subscriptionTitle\x12 \n" +
+	"\fvk_auth_mode\x18\t \x01(\tR\n" +
+	"vkAuthMode\x12\x19\n" +
+	"\bdns_mode\x18\n" +
+	" \x01(\tR\adnsMode\"\xaf\x02\n" +
 	"\tWireGuard\x12'\n" +
 	"\x05iface\x18\x01 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
 	"\x04peer\x18\x02 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
