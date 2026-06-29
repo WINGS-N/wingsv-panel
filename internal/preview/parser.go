@@ -178,7 +178,7 @@ func buildPreview(raw string, config *wingsvpb.Config) *Preview {
 	preview := &Preview{
 		RawLink:       raw,
 		LinkType:      "wingsv",
-		Backend:       backendLabel(config.GetBackend()),
+		Backend:       backendLabelForConfig(config),
 		ConfigType:    configTypeLabel(config.GetType()),
 		Version:       config.GetVer(),
 		Title:         "WINGS V ссылка",
@@ -1229,21 +1229,34 @@ func boolLabel(value bool, yes, no string) string {
 
 func backendLabel(backend wingsvpb.BackendType) string {
 	switch backend {
-	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD:
+	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD, wingsvpb.BackendType_BACKEND_TYPE_VK_TURN:
 		return "VK TURN + WireGuard"
 	case wingsvpb.BackendType_BACKEND_TYPE_XRAY:
 		return "Xray"
 	case wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG:
-		return "AmneziaWG"
+		return "VK TURN + AmneziaWG"
 	case wingsvpb.BackendType_BACKEND_TYPE_WIREGUARD:
 		return "WireGuard"
-	case wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN:
-		return "AmneziaWG Plain"
+	case wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN, wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG_TL:
+		return "AmneziaWG"
 	case wingsvpb.BackendType_BACKEND_TYPE_WB_STREAM:
 		return "WB Stream"
 	default:
 		return "WINGS V"
 	}
+}
+
+// backendLabelForConfig refines the VK TURN label by Turn.tunnel_mode, since the
+// new BACKEND_TYPE_VK_TURN carries the WG/AWG choice in Turn rather than in the
+// backend enum.
+func backendLabelForConfig(config *wingsvpb.Config) string {
+	b := config.GetBackend()
+	if (b == wingsvpb.BackendType_BACKEND_TYPE_VK_TURN ||
+		b == wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD) &&
+		config.GetTurn().GetTunnelMode() == wingsvpb.TunnelMode_TUNNEL_MODE_AMNEZIAWG {
+		return "VK TURN + AmneziaWG"
+	}
+	return backendLabel(b)
 }
 
 func configTypeLabel(configType wingsvpb.ConfigType) string {

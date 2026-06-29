@@ -97,20 +97,33 @@ func toClientView(c storage.Client) clientView {
 // backendTypeLabel maps the proto enum to a short user-facing label.
 func backendTypeLabel(t wingsvpb.BackendType) string {
 	switch t {
-	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD:
+	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD, wingsvpb.BackendType_BACKEND_TYPE_VK_TURN:
 		return "VK TURN + WG"
 	case wingsvpb.BackendType_BACKEND_TYPE_XRAY:
 		return "Xray"
 	case wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG:
-		return "AmneziaWG"
+		return "VK TURN + AWG"
 	case wingsvpb.BackendType_BACKEND_TYPE_WIREGUARD:
 		return "WireGuard"
-	case wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN:
-		return "AmneziaWG plain"
+	case wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG_PLAIN, wingsvpb.BackendType_BACKEND_TYPE_AMNEZIAWG_TL:
+		return "AmneziaWG"
 	case wingsvpb.BackendType_BACKEND_TYPE_WB_STREAM:
 		return "WB Stream"
 	}
 	return ""
+}
+
+// backendTypeLabelForConfig refines the VK TURN label by Turn.tunnel_mode, since
+// the new BACKEND_TYPE_VK_TURN carries the WG/AWG choice in Turn rather than in
+// the backend enum.
+func backendTypeLabelForConfig(cfg *wingsvpb.Config) string {
+	b := cfg.GetBackend()
+	if (b == wingsvpb.BackendType_BACKEND_TYPE_VK_TURN ||
+		b == wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD) &&
+		cfg.GetTurn().GetTunnelMode() == wingsvpb.TunnelMode_TUNNEL_MODE_AMNEZIAWG {
+		return "VK TURN + AWG"
+	}
+	return backendTypeLabel(b)
 }
 
 // hydrateBackendType reads the desired_config blob (if any) and adds the
@@ -124,7 +137,7 @@ func (h *Handler) hydrateBackendType(view *clientView, clientID string) {
 	if err := proto.Unmarshal(cfg.ConfigProto, parsed); err != nil {
 		return
 	}
-	view.BackendType = backendTypeLabel(parsed.GetBackend())
+	view.BackendType = backendTypeLabelForConfig(parsed)
 }
 
 func normalizeSyncMode(value string) string {
