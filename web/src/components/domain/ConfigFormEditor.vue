@@ -141,6 +141,14 @@
         />
       </div>
       <div class="form-row">
+        <label class="form-label">Отпечаток браузера</label>
+        <OneuiSelect
+          :model-value="turn.browserFingerprint || 'auto'"
+          :options="browserFingerprintOptions"
+          @change="setTurn('browserFingerprint', $event === 'auto' ? undefined : $event)"
+        />
+      </div>
+      <div class="form-row">
         <label class="form-label">Runtime mode</label>
         <OneuiSelect
           :model-value="turn.runtimeMode || 'PROXY_RUNTIME_MODE_UNSPECIFIED'"
@@ -943,6 +951,14 @@ const sessionModeOptions = [
   { value: 'TURN_SESSION_MODE_AUTO', label: 'Auto' },
   { value: 'TURN_SESSION_MODE_MAINLINE', label: 'Mainline' },
   { value: 'TURN_SESSION_MODE_MUX', label: 'MU' },
+];
+
+const browserFingerprintOptions = [
+  { value: 'auto', label: 'Авто (случайный за сессию)' },
+  { value: 'chrome', label: 'Chrome' },
+  { value: 'edge', label: 'Edge' },
+  { value: 'safari', label: 'Safari' },
+  { value: 'firefox', label: 'Firefox' },
 ];
 
 // Top-level выбор (multi-profile модель). VK TURN кодируется как
