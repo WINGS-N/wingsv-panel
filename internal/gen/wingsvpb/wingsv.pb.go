@@ -1995,8 +1995,12 @@ type Turn struct {
 	ActiveProfileId string         `protobuf:"bytes,24,opt,name=active_profile_id,json=activeProfileId,proto3" json:"active_profile_id,omitempty"`
 	Profiles        []*TurnProfile `protobuf:"bytes,25,rep,name=profiles,proto3" json:"profiles,omitempty"`
 	MergeOnly       *bool          `protobuf:"varint,26,opt,name=merge_only,json=mergeOnly,proto3,oneof" json:"merge_only,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Семейство браузерного отпечатка для HTTP+TLS-имитации relay'ем:
+	// "auto" | "chrome" | "edge" | "safari" | "firefox". Пусто / "auto" — relay
+	// выбирает случайный профиль на сессию; остальные фиксируют одно семейство.
+	BrowserFingerprint string `protobuf:"bytes,27,opt,name=browser_fingerprint,json=browserFingerprint,proto3" json:"browser_fingerprint,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Turn) Reset() {
@@ -2209,6 +2213,13 @@ func (x *Turn) GetMergeOnly() bool {
 		return *x.MergeOnly
 	}
 	return false
+}
+
+func (x *Turn) GetBrowserFingerprint() string {
+	if x != nil {
+		return x.BrowserFingerprint
+	}
+	return ""
 }
 
 type TurnProfile struct {
@@ -4255,7 +4266,7 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x04port\x18\x02 \x01(\rR\x04port\"2\n" +
 	"\x04Cidr\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\fR\x04addr\x12\x16\n" +
-	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xce\t\n" +
+	"\x06prefix\x18\x02 \x01(\rR\x06prefix\"\xff\t\n" +
 	"\x04Turn\x12,\n" +
 	"\bendpoint\x18\x01 \x01(\v2\x10.wingsv.EndpointR\bendpoint\x12\x12\n" +
 	"\x04link\x18\x02 \x01(\tR\x04link\x12\x1d\n" +
@@ -4285,7 +4296,8 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x11active_profile_id\x18\x18 \x01(\tR\x0factiveProfileId\x12/\n" +
 	"\bprofiles\x18\x19 \x03(\v2\x13.wingsv.TurnProfileR\bprofiles\x12\"\n" +
 	"\n" +
-	"merge_only\x18\x1a \x01(\bH\aR\tmergeOnly\x88\x01\x01B\n" +
+	"merge_only\x18\x1a \x01(\bH\aR\tmergeOnly\x88\x01\x01\x12/\n" +
+	"\x13browser_fingerprint\x18\x1b \x01(\tR\x12browserFingerprintB\n" +
 	"\n" +
 	"\b_threadsB\n" +
 	"\n" +
