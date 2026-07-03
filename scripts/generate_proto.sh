@@ -47,3 +47,15 @@ protoc \
   --go-grpc_out="$ROOT_DIR" \
   --go-grpc_opt=module=v.wingsnet.org \
   "$PROTO_DIR/relay.proto"
+
+XUI_PKG_DIR="$OUT_DIR/xuipb"
+mkdir -p "$XUI_PKG_DIR"
+rm -f "$XUI_PKG_DIR/xui.pb.go" "$XUI_PKG_DIR/xui_grpc.pb.go"
+
+protoc \
+  --proto_path="$PROTO_DIR" \
+  --go_out="$ROOT_DIR" \
+  --go_opt=module=v.wingsnet.org \
+  --go-grpc_out="$ROOT_DIR" \
+  --go-grpc_opt=module=v.wingsnet.org \
+  "$PROTO_DIR/xui.proto"
