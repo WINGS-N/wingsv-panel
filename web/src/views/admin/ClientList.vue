@@ -514,12 +514,37 @@ async function generateQR(link) {
   if (!link) return '';
   try {
     const QR = await import('qrcode');
-    return await QR.toDataURL(link, {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 320;
+    await QR.toCanvas(canvas, link, {
       errorCorrectionLevel: 'H',
-      width: 240,
+      width: 320,
       margin: 1,
       color: { dark: '#000000', light: '#ffffff' },
     });
+    // Overlay WINGS V app icon in the center.
+    const ctx = canvas.getContext('2d');
+    const icon = new Image();
+    icon.src = '/img/wingsv-icon.webp';
+    await new Promise((resolve) => {
+      icon.onload = resolve;
+      icon.onerror = resolve;
+    });
+    const size = 64;
+    const x = (canvas.width - size) / 2;
+    const y = (canvas.height - size) / 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(x - 6, y - 6, size + 12, size + 12, 16);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(x, y, size, size, 14);
+    ctx.clip();
+    ctx.drawImage(icon, x, y, size, size);
+    ctx.restore();
+    return canvas.toDataURL('image/png');
   } catch {
     return '';
   }
