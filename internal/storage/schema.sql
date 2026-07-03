@@ -147,3 +147,19 @@ CREATE TABLE IF NOT EXISTS admin_master_config (
     scope_flags TEXT NOT NULL DEFAULT '',
     updated_at INTEGER NOT NULL DEFAULT 0
 );
+
+-- Backend servers the panel manages in wg/awg and 3x-ui modes. kind is
+-- 'vk_turn_proxy' or 'xui'; ca_pin is the SPKI pin the panel uses to verify the
+-- node's gRPC TLS.
+CREATE TABLE IF NOT EXISTS server_nodes (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    grpc_endpoint TEXT NOT NULL DEFAULT '',
+    ca_pin BLOB,
+    status TEXT NOT NULL DEFAULT 'unknown',
+    last_seen_at INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_server_nodes_kind ON server_nodes(kind);

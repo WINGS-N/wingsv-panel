@@ -8,40 +8,122 @@ import (
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 //go:embed schema.sql
 var schemaSQL string
 
-type Store struct {
-	db *sql.DB
+// Driver is a supported SQL backend. The panel keeps a single portable data
+// model across all three via GORM; only the connection layer and DDL differ.
+type Driver string
+
+const (
+	DriverSQLite   Driver = "sqlite"
+	DriverPostgres Driver = "pgsql"
+	DriverMySQL    Driver = "mariadb"
+)
+
+// Options selects the database backend. For sqlite, DSN is a filesystem path;
+// for pgsql / mariadb it is a full driver DSN.
+type Options struct {
+	Driver Driver
+	DSN    string
 }
 
-func Open(dbPath string) (*Store, error) {
-	if dbPath == "" {
-		return nil, errors.New("storage: empty db path")
+// NormalizeDriver maps the common aliases to the canonical Driver value.
+func NormalizeDriver(s string) (Driver, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "", "sqlite", "sqlite3":
+		return DriverSQLite, nil
+	case "pgsql", "postgres", "postgresql":
+		return DriverPostgres, nil
+	case "mariadb", "mysql":
+		return DriverMySQL, nil
+	default:
+		return "", fmt.Errorf("storage: unknown driver %q", s)
 	}
-	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)&_pragma=synchronous(NORMAL)", dbPath)
-	db, err := sql.Open("sqlite", dsn)
+}
+
+type Store struct {
+	gdb *gorm.DB
+	db  *sql.DB
+}
+
+// Open connects to the configured backend, applies the schema, and runs the
+// idempotent data migrations. The pure-Go drivers (glebarez/sqlite, pgx,
+// go-sql-driver/mysql) keep the binary CGO-free so it cross-compiles to every
+// release arch, including android/arm64+arm and riscv64.
+func Open(opts Options) (*Store, error) {
+	driver, err := NormalizeDriver(string(opts.Driver))
 	if err != nil {
-		return nil, fmt.Errorf("storage: open: %w", err)
+		return nil, err
 	}
-	// WAL allows many concurrent readers alongside a single writer, so a single
-	// pooled connection (the old SetMaxOpenConns(1)) is needlessly serializing
-	// the whole panel: one guardian welcome flow or a reconnect storm could
-	// starve every admin request. Allow real read concurrency; writes still
-	// serialize at the SQLite level and wait out contention via busy_timeout.
-	db.SetMaxOpenConns(24)
-	db.SetMaxIdleConns(24)
-	db.SetConnMaxIdleTime(5 * time.Minute)
+	if strings.TrimSpace(opts.DSN) == "" {
+		return nil, errors.New("storage: empty DSN")
+	}
+
+	var dialector gorm.Dialector
+	switch driver {
+	case DriverSQLite:
+		// WAL lets many readers run alongside a single writer; busy_timeout waits
+		// out write contention instead of erroring; foreign_keys(ON) enforces the
+		// ON DELETE CASCADE relations the schema declares.
+		dsn := fmt.Sprintf(
+			"file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)&_pragma=synchronous(NORMAL)",
+			opts.DSN,
+		)
+		dialector = sqlite.Open(dsn)
+	case DriverPostgres:
+		dialector = postgres.Open(opts.DSN)
+	case DriverMySQL:
+		dialector = mysql.Open(opts.DSN)
+	}
+
+	gdb, err := gorm.Open(dialector, &gorm.Config{
+		Logger:                 gormlogger.Default.LogMode(gormlogger.Silent),
+		SkipDefaultTransaction: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("storage: open %s: %w", driver, err)
+	}
+	sqlDB, err := gdb.DB()
+	if err != nil {
+		return nil, fmt.Errorf("storage: sql handle: %w", err)
+	}
+	// See the WAL note above: real read concurrency, writes serialize at the
+	// engine and wait via busy_timeout rather than starving admin requests.
+	sqlDB.SetMaxOpenConns(24)
+	sqlDB.SetMaxIdleConns(24)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+
+	if err := applySchema(sqlDB, driver); err != nil {
+		_ = sqlDB.Close()
+		return nil, err
+	}
+	if err := migrateAdminUsernamesToLower(gdb); err != nil {
+		_ = sqlDB.Close()
+		return nil, fmt.Errorf("storage: migrate admin usernames: %w", err)
+	}
+	return &Store{gdb: gdb, db: sqlDB}, nil
+}
+
+// applySchema creates tables and adds any missing columns. sqlite is fully
+// schema-owned by schema.sql (unchanged from the raw-sql era so existing DBs
+// upgrade in place); pgsql / mariadb DDL lands as those backends are wired.
+func applySchema(db *sql.DB, driver Driver) error {
+	if driver != DriverSQLite {
+		return nil
+	}
 	if _, err := db.Exec(schemaSQL); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("storage: apply schema: %w", err)
+		return fmt.Errorf("storage: apply schema: %w", err)
 	}
 	// Idempotent column-adds for upgrades from older schemas. SQLite returns
-	// "duplicate column name" when the column already exists; that's expected
-	// and ignored.
+	// "duplicate column name" when the column already exists; that's expected.
 	for _, alter := range []string{
 		`ALTER TABLE clients ADD COLUMN token_plain BLOB`,
 		`ALTER TABLE clients ADD COLUMN sync_mode TEXT NOT NULL DEFAULT 'always'`,
@@ -57,63 +139,44 @@ func Open(dbPath string) (*Store, error) {
 	} {
 		if _, err := db.Exec(alter); err != nil {
 			if !strings.Contains(err.Error(), "duplicate column name") {
-				_ = db.Close()
-				return nil, fmt.Errorf("storage: %s: %w", alter, err)
+				return fmt.Errorf("storage: %s: %w", alter, err)
 			}
 		}
 	}
-	if err := migrateAdminUsernamesToLower(db); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("storage: migrate admin usernames: %w", err)
-	}
-	return &Store{db: db}, nil
+	return nil
 }
 
 // migrateAdminUsernamesToLower lowercases every existing admin username so the
-// case-insensitive login flow (auth.NormalizeUsername) lines up with what's in
-// the table. Run on every startup but only touches rows that actually differ,
-// so it's a no-op after the first migration. Collisions (two admins differing
-// only in case) abort the migration and surface a clear error rather than
-// silently merging the rows.
-func migrateAdminUsernamesToLower(db *sql.DB) error {
-	rows, err := db.Query(`SELECT id, username FROM admins WHERE username <> lower(username)`)
-	if err != nil {
+// case-insensitive login flow lines up with the table. Runs on every startup
+// but only touches rows that actually differ, so it is a no-op afterward.
+// Collisions (two admins differing only in case) abort with a clear error
+// rather than silently merging rows.
+func migrateAdminUsernamesToLower(gdb *gorm.DB) error {
+	type row struct {
+		ID       int64
+		Username string
+	}
+	var rows []row
+	if err := gdb.Raw(`SELECT id, username FROM admins WHERE username <> lower(username)`).Scan(&rows).Error; err != nil {
 		return err
 	}
-	type pending struct {
-		id       int64
-		lowered  string
-		original string
-	}
-	var todo []pending
-	for rows.Next() {
-		var p pending
-		if err := rows.Scan(&p.id, &p.original); err != nil {
-			rows.Close()
+	for _, r := range rows {
+		lowered := strings.ToLower(r.Username)
+		var collidingID int64
+		err := gdb.Raw(
+			`SELECT id FROM admins WHERE lower(username) = ? AND id <> ?`,
+			lowered, r.ID,
+		).Scan(&collidingID).Error
+		if err != nil {
 			return err
 		}
-		p.lowered = strings.ToLower(p.original)
-		todo = append(todo, p)
-	}
-	rows.Close()
-	if len(todo) == 0 {
-		return nil
-	}
-	for _, p := range todo {
-		var collidingID int64
-		err := db.QueryRow(
-			`SELECT id FROM admins WHERE lower(username) = ? AND id <> ?`,
-			p.lowered, p.id,
-		).Scan(&collidingID)
-		if err == nil {
+		if collidingID != 0 {
 			return fmt.Errorf(
 				"username collision when lowercasing admin id=%d %q: row id=%d already owns %q",
-				p.id, p.original, collidingID, p.lowered,
+				r.ID, r.Username, collidingID, lowered,
 			)
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			return err
 		}
-		if _, err := db.Exec(`UPDATE admins SET username = ? WHERE id = ?`, p.lowered, p.id); err != nil {
+		if err := gdb.Exec(`UPDATE admins SET username = ? WHERE id = ?`, lowered, r.ID).Error; err != nil {
 			return err
 		}
 	}
@@ -124,6 +187,13 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
+// DB returns the underlying database/sql handle used by the raw-SQL methods
+// still being ported to GORM.
 func (s *Store) DB() *sql.DB {
 	return s.db
+}
+
+// Gorm returns the GORM handle for ported methods and the db-migrate command.
+func (s *Store) Gorm() *gorm.DB {
+	return s.gdb
 }

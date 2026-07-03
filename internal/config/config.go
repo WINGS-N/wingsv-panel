@@ -14,6 +14,9 @@ type Config struct {
 	ReleaseAssetSuffix     string
 	StaticDir              string
 	DBPath                 string
+	DBKind                 string
+	DBDSN                  string
+	CADir                  string
 	BootstrapAdminUsername string
 	BootstrapAdminPassword string
 	SessionSecure          bool
@@ -30,6 +33,9 @@ func Load() Config {
 		// explicitly to swap the frontend without rebuilding the binary.
 		StaticDir:              getEnv("STATIC_DIR", ""),
 		DBPath:                 getEnv("DB_PATH", "./v-wingsnet.db"),
+		DBKind:                 getEnv("DB_KIND", "sqlite"),
+		DBDSN:                  getEnv("DB_DSN", ""),
+		CADir:                  getEnv("CA_DIR", "./certs"),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
 		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", "admin"),
 		SessionSecure:          parseBoolEnv("SESSION_SECURE", true),

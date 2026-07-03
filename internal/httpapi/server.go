@@ -436,8 +436,19 @@ func isWebSocketUpgrade(r *http.Request) bool {
 	return false
 }
 
+func storageOptions(cfg config.Config) storage.Options {
+	driver, err := storage.NormalizeDriver(cfg.DBKind)
+	if err != nil {
+		driver = storage.DriverSQLite
+	}
+	if driver == storage.DriverSQLite {
+		return storage.Options{Driver: driver, DSN: cfg.DBPath}
+	}
+	return storage.Options{Driver: driver, DSN: cfg.DBDSN}
+}
+
 func Run(ctx context.Context, cfg config.Config) error {
-	store, err := storage.Open(cfg.DBPath)
+	store, err := storage.Open(storageOptions(cfg))
 	if err != nil {
 		return err
 	}
