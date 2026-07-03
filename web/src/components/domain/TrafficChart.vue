@@ -140,27 +140,55 @@ const yTicks = computed(() => {
   return out;
 });
 
+// The visible span decides the tick format: a sub-day window shows HH:MM, a
+// multi-day window shows DD.MM (plus the hour only when the span is still short
+// enough for intra-day detail to matter), so the axis actually reads differently
+// across the 24h / 7d / month ranges.
+const spanSeconds = computed(() => {
+  const n = props.series.length;
+  if (n < 2) return 0;
+  return (Number(props.series[n - 1].ts) || 0) - (Number(props.series[0].ts) || 0);
+});
+
 const xTicks = computed(() => {
   const n = props.series.length;
   if (!n) return [];
-  const want = Math.min(5, n);
+  const want = Math.min(6, n);
   const out = [];
   for (let i = 0; i < want; i++) {
     const idx = want === 1 ? 0 : Math.round((i / (want - 1)) * (n - 1));
-    out.push({ v: idx, x: xOf(idx), label: hhmm(props.series[idx].ts) });
+    out.push({ v: idx, x: xOf(idx), label: tickLabel(props.series[idx].ts) });
   }
   return out;
 });
 
+function pad2(v) {
+  return String(v).padStart(2, '0');
+}
+
 function hhmm(ts) {
   const d = new Date((Number(ts) || 0) * 1000);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function ddmm(ts) {
+  const d = new Date((Number(ts) || 0) * 1000);
+  return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}`;
+}
+
+// tickLabel adapts to the whole-chart span (not per-tick), so all axis labels
+// share one format.
+function tickLabel(ts) {
+  const day = 86400;
+  if (spanSeconds.value > 3 * day) return ddmm(ts);
+  if (spanSeconds.value > day) return `${ddmm(ts)} ${hhmm(ts)}`;
+  return hhmm(ts);
 }
 
 const span = computed(() => {
   const n = props.series.length;
   if (n < 2) return '';
-  return `${hhmm(props.series[0].ts)} - ${hhmm(props.series[n - 1].ts)}`;
+  return `${tickLabel(props.series[0].ts)} - ${tickLabel(props.series[n - 1].ts)}`;
 });
 
 const hover = ref(-1);
@@ -177,7 +205,7 @@ function onMove(e) {
 }
 
 const hoverX = computed(() => (hover.value >= 0 ? xOf(hover.value) : 0));
-const tipTime = computed(() => (hover.value >= 0 ? hhmm(props.series[hover.value].ts) : ''));
+const tipTime = computed(() => (hover.value >= 0 ? tickLabel(props.series[hover.value].ts) : ''));
 const tipStyle = computed(() => {
   const leftPct = (hoverX.value / W.value) * 100;
   const side = leftPct > 60 ? 'right' : 'left';
