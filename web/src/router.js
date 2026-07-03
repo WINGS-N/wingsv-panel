@@ -8,6 +8,7 @@ import AdminClientList from "./views/admin/ClientList.vue";
 import AdminClientDetail from "./views/admin/ClientDetail.vue";
 import AdminAccount from "./views/admin/AccountView.vue";
 import AdminMasterSettings from "./views/admin/MasterSettings.vue";
+import AdminNodes from "./views/admin/AdminNodes.vue";
 import OwnerLayout from "./views/owner/OwnerLayout.vue";
 import OwnerOverview from "./views/owner/OwnerOverview.vue";
 import OwnerNodes from "./views/owner/OwnerNodes.vue";
@@ -36,6 +37,7 @@ const router = createRouter({
         },
         { path: "account", component: AdminAccount, name: "admin-account" },
         { path: "master", component: AdminMasterSettings, name: "admin-master" },
+        { path: "nodes", component: AdminNodes, name: "admin-nodes" },
       ],
     },
     {
