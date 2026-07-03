@@ -12,4 +12,12 @@ data:
   BOOTSTRAP_ADMIN_USERNAME: "admin"
   BOOTSTRAP_ADMIN_PASSWORD: "admin"
   SESSION_SECURE: "true"
+  # Provisioning gRPC served plaintext h2c; Traefik terminates the public Let's
+  # Encrypt TLS on :443 and forwards the gRPC path here, so vk-turn nodes verify
+  # the panel by system trust with no pin.
+  PROVISIONING_LISTEN: ":9091"
+  # Route DTLS-provisioning wg minting to the relay.example.com 3x-ui node's WireGuard
+  # inbound instead of the relay peerstore.
+  XUI_WG_NODE_ID: "03e1f00a1c517ca89ed9940ee40be793"
+  XUI_WG_INBOUND_TAG: "in-26881-udp"
 

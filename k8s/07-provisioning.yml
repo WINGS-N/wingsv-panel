@@ -1,0 +1,42 @@
+# Exposes the panel Provisioning gRPC (server->panel, called by vk-turn-proxy
+# nodes during app self-enroll) on the public v.wingsnet.org host. Traefik
+# terminates the existing Let's Encrypt cert on :443 and forwards the gRPC path
+# to the panel over h2c, so a vk-turn node verifies the panel by system trust
+# with no pin. The gRPC method path is fully-qualified by the proto package, so
+# it never collides with the web routes served from "/".
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-grpc
+  namespace: v-wingsnet
+  annotations:
+    # The panel serves gRPC as HTTP/2 cleartext on this port; tell Traefik to
+    # speak h2c to the backend rather than plaintext HTTP/1.
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
+spec:
+  selector:
+    app: app
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 9091
+      targetPort: 9091
+  type: ClusterIP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app-provisioning
+  namespace: v-wingsnet
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`v.wingsnet.org`) && PathPrefix(`/wingsv.provisioning.v1.Provisioning/`)
+      services:
+        - name: app-grpc
+          port: 9091
+          scheme: h2c
+  tls:
+    secretName: v-wingsnet-tls
