@@ -28,6 +28,23 @@
     <!-- VK TURN -->
     <section v-if="show('vk_turn')" class="form-section">
       <h3 class="form-section-title">VK TURN</h3>
+      <template v-if="provision">
+        <div class="form-row">
+          <label class="form-label">Разрешить клиенту автоматически создавать wg конфигурацию</label>
+          <OneuiSwitch
+            :model-value="!!provision.enabled"
+            @change="$emit('update:provisionEnabled', $event)"
+          />
+        </div>
+        <div v-if="provision.enabled" class="form-row">
+          <label class="form-label">VK TURN сервер</label>
+          <OneuiSelect
+            :model-value="provision.nodeId || ''"
+            :options="provision.nodes || []"
+            @change="$emit('update:provisionNode', $event)"
+          />
+        </div>
+      </template>
       <div class="form-row">
         <label class="form-label">Под-backend</label>
         <OneuiSelect
@@ -920,8 +937,13 @@ const props = defineProps({
   perClientActions: { type: Boolean, default: false },
   // True while a generate-vk-link command is in flight (button busy state).
   generateVkLinkBusy: { type: Boolean, default: false },
+  // Panel-managed self-provisioning controls for the VK TURN section. When
+  // non-null the toggle + vk-turn server selector render at the top of the
+  // section: { enabled: Boolean, nodeId: String, nodes: [{value,label}] }. The
+  // client token and endpoint are filled server-side, never here.
+  provision: { type: Object, default: null },
 });
-const emit = defineEmits(['update:modelValue', 'generate-vk-link']);
+const emit = defineEmits(['update:modelValue', 'generate-vk-link', 'update:provisionEnabled', 'update:provisionNode']);
 
 const ROOT_ONLY_SECTIONS = new Set(['root', 'sharing', 'xposed']);
 

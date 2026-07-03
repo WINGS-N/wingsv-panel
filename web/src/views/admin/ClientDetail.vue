@@ -186,8 +186,11 @@
           :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
           :per-client-actions="true"
           :generate-vk-link-busy="busyGenerateVkLink"
+          :provision="provisionState"
           @update:model-value="onFormChanged"
           @generate-vk-link="generateVkLink"
+          @update:provision-enabled="onProvisionEnabled"
+          @update:provision-node="onProvisionNode"
         />
         <JsonEditor v-else v-model="configDraft" height="fixed" />
         <p v-if="configError" class="admin-error">{{ configError }}</p>
@@ -474,8 +477,11 @@
           :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
           :per-client-actions="true"
           :generate-vk-link-busy="busyGenerateVkLink"
+          :provision="backend === 'vk_turn' ? provisionState : null"
           @update:model-value="onFormChanged"
           @generate-vk-link="generateVkLink"
+          @update:provision-enabled="onProvisionEnabled"
+          @update:provision-node="onProvisionNode"
         />
       </div>
 
@@ -803,6 +809,22 @@ const busyPush = ref(false);
 const busyLoadReported = ref(false);
 const busyGenerateVkLink = ref(false);
 const showQueueVkLinkModal = ref(false);
+// Panel-managed self-provisioning state for the VK TURN section. provisionEnabled
+// grants the client the right to auto-create its wg config; provisionNodeId picks
+// which vk-turn relay it takes IP:port from ('' keeps the endpoint already saved).
+const vkTurnNodes = ref([]);
+const provisionEnabled = ref(false);
+const provisionNodeId = ref('');
+const provisionSeeded = ref(false);
+const vkTurnNodeOptions = computed(() => [
+  { value: '', label: 'Не выбран' },
+  ...vkTurnNodes.value.map((n) => ({ value: n.id, label: n.name || n.id })),
+]);
+const provisionState = computed(() => ({
+  enabled: provisionEnabled.value,
+  nodeId: provisionNodeId.value,
+  nodes: vkTurnNodeOptions.value,
+}));
 const queueVkLinkCount = ref(1);
 const busyCmd = ref(false);
 const busyDelete = ref(false);
@@ -996,6 +1018,12 @@ async function loadDetail() {
       configDraft.value = formatJson(detail.value.desired_config) || '{}';
       configDraftSeeded.value = true;
     }
+    // Seed the provision toggle once from whatever managed profile the saved
+    // config already carries; afterwards leave the admin's toggle untouched.
+    if (!provisionSeeded.value && configDraftSeeded.value) {
+      provisionEnabled.value = (formValue.value?.turn?.profiles || []).some((p) => p.wgProvisioned);
+      provisionSeeded.value = true;
+    }
     // Lazy-load the wingsv:// link so the QR card on Конфигурация has data
     // without requiring the admin to click "Показать ссылку" first.
     if (!wingsvLink.value) {
@@ -1003,6 +1031,23 @@ async function loadDetail() {
     }
   } catch (err) {
     loadError.value = err.message || 'Не удалось загрузить клиента';
+  }
+}
+
+function onProvisionEnabled(v) {
+  provisionEnabled.value = !!v;
+}
+function onProvisionNode(v) {
+  provisionNodeId.value = v || '';
+}
+async function loadVkTurnNodes() {
+  try {
+    const res = await fetch('/api/admin/nodes', { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    vkTurnNodes.value = (data.nodes || []).filter((n) => n.kind === 'vk_turn_proxy');
+  } catch {
+    // Non-fatal: without nodes the selector just offers "Не выбран".
   }
 }
 
@@ -1703,7 +1748,11 @@ async function pushConfig() {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: parsed }),
+      body: JSON.stringify({
+        config: parsed,
+        provision: provisionEnabled.value,
+        vk_turn_node_id: provisionNodeId.value,
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -2008,6 +2057,7 @@ watch(id, () => {
 onMounted(() => {
   loadDetail();
   loadInstalledApps();
+  loadVkTurnNodes();
   socketHandle = connectAdminSocket((event) => {
     if (event.client_id !== id.value) return;
     if (event.kind === 'status_update' || event.kind === 'error') {
