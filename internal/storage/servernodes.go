@@ -141,3 +141,21 @@ func (s *Store) UpdateServerNodeStatus(id, status string, lastSeen int64) error 
 	}
 	return nil
 }
+
+// UpdateXuiNodeStatus records a 3x-ui node's reachability plus its Xray core
+// state and version, so the UI can show whether Xray is running.
+func (s *Store) UpdateXuiNodeStatus(id, status, xrayState, xrayVersion string, lastSeen int64) error {
+	res := s.gdb.Model(&dbmodel.ServerNode{}).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"status": status, "last_seen_at": lastSeen,
+			"xray_state": xrayState, "xray_version": xrayVersion,
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

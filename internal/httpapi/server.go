@@ -564,6 +564,41 @@ func Run(ctx context.Context, cfg config.Config) error {
 		},
 	}).Run(ctx)
 
+	// The collector above only polls vk-turn-proxy relays. 3x-ui nodes are polled
+	// here for reachability and Xray core state so the UI can show they are up.
+	go func() {
+		xc := xuiclient.New()
+		poll := func() {
+			nodes, err := store.ListServerNodes(storage.ServerNodeXUI)
+			if err != nil {
+				return
+			}
+			for _, n := range nodes {
+				pctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				st, sErr := xc.ServerStatus(pctx, n)
+				cancel()
+				now := time.Now().Unix()
+				if sErr != nil {
+					_ = store.UpdateXuiNodeStatus(n.ID, "offline", "", "", now)
+					continue
+				}
+				_ = store.UpdateXuiNodeStatus(n.ID, "online", st.XrayState, st.XrayVersion, now)
+			}
+			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
+		}
+		poll()
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				poll()
+			}
+		}
+	}()
+
 	// Audit log rotation: drop entries older than 30 days every 6h.
 	const auditRetention = 30 * 24 * time.Hour
 	go func() {

@@ -185,9 +185,13 @@ type ServerNode struct {
 	// OwnerAdminID is 0 for a panel-local node the owner deploys and manages
 	// (its provisioning and stats are owner-only), or the id of the admin who
 	// registered it as their own external vk-turn-proxy / 3x-ui gRPC endpoint.
-	OwnerAdminID  int64 `gorm:"column:owner_admin_id;not null;default:0;index"`
-	LastSeenAt    int64 `gorm:"column:last_seen_at;not null;default:0"`
-	CreatedAtUnix int64 `gorm:"column:created_at;not null"`
+	OwnerAdminID int64 `gorm:"column:owner_admin_id;not null;default:0;index"`
+	LastSeenAt   int64 `gorm:"column:last_seen_at;not null;default:0"`
+	// XrayState / XrayVersion are polled from a 3x-ui node's Panel gRPC so the UI
+	// can show whether its Xray core is running. Empty for vk-turn-proxy nodes.
+	XrayState     string `gorm:"column:xray_state;not null;default:''"`
+	XrayVersion   string `gorm:"column:xray_version;not null;default:''"`
+	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
 }
 
 func (ServerNode) TableName() string { return "server_nodes" }

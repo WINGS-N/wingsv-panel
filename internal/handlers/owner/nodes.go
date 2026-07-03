@@ -22,6 +22,8 @@ type nodeView struct {
 	Local          bool   `json:"local"`
 	PeerCount      uint32 `json:"peer_count"`
 	ActiveSessions uint32 `json:"active_sessions"`
+	XrayState      string `json:"xray_state"`
+	XrayVersion    string `json:"xray_version"`
 	LastSeen       int64  `json:"last_seen"`
 	CreatedAt      int64  `json:"created_at"`
 }
@@ -142,6 +144,8 @@ func (h *Handler) respondListNodes(w http.ResponseWriter, r *http.Request) {
 			Status:       n.Status,
 			OwnerID:      n.OwnerAdminID,
 			Local:        n.OwnerAdminID == 0,
+			XrayState:    n.XrayState,
+			XrayVersion:  n.XrayVersion,
 			LastSeen:     n.LastSeenAt,
 			CreatedAt:    n.CreatedAtUnix,
 		}

@@ -161,6 +161,8 @@ CREATE TABLE IF NOT EXISTS server_nodes (
     status TEXT NOT NULL DEFAULT 'unknown',
     owner_admin_id INTEGER NOT NULL DEFAULT 0,
     last_seen_at INTEGER NOT NULL DEFAULT 0,
+    xray_state TEXT NOT NULL DEFAULT '',
+    xray_version TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL
 );
 

@@ -20,6 +20,8 @@ type adminNodeView struct {
 	Status         string `json:"status"`
 	PeerCount      uint32 `json:"peer_count"`
 	ActiveSessions uint32 `json:"active_sessions"`
+	XrayState      string `json:"xray_state"`
+	XrayVersion    string `json:"xray_version"`
 	LastSeen       int64  `json:"last_seen"`
 	CreatedAt      int64  `json:"created_at"`
 }
@@ -32,7 +34,8 @@ func (h *Handler) adminGRPCAllowed() bool {
 func (h *Handler) nodeToView(n dbmodel.ServerNode) adminNodeView {
 	view := adminNodeView{
 		ID: n.ID, Kind: n.Kind, Name: n.Name, GRPCEndpoint: n.GRPCEndpoint,
-		Status: n.Status, LastSeen: n.LastSeenAt, CreatedAt: n.CreatedAtUnix,
+		Status: n.Status, XrayState: n.XrayState, XrayVersion: n.XrayVersion,
+		LastSeen: n.LastSeenAt, CreatedAt: n.CreatedAtUnix,
 	}
 	if latest, err := h.store.LatestTrafficSample(n.ID); err == nil {
 		view.PeerCount = latest.PeerCount
