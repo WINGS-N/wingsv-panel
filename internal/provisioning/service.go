@@ -8,6 +8,7 @@ package provisioning
 import (
 	"context"
 	"errors"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -30,9 +31,11 @@ type Peer struct {
 }
 
 // PeerProvisioner creates a peer on a vk-turn-proxy node. The production
-// implementation is a Relay gRPC client; tests use a fake.
+// implementation is a Relay gRPC client; tests use a fake. An empty publicKey /
+// allowedIPs asks the node to generate them; passing both replicates an existing
+// peer onto another node with the same key and address (roaming).
 type PeerProvisioner interface {
-	CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey string) (Peer, error)
+	CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey, allowedIPs string) (Peer, error)
 }
 
 // Service implements provisioningpb.ProvisioningServer.
@@ -78,7 +81,7 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	peer, err := s.provisioner.CreatePeer(ctx, node, "")
+	peer, err := s.provisioner.CreatePeer(ctx, node, "", "")
 	if err != nil {
 		return nil, status.Error(codes.Internal, "create peer: "+err.Error())
 	}
@@ -92,7 +95,38 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 	}); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	s.replicatePeer(ctx, req.GetClientId(), node.ID, peer)
 	return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
+}
+
+// replicatePeer applies the just-minted peer onto every other vk-turn-proxy node
+// with the same key and tunnel address, so a client roams across relay IPs behind
+// a DNS load balancer. Best-effort: a node that is down is skipped and picked up
+// on its next resolve. Roaming also requires the nodes to share wg server keys
+// (a deploy-time concern documented in the HA notes).
+func (s *Service) replicatePeer(ctx context.Context, clientID, originNodeID string, peer Peer) {
+	nodes, err := s.store.ListServerNodes(storage.ServerNodeVKTurnProxy)
+	if err != nil {
+		return
+	}
+	for _, n := range nodes {
+		if n.ID == originNodeID {
+			continue
+		}
+		replica, err := s.provisioner.CreatePeer(ctx, n, peer.PublicKey, peer.AllowedIPs)
+		if err != nil {
+			log.Printf("provisioning: replicate peer for %s to node %s: %v", clientID, n.ID, err)
+			continue
+		}
+		_ = s.store.UpsertClientWGPeer(dbmodel.ClientWGPeer{
+			ClientID:        clientID,
+			NodeID:          n.ID,
+			PublicKey:       peer.PublicKey,
+			PrivateKey:      peer.PrivateKey,
+			AllowedIPs:      peer.AllowedIPs,
+			ServerPublicKey: replica.ServerPublicKey,
+		})
+	}
 }
 
 func (s *Service) response(privateKey, publicKey, address, serverPublicKey string) *provisioningpb.ResolveClientConfigResponse {

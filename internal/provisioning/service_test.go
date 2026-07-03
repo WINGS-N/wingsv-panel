@@ -16,11 +16,13 @@ import (
 
 type fakeProvisioner struct {
 	calls int
+	nodes []string
 	peer  Peer
 }
 
-func (f *fakeProvisioner) CreatePeer(context.Context, dbmodel.ServerNode, string) (Peer, error) {
+func (f *fakeProvisioner) CreatePeer(_ context.Context, node dbmodel.ServerNode, _, _ string) (Peer, error) {
 	f.calls++
+	f.nodes = append(f.nodes, node.ID)
 	return f.peer, nil
 }
 
@@ -77,6 +79,28 @@ func TestResolveCreatesThenReturnsExisting(t *testing.T) {
 	}
 	if fake.calls != 1 {
 		t.Fatalf("provisioner was called again: %d", fake.calls)
+	}
+}
+
+func TestResolveReplicatesPeerToOtherNodes(t *testing.T) {
+	st, clientID, token := setup(t)
+	if _, err := st.CreateServerNode(dbmodel.ServerNode{ID: "n2", Kind: storage.ServerNodeVKTurnProxy, Name: "relay2"}); err != nil {
+		t.Fatalf("node n2: %v", err)
+	}
+	fake := &fakeProvisioner{peer: Peer{PublicKey: "pub", PrivateKey: "priv", AllowedIPs: "10.66.66.2/32", ServerPublicKey: "spub"}}
+	svc := NewService(st, fake)
+	req := &provisioningpb.ResolveClientConfigRequest{ClientId: clientID, Token: token, NodeId: "n1"}
+	if _, err := svc.ResolveClientConfig(context.Background(), req); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if fake.calls != 2 {
+		t.Fatalf("provisioner calls = %d, want 2 (origin + one replica)", fake.calls)
+	}
+	if _, err := st.GetClientWGPeer(clientID, "n1"); err != nil {
+		t.Fatalf("peer for origin node n1 missing: %v", err)
+	}
+	if _, err := st.GetClientWGPeer(clientID, "n2"); err != nil {
+		t.Fatalf("peer was not replicated to n2: %v", err)
 	}
 }
 
