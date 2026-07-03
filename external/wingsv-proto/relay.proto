@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+// Package and service names mirror vk-turn-proxy's proto/control.proto exactly so
+// the generated method paths line up; only go_package differs. This is the panel
+// side (client) of that contract, used to manage a node's tunnel peers.
+package vkturn.control.v1;
+
+option go_package = "v.wingsnet.org/internal/gen/relaypb;relaypb";
+
+service Relay {
+  rpc GetStatus(GetStatusRequest) returns (Status);
+  rpc ListPeers(ListPeersRequest) returns (Peers);
+  rpc CreatePeer(CreatePeerRequest) returns (Peer);
+  rpc DeletePeer(DeletePeerRequest) returns (DeletePeerResponse);
+}
+
+message GetStatusRequest {}
+
+message Status {
+  string version = 1;
+  string wg_interface = 2;
+  uint32 peer_count = 3;
+  uint64 active_sessions = 4;
+}
+
+message ListPeersRequest {}
+
+message Peers {
+  repeated Peer peers = 1;
+}
+
+message CreatePeerRequest {
+  string public_key = 1;
+  string allowed_ips = 2;
+}
+
+message Peer {
+  string public_key = 1;
+  string private_key = 2;
+  string allowed_ips = 3;
+  string server_public_key = 4;
+  uint64 rx_bytes = 5;
+  uint64 tx_bytes = 6;
+  int64 created_unix = 7;
+}
+
+message DeletePeerRequest {
+  string public_key = 1;
+}
+
+message DeletePeerResponse {}

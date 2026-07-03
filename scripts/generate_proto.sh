@@ -35,3 +35,15 @@ protoc \
   --go-grpc_out="$ROOT_DIR" \
   --go-grpc_opt=module=v.wingsnet.org \
   "$PROTO_DIR/provisioning.proto"
+
+RELAY_PKG_DIR="$OUT_DIR/relaypb"
+mkdir -p "$RELAY_PKG_DIR"
+rm -f "$RELAY_PKG_DIR/relay.pb.go" "$RELAY_PKG_DIR/relay_grpc.pb.go"
+
+protoc \
+  --proto_path="$PROTO_DIR" \
+  --go_out="$ROOT_DIR" \
+  --go_opt=module=v.wingsnet.org \
+  --go-grpc_out="$ROOT_DIR" \
+  --go-grpc_opt=module=v.wingsnet.org \
+  "$PROTO_DIR/relay.proto"
