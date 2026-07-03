@@ -495,6 +495,10 @@ func applyManagedTurnProfile(turn *wingsvpb.Turn, clientID, name string, token [
 		WgProvisioned:     true,
 		ProvisionClientId: clientID,
 		ProvisionToken:    token,
+		// Force the mu/v1 (mux) TURN session mode for panel-provisioned profiles.
+		// Without an inner config the app falls back to its flat "mainline" default;
+		// the inner Turn carries only the session mode, the rest stays app-default.
+		Config: &wingsvpb.Turn{SessionMode: wingsvpb.TurnSessionMode_TURN_SESSION_MODE_MUX},
 	}
 	if turn == nil {
 		turn = &wingsvpb.Turn{}
