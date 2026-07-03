@@ -1,20 +1,22 @@
 <template>
-  <label v-if="label" class="field-label">{{ label }}</label>
-  <input
-    :type="type"
-    :class="['text-input', narrow ? 'form-input-narrow' : '']"
-    :value="modelValue"
-    :placeholder="placeholder"
-    :disabled="disabled"
-    :readonly="readonly"
-    :inputmode="inputmode"
-    :autocomplete="autocomplete"
-    :min="min"
-    :max="max"
-    :step="step"
-    @input="onInput"
-  />
-  <p v-if="error" class="admin-error mt-2">{{ error }}</p>
+  <div class="oneui-field">
+    <label v-if="label" class="field-label">{{ label }}</label>
+    <input
+      :type="type"
+      :class="['text-input', narrow ? 'form-input-narrow' : '']"
+      :value="modelValue"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      :readonly="readonly"
+      :inputmode="inputmode"
+      :autocomplete="autocomplete"
+      :min="min"
+      :max="max"
+      :step="step"
+      @input="onInput"
+    />
+    <p v-if="error" class="admin-error mt-2">{{ error }}</p>
+  </div>
 </template>
 
 <script setup>
@@ -39,3 +41,15 @@ function onInput(event) {
   emit('update:modelValue', raw);
 }
 </script>
+
+<style scoped>
+/* Single-root field: label sits directly above its input with a tight gap, and
+   the whole field is one flex/grid item so it sizes correctly in rows. */
+.oneui-field {
+  display: flex;
+  flex-direction: column;
+}
+.oneui-field :deep(.field-label) {
+  margin-bottom: 4px;
+}
+</style>

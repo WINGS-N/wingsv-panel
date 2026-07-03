@@ -255,14 +255,20 @@ onBeforeUnmount(() => {
 <style scoped>
 .node-endpoint-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: flex-end;
 }
 .node-endpoint-host {
-  flex: 1 1 auto;
+  flex: 3 1 240px;
+  min-width: 0;
 }
 .node-endpoint-port {
-  flex: 0 0 130px;
+  flex: 1 1 150px;
+  min-width: 140px;
+}
+.node-endpoint-row :deep(.field-label) {
+  white-space: nowrap;
 }
 .node-row-tail {
   display: flex;
