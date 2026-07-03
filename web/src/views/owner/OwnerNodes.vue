@@ -52,6 +52,11 @@
             {{ n.owner_name || 'admin' }}
           </SamsungPill>
           <span class="admin-muted ml-2">{{ nodeKindLabel(n.kind) }}</span>
+          <div class="node-id-row">
+            <span class="admin-muted node-id-label">ID ноды:</span>
+            <code class="admin-mono node-id" :title="'Скопировать ' + n.id" @click="copyId(n.id)">{{ n.id }}</code>
+            <span v-if="copiedId === n.id" class="node-id-copied">скопировано</span>
+          </div>
         </div>
         <div class="session-row-meta node-row-tail">
           <span>{{ n.grpc_endpoint }} · {{ n.peer_count }} пиров · {{ n.active_sessions }} сессий</span>
@@ -173,6 +178,19 @@ function nodeKindLabel(kind) {
 }
 
 const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id, n.name || n.id])));
+
+const copiedId = ref('');
+async function copyId(id) {
+  try {
+    await navigator.clipboard.writeText(id);
+    copiedId.value = id;
+    setTimeout(() => {
+      if (copiedId.value === id) copiedId.value = '';
+    }, 1500);
+  } catch {
+    // Clipboard denied (insecure context); the id stays visible to copy manually.
+  }
+}
 
 const connRangeLabel = computed(() => {
   if (!connTotal.value) return '';
@@ -318,5 +336,29 @@ onBeforeUnmount(() => {
 .conn-pager-info {
   font-size: 13px;
   color: rgba(252, 252, 252, 0.55);
+}
+.node-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.node-id-label {
+  font-size: 12px;
+}
+.node-id {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(252, 252, 252, 0.06);
+}
+.node-id:hover {
+  background: rgba(75, 141, 255, 0.18);
+}
+.node-id-copied {
+  font-size: 12px;
+  color: #5ecb9e;
 }
 </style>
