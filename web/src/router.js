@@ -9,6 +9,7 @@ import AdminClientDetail from "./views/admin/ClientDetail.vue";
 import AdminAccount from "./views/admin/AccountView.vue";
 import AdminMasterSettings from "./views/admin/MasterSettings.vue";
 import AdminNodes from "./views/admin/AdminNodes.vue";
+import WgPeers from "./views/shared/WgPeers.vue";
 import OwnerLayout from "./views/owner/OwnerLayout.vue";
 import OwnerOverview from "./views/owner/OwnerOverview.vue";
 import OwnerNodes from "./views/owner/OwnerNodes.vue";
@@ -38,6 +39,12 @@ const router = createRouter({
         { path: "account", component: AdminAccount, name: "admin-account" },
         { path: "master", component: AdminMasterSettings, name: "admin-master" },
         { path: "nodes", component: AdminNodes, name: "admin-nodes" },
+        {
+          path: "wgpeers",
+          component: WgPeers,
+          name: "admin-wgpeers",
+          props: { apiBase: "/api/admin" },
+        },
       ],
     },
     {
@@ -47,6 +54,12 @@ const router = createRouter({
         { path: "", redirect: "/owner/overview" },
         { path: "overview", component: OwnerOverview, name: "owner-overview" },
         { path: "nodes", component: OwnerNodes, name: "owner-nodes" },
+        {
+          path: "wgpeers",
+          component: WgPeers,
+          name: "owner-wgpeers",
+          props: { apiBase: "/api/owner" },
+        },
         { path: "admins", component: OwnerAdmins, name: "owner-admins" },
         { path: "clients", component: OwnerClients, name: "owner-clients" },
         { path: "audit", component: OwnerAudit, name: "owner-audit" },

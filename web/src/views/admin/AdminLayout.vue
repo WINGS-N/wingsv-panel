@@ -49,6 +49,10 @@
             <Server class="admin-nav-icon" aria-hidden="true" />
             <span>Серверы</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'admin-wgpeers' }" active-class="is-active">
+            <ShieldCheck class="admin-nav-icon" aria-hidden="true" />
+            <span>WG-конфиги</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'admin-account' }" active-class="is-active">
             <UserCog class="admin-nav-icon" aria-hidden="true" />
             <span>Аккаунт</span>
@@ -77,7 +81,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Crown, LogOut, Server, SlidersHorizontal, UserCog, Users } from 'lucide-vue-next';
+import { Crown, LogOut, Server, ShieldCheck, SlidersHorizontal, UserCog, Users } from 'lucide-vue-next';
 import { authState, isOwner, logout, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
