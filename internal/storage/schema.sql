@@ -178,3 +178,54 @@ CREATE TABLE IF NOT EXISTS client_wg_peers (
     created_at INTEGER NOT NULL,
     PRIMARY KEY (client_id, node_id)
 );
+
+-- M4 stats: one time-series point per node per poll (traffic totals + counts).
+CREATE TABLE IF NOT EXISTS traffic_samples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id TEXT NOT NULL,
+    ts INTEGER NOT NULL,
+    rx_bytes INTEGER NOT NULL DEFAULT 0,
+    tx_bytes INTEGER NOT NULL DEFAULT 0,
+    active_streams INTEGER NOT NULL DEFAULT 0,
+    active_sessions INTEGER NOT NULL DEFAULT 0,
+    peer_count INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_traffic_node_ts ON traffic_samples(node_id, ts);
+
+-- M4 stats: current live relay flows, replaced wholesale each poll.
+CREATE TABLE IF NOT EXISTS flow_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    stream_id INTEGER NOT NULL,
+    client_ip TEXT NOT NULL DEFAULT '',
+    remote TEXT NOT NULL DEFAULT '',
+    protocol TEXT NOT NULL DEFAULT '',
+    version INTEGER NOT NULL DEFAULT 0,
+    rx_bytes INTEGER NOT NULL DEFAULT 0,
+    tx_bytes INTEGER NOT NULL DEFAULT 0,
+    rx_rate INTEGER NOT NULL DEFAULT 0,
+    tx_rate INTEGER NOT NULL DEFAULT 0,
+    started_unix INTEGER NOT NULL DEFAULT 0,
+    sampled_unix INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_flow_snapshots_node ON flow_snapshots(node_id);
+
+-- M4 stats: append/refresh history of relay flows for the connection log.
+CREATE TABLE IF NOT EXISTS connection_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    stream_id INTEGER NOT NULL,
+    started_unix INTEGER NOT NULL,
+    client_ip TEXT NOT NULL DEFAULT '',
+    remote TEXT NOT NULL DEFAULT '',
+    protocol TEXT NOT NULL DEFAULT '',
+    rx_bytes INTEGER NOT NULL DEFAULT 0,
+    tx_bytes INTEGER NOT NULL DEFAULT 0,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_conn_identity ON connection_log(node_id, session_id, stream_id, started_unix);
+CREATE INDEX IF NOT EXISTS idx_conn_first_seen ON connection_log(first_seen);
+CREATE INDEX IF NOT EXISTS idx_conn_last_seen ON connection_log(last_seen);

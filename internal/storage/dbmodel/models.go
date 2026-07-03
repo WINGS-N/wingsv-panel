@@ -197,6 +197,67 @@ type ClientWGPeer struct {
 
 func (ClientWGPeer) TableName() string { return "client_wg_peers" }
 
+// TrafficSample is one time-series point per server node, written by the stats
+// collector each poll. For a vk-turn-proxy node the byte counters are the relay's
+// cumulative server_rx/tx_bytes and the session/stream/peer counts come from its
+// flow stats; for a 3x-ui node the counters carry the aggregate inbound up/down
+// and ActiveSessions the online-client count.
+type TrafficSample struct {
+	ID             uint64 `gorm:"column:id;primaryKey;autoIncrement"`
+	NodeID         string `gorm:"column:node_id;not null;index:idx_traffic_node_ts,priority:1"`
+	TsUnix         int64  `gorm:"column:ts;not null;index:idx_traffic_node_ts,priority:2"`
+	RxBytes        uint64 `gorm:"column:rx_bytes;not null;default:0"`
+	TxBytes        uint64 `gorm:"column:tx_bytes;not null;default:0"`
+	ActiveStreams  uint32 `gorm:"column:active_streams;not null;default:0"`
+	ActiveSessions uint32 `gorm:"column:active_sessions;not null;default:0"`
+	PeerCount      uint32 `gorm:"column:peer_count;not null;default:0"`
+}
+
+func (TrafficSample) TableName() string { return "traffic_samples" }
+
+// FlowSnapshot is one live relay flow captured at the last poll. The collector
+// replaces a node's whole snapshot each cycle, so this table is the current state
+// the flow-chain view renders (client_ip -> session/stream -> remote).
+type FlowSnapshot struct {
+	ID          uint64 `gorm:"column:id;primaryKey;autoIncrement"`
+	NodeID      string `gorm:"column:node_id;not null;index"`
+	SessionID   string `gorm:"column:session_id;not null"`
+	StreamID    uint32 `gorm:"column:stream_id;not null"`
+	ClientIP    string `gorm:"column:client_ip;not null;default:''"`
+	Remote      string `gorm:"column:remote;not null;default:''"`
+	Protocol    string `gorm:"column:protocol;not null;default:''"`
+	Version     uint32 `gorm:"column:version;not null;default:0"`
+	RxBytes     uint64 `gorm:"column:rx_bytes;not null;default:0"`
+	TxBytes     uint64 `gorm:"column:tx_bytes;not null;default:0"`
+	RxRate      uint64 `gorm:"column:rx_rate;not null;default:0"`
+	TxRate      uint64 `gorm:"column:tx_rate;not null;default:0"`
+	StartedUnix int64  `gorm:"column:started_unix;not null;default:0"`
+	SampledUnix int64  `gorm:"column:sampled_unix;not null;default:0"`
+}
+
+func (FlowSnapshot) TableName() string { return "flow_snapshots" }
+
+// ConnectionLog is the append/refresh history of relay flows: one row per
+// (node, session, stream, start), first_seen set on insert and last_seen plus the
+// byte counters refreshed while the flow stays live. The connection-log view reads
+// it newest-first; a retention prune drops old rows.
+type ConnectionLog struct {
+	ID            uint64 `gorm:"column:id;primaryKey;autoIncrement"`
+	NodeID        string `gorm:"column:node_id;not null;uniqueIndex:idx_conn_identity,priority:1"`
+	SessionID     string `gorm:"column:session_id;not null;uniqueIndex:idx_conn_identity,priority:2"`
+	StreamID      uint32 `gorm:"column:stream_id;not null;uniqueIndex:idx_conn_identity,priority:3"`
+	StartedUnix   int64  `gorm:"column:started_unix;not null;uniqueIndex:idx_conn_identity,priority:4"`
+	ClientIP      string `gorm:"column:client_ip;not null;default:''"`
+	Remote        string `gorm:"column:remote;not null;default:''"`
+	Protocol      string `gorm:"column:protocol;not null;default:''"`
+	RxBytes       uint64 `gorm:"column:rx_bytes;not null;default:0"`
+	TxBytes       uint64 `gorm:"column:tx_bytes;not null;default:0"`
+	FirstSeenUnix int64  `gorm:"column:first_seen;not null;index"`
+	LastSeenUnix  int64  `gorm:"column:last_seen;not null;index"`
+}
+
+func (ConnectionLog) TableName() string { return "connection_log" }
+
 // All returns every model in parent-first order so a row copy inserts referenced
 // rows before the rows that point at them.
 func All() []any {
@@ -218,6 +279,9 @@ func All() []any {
 		&PlatformSetting{},
 		&ServerNode{},
 		&ClientWGPeer{},
+		&TrafficSample{},
+		&FlowSnapshot{},
+		&ConnectionLog{},
 	}
 }
 
