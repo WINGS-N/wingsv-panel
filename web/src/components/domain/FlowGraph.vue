@@ -28,8 +28,8 @@
       :viewBox="`0 0 ${W} ${graph.height}`"
       role="img"
       aria-label="Граф потоков трафика"
-      @click="clearSelection"
     >
+      <rect class="fg-bg" x="0" y="0" :width="W" :height="graph.height" @click="clearSelection" />
       <path
         v-for="l in graph.links"
         :key="l.key"
@@ -99,13 +99,14 @@ const props = defineProps({
   nodeNames: { type: Object, default: () => ({}) },
   clientNames: { type: Object, default: () => ({}) },
   mode: { type: String, default: 'live' }, // live | historical
-  maxPerColumn: { type: Number, default: 8 },
+  maxPerColumn: { type: Number, default: 16 },
 });
 
 const NODEW = 11;
 const PADY = 16;
 const GAP = 9;
-const CAP_H = 150;
+const MIN_H = 14; // every kept node is at least this tall so its label always shows
+const TARGET_H = 440; // px the busiest column aims to fill; the SVG grows past it to fit
 
 // Per-protocol colours; unknown protocols fall back to grey. Keys are lower-cased
 // so the legend and links agree.
@@ -258,19 +259,28 @@ const graph = computed(() => {
   };
 
   const total = [...cTot.values()].reduce((a, b) => a + b, 0) || 1;
-  const maxCount = Math.max(c.order.length, r.order.length, d.order.length);
-  const maxNodeBytes = Math.max(...[...c.bytesOf.values(), ...r.bytesOf.values(), ...d.bytesOf.values()], 1);
-  const height = Math.max(180, PADY * 2 + maxCount * 30);
-  const usableH = height - PADY * 2 - (maxCount - 1) * GAP;
-  const scale = Math.min(usableH / total, CAP_H / maxNodeBytes);
+  // Byte-to-pixel scale sizes ribbons; the busiest column aims for TARGET_H. Every
+  // node then gets a MIN_H floor for a legible label, and the SVG height grows to
+  // whatever the tallest column needs - so extra flows extend the graph downward
+  // instead of being squished or clipped.
+  const scale = TARGET_H / total;
+  const nodeH = (b) => Math.max(MIN_H, b * scale);
+  const colHeight = (order, bytesMap) =>
+    order.reduce((s, k) => s + nodeH(bytesMap.get(k)), 0) + Math.max(0, order.length - 1) * GAP;
+  const tallest = Math.max(colHeight(c.order, c.bytesOf), colHeight(r.order, r.bytesOf), colHeight(d.order, d.bytesOf));
+  const height = Math.max(180, PADY * 2 + tallest);
 
   const nodes = [];
   const nodeIndex = new Map();
   function layout(colKey, order, bytesMap, x, labelX, anchor) {
-    const colH = order.reduce((s, k) => s + Math.max(2, bytesMap.get(k) * scale), 0) + (order.length - 1) * GAP;
+    const colH = colHeight(order, bytesMap);
     let y = (height - colH) / 2;
     for (const k of order) {
-      const h = Math.max(2, bytesMap.get(k) * scale);
+      const h = nodeH(bytesMap.get(k));
+      // Ribbons carry bytes*scale of the (possibly taller) node bar; centre them so
+      // a floored node's ribbons sit in the middle rather than hugging the top.
+      const ribbonH = bytesMap.get(k) * scale;
+      const inset = Math.max(0, (h - ribbonH) / 2);
       const node = {
         id: colKey + ':' + k,
         col: colKey,
@@ -281,8 +291,8 @@ const graph = computed(() => {
         labelX,
         anchor,
         label: label(colKey, k) + '  ' + fmt(bytesMap.get(k)),
-        outY: y,
-        inY: y,
+        outY: y + inset,
+        inY: y + inset,
       };
       nodes.push(node);
       nodeIndex.set(node.id, node);
@@ -365,7 +375,7 @@ const headerThroughput = computed(() => {
   if (props.mode === 'live') {
     let rate = 0;
     for (const f of props.flows) rate += (Number(f.rx_rate) || 0) + (Number(f.tx_rate) || 0);
-    return fmt(rate) + '/с';
+    return fmt(rate) + '/s';
   }
   let bytes = 0;
   for (const f of props.flows) bytes += (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0);
@@ -485,6 +495,9 @@ const tipStyle = computed(() => ({
   width: 100%;
   height: auto;
   display: block;
+}
+.fg-bg {
+  fill: transparent;
 }
 .fg-link {
   opacity: 0.85;
