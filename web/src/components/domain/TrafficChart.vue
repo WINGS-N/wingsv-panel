@@ -1,5 +1,5 @@
 <template>
-  <div class="tc-wrap">
+  <div ref="wrapEl" class="tc-wrap">
     <div class="tc-legend">
       <span class="tc-legend-item"><i class="tc-swatch tc-swatch-rx" /> Приём</span>
       <span class="tc-legend-item"><i class="tc-swatch tc-swatch-tx" /> Передача</span>
@@ -7,8 +7,9 @@
     </div>
     <svg
       class="tc-svg"
+      :width="W"
+      :height="H"
       :viewBox="`0 0 ${W} ${H}`"
-      preserveAspectRatio="none"
       role="img"
       :aria-label="ariaLabel"
       @pointermove="onMove"
@@ -47,7 +48,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatBytes } from '@/utils/format.js';
 
 const props = defineProps({
@@ -55,13 +56,28 @@ const props = defineProps({
   ariaLabel: { type: String, default: 'График трафика' },
 });
 
-// viewBox space; the SVG stretches to its container but keeps these coordinates.
-const W = 680;
+// W tracks the real rendered width so the viewBox maps 1:1 to CSS pixels: no
+// aspect-ratio stretch, so axis text and lines stay crisp instead of squashed.
+const wrapEl = ref(null);
+const W = ref(680);
 const H = 220;
 const padL = 56;
 const padR = 12;
 const padT = 12;
 const padB = 24;
+
+let ro = null;
+onMounted(() => {
+  if (!wrapEl.value) return;
+  ro = new ResizeObserver((entries) => {
+    const w = entries[0]?.contentRect?.width || 0;
+    if (w > 0) W.value = Math.max(320, Math.round(w));
+  });
+  ro.observe(wrapEl.value);
+});
+onBeforeUnmount(() => {
+  if (ro) ro.disconnect();
+});
 
 const fmt = (b) => formatBytes(Number(b) || 0);
 
@@ -85,8 +101,8 @@ function niceCeil(v) {
 
 function xOf(i) {
   const n = props.series.length;
-  if (n <= 1) return padL + (W - padL - padR) / 2;
-  return padL + (i / (n - 1)) * (W - padL - padR);
+  if (n <= 1) return padL + (W.value - padL - padR) / 2;
+  return padL + (i / (n - 1)) * (W.value - padL - padR);
 }
 
 function yOf(v) {
@@ -153,8 +169,8 @@ function onMove(e) {
   const n = props.series.length;
   if (!n) return;
   const rect = e.currentTarget.getBoundingClientRect();
-  const rel = ((e.clientX - rect.left) / rect.width) * W;
-  const frac = (rel - padL) / (W - padL - padR);
+  const rel = ((e.clientX - rect.left) / rect.width) * W.value;
+  const frac = (rel - padL) / (W.value - padL - padR);
   let idx = Math.round(frac * (n - 1));
   idx = Math.max(0, Math.min(n - 1, idx));
   hover.value = idx;
@@ -163,7 +179,7 @@ function onMove(e) {
 const hoverX = computed(() => (hover.value >= 0 ? xOf(hover.value) : 0));
 const tipTime = computed(() => (hover.value >= 0 ? hhmm(props.series[hover.value].ts) : ''));
 const tipStyle = computed(() => {
-  const leftPct = (hoverX.value / W) * 100;
+  const leftPct = (hoverX.value / W.value) * 100;
   const side = leftPct > 60 ? 'right' : 'left';
   return side === 'right'
     ? { right: `${(100 - leftPct).toFixed(1)}%`, left: 'auto' }
