@@ -58,6 +58,7 @@ func Run(src, dst storage.Options) ([]Result, error) {
 		{"kv", copyTable[dbmodel.KV]},
 		{"platform_settings", copyTable[dbmodel.PlatformSetting]},
 		{"server_nodes", copyTable[dbmodel.ServerNode]},
+		{"client_wg_peers", copyTable[dbmodel.ClientWGPeer]},
 	}
 
 	results := make([]Result, 0, len(steps))

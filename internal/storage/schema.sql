@@ -163,3 +163,18 @@ CREATE TABLE IF NOT EXISTS server_nodes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_server_nodes_kind ON server_nodes(kind);
+
+-- WireGuard/AmneziaWG peer a client holds on a given vk-turn-proxy node. One
+-- client may hold peers on several nodes (HA). private_key is stored only when
+-- the node generated the keypair so the panel can hand it to the client.
+CREATE TABLE IF NOT EXISTS client_wg_peers (
+    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    node_id TEXT NOT NULL REFERENCES server_nodes(id) ON DELETE CASCADE,
+    public_key TEXT NOT NULL DEFAULT '',
+    private_key TEXT NOT NULL DEFAULT '',
+    allowed_ips TEXT NOT NULL DEFAULT '',
+    server_public_key TEXT NOT NULL DEFAULT '',
+    endpoint TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (client_id, node_id)
+);

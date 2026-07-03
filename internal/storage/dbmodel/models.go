@@ -184,6 +184,19 @@ type ServerNode struct {
 
 func (ServerNode) TableName() string { return "server_nodes" }
 
+type ClientWGPeer struct {
+	ClientID        string `gorm:"column:client_id;primaryKey"`
+	NodeID          string `gorm:"column:node_id;primaryKey"`
+	PublicKey       string `gorm:"column:public_key;not null"`
+	PrivateKey      string `gorm:"column:private_key;not null"`
+	AllowedIPs      string `gorm:"column:allowed_ips;not null"`
+	ServerPublicKey string `gorm:"column:server_public_key;not null"`
+	Endpoint        string `gorm:"column:endpoint;not null"`
+	CreatedAtUnix   int64  `gorm:"column:created_at;not null"`
+}
+
+func (ClientWGPeer) TableName() string { return "client_wg_peers" }
+
 // All returns every model in parent-first order so a row copy inserts referenced
 // rows before the rows that point at them.
 func All() []any {
@@ -204,6 +217,7 @@ func All() []any {
 		&KV{},
 		&PlatformSetting{},
 		&ServerNode{},
+		&ClientWGPeer{},
 	}
 }
 
