@@ -1,14 +1,15 @@
 <template>
   <section class="surface-card">
     <router-link :to="backTo" class="node-back">← К списку серверов</router-link>
-    <h2 class="section-title mt-2">{{ node?.name || nodeId }}</h2>
+    <h2 class="section-title mt-2">{{ meta?.name || node?.name || nodeId }}</h2>
     <p class="body-copy">
-      <SamsungPill :variant="node?.status === 'online' ? 'online' : 'offline'">{{ node?.status || '—' }}</SamsungPill>
-      <span class="admin-muted ml-2">{{ node?.id }}</span>
+      <SamsungPill :variant="metaStatus === 'online' ? 'online' : 'offline'">{{ metaStatus || '—' }}</SamsungPill>
+      <span class="admin-muted ml-2">{{ nodeKindLabel }}</span>
+      <span class="admin-muted ml-2">{{ nodeId }}</span>
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
 
-    <div v-if="traffic" class="admin-stats mt-4">
+    <div v-if="!isXui && traffic" class="admin-stats mt-4">
       <div class="stat">
         <span class="stat-kicker">Текущая скорость</span>
         <span class="stat-value">{{ formatBytes(curRate) }}/s</span>
@@ -32,18 +33,27 @@
     </div>
   </section>
 
-  <SamsungCard class="mt-6" title="Трафик" subtitle="Приём и передача этой ноды.">
+  <SamsungCard
+    v-if="isXui"
+    class="mt-6"
+    title="Граф потоков Xray"
+    subtitle="Клиент → нода → inbound, толщина = трафик клиента."
+  >
+    <FlowGraph :flows="xrayFlows" :client-names="xrayNames" mode="historical" class="mt-4" />
+  </SamsungCard>
+
+  <SamsungCard v-if="!isXui" class="mt-6" title="Трафик" subtitle="Приём и передача этой ноды.">
     <template #actions>
       <OneuiRadioGroup v-model="trafficRange" :options="rangeOptions" variant="pill" @update:model-value="load" />
     </template>
     <TrafficChart :series="traffic?.series || []" class="mt-4" />
   </SamsungCard>
 
-  <SamsungCard class="mt-6" title="Граф потоков" subtitle="Живые потоки ноды.">
+  <SamsungCard v-if="!isXui" class="mt-6" title="Граф потоков" subtitle="Живые потоки ноды.">
     <FlowGraph :flows="flows" :client-names="clientNames" mode="live" :live-rate="curRate" class="mt-4" />
   </SamsungCard>
 
-  <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения ноды (хранятся сутки).">
+  <SamsungCard v-if="!isXui" class="mt-6" title="Журнал соединений" subtitle="Недавние соединения ноды (хранятся час).">
     <ul class="admin-list mt-4">
       <li v-for="c in connections" :key="c.session_id + c.stream_id + c.first_seen" class="session-row">
         <div>
@@ -93,8 +103,11 @@ const route = useRoute();
 const nodeId = route.params.id;
 
 const traffic = ref(null);
+const meta = ref(null);
 const flows = ref([]);
 const clientNames = ref({});
+const xrayFlows = ref([]);
+const xrayNames = ref({});
 const connections = ref([]);
 const connTotal = ref(0);
 const connOffset = ref(0);
@@ -109,6 +122,9 @@ const rangeOptions = [
 
 const backTo = computed(() => ({ name: props.backName }));
 const node = computed(() => (traffic.value?.nodes || []).find((n) => n.id === nodeId) || null);
+const isXui = computed(() => meta.value?.kind === 'xui');
+const metaStatus = computed(() => meta.value?.status || node.value?.status || '');
+const nodeKindLabel = computed(() => (meta.value?.kind === 'xui' ? '3x-ui' : meta.value?.kind ? 'VK TURN' : ''));
 const curRate = computed(() => {
   const t = traffic.value?.totals || {};
   return (t.cur_rx_rate || 0) + (t.cur_tx_rate || 0);
@@ -127,9 +143,26 @@ async function fetchJSON(path) {
   return res.json();
 }
 
+async function loadMeta() {
+  try {
+    const data = await fetchJSON(`${props.apiBase}/nodes`);
+    meta.value = (data.nodes || []).find((n) => n.id === nodeId) || meta.value;
+  } catch {
+    // Non-fatal: the kind branch falls back to vk-turn until meta loads.
+  }
+}
+
 async function load() {
+  if (!meta.value) await loadMeta();
   try {
     const q = `node=${encodeURIComponent(nodeId)}`;
+    if (isXui.value) {
+      const x = await fetchJSON(`${props.apiBase}/stats/xrayflows?${q}`);
+      xrayFlows.value = x.flows || [];
+      xrayNames.value = x.client_names || {};
+      loadError.value = '';
+      return;
+    }
     const [t, f, c] = await Promise.all([
       fetchJSON(`${props.apiBase}/stats/traffic?range=${trafficRange.value}&${q}`),
       fetchJSON(`${props.apiBase}/stats/flows?${q}`),
