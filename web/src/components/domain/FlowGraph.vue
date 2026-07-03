@@ -125,6 +125,9 @@ const PROTO_COLORS = {
   quic: '#e46a9b',
 };
 const OTHER_COLOR = 'rgba(200,200,210,0.5)';
+// Muted palette for protocols not in the fixed table (e.g. mu/v1, mainline), so
+// each gets a distinct but design-appropriate colour instead of a neon hue.
+const EXTRA_PALETTE = ['#7f9cf5', '#68b3a3', '#c98bbf', '#d9a066', '#8fa3ad', '#a9c47f', '#d78fa0', '#7bb0d1'];
 const WELL_KNOWN_PORTS = { 443: 'HTTPS', 80: 'HTTP', 53: 'DNS', 22: 'SSH', 25: 'SMTP', 993: 'IMAPS', 3478: 'STUN' };
 
 const fmt = (b) => formatBytes(Number(b) || 0);
@@ -170,7 +173,7 @@ function hashHue(s) {
 function protoColor(p) {
   const k = (p || '').toLowerCase();
   if (!k) return OTHER_COLOR;
-  return PROTO_COLORS[k] || `hsl(${hashHue(k)}, 62%, 62%)`;
+  return PROTO_COLORS[k] || EXTRA_PALETTE[hashHue(k) % EXTRA_PALETTE.length];
 }
 
 function clientLabel(ip) {
