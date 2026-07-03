@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -230,6 +231,84 @@ func (s *Store) SumNodeTrafficTotals(nodeIDs []string) (uint64, uint64, error) {
 		return 0, 0, err
 	}
 	return uint64(row.Rx), uint64(row.Tx), nil
+}
+
+// AggregatedFlow is a connection-log path collapsed over a time window: total
+// bytes between a client and a remote via a node over a given protocol.
+type AggregatedFlow struct {
+	NodeID   string
+	ClientIP string
+	Remote   string
+	Protocol string
+	RxBytes  uint64
+	TxBytes  uint64
+}
+
+// AggregateConnectionsSince folds the connection log on the given nodes since
+// cutoff into one row per (node, client, remote, protocol) path, summing bytes.
+// It backs the historical flow graph. An empty node set returns nothing.
+func (s *Store) AggregateConnectionsSince(nodeIDs []string, sinceUnix int64) ([]AggregatedFlow, error) {
+	if len(nodeIDs) == 0 {
+		return nil, nil
+	}
+	var rows []struct {
+		NodeID   string
+		ClientIP string
+		Remote   string
+		Protocol string
+		Rx       int64
+		Tx       int64
+	}
+	err := s.gdb.Model(&dbmodel.ConnectionLog{}).
+		Where("node_id IN ? AND last_seen >= ?", nodeIDs, sinceUnix).
+		Group("node_id, client_ip, remote, protocol").
+		Select("node_id, client_ip, remote, protocol, " +
+			"COALESCE(SUM(rx_bytes),0) AS rx, COALESCE(SUM(tx_bytes),0) AS tx").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AggregatedFlow, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, AggregatedFlow{
+			NodeID: r.NodeID, ClientIP: r.ClientIP, Remote: r.Remote, Protocol: r.Protocol,
+			RxBytes: uint64(r.Rx), TxBytes: uint64(r.Tx),
+		})
+	}
+	return out, nil
+}
+
+// ClientNamesByPeerIP maps a managed client's WireGuard tunnel IP (the
+// allowed_ips address without its CIDR suffix) to the client's name, for the
+// given nodes. It lets the flow graph label a client_ip with a human name.
+func (s *Store) ClientNamesByPeerIP(nodeIDs []string) (map[string]string, error) {
+	if len(nodeIDs) == 0 {
+		return map[string]string{}, nil
+	}
+	var rows []struct {
+		AllowedIPs string
+		Name       string
+	}
+	err := s.gdb.
+		Table("client_wg_peers AS cwp").
+		Joins("JOIN clients AS c ON c.id = cwp.client_id").
+		Where("cwp.node_id IN ?", nodeIDs).
+		Select("cwp.allowed_ips AS allowed_ips, c.name AS name").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(rows))
+	for _, r := range rows {
+		ip := r.AllowedIPs
+		if i := strings.IndexByte(ip, '/'); i >= 0 {
+			ip = ip[:i]
+		}
+		if ip != "" {
+			out[ip] = r.Name
+		}
+	}
+	return out, nil
 }
 
 // ListNodeTrafficTotals returns the durable all-time accumulator row per node.

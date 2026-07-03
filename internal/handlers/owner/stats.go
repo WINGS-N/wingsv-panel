@@ -36,7 +36,22 @@ func (h *Handler) handleStatsFlows(w http.ResponseWriter, r *http.Request, _ sto
 		writeError(w, http.StatusInternalServerError, "failed to read flows")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"flows": flows})
+	names, _ := statsview.ClientNames(h.store, localNodeOwnerID)
+	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
+}
+
+func (h *Handler) handleStatsFlowHistory(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	flows, err := statsview.BuildFlowHistory(h.store, localNodeOwnerID, r.URL.Query().Get("window"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to read flow history")
+		return
+	}
+	names, _ := statsview.ClientNames(h.store, localNodeOwnerID)
+	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
 }
 
 func (h *Handler) handleStatsConnections(w http.ResponseWriter, r *http.Request, _ storage.Admin) {

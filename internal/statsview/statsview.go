@@ -207,6 +207,51 @@ func BuildFlows(store *storage.Store, ownerAdminID int64) ([]Flow, error) {
 	return out, nil
 }
 
+// ClientNames maps a managed client's tunnel IP to its name for the owner's
+// nodes, so the flow graph can label clients by name instead of raw IP.
+func ClientNames(store *storage.Store, ownerAdminID int64) (map[string]string, error) {
+	ids, err := ownedNodeIDs(store, ownerAdminID)
+	if err != nil {
+		return nil, err
+	}
+	return store.ClientNamesByPeerIP(ids)
+}
+
+// flowHistoryWindows maps a UI window key to its lookback. Bounded by the
+// connection-log retention (one day), so nothing longer than 24h is offered.
+var flowHistoryWindows = map[string]time.Duration{
+	"1h":  time.Hour,
+	"6h":  6 * time.Hour,
+	"24h": 24 * time.Hour,
+}
+
+// BuildFlowHistory returns the historical flow graph for the given owner's nodes:
+// connection-log paths aggregated over the selected window (default 1h), shaped
+// like Flow so the same graph component renders it. Rates are zero (no live rate
+// for past traffic).
+func BuildFlowHistory(store *storage.Store, ownerAdminID int64, window string) ([]Flow, error) {
+	dur, ok := flowHistoryWindows[window]
+	if !ok {
+		dur = time.Hour
+	}
+	ids, err := ownedNodeIDs(store, ownerAdminID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := store.AggregateConnectionsSince(ids, time.Now().Add(-dur).Unix())
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Flow, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, Flow{
+			NodeID: r.NodeID, ClientIP: r.ClientIP, Remote: r.Remote, Protocol: r.Protocol,
+			RxBytes: r.RxBytes, TxBytes: r.TxBytes,
+		})
+	}
+	return out, nil
+}
+
 // BuildConnections returns a page of the connection log for the given owner's
 // nodes, newest-first, plus the total row count so the UI can paginate.
 func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset int) ([]Connection, int64, error) {
