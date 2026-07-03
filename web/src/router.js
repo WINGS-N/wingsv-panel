@@ -10,6 +10,7 @@ import AdminAccount from "./views/admin/AccountView.vue";
 import AdminMasterSettings from "./views/admin/MasterSettings.vue";
 import OwnerLayout from "./views/owner/OwnerLayout.vue";
 import OwnerOverview from "./views/owner/OwnerOverview.vue";
+import OwnerNodes from "./views/owner/OwnerNodes.vue";
 import OwnerAdmins from "./views/owner/OwnerAdmins.vue";
 import OwnerClients from "./views/owner/OwnerClients.vue";
 import OwnerAudit from "./views/owner/OwnerAudit.vue";
@@ -43,6 +44,7 @@ const router = createRouter({
       children: [
         { path: "", redirect: "/owner/overview" },
         { path: "overview", component: OwnerOverview, name: "owner-overview" },
+        { path: "nodes", component: OwnerNodes, name: "owner-nodes" },
         { path: "admins", component: OwnerAdmins, name: "owner-admins" },
         { path: "clients", component: OwnerClients, name: "owner-clients" },
         { path: "audit", component: OwnerAudit, name: "owner-audit" },

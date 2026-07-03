@@ -38,6 +38,10 @@
             <LayoutDashboard class="admin-nav-icon" aria-hidden="true" />
             <span>Обзор</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-nodes' }" active-class="is-active">
+            <Server class="admin-nav-icon" aria-hidden="true" />
+            <span>Серверы</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-admins' }" active-class="is-active">
             <UsersRound class="admin-nav-icon" aria-hidden="true" />
             <span>Администраторы</span>
@@ -67,7 +71,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowLeft, ClipboardList, LayoutDashboard, LogOut, Smartphone, UsersRound } from 'lucide-vue-next';
+import { ArrowLeft, ClipboardList, LayoutDashboard, LogOut, Server, Smartphone, UsersRound } from 'lucide-vue-next';
 import { authState, logout, myAvatarUrl } from '@/stores/auth.js';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
