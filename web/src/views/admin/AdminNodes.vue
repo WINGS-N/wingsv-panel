@@ -10,23 +10,44 @@
       Owner пока не разрешил администраторам подключать свои gRPC-эндпоинты.
     </p>
 
-    <form v-if="allowGRPC" class="mt-4" @submit.prevent="onAdd">
-      <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
-      <div class="form-grid mt-3">
-        <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой релей" />
-        <OneuiInput v-model.trim="form.host" label="IP или домен" placeholder="relay.example.com" />
-        <OneuiInput v-model.number="form.port" label="gRPC порт" type="number" :placeholder="String(defaultPort)" />
-        <OneuiInput v-model.trim="form.grpc_token" label="Токен" placeholder="bearer-токен (опционально)" />
-      </div>
-      <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
-      <div class="actions-row mt-3">
-        <SamsungButton type="submit" :busy="adding">
-          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          Добавить сервер
-        </SamsungButton>
-      </div>
-    </form>
+    <div v-if="allowGRPC" class="actions-row mt-4">
+      <SamsungButton @click="openAdd">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Добавить сервер
+      </SamsungButton>
+    </div>
   </section>
+
+  <SamsungModal :model-value="showAdd" :busy="adding" title="Новый сервер" @update:model-value="closeAdd">
+    <p class="body-copy">Ваш внешний VK TURN relay или 3x-ui сервер — панель будет опрашивать его по gRPC.</p>
+    <label class="field-label mt-4">Тип сервера</label>
+    <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
+    <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой релей" class="mt-4" />
+    <div class="node-endpoint-row mt-3">
+      <OneuiInput
+        v-model.trim="form.host"
+        label="IP или домен"
+        placeholder="relay.example.com"
+        class="node-endpoint-host"
+      />
+      <OneuiInput
+        v-model.number="form.port"
+        label="gRPC порт"
+        type="number"
+        :placeholder="String(defaultPort)"
+        class="node-endpoint-port"
+      />
+    </div>
+    <OneuiInput v-model.trim="form.grpc_token" label="Токен (bearer)" placeholder="опционально" class="mt-3" />
+    <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
+    <template #actions>
+      <SamsungButton :busy="adding" @click="onAdd">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Создать
+      </SamsungButton>
+      <SamsungButton variant="secondary" :disabled="adding" @click="closeAdd">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
 
   <SamsungCard v-if="nodes.length" class="mt-6" title="Ноды" subtitle="Ваши подключённые серверы.">
     <ul class="admin-list mt-4">
@@ -152,6 +173,7 @@ const connections = ref([]);
 const loadError = ref('');
 const addError = ref('');
 const adding = ref(false);
+const showAdd = ref(false);
 
 const clientNode = ref(null);
 const clientPayload = ref('');
@@ -221,6 +243,19 @@ async function refresh() {
   await loadStats();
 }
 
+function openAdd() {
+  addError.value = '';
+  form.name = '';
+  form.host = '';
+  form.grpc_token = '';
+  form.port = defaultPort.value;
+  showAdd.value = true;
+}
+
+function closeAdd() {
+  showAdd.value = false;
+}
+
 async function onAdd() {
   addError.value = '';
   const host = form.host.trim();
@@ -243,9 +278,7 @@ async function onAdd() {
       }),
     });
     if (!res.ok) throw new Error(await res.text());
-    form.name = '';
-    form.host = '';
-    form.grpc_token = '';
+    showAdd.value = false;
     await refresh();
   } catch (err) {
     addError.value = err.message || 'Не удалось добавить';
@@ -309,10 +342,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+.node-endpoint-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.node-endpoint-host {
+  flex: 1 1 auto;
+}
+.node-endpoint-port {
+  flex: 0 0 130px;
 }
 .node-row-tail {
   display: flex;

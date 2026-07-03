@@ -34,30 +34,13 @@
     <TrafficSparkline :series="traffic?.series || []" class="mt-4" />
   </SamsungCard>
 
-  <SamsungCard
-    class="mt-6"
-    title="Добавить ноду"
-    subtitle="Локальный VK TURN relay или 3x-ui сервер, который опрашивает панель."
-  >
-    <form class="mt-4" @submit.prevent="addNode">
-      <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
-      <div class="node-form-grid mt-3">
-        <OneuiInput v-model.trim="form.name" label="Название" placeholder="relay.example.com" />
-        <OneuiInput v-model.trim="form.host" label="IP или домен" placeholder="relay.example.com" />
-        <OneuiInput v-model.number="form.port" label="gRPC порт" type="number" :placeholder="String(defaultPort)" />
-        <OneuiInput v-model.trim="form.token" label="Токен (bearer)" placeholder="опционально" />
-      </div>
-      <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
-      <div class="actions-row mt-3">
-        <SamsungButton type="submit" :busy="adding">
-          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          Добавить сервер
-        </SamsungButton>
-      </div>
-    </form>
-  </SamsungCard>
-
   <SamsungCard class="mt-6" title="Ноды" subtitle="Все управляемые серверы и их статус.">
+    <template #actions>
+      <SamsungButton variant="secondary" @click="openAdd">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Сервер
+      </SamsungButton>
+    </template>
     <ul class="admin-list mt-4">
       <li v-for="n in nodes" :key="n.id" class="session-row">
         <div>
@@ -100,6 +83,32 @@
       </li>
     </ul>
   </SamsungCard>
+
+  <SamsungModal :model-value="showAdd" :busy="adding" title="Новый сервер" @update:model-value="closeAdd">
+    <p class="body-copy">Локальная нода панели — VK TURN relay или 3x-ui. Панель опрашивает её по gRPC.</p>
+    <label class="field-label mt-4">Тип сервера</label>
+    <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
+    <OneuiInput v-model.trim="form.name" label="Название" placeholder="relay.example.com" class="mt-4" />
+    <div class="node-endpoint-row mt-3">
+      <OneuiInput v-model.trim="form.host" label="IP или домен" placeholder="relay.example.com" class="node-endpoint-host" />
+      <OneuiInput
+        v-model.number="form.port"
+        label="gRPC порт"
+        type="number"
+        :placeholder="String(defaultPort)"
+        class="node-endpoint-port"
+      />
+    </div>
+    <OneuiInput v-model.trim="form.token" label="Токен (bearer)" placeholder="опционально" class="mt-3" />
+    <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
+    <template #actions>
+      <SamsungButton :busy="adding" @click="addNode">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Создать
+      </SamsungButton>
+      <SamsungButton variant="secondary" :disabled="adding" @click="closeAdd">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
 </template>
 
 <script setup>
@@ -108,6 +117,7 @@ import { Plus, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
 import SamsungPill from '@/components/layout/SamsungPill.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
@@ -124,6 +134,7 @@ const connections = ref([]);
 const loadError = ref('');
 const addError = ref('');
 const adding = ref(false);
+const showAdd = ref(false);
 
 const kindOptions = [
   { value: 'vk_turn_proxy', label: 'VK TURN' },
@@ -173,6 +184,19 @@ async function loadAll() {
   }
 }
 
+function openAdd() {
+  addError.value = '';
+  form.name = '';
+  form.host = '';
+  form.token = '';
+  form.port = defaultPort.value;
+  showAdd.value = true;
+}
+
+function closeAdd() {
+  showAdd.value = false;
+}
+
 async function addNode() {
   addError.value = '';
   const host = form.host.trim();
@@ -195,9 +219,7 @@ async function addNode() {
       }),
     });
     if (!res.ok) throw new Error(await res.text());
-    form.name = '';
-    form.host = '';
-    form.token = '';
+    showAdd.value = false;
     await loadAll();
   } catch (err) {
     addError.value = err.message || 'Не удалось добавить';
@@ -231,10 +253,16 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.node-form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
+.node-endpoint-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.node-endpoint-host {
+  flex: 1 1 auto;
+}
+.node-endpoint-port {
+  flex: 0 0 130px;
 }
 .node-row-tail {
   display: flex;
