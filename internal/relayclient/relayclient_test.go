@@ -46,6 +46,7 @@ func TestCreatePeerMapsResponse(t *testing.T) {
 		context.Background(),
 		dbmodel.ServerNode{ID: "n1", GRPCEndpoint: "passthrough:///bufnet"},
 		"clientpub",
+		"",
 	)
 	if err != nil {
 		t.Fatalf("CreatePeer: %v", err)

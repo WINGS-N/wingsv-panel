@@ -67,14 +67,21 @@ func (p *Provisioner) authCtx(ctx context.Context) context.Context {
 }
 
 // CreatePeer implements provisioning.PeerProvisioner.
-func (p *Provisioner) CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey string) (provisioning.Peer, error) {
+// CreatePeer creates (or replicates) a wg peer on a node. An empty publicKey
+// asks the node to generate a keypair; an empty allowedIPs asks it to allocate an
+// address. Passing both replicates an existing peer onto another node with the
+// same key and tunnel address (roaming).
+func (p *Provisioner) CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey, allowedIPs string) (provisioning.Peer, error) {
 	conn, err := p.dial(node)
 	if err != nil {
 		return provisioning.Peer{}, fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
 	}
 	defer func() { _ = conn.Close() }()
 
-	peer, err := relaypb.NewRelayClient(conn).CreatePeer(p.authCtx(ctx), &relaypb.CreatePeerRequest{PublicKey: publicKey})
+	peer, err := relaypb.NewRelayClient(conn).CreatePeer(
+		p.authCtx(ctx),
+		&relaypb.CreatePeerRequest{PublicKey: publicKey, AllowedIps: allowedIPs},
+	)
 	if err != nil {
 		return provisioning.Peer{}, err
 	}
