@@ -40,12 +40,24 @@
     </div>
     <OneuiInput v-model.trim="form.grpc_token" label="Токен (bearer)" placeholder="опционально" class="mt-3" />
     <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
+
+    <div v-if="connectCommand" class="connect-block mt-4">
+      <label class="field-label">Команда подключения ноды</label>
+      <p class="admin-muted connect-hint">Выполните на хосте ноды — включит gRPC-управление и DTLS-provisioning.</p>
+      <pre class="connect-cmd">{{ connectCommand }}</pre>
+      <SamsungButton variant="secondary" size="small" @click="copyConnect">
+        {{ connectCopied ? 'Скопировано' : 'Скопировать' }}
+      </SamsungButton>
+    </div>
+
     <template #actions>
-      <SamsungButton :busy="adding" @click="onAdd">
+      <SamsungButton v-if="!connectCommand" :busy="adding" @click="onAdd">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
         Создать
       </SamsungButton>
-      <SamsungButton variant="secondary" :disabled="adding" @click="closeAdd">Отмена</SamsungButton>
+      <SamsungButton variant="secondary" :disabled="adding" @click="closeAdd">
+        {{ connectCommand ? 'Готово' : 'Отмена' }}
+      </SamsungButton>
     </template>
   </SamsungModal>
 
@@ -237,6 +249,7 @@ const loadError = ref('');
 const addError = ref('');
 const adding = ref(false);
 const showAdd = ref(false);
+const connectCommand = ref('');
 
 const clientNode = ref(null);
 const clientPayload = ref('');
@@ -360,6 +373,7 @@ async function refresh() {
 
 function openAdd() {
   addError.value = '';
+  connectCommand.value = '';
   form.name = '';
   form.host = '';
   form.grpc_token = '';
@@ -369,6 +383,7 @@ function openAdd() {
 
 function closeAdd() {
   showAdd.value = false;
+  connectCommand.value = '';
 }
 
 async function onAdd() {
@@ -393,12 +408,32 @@ async function onAdd() {
       }),
     });
     if (!res.ok) throw new Error(await res.text());
-    showAdd.value = false;
+    const created = await res.json();
+    connectCommand.value = buildConnectCommand(created.id, form.kind, form.grpc_token.trim());
     await refresh();
   } catch (err) {
     addError.value = err.message || 'Не удалось добавить';
   } finally {
     adding.value = false;
+  }
+}
+
+function buildConnectCommand(nodeId, kind, token) {
+  const origin = window.location.origin;
+  const grpc = `${window.location.hostname}:443`;
+  const k = kind === 'xui' ? 'xui' : 'vktp';
+  const tok = token || '<token>';
+  return `curl -fsSL ${origin}/connect.sh | sh -s -- grpc connect ${grpc} ${tok} ${nodeId} ${k}`;
+}
+
+const connectCopied = ref(false);
+async function copyConnect() {
+  try {
+    await navigator.clipboard.writeText(connectCommand.value);
+    connectCopied.value = true;
+    setTimeout(() => (connectCopied.value = false), 1500);
+  } catch {
+    // Clipboard denied; the command stays selectable in the block.
   }
 }
 
@@ -542,5 +577,26 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+.connect-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.connect-hint {
+  font-size: 12px;
+  margin: 0;
+}
+.connect-cmd {
+  width: 100%;
+  overflow-x: auto;
+  background: rgba(252, 252, 252, 0.06);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
 }
 </style>
