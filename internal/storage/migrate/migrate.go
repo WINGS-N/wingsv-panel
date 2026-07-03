@@ -7,6 +7,8 @@ package migrate
 import (
 	"fmt"
 	"reflect"
+	"strings"
+	"unicode/utf8"
 
 	"gorm.io/gorm"
 
@@ -82,7 +84,7 @@ func copyTable[T any](src, dst *gorm.DB) (int64, error) {
 		return 0, nil
 	}
 	for i := range rows {
-		normalizeBytes(&rows[i])
+		normalizeRow(&rows[i])
 	}
 	if err := dst.CreateInBatches(rows, 200).Error; err != nil {
 		return 0, err
@@ -90,15 +92,25 @@ func copyTable[T any](src, dst *gorm.DB) (int64, error) {
 	return int64(len(rows)), nil
 }
 
-// normalizeBytes replaces nil byte-slice fields with empty slices. SQLite is lax
-// about NOT NULL, so a column can hold NULL there; Postgres and MariaDB reject a
-// NULL into a NOT NULL bytea/blob, so an empty slice keeps the copy portable.
-func normalizeBytes(row any) {
+// normalizeRow makes a source row portable to a stricter backend. SQLite is lax:
+// it allows NULL in a NOT NULL column and NUL bytes / invalid UTF-8 in text.
+// Postgres and MariaDB reject those, so nil byte slices become empty slices and
+// text fields are stripped of NUL bytes and coerced to valid UTF-8.
+func normalizeRow(row any) {
 	v := reflect.ValueOf(row).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
-		if f.Kind() == reflect.Slice && f.Type().Elem().Kind() == reflect.Uint8 && f.IsNil() && f.CanSet() {
+		if !f.CanSet() {
+			continue
+		}
+		switch {
+		case f.Kind() == reflect.Slice && f.Type().Elem().Kind() == reflect.Uint8 && f.IsNil():
 			f.Set(reflect.MakeSlice(f.Type(), 0, 0))
+		case f.Kind() == reflect.String:
+			s := f.String()
+			if strings.IndexByte(s, 0) >= 0 || !utf8.ValidString(s) {
+				f.SetString(strings.ToValidUTF8(strings.ReplaceAll(s, "\x00", ""), ""))
+			}
 		}
 	}
 }
