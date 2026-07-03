@@ -209,6 +209,17 @@
           />
         </div>
 
+        <div class="remote-toggle-row mt-4">
+          <div>
+            <span class="field-label">Управлять конфигурацией удалённо через панель</span>
+            <p class="admin-muted remote-toggle-hint">
+              Вкл — ссылка с Guardian (WSS-контроль). Выкл — автономная ссылка VK TURN-профиля; клиент сам выпускает
+              wg-конфиг по токену.
+            </p>
+          </div>
+          <OneuiSwitch v-model="remoteControl" />
+        </div>
+
         <label class="field-label mt-4">Заполнение конфигурации</label>
         <OneuiRadioGroup v-model="seedMode" :options="seedModeOptions" variant="pill" />
 
@@ -269,6 +280,9 @@
       <SamsungModal :model-value="!!lastCreatedLink" title="Клиент создан" @update:model-value="dismissLink">
         <p class="body-copy">Откройте ссылку в WINGS V на устройстве клиента:</p>
         <CopyableLink :value="lastCreatedLink" rows="3" />
+        <div v-if="createdQr" class="created-qr mt-3">
+          <img :src="createdQr" alt="QR-код ссылки" width="240" height="240" />
+        </div>
         <p class="admin-muted mt-3">
           Ссылку можно посмотреть позже — откройте клиента в списке и нажмите «Показать ссылку».
         </p>
@@ -293,6 +307,7 @@ import { formatBytes } from '@/utils/format.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
+import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiTextarea from '@/components/controls/OneuiTextarea.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
@@ -386,9 +401,11 @@ function scrollToTable() {
 
 const showCreate = ref(false);
 const newName = ref('');
+const remoteControl = ref(true);
 const creating = ref(false);
 const createError = ref('');
 const lastCreatedLink = ref('');
+const createdQr = ref('');
 const seedMode = ref('empty');
 const seedFromClientId = ref('');
 const seedLink = ref('');
@@ -442,8 +459,10 @@ async function loadClients() {
 function openCreate() {
   showCreate.value = true;
   newName.value = '';
+  remoteControl.value = true;
   createError.value = '';
   lastCreatedLink.value = '';
+  createdQr.value = '';
   seedMode.value = 'empty';
   seedFromClientId.value = '';
   seedLink.value = '';
@@ -457,6 +476,22 @@ function closeCreate() {
 
 function dismissLink() {
   lastCreatedLink.value = '';
+  createdQr.value = '';
+}
+
+async function generateQR(link) {
+  if (!link) return '';
+  try {
+    const QR = await import('qrcode');
+    return await QR.toDataURL(link, {
+      errorCorrectionLevel: 'H',
+      width: 240,
+      margin: 1,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+  } catch {
+    return '';
+  }
 }
 
 async function createClient() {
@@ -468,6 +503,7 @@ async function createClient() {
       name: newName.value,
       sync_mode: syncMode.value,
       periodic_interval_minutes: Math.max(15, Number(syncIntervalMinutes.value) || 30),
+      remote_control: remoteControl.value,
     };
     if (seedMode.value === 'clone' && seedFromClientId.value) {
       reqBody.seed_from_client_id = seedFromClientId.value;
@@ -487,6 +523,7 @@ async function createClient() {
     const respBody = await res.json();
     showCreate.value = false;
     lastCreatedLink.value = respBody.wingsv_link;
+    createdQr.value = await generateQR(respBody.wingsv_link);
     await loadClients();
   } catch (err) {
     createError.value = err.message || 'Не удалось создать клиента';
@@ -556,3 +593,23 @@ onBeforeUnmount(() => {
   if (socketHandle) socketHandle.close();
 });
 </script>
+
+<style scoped>
+.remote-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.remote-toggle-hint {
+  margin-top: 4px;
+  max-width: 42ch;
+}
+.created-qr {
+  display: flex;
+  justify-content: center;
+}
+.created-qr img {
+  border-radius: 12px;
+}
+</style>
