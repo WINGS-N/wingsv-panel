@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/githubapi"
@@ -22,6 +24,8 @@ import (
 	guardianhandler "v.wingsnet.org/internal/handlers/guardian"
 	ownerhandler "v.wingsnet.org/internal/handlers/owner"
 	"v.wingsnet.org/internal/preview"
+	"v.wingsnet.org/internal/provisioning"
+	"v.wingsnet.org/internal/relayclient"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/web"
 )
@@ -470,6 +474,21 @@ func Run(ctx context.Context, cfg config.Config) error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	// Provisioning gRPC (server->panel, called by vk-turn-proxy nodes during app
+	// self-enroll). Plaintext for now; pinned-CA/mTLS creds land with the CA wiring.
+	var grpcServer *grpc.Server
+	if cfg.ProvisioningListen != "" {
+		grpcListener, listenErr := net.Listen("tcp", cfg.ProvisioningListen)
+		if listenErr != nil {
+			return listenErr
+		}
+		grpcServer = grpc.NewServer()
+		provisioning.NewService(store, relayclient.New(cfg.RelayToken)).Register(grpcServer)
+		go func() {
+			_ = grpcServer.Serve(grpcListener)
+		}()
+	}
+
 	// Audit log rotation: drop entries older than 30 days every 6h.
 	const auditRetention = 30 * 24 * time.Hour
 	go func() {
@@ -490,6 +509,9 @@ func Run(ctx context.Context, cfg config.Config) error {
 	go func() {
 		defer close(shutdownDone)
 		<-ctx.Done()
+		if grpcServer != nil {
+			grpcServer.GracefulStop()
+		}
 		shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = server.Shutdown(shutdownContext)

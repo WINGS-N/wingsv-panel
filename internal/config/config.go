@@ -17,6 +17,8 @@ type Config struct {
 	DBKind                 string
 	DBDSN                  string
 	CADir                  string
+	ProvisioningListen     string
+	RelayToken             string
 	BootstrapAdminUsername string
 	BootstrapAdminPassword string
 	SessionSecure          bool
@@ -36,6 +38,8 @@ func Load() Config {
 		DBKind:                 getEnv("DB_KIND", "sqlite"),
 		DBDSN:                  getEnv("DB_DSN", ""),
 		CADir:                  getEnv("CA_DIR", "./certs"),
+		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
+		RelayToken:             getEnv("RELAY_TOKEN", ""),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
 		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", "admin"),
 		SessionSecure:          parseBoolEnv("SESSION_SECURE", true),
