@@ -25,6 +25,7 @@ import (
 	adminhandler "v.wingsnet.org/internal/handlers/admin"
 	guardianhandler "v.wingsnet.org/internal/handlers/guardian"
 	ownerhandler "v.wingsnet.org/internal/handlers/owner"
+	"v.wingsnet.org/internal/metrics"
 	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/provisioning"
@@ -70,6 +71,9 @@ func (s *Server) Handler() http.Handler {
 	s.adminH.RegisterWS(mux)
 	s.ownerH.Register(mux)
 	s.guardianH.Register(mux)
+	mux.Handle("/metrics", metrics.Handler(
+		metrics.NewCollector(s.store, s.hub, relayclient.New(s.config.RelayToken)),
+	))
 	mux.HandleFunc("/", s.handleFrontend)
 	return redirectToHTTPS(s.config.PublicBaseURL, cors(s.config.PublicBaseURL, mux))
 }

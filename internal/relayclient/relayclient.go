@@ -51,22 +51,30 @@ func New(token string, opts ...Option) *Provisioner {
 	return p
 }
 
-// CreatePeer implements provisioning.PeerProvisioner.
-func (p *Provisioner) CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey string) (provisioning.Peer, error) {
+func (p *Provisioner) dial(node dbmodel.ServerNode) (*grpc.ClientConn, error) {
 	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(p.creds)}
 	if p.dialContext != nil {
 		dialOpts = append(dialOpts, grpc.WithContextDialer(p.dialContext))
 	}
-	conn, err := grpc.NewClient(node.GRPCEndpoint, dialOpts...)
+	return grpc.NewClient(node.GRPCEndpoint, dialOpts...)
+}
+
+func (p *Provisioner) authCtx(ctx context.Context) context.Context {
+	if p.token != "" {
+		return metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+p.token)
+	}
+	return ctx
+}
+
+// CreatePeer implements provisioning.PeerProvisioner.
+func (p *Provisioner) CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey string) (provisioning.Peer, error) {
+	conn, err := p.dial(node)
 	if err != nil {
 		return provisioning.Peer{}, fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
 	}
 	defer func() { _ = conn.Close() }()
 
-	if p.token != "" {
-		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+p.token)
-	}
-	peer, err := relaypb.NewRelayClient(conn).CreatePeer(ctx, &relaypb.CreatePeerRequest{PublicKey: publicKey})
+	peer, err := relaypb.NewRelayClient(conn).CreatePeer(p.authCtx(ctx), &relaypb.CreatePeerRequest{PublicKey: publicKey})
 	if err != nil {
 		return provisioning.Peer{}, err
 	}
@@ -76,4 +84,37 @@ func (p *Provisioner) CreatePeer(ctx context.Context, node dbmodel.ServerNode, p
 		AllowedIPs:      peer.GetAllowedIps(),
 		ServerPublicKey: peer.GetServerPublicKey(),
 	}, nil
+}
+
+// RelayStatus is a node's live status, used by the metrics collector.
+type RelayStatus struct {
+	PeerCount      uint32
+	ActiveSessions uint64
+	RxBytes        uint64
+	TxBytes        uint64
+}
+
+// NodeStatus queries a node's Relay API for its status and aggregate peer
+// traffic.
+func (p *Provisioner) NodeStatus(ctx context.Context, node dbmodel.ServerNode) (RelayStatus, error) {
+	conn, err := p.dial(node)
+	if err != nil {
+		return RelayStatus{}, fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	client := relaypb.NewRelayClient(conn)
+	ctx = p.authCtx(ctx)
+	st, err := client.GetStatus(ctx, &relaypb.GetStatusRequest{})
+	if err != nil {
+		return RelayStatus{}, err
+	}
+	rs := RelayStatus{PeerCount: st.GetPeerCount(), ActiveSessions: st.GetActiveSessions()}
+	if peers, err := client.ListPeers(ctx, &relaypb.ListPeersRequest{}); err == nil {
+		for _, peer := range peers.GetPeers() {
+			rs.RxBytes += peer.GetRxBytes()
+			rs.TxBytes += peer.GetTxBytes()
+		}
+	}
+	return rs, nil
 }
