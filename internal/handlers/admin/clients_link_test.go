@@ -13,7 +13,7 @@ import (
 func TestBuildClientLinkRemoteControlOn(t *testing.T) {
 	h := &Handler{cfg: config.Config{VkTurnEndpoint: "relay.example:443", PublicBaseURL: "https://panel.example"}}
 	token := []byte("tok-bytes")
-	link, err := h.buildClientLink("c1", "Dev", token, "always", 30, storage.Admin{ID: 1, Username: "adm"}, true)
+	link, err := h.buildClientLink("c1", "Dev", token, "always", 30, storage.Admin{ID: 1, Username: "adm"}, true, "relay.example.com:56000")
 	if err != nil {
 		t.Fatalf("buildClientLink on: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestBuildClientLinkRemoteControlOn(t *testing.T) {
 func TestBuildClientLinkRemoteControlOff(t *testing.T) {
 	h := &Handler{cfg: config.Config{VkTurnEndpoint: "relay.example:443"}}
 	token := []byte("tok-bytes")
-	link, err := h.buildClientLink("c1", "Dev", token, "always", 30, storage.Admin{ID: 1}, false)
+	link, err := h.buildClientLink("c1", "Dev", token, "always", 30, storage.Admin{ID: 1}, false, "relay.example.com:56000")
 	if err != nil {
 		t.Fatalf("buildClientLink off: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestBuildClientLinkRemoteControlOff(t *testing.T) {
 
 func TestBuildClientLinkOffWithoutEndpoint(t *testing.T) {
 	h := &Handler{cfg: config.Config{}}
-	if _, err := h.buildClientLink("c1", "Dev", []byte("t"), "always", 30, storage.Admin{}, false); err == nil {
+	if _, err := h.buildClientLink("c1", "Dev", []byte("t"), "always", 30, storage.Admin{}, false, ""); err == nil {
 		t.Fatal("expected an error issuing a profile link with no vk-turn endpoint")
 	}
 }
@@ -70,7 +70,7 @@ func assertManagedProfile(t *testing.T, cfg *wingsvpb.Config, token []byte) {
 	if !bytes.Equal(p.GetProvisionToken(), token) {
 		t.Fatalf("managed profile token mismatch: %x", p.GetProvisionToken())
 	}
-	if p.GetVkTurnEndpoint() != "relay.example:443" {
+	if p.GetVkTurnEndpoint() != "relay.example.com:56000" {
 		t.Fatalf("managed profile endpoint wrong: %q", p.GetVkTurnEndpoint())
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -200,6 +201,40 @@ type createClientRequest struct {
 	// Guardian block (WSS remote control); false emits a plain VK-TURN-profile
 	// link. Both carry a managed VK-TURN profile when a vk-turn endpoint is set.
 	RemoteControl *bool `json:"remote_control"`
+	// VkTurnNodeID picks which registered vk-turn relay the managed profile points
+	// at; the endpoint is derived from that node's host. Empty falls back to the
+	// configured VK_TURN_ENDPOINT.
+	VkTurnNodeID string `json:"vk_turn_node_id"`
+}
+
+// vkTurnDefaultDTLSPort is the port a vk-turn relay listens on for the app's DTLS
+// data plane (the relay -listen default). The panel pairs it with the node's host
+// to form the managed profile endpoint.
+const vkTurnDefaultDTLSPort = "56000"
+
+// resolveVkTurnEndpoint returns the DTLS endpoint the app dials for the managed
+// VK-TURN profile: the host from the selected node's gRPC endpoint paired with the
+// relay DTLS port. An empty nodeID falls back to the configured VK_TURN_ENDPOINT.
+func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (string, error) {
+	nodeID = strings.TrimSpace(nodeID)
+	if nodeID == "" {
+		return strings.TrimSpace(h.cfg.VkTurnEndpoint), nil
+	}
+	node, err := h.store.GetServerNode(nodeID)
+	if err != nil {
+		return "", errors.New("unknown vk-turn node")
+	}
+	if node.Kind != storage.ServerNodeVKTurnProxy {
+		return "", errors.New("selected node is not a vk-turn relay")
+	}
+	if node.OwnerAdminID != admin.ID && !(auth.IsOwner(admin) && node.OwnerAdminID == 0) {
+		return "", errors.New("node not available")
+	}
+	host := node.GRPCEndpoint
+	if parsedHost, _, splitErr := net.SplitHostPort(node.GRPCEndpoint); splitErr == nil {
+		host = parsedHost
+	}
+	return net.JoinHostPort(host, vkTurnDefaultDTLSPort), nil
 }
 
 func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -256,8 +291,13 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 		return
 	}
 
+	vkTurnEndpoint, err := h.resolveVkTurnEndpoint(admin, req.VkTurnNodeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	remoteControl := req.RemoteControl == nil || *req.RemoteControl
-	link, err := h.buildClientLink(clientID, name, tokenBytes, syncMode, periodic, admin, remoteControl)
+	link, err := h.buildClientLink(clientID, name, tokenBytes, syncMode, periodic, admin, remoteControl, vkTurnEndpoint)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -317,9 +357,10 @@ func (h *Handler) buildClientLink(
 	periodic int,
 	admin storage.Admin,
 	remoteControl bool,
+	vkTurnEndpoint string,
 ) (string, error) {
 	cfg := &wingsvpb.Config{Ver: 1}
-	cfg.Turn = h.managedTurn(clientID, name, token)
+	cfg.Turn = h.managedTurn(clientID, name, token, vkTurnEndpoint)
 	if remoteControl {
 		cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN
 		cfg.Guardian = &wingsvpb.Guardian{
@@ -346,8 +387,8 @@ func (h *Handler) buildClientLink(
 // managedTurn builds the panel-managed VK-TURN profile that lets the app
 // self-provision its wg config: it carries the client's panel token and the
 // vk-turn endpoint. Returns nil when no vk-turn endpoint is configured.
-func (h *Handler) managedTurn(clientID, name string, token []byte) *wingsvpb.Turn {
-	endpoint := strings.TrimSpace(h.cfg.VkTurnEndpoint)
+func (h *Handler) managedTurn(clientID, name string, token []byte, vkTurnEndpoint string) *wingsvpb.Turn {
+	endpoint := strings.TrimSpace(vkTurnEndpoint)
 	if endpoint == "" {
 		return nil
 	}
@@ -478,8 +519,14 @@ func (h *Handler) respondWingsvLink(w http.ResponseWriter, r *http.Request, clie
 		return
 	}
 	remoteControl := r.URL.Query().Get("remote") != "0"
+	vkTurnEndpoint, err := h.resolveVkTurnEndpoint(admin, r.URL.Query().Get("vk_turn_node"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	link, err := h.buildClientLink(
-		client.ID, client.Name, tokenBytes, client.SyncMode, client.PeriodicIntervalMinutes, admin, remoteControl,
+		client.ID, client.Name, tokenBytes, client.SyncMode, client.PeriodicIntervalMinutes,
+		admin, remoteControl, vkTurnEndpoint,
 	)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
