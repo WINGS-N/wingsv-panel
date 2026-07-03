@@ -110,7 +110,7 @@
     />
   </SamsungCard>
 
-  <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения через ноды (хранятся сутки).">
+  <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения через ноды (хранятся час).">
     <ul class="admin-list mt-4">
       <li v-for="c in connections" :key="c.node_id + c.session_id + c.stream_id + c.first_seen" class="session-row">
         <div>
@@ -225,9 +225,9 @@ const flowModeOptions = [
   { value: 'historical', label: 'История' },
 ];
 const flowWindowOptions = [
+  { value: '15m', label: '15м' },
+  { value: '30m', label: '30м' },
   { value: '1h', label: '1ч' },
-  { value: '6h', label: '6ч' },
-  { value: '24h', label: '24ч' },
 ];
 const connections = ref([]);
 const connTotal = ref(0);

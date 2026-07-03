@@ -303,11 +303,11 @@ func ClientNames(store *storage.Store, ownerAdminID int64, extraOwners ...int64)
 }
 
 // flowHistoryWindows maps a UI window key to its lookback. Bounded by the
-// connection-log retention (one day), so nothing longer than 24h is offered.
+// connection-log retention (one hour), so nothing longer than 1h is offered.
 var flowHistoryWindows = map[string]time.Duration{
+	"15m": 15 * time.Minute,
+	"30m": 30 * time.Minute,
 	"1h":  time.Hour,
-	"6h":  6 * time.Hour,
-	"24h": 24 * time.Hour,
 }
 
 // BuildFlowHistory returns the historical flow graph for the given owner's nodes:

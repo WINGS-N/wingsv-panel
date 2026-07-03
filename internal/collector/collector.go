@@ -92,7 +92,7 @@ func New(store Store, newRelay RelayFactory, opts Options) *Collector {
 		opts.TrafficRetention = 31 * 24 * time.Hour
 	}
 	if opts.ConnRetention <= 0 {
-		opts.ConnRetention = 24 * time.Hour
+		opts.ConnRetention = time.Hour
 	}
 	if opts.Now == nil {
 		opts.Now = time.Now
