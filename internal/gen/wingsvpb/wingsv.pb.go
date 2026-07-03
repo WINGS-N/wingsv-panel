@@ -2256,9 +2256,17 @@ type TurnProfile struct {
 	VkAuthMode string `protobuf:"bytes,9,opt,name=vk_auth_mode,json=vkAuthMode,proto3" json:"vk_auth_mode,omitempty"`
 	// "auto" | "udp" | "doh" - UI "DNS resolver" list (shared VK TURN / WB Stream
 	// setting). Not carried by the inner Turn message.
-	DnsMode       string `protobuf:"bytes,10,opt,name=dns_mode,json=dnsMode,proto3" json:"dns_mode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	DnsMode string `protobuf:"bytes,10,opt,name=dns_mode,json=dnsMode,proto3" json:"dns_mode,omitempty"`
+	// Managed profile: the wg/awg transport is provisioned dynamically by the node
+	// over the DTLS PROVISION exchange rather than referenced via
+	// transport_profile_id. The app calls AppControl.Provision with the fields
+	// below and applies the returned config; the editor shows the wg/awg fields
+	// read-only.
+	WgProvisioned     bool   `protobuf:"varint,11,opt,name=wg_provisioned,json=wgProvisioned,proto3" json:"wg_provisioned,omitempty"`
+	ProvisionClientId string `protobuf:"bytes,12,opt,name=provision_client_id,json=provisionClientId,proto3" json:"provision_client_id,omitempty"`
+	ProvisionToken    []byte `protobuf:"bytes,13,opt,name=provision_token,json=provisionToken,proto3" json:"provision_token,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *TurnProfile) Reset() {
@@ -2359,6 +2367,27 @@ func (x *TurnProfile) GetDnsMode() string {
 		return x.DnsMode
 	}
 	return ""
+}
+
+func (x *TurnProfile) GetWgProvisioned() bool {
+	if x != nil {
+		return x.WgProvisioned
+	}
+	return false
+}
+
+func (x *TurnProfile) GetProvisionClientId() string {
+	if x != nil {
+		return x.ProvisionClientId
+	}
+	return ""
+}
+
+func (x *TurnProfile) GetProvisionToken() []byte {
+	if x != nil {
+		return x.ProvisionToken
+	}
+	return nil
 }
 
 type WireGuard struct {
@@ -4322,7 +4351,7 @@ const file_wingsv_proto_rawDesc = "" +
 	"\x11_creds_group_sizeB\x11\n" +
 	"\x0f_manual_captchaB\x1c\n" +
 	"\x1a_restart_on_network_changeB\r\n" +
-	"\v_merge_only\"\xf1\x02\n" +
+	"\v_merge_only\"\xf1\x03\n" +
 	"\vTurnProfile\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12%\n" +
@@ -4335,7 +4364,10 @@ const file_wingsv_proto_rawDesc = "" +
 	"\fvk_auth_mode\x18\t \x01(\tR\n" +
 	"vkAuthMode\x12\x19\n" +
 	"\bdns_mode\x18\n" +
-	" \x01(\tR\adnsMode\"\xaf\x02\n" +
+	" \x01(\tR\adnsMode\x12%\n" +
+	"\x0ewg_provisioned\x18\v \x01(\bR\rwgProvisioned\x12.\n" +
+	"\x13provision_client_id\x18\f \x01(\tR\x11provisionClientId\x12'\n" +
+	"\x0fprovision_token\x18\r \x01(\fR\x0eprovisionToken\"\xaf\x02\n" +
 	"\tWireGuard\x12'\n" +
 	"\x05iface\x18\x01 \x01(\v2\x11.wingsv.InterfaceR\x05iface\x12 \n" +
 	"\x04peer\x18\x02 \x01(\v2\f.wingsv.PeerR\x04peer\x12,\n" +
