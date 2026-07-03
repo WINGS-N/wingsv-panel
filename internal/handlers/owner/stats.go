@@ -3,9 +3,11 @@ package owner
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"v.wingsnet.org/internal/statsview"
 	"v.wingsnet.org/internal/storage"
+	"v.wingsnet.org/internal/xuiclient"
 )
 
 // The node-traffic dashboard here is owner-only: it reports the panel-local
@@ -37,6 +39,24 @@ func (h *Handler) handleStatsFlows(w http.ResponseWriter, r *http.Request, _ sto
 		return
 	}
 	names, _ := statsview.ClientNames(h.store, localNodeOwnerID)
+	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
+}
+
+func (h *Handler) handleStatsXrayFlows(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	node, err := h.store.GetServerNode(strings.TrimSpace(r.URL.Query().Get("node")))
+	if err != nil || node.Kind != storage.ServerNodeXUI || node.OwnerAdminID != localNodeOwnerID {
+		writeError(w, http.StatusNotFound, "unknown xui node")
+		return
+	}
+	flows, names, err := statsview.BuildXrayFlows(xuiclient.New(), node)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to read xray flows")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
 }
 

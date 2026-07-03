@@ -44,6 +44,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/stats/traffic", h.requireOwner(h.handleStatsTraffic))
 	mux.HandleFunc("/api/owner/stats/flows", h.requireOwner(h.handleStatsFlows))
 	mux.HandleFunc("/api/owner/stats/flowhistory", h.requireOwner(h.handleStatsFlowHistory))
+	mux.HandleFunc("/api/owner/stats/xrayflows", h.requireOwner(h.handleStatsXrayFlows))
 	mux.HandleFunc("/api/owner/stats/connections", h.requireOwner(h.handleStatsConnections))
 	mux.HandleFunc("/api/owner/settings", h.requireOwner(h.handleSettings))
 	mux.HandleFunc("/api/owner/invites", h.requireOwner(h.handleInvites))

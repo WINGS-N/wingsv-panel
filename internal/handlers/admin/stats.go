@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/statsview"
@@ -47,6 +48,26 @@ func (h *Handler) handleStatsFlows(w http.ResponseWriter, r *http.Request, admin
 		return
 	}
 	names, _ := statsview.ClientNames(h.store, admin.ID, localExtra(admin)...)
+	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
+}
+
+func (h *Handler) handleStatsXrayFlows(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	node, err := h.store.GetServerNode(strings.TrimSpace(r.URL.Query().Get("node")))
+	allowed := err == nil && node.Kind == storage.ServerNodeXUI &&
+		(node.OwnerAdminID == admin.ID || (auth.IsOwner(admin) && node.OwnerAdminID == 0))
+	if !allowed {
+		writeError(w, http.StatusNotFound, "unknown xui node")
+		return
+	}
+	flows, names, err := statsview.BuildXrayFlows(h.xui, node)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to read xray flows")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
 }
 

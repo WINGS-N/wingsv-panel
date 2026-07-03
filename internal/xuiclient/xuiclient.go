@@ -90,6 +90,7 @@ type ServerStatus struct {
 // ClientTraffic is one inbound client's counters.
 type ClientTraffic struct {
 	Email      string
+	InboundID  int64
 	Enable     bool
 	Up         int64
 	Down       int64
@@ -191,6 +192,38 @@ func (c *Client) ListInbounds(ctx context.Context, node dbmodel.ServerNode) ([]I
 		})
 	}
 	return out, nil
+}
+
+// ListOnlineClients returns the emails of clients currently online on the node.
+func (c *Client) ListOnlineClients(ctx context.Context, node dbmodel.ServerNode) ([]string, error) {
+	conn, err := c.dial(node)
+	if err != nil {
+		return nil, fmt.Errorf("dial xui node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+	resp, err := xuipb.NewPanelClient(conn).ListOnlineClients(authCtx(ctx, node.GRPCToken), &xuipb.ListOnlineClientsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return resp.GetEmails(), nil
+}
+
+// GetClientTraffic reads one client's cumulative counters by email.
+func (c *Client) GetClientTraffic(ctx context.Context, node dbmodel.ServerNode, email string) (ClientTraffic, error) {
+	conn, err := c.dial(node)
+	if err != nil {
+		return ClientTraffic{}, fmt.Errorf("dial xui node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+	t, err := xuipb.NewPanelClient(conn).GetClientTraffic(authCtx(ctx, node.GRPCToken), &xuipb.GetClientTrafficRequest{Email: email})
+	if err != nil {
+		return ClientTraffic{}, err
+	}
+	return ClientTraffic{
+		Email: t.GetEmail(), InboundID: t.GetInboundId(), Enable: t.GetEnable(),
+		Up: t.GetUp(), Down: t.GetDown(), Total: t.GetTotal(),
+		ExpiryTime: t.GetExpiryTime(), LastOnline: t.GetLastOnline(),
+	}, nil
 }
 
 // ServerStatus reads the node's resource + xray status.

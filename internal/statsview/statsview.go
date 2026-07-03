@@ -5,6 +5,7 @@
 package statsview
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"sync"
@@ -12,6 +13,7 @@ import (
 
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
+	"v.wingsnet.org/internal/xuiclient"
 )
 
 // trafficCache memoises the heavy traffic aggregation for a few seconds. The
@@ -290,6 +292,64 @@ func BuildFlows(store *storage.Store, ownerAdminID int64, nodeFilter string, ext
 		})
 	}
 	return out, nil
+}
+
+// BuildXrayFlows turns a 3x-ui node's online clients into flow edges (client email
+// -> node -> inbound) sized by cumulative per-client traffic, so the same graph
+// component renders Xray activity. Xray does not expose per-connection remotes via
+// 3x-ui, so the inbound tag stands in for the destination. Returns the flows and an
+// email->name map (identity, so the graph labels clients by email).
+func BuildXrayFlows(xui XuiFlowSource, node dbmodel.ServerNode) ([]Flow, map[string]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	inbounds, err := xui.ListInbounds(ctx, node)
+	if err != nil {
+		return nil, nil, err
+	}
+	inByID := make(map[int64]xuiclient.InboundSummary, len(inbounds))
+	for _, in := range inbounds {
+		inByID[in.ID] = in
+	}
+	emails, err := xui.ListOnlineClients(ctx, node)
+	if err != nil {
+		return nil, nil, err
+	}
+	flows := make([]Flow, 0, len(emails))
+	names := make(map[string]string, len(emails))
+	for _, email := range emails {
+		t, terr := xui.GetClientTraffic(ctx, node, email)
+		if terr != nil {
+			continue
+		}
+		in := inByID[t.InboundID]
+		remote := in.Tag
+		if remote == "" {
+			remote = in.Remark
+		}
+		if remote == "" {
+			remote = "inbound"
+		}
+		flows = append(flows, Flow{
+			NodeID: node.ID, ClientIP: email, Remote: remote, Protocol: in.Protocol,
+			RxBytes: nonNegU64(t.Down), TxBytes: nonNegU64(t.Up),
+		})
+		names[email] = email
+	}
+	return flows, names, nil
+}
+
+// XuiFlowSource is the subset of the 3x-ui gRPC client BuildXrayFlows needs.
+type XuiFlowSource interface {
+	ListInbounds(ctx context.Context, node dbmodel.ServerNode) ([]xuiclient.InboundSummary, error)
+	ListOnlineClients(ctx context.Context, node dbmodel.ServerNode) ([]string, error)
+	GetClientTraffic(ctx context.Context, node dbmodel.ServerNode, email string) (xuiclient.ClientTraffic, error)
+}
+
+func nonNegU64(v int64) uint64 {
+	if v < 0 {
+		return 0
+	}
+	return uint64(v)
 }
 
 // ClientNames maps a managed client's tunnel IP to its name for the owner's
