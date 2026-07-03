@@ -209,7 +209,7 @@
           />
         </div>
 
-        <div class="remote-toggle-row mt-4">
+        <div v-if="selfProvisioning" class="remote-toggle-row mt-4">
           <div>
             <span class="field-label">Управлять конфигурацией удалённо через панель</span>
             <p class="admin-muted remote-toggle-hint">
@@ -301,7 +301,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-vue-next';
-import { authState, myAvatarUrl } from '@/stores/auth.js';
+import { authState, myAvatarUrl, selfProvisioning } from '@/stores/auth.js';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { formatBytes } from '@/utils/format.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';

@@ -5,6 +5,11 @@ export const registrationState = ref({ mode: "open", loaded: false });
 
 export const isOwner = computed(() => authState.value.admin?.role === "owner");
 
+// selfProvisioning is true when the panel can issue an autonomous VK-TURN-profile
+// link (a vk-turn endpoint is configured). When false the only valid link shape
+// is Guardian, so the remote-control toggle is hidden and forced on.
+export const selfProvisioning = computed(() => authState.value.admin?.self_provisioning === true);
+
 export function avatarUrlFor(admin) {
   if (!admin || !admin.id) return "/img/avatar-default.png";
   if (admin.avatar_version && admin.avatar_version > 0) {
