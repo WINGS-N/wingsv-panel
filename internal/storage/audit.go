@@ -14,6 +14,9 @@ import (
 
 const (
 	SettingRegistrationMode = "registration_mode"
+	// SettingAllowAdminGRPC gates whether non-owner admins may register their own
+	// external vk-turn-proxy / 3x-ui gRPC endpoints. Stored as "true"/"false".
+	SettingAllowAdminGRPC = "allow_admin_grpc"
 )
 
 type AuditEntry struct {

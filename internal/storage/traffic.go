@@ -32,6 +32,21 @@ func (s *Store) ListTrafficSamples(nodeID string, sinceUnix int64) ([]dbmodel.Tr
 	return samples, nil
 }
 
+// ListTrafficSince returns every node's samples at or after sinceUnix, grouped by
+// node then oldest-first, so the caller can delta each node's cumulative counters
+// into a per-interval traffic series.
+func (s *Store) ListTrafficSince(sinceUnix int64) ([]dbmodel.TrafficSample, error) {
+	var samples []dbmodel.TrafficSample
+	err := s.gdb.
+		Where("ts >= ?", sinceUnix).
+		Order("node_id asc, ts asc").
+		Find(&samples).Error
+	if err != nil {
+		return nil, err
+	}
+	return samples, nil
+}
+
 // LatestTrafficSample returns a node's most recent sample, or ErrNotFound.
 func (s *Store) LatestTrafficSample(nodeID string) (dbmodel.TrafficSample, error) {
 	var sample dbmodel.TrafficSample
@@ -74,6 +89,20 @@ func (s *Store) ListFlows() ([]dbmodel.FlowSnapshot, error) {
 	return flows, nil
 }
 
+// ListFlowsForNodes returns the current live flows on the given nodes, busiest
+// first. An empty node set returns no flows.
+func (s *Store) ListFlowsForNodes(nodeIDs []string) ([]dbmodel.FlowSnapshot, error) {
+	if len(nodeIDs) == 0 {
+		return nil, nil
+	}
+	var flows []dbmodel.FlowSnapshot
+	err := s.gdb.Where("node_id IN ?", nodeIDs).Order("rx_rate + tx_rate desc").Find(&flows).Error
+	if err != nil {
+		return nil, err
+	}
+	return flows, nil
+}
+
 // RecordConnections upserts the connection-log history for a batch of flows: a
 // first sighting inserts with first_seen == last_seen; a repeat refreshes last_seen
 // and the byte counters. Identity is (node, session, stream, started).
@@ -107,6 +136,23 @@ func (s *Store) ListConnectionLog(limit int) ([]dbmodel.ConnectionLog, error) {
 	}
 	var rows []dbmodel.ConnectionLog
 	err := s.gdb.Order("last_seen desc").Limit(limit).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ListConnectionLogForNodes returns recent connections on the given nodes,
+// newest-first, capped at limit. An empty node set returns nothing.
+func (s *Store) ListConnectionLogForNodes(nodeIDs []string, limit int) ([]dbmodel.ConnectionLog, error) {
+	if len(nodeIDs) == 0 {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	var rows []dbmodel.ConnectionLog
+	err := s.gdb.Where("node_id IN ?", nodeIDs).Order("last_seen desc").Limit(limit).Find(&rows).Error
 	if err != nil {
 		return nil, err
 	}

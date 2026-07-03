@@ -172,14 +172,18 @@ type AdminMasterConfig struct {
 func (AdminMasterConfig) TableName() string { return "admin_master_config" }
 
 type ServerNode struct {
-	ID            string `gorm:"column:id;primaryKey"`
-	Kind          string `gorm:"column:kind;not null;index"`
-	Name          string `gorm:"column:name;not null"`
-	GRPCEndpoint  string `gorm:"column:grpc_endpoint;not null"`
-	CAPin         []byte `gorm:"column:ca_pin"`
-	Status        string `gorm:"column:status;not null"`
-	LastSeenAt    int64  `gorm:"column:last_seen_at;not null;default:0"`
-	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
+	ID           string `gorm:"column:id;primaryKey"`
+	Kind         string `gorm:"column:kind;not null;index"`
+	Name         string `gorm:"column:name;not null"`
+	GRPCEndpoint string `gorm:"column:grpc_endpoint;not null"`
+	CAPin        []byte `gorm:"column:ca_pin"`
+	Status       string `gorm:"column:status;not null"`
+	// OwnerAdminID is 0 for a panel-local node the owner deploys and manages
+	// (its provisioning and stats are owner-only), or the id of the admin who
+	// registered it as their own external vk-turn-proxy / 3x-ui gRPC endpoint.
+	OwnerAdminID  int64 `gorm:"column:owner_admin_id;not null;default:0;index"`
+	LastSeenAt    int64 `gorm:"column:last_seen_at;not null;default:0"`
+	CreatedAtUnix int64 `gorm:"column:created_at;not null"`
 }
 
 func (ServerNode) TableName() string { return "server_nodes" }

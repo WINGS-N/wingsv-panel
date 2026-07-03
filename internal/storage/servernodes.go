@@ -73,6 +73,21 @@ func (s *Store) ListServerNodes(kind string) ([]dbmodel.ServerNode, error) {
 	return nodes, nil
 }
 
+// ListServerNodesByOwner returns nodes of the given kind owned by ownerAdminID
+// (0 = panel-local nodes the owner manages; a positive id = an admin's own
+// external endpoints). An empty kind matches every kind.
+func (s *Store) ListServerNodesByOwner(kind string, ownerAdminID int64) ([]dbmodel.ServerNode, error) {
+	q := s.gdb.Order("created_at asc").Where("owner_admin_id = ?", ownerAdminID)
+	if kind != "" {
+		q = q.Where("kind = ?", kind)
+	}
+	var nodes []dbmodel.ServerNode
+	if err := q.Find(&nodes).Error; err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
 func (s *Store) GetServerNode(id string) (dbmodel.ServerNode, error) {
 	var n dbmodel.ServerNode
 	err := s.gdb.Where("id = ?", id).First(&n).Error
