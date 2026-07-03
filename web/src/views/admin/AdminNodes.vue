@@ -243,7 +243,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { Plus, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
@@ -304,16 +304,13 @@ const kindOptions = [
   { value: 'vk_turn_proxy', label: 'VK TURN' },
   { value: 'xui', label: '3x-ui' },
 ];
-// Default gRPC ports: VK TURN relay 25612, 3x-ui panel API 25613.
-const defaultPorts = { vk_turn_proxy: 25612, xui: 25613 };
-const form = reactive({ name: '', kind: 'vk_turn_proxy', host: '', port: 25612, grpc_token: '' });
-const defaultPort = computed(() => defaultPorts[form.kind] || 25612);
-watch(
-  () => form.kind,
-  (kind) => {
-    form.port = defaultPorts[kind] || form.port;
-  },
-);
+// A fresh form gets a random gRPC port from a high, unprivileged range unlikely
+// to clash with common services, so two nodes on one host don't collide by default.
+function randomPort() {
+  return 20000 + Math.floor(Math.random() * 25000);
+}
+const form = reactive({ name: '', kind: 'vk_turn_proxy', host: '', port: randomPort(), grpc_token: '' });
+const defaultPort = computed(() => form.port);
 
 const formatTs = formatUnix;
 
@@ -427,7 +424,7 @@ function openAdd() {
   form.name = '';
   form.host = '';
   form.grpc_token = '';
-  form.port = defaultPort.value;
+  form.port = randomPort();
   showAdd.value = true;
 }
 

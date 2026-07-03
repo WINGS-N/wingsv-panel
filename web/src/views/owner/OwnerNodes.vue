@@ -145,9 +145,14 @@
     </template>
     <label class="field-label mt-4">Тип сервера</label>
     <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
-    <OneuiInput v-model.trim="form.name" label="Название" placeholder="relay.example.com" class="mt-4" />
+    <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой сервер" class="mt-4" />
     <div class="node-endpoint-row mt-3">
-      <OneuiInput v-model.trim="form.host" label="IP или домен" placeholder="relay.example.com" class="node-endpoint-host" />
+      <OneuiInput
+        v-model.trim="form.host"
+        label="IP или домен"
+        placeholder="relay.example.com"
+        class="node-endpoint-host"
+      />
       <OneuiInput
         v-model.number="form.port"
         label="gRPC порт"
@@ -191,7 +196,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { Plus, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
@@ -248,16 +253,13 @@ const kindOptions = [
   { value: 'vk_turn_proxy', label: 'VK TURN' },
   { value: 'xui', label: '3x-ui' },
 ];
-// Default gRPC ports for a fresh form: VK TURN relay 25612, 3x-ui panel API 25613.
-const defaultPorts = { vk_turn_proxy: 25612, xui: 25613 };
-const form = reactive({ kind: 'vk_turn_proxy', name: '', host: '', port: 25612, token: '' });
-const defaultPort = computed(() => defaultPorts[form.kind] || 25612);
-watch(
-  () => form.kind,
-  (kind) => {
-    form.port = defaultPorts[kind] || form.port;
-  },
-);
+// A fresh form gets a random gRPC port from a high, unprivileged range unlikely
+// to clash with common services, so two nodes on one host don't collide by default.
+function randomPort() {
+  return 20000 + Math.floor(Math.random() * 25000);
+}
+const form = reactive({ kind: 'vk_turn_proxy', name: '', host: '', port: randomPort(), token: '' });
+const defaultPort = computed(() => form.port);
 
 function nodeKindLabel(kind) {
   return kind === 'xui' ? '3x-ui' : 'VK TURN';
@@ -360,7 +362,7 @@ function openAdd() {
   form.name = '';
   form.host = '';
   form.token = '';
-  form.port = defaultPort.value;
+  form.port = randomPort();
   showAdd.value = true;
 }
 
