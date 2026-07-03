@@ -17,18 +17,27 @@ import (
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/guardianhub"
+	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/storage"
 )
 
 type Handler struct {
-	cfg   config.Config
-	store *storage.Store
-	auth  *auth.Service
-	hub   *guardianhub.Hub
+	cfg    config.Config
+	store  *storage.Store
+	auth   *auth.Service
+	hub    *guardianhub.Hub
+	caPins [][]byte
 }
 
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
-	return &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub}
+	h := &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub}
+	// Pin mode: when a panel CA is present (no public certificate), embed its
+	// SPKI pin in every enrollment link so the app trusts the control-plane TLS.
+	if ca, err := pki.LoadCADir(cfg.CADir); err == nil {
+		pin := ca.Pin()
+		h.caPins = [][]byte{pin[:]}
+	}
+	return h
 }
 
 // Register binds /api/admin/* routes onto the provided mux.

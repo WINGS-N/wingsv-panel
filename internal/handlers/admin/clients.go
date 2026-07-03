@@ -258,6 +258,7 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 			AdminUsername:           admin.Username,
 			AdminId:                 admin.ID,
 			AdminAvatarVersion:      admin.AvatarVersion,
+			ServerCaPins:            h.caPins,
 		},
 	})
 	if err != nil {
@@ -432,6 +433,7 @@ func (h *Handler) respondWingsvLink(w http.ResponseWriter, client storage.Client
 			AdminUsername:           admin.Username,
 			AdminId:                 admin.ID,
 			AdminAvatarVersion:      admin.AvatarVersion,
+			ServerCaPins:            h.caPins,
 		},
 	})
 	if err != nil {
@@ -469,6 +471,7 @@ func (h *Handler) respondRotateToken(w http.ResponseWriter, r *http.Request, cli
 			AdminUsername:           admin.Username,
 			AdminId:                 admin.ID,
 			AdminAvatarVersion:      admin.AvatarVersion,
+			ServerCaPins:            h.caPins,
 		},
 	})
 	if err != nil {
