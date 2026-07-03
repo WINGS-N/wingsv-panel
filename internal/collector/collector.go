@@ -19,6 +19,7 @@ type Store interface {
 	InsertTrafficSample(dbmodel.TrafficSample) error
 	ReplaceFlows(nodeID string, flows []dbmodel.FlowSnapshot) error
 	RecordConnections([]dbmodel.ConnectionLog) error
+	UpsertPeerTraffic([]dbmodel.PeerTraffic) error
 	PruneTrafficBefore(time.Time) error
 	PruneConnectionsBefore(time.Time) error
 	UpdateServerNodeStatus(id, status string, lastSeen int64) error
@@ -29,6 +30,7 @@ type Relay interface {
 	NodeStatus(ctx context.Context, node dbmodel.ServerNode) (relayclient.RelayStatus, error)
 	FlowStats(ctx context.Context, node dbmodel.ServerNode) (relayclient.FlowStats, error)
 	ListFlows(ctx context.Context, node dbmodel.ServerNode) ([]relayclient.Flow, error)
+	ListPeers(ctx context.Context, node dbmodel.ServerNode) ([]relayclient.Peer, error)
 }
 
 // Options tune the poll cadence and retention. Zero values fall back to defaults.
@@ -165,6 +167,20 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode) er
 	}
 	if err := c.store.RecordConnections(conns); err != nil {
 		return err
+	}
+	// Per-peer counters attribute traffic to managed clients. Best-effort: a node
+	// that does not expose peers still gets its flow/traffic stats above.
+	if peers, perr := relay.ListPeers(ctx, node); perr == nil {
+		peerRows := make([]dbmodel.PeerTraffic, 0, len(peers))
+		for _, p := range peers {
+			peerRows = append(peerRows, dbmodel.PeerTraffic{
+				NodeID: node.ID, PublicKey: p.PublicKey,
+				RxBytes: p.RxBytes, TxBytes: p.TxBytes, SampledUnix: now,
+			})
+		}
+		if err := c.store.UpsertPeerTraffic(peerRows); err != nil {
+			log.Printf("collector: node %s peer traffic: %v", node.ID, err)
+		}
 	}
 	if err := c.store.UpdateServerNodeStatus(node.ID, "online", now); err != nil {
 		return err

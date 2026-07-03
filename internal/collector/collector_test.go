@@ -15,6 +15,7 @@ type fakeStore struct {
 	samples  []dbmodel.TrafficSample
 	flows    map[string][]dbmodel.FlowSnapshot
 	conns    []dbmodel.ConnectionLog
+	peers    []dbmodel.PeerTraffic
 	statuses map[string]string
 	pruned   bool
 }
@@ -36,6 +37,10 @@ func (f *fakeStore) RecordConnections(rows []dbmodel.ConnectionLog) error {
 	f.conns = append(f.conns, rows...)
 	return nil
 }
+func (f *fakeStore) UpsertPeerTraffic(rows []dbmodel.PeerTraffic) error {
+	f.peers = append(f.peers, rows...)
+	return nil
+}
 func (f *fakeStore) PruneTrafficBefore(time.Time) error     { f.pruned = true; return nil }
 func (f *fakeStore) PruneConnectionsBefore(time.Time) error { return nil }
 func (f *fakeStore) UpdateServerNodeStatus(id, status string, _ int64) error {
@@ -47,6 +52,7 @@ type fakeRelay struct {
 	status    relayclient.RelayStatus
 	stats     relayclient.FlowStats
 	flows     []relayclient.Flow
+	peers     []relayclient.Peer
 	statusErr error
 }
 
@@ -59,6 +65,9 @@ func (r *fakeRelay) FlowStats(context.Context, dbmodel.ServerNode) (relayclient.
 func (r *fakeRelay) ListFlows(context.Context, dbmodel.ServerNode) ([]relayclient.Flow, error) {
 	return r.flows, nil
 }
+func (r *fakeRelay) ListPeers(context.Context, dbmodel.ServerNode) ([]relayclient.Peer, error) {
+	return r.peers, nil
+}
 
 func TestCollectOncePersistsAndNotifies(t *testing.T) {
 	store := newFakeStore(dbmodel.ServerNode{ID: "n1", Kind: "vk_turn_proxy", GRPCEndpoint: "x:1"})
@@ -67,6 +76,9 @@ func TestCollectOncePersistsAndNotifies(t *testing.T) {
 		stats:  relayclient.FlowStats{ActiveStreams: 2, ActiveSessions: 1, ServerRxBytes: 1000, ServerTxBytes: 500},
 		flows: []relayclient.Flow{
 			{SessionID: "s1", StreamID: 0, ClientIP: "1.1.1.1", Remote: "8.8.8.8:53", Protocol: "udp", RxRate: 10},
+		},
+		peers: []relayclient.Peer{
+			{PublicKey: "pubA", RxBytes: 4000, TxBytes: 2000},
 		},
 	}
 	var notified []string
@@ -87,6 +99,9 @@ func TestCollectOncePersistsAndNotifies(t *testing.T) {
 	}
 	if len(store.conns) != 1 || store.conns[0].FirstSeenUnix != 1000 {
 		t.Fatalf("connection log wrong: %+v", store.conns)
+	}
+	if len(store.peers) != 1 || store.peers[0].PublicKey != "pubA" || store.peers[0].RxBytes != 4000 {
+		t.Fatalf("peer traffic not persisted: %+v", store.peers)
 	}
 	if store.statuses["n1"] != "online" {
 		t.Fatalf("node should be marked online, got %q", store.statuses["n1"])

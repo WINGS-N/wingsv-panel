@@ -177,6 +177,40 @@ func (p *Provisioner) FlowStats(ctx context.Context, node dbmodel.ServerNode) (F
 
 // NodeStatus queries a node's Relay API for its status and aggregate peer
 // traffic.
+// Peer is one wg peer's live counters, used to attribute per-client traffic.
+type Peer struct {
+	PublicKey   string
+	AllowedIPs  string
+	RxBytes     uint64
+	TxBytes     uint64
+	CreatedUnix int64
+}
+
+// ListPeers returns every wg peer on a node with its byte counters.
+func (p *Provisioner) ListPeers(ctx context.Context, node dbmodel.ServerNode) ([]Peer, error) {
+	conn, err := p.dial(node)
+	if err != nil {
+		return nil, fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+	client := relaypb.NewRelayClient(conn)
+	resp, err := client.ListPeers(p.authCtx(ctx), &relaypb.ListPeersRequest{})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Peer, 0, len(resp.GetPeers()))
+	for _, pr := range resp.GetPeers() {
+		out = append(out, Peer{
+			PublicKey:   pr.GetPublicKey(),
+			AllowedIPs:  pr.GetAllowedIps(),
+			RxBytes:     pr.GetRxBytes(),
+			TxBytes:     pr.GetTxBytes(),
+			CreatedUnix: pr.GetCreatedUnix(),
+		})
+	}
+	return out, nil
+}
+
 func (p *Provisioner) NodeStatus(ctx context.Context, node dbmodel.ServerNode) (RelayStatus, error) {
 	conn, err := p.dial(node)
 	if err != nil {
