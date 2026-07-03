@@ -5,6 +5,10 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"gorm.io/gorm/clause"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 const (
@@ -117,12 +121,10 @@ func (s *Store) GetPlatformSetting(key, fallback string) (string, error) {
 }
 
 func (s *Store) SetPlatformSetting(key, value string) error {
-	_, err := s.db.Exec(
-		`INSERT INTO platform_settings (key, value) VALUES (?, ?)
-		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-		key, value,
-	)
-	return err
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "key"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value"}),
+	}).Create(&dbmodel.PlatformSetting{Key: key, Value: value}).Error
 }
 
 // ===== invite_tokens =====

@@ -3,6 +3,10 @@ package storage
 import (
 	"database/sql"
 	"errors"
+
+	"gorm.io/gorm/clause"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 func (s *Store) KVGet(key string) ([]byte, error) {
@@ -19,9 +23,8 @@ func (s *Store) KVGet(key string) ([]byte, error) {
 }
 
 func (s *Store) KVSet(key string, value []byte) error {
-	_, err := s.db.Exec(`
-		INSERT INTO kv (key, value) VALUES (?, ?)
-		ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-		key, value)
-	return err
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "key"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value"}),
+	}).Create(&dbmodel.KV{Key: key, Value: value}).Error
 }

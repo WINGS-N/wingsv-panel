@@ -4,6 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"gorm.io/gorm/clause"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 // MasterConfig is the per-admin "shared across all my clients" set of settings.
@@ -40,17 +44,18 @@ func (s *Store) GetMasterConfig(adminID int64) (MasterConfig, error) {
 }
 
 func (s *Store) SaveMasterConfig(m MasterConfig) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(
-		`INSERT INTO admin_master_config (admin_id, config_proto, sync_mode, periodic_interval_minutes, scope_flags, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(admin_id) DO UPDATE SET
-		   config_proto = excluded.config_proto,
-		   sync_mode = excluded.sync_mode,
-		   periodic_interval_minutes = excluded.periodic_interval_minutes,
-		   scope_flags = excluded.scope_flags,
-		   updated_at = excluded.updated_at`,
-		m.AdminID, m.ConfigProto, m.SyncMode, m.PeriodicIntervalMinutes, m.ScopeFlags, now,
-	)
-	return err
+	row := dbmodel.AdminMasterConfig{
+		AdminID:                 m.AdminID,
+		ConfigProto:             m.ConfigProto,
+		SyncMode:                m.SyncMode,
+		PeriodicIntervalMinutes: int64(m.PeriodicIntervalMinutes),
+		ScopeFlags:              m.ScopeFlags,
+		UpdatedAtUnix:           time.Now().UTC().UnixMilli(),
+	}
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "admin_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"config_proto", "sync_mode", "periodic_interval_minutes", "scope_flags", "updated_at",
+		}),
+	}).Create(&row).Error
 }

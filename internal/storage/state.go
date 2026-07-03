@@ -4,6 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 type ClientConfig struct {
@@ -20,20 +25,20 @@ type ClientConfig struct {
 // сервер не «перезатёр» свежий админский редактор старым DB-снимком.
 func (s *Store) UpsertClientConfig(clientID string, configProto []byte, revision string) (uint64, error) {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`
-		INSERT INTO client_configs (client_id, config_proto, revision, updated_at, config_version)
-		VALUES (?, ?, ?, ?, 1)
-		ON CONFLICT(client_id) DO UPDATE SET
-			config_proto = excluded.config_proto,
-			revision = excluded.revision,
-			updated_at = excluded.updated_at,
-			config_version = client_configs.config_version + 1`,
-		clientID, configProto, revision, now)
-	if err != nil {
+	row := dbmodel.ClientConfig{ClientID: clientID, ConfigProto: configProto, Revision: revision, UpdatedAtUnix: now, ConfigVersion: 1}
+	if err := s.gdb.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "client_id"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"config_proto":   configProto,
+			"revision":       revision,
+			"updated_at":     now,
+			"config_version": gorm.Expr("client_configs.config_version + 1"),
+		}),
+	}).Create(&row).Error; err != nil {
 		return 0, err
 	}
 	var version uint64
-	if err := s.db.QueryRow(`SELECT config_version FROM client_configs WHERE client_id = ?`, clientID).Scan(&version); err != nil {
+	if err := s.gdb.Model(&dbmodel.ClientConfig{}).Where("client_id = ?", clientID).Pluck("config_version", &version).Error; err != nil {
 		return 0, err
 	}
 	return version, nil
@@ -55,23 +60,21 @@ func (s *Store) GetClientConfig(clientID string) (ClientConfig, error) {
 }
 
 func (s *Store) UpsertClientReportedConfig(clientID string, configProto []byte) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`
-		INSERT INTO client_reported_configs (client_id, config_proto, updated_at)
-		VALUES (?, ?, ?)
-		ON CONFLICT(client_id) DO UPDATE SET config_proto = excluded.config_proto, updated_at = excluded.updated_at`,
-		clientID, configProto, now)
-	return err
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "client_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"config_proto", "updated_at"}),
+	}).Create(&dbmodel.ClientReportedConfig{
+		ClientID: clientID, ConfigProto: configProto, UpdatedAtUnix: time.Now().UTC().UnixMilli(),
+	}).Error
 }
 
 func (s *Store) UpsertClientRuntime(clientID string, runtimeProto []byte) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`
-		INSERT INTO client_runtime (client_id, runtime_proto, updated_at)
-		VALUES (?, ?, ?)
-		ON CONFLICT(client_id) DO UPDATE SET runtime_proto = excluded.runtime_proto, updated_at = excluded.updated_at`,
-		clientID, runtimeProto, now)
-	return err
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "client_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"runtime_proto", "updated_at"}),
+	}).Create(&dbmodel.ClientRuntime{
+		ClientID: clientID, RuntimeProto: runtimeProto, UpdatedAtUnix: time.Now().UTC().UnixMilli(),
+	}).Error
 }
 
 func (s *Store) GetClientRuntime(clientID string) ([]byte, time.Time, error) {
@@ -95,13 +98,12 @@ type PackageMetadata struct {
 }
 
 func (s *Store) UpsertClientInstalledApps(clientID string, appsProto []byte) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`
-		INSERT INTO client_installed_apps (client_id, apps_proto, updated_at)
-		VALUES (?, ?, ?)
-		ON CONFLICT(client_id) DO UPDATE SET apps_proto = excluded.apps_proto, updated_at = excluded.updated_at`,
-		clientID, appsProto, now)
-	return err
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "client_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"apps_proto", "updated_at"}),
+	}).Create(&dbmodel.ClientInstalledApps{
+		ClientID: clientID, AppsProto: appsProto, UpdatedAtUnix: time.Now().UTC().UnixMilli(),
+	}).Error
 }
 
 func (s *Store) GetClientInstalledApps(clientID string) ([]byte, time.Time, error) {
