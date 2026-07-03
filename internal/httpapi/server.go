@@ -34,6 +34,7 @@ import (
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/provisioning"
 	"v.wingsnet.org/internal/relayclient"
+	"v.wingsnet.org/internal/assets"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
 	"v.wingsnet.org/internal/xuiclient"
@@ -73,6 +74,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/releases/latest", s.handleLatestRelease)
 	mux.HandleFunc("/api/download/latest", s.handleLatestDownload)
 	mux.HandleFunc("/.well-known/assetlinks.json", s.handleAssetLinks)
+	mux.HandleFunc("/connect.sh", s.handleConnectScript)
 	s.adminH.Register(mux)
 	s.adminH.RegisterWS(mux)
 	s.ownerH.Register(mux)
@@ -89,6 +91,15 @@ func (s *Server) handleHealth(writer http.ResponseWriter, request *http.Request)
 		"ok":   true,
 		"time": time.Now().UTC().Format(time.RFC3339),
 	})
+}
+
+// handleConnectScript serves the node connector shell script fetched by
+// curl | sh. It is public and inert on its own - it only acts on the panel_grpc,
+// token and node-id the operator passes as arguments.
+func (s *Server) handleConnectScript(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/x-shellscript; charset=utf-8")
+	writer.Header().Set("Cache-Control", "no-cache")
+	_, _ = writer.Write(assets.ConnectScript)
 }
 
 func (s *Server) handlePreview(writer http.ResponseWriter, request *http.Request) {
