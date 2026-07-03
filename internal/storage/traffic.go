@@ -159,6 +159,42 @@ func (s *Store) ListConnectionLogForNodes(nodeIDs []string, limit int) ([]dbmode
 	return rows, nil
 }
 
+// UpsertPeerTraffic refreshes the byte counters for a node's wg peers.
+func (s *Store) UpsertPeerTraffic(rows []dbmodel.PeerTraffic) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "node_id"}, {Name: "public_key"}},
+		DoUpdates: clause.AssignmentColumns([]string{"rx_bytes", "tx_bytes", "sampled_unix"}),
+	}).Create(&rows).Error
+}
+
+// ClientTrafficMap sums peer traffic per managed client (joined via the peers a
+// client holds across nodes), so the client list can render a traffic column in
+// one query. Clients with no peers are absent from the map.
+func (s *Store) ClientTrafficMap() (map[string][2]uint64, error) {
+	var rows []struct {
+		ClientID string
+		Rx       int64
+		Tx       int64
+	}
+	err := s.gdb.
+		Table("client_wg_peers AS cwp").
+		Joins("JOIN peer_traffic AS pt ON pt.node_id = cwp.node_id AND pt.public_key = cwp.public_key").
+		Group("cwp.client_id").
+		Select("cwp.client_id AS client_id, COALESCE(SUM(pt.rx_bytes),0) AS rx, COALESCE(SUM(pt.tx_bytes),0) AS tx").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][2]uint64, len(rows))
+	for _, r := range rows {
+		out[r.ClientID] = [2]uint64{uint64(r.Rx), uint64(r.Tx)}
+	}
+	return out, nil
+}
+
 // PruneConnectionsBefore drops connection-log rows last seen before cutoff.
 func (s *Store) PruneConnectionsBefore(cutoff time.Time) error {
 	return s.gdb.Where("last_seen < ?", cutoff.Unix()).Delete(&dbmodel.ConnectionLog{}).Error

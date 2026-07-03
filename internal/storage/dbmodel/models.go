@@ -266,6 +266,19 @@ type ConnectionLog struct {
 
 func (ConnectionLog) TableName() string { return "connection_log" }
 
+// PeerTraffic is a wg peer's latest cumulative byte counters on a node, refreshed
+// each poll. Joined with client_wg_peers (node_id + public_key) it attributes
+// traffic to a managed client for the per-client traffic column.
+type PeerTraffic struct {
+	NodeID      string `gorm:"column:node_id;primaryKey"`
+	PublicKey   string `gorm:"column:public_key;primaryKey"`
+	RxBytes     uint64 `gorm:"column:rx_bytes;not null;default:0"`
+	TxBytes     uint64 `gorm:"column:tx_bytes;not null;default:0"`
+	SampledUnix int64  `gorm:"column:sampled_unix;not null;default:0"`
+}
+
+func (PeerTraffic) TableName() string { return "peer_traffic" }
+
 // All returns every model in parent-first order so a row copy inserts referenced
 // rows before the rows that point at them.
 func All() []any {
@@ -290,6 +303,7 @@ func All() []any {
 		&TrafficSample{},
 		&FlowSnapshot{},
 		&ConnectionLog{},
+		&PeerTraffic{},
 	}
 }
 

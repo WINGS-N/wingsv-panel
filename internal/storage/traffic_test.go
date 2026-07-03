@@ -95,3 +95,32 @@ func TestRecordConnectionsUpsert(t *testing.T) {
 		t.Fatalf("upsert kept first_seen, refreshed last_seen+bytes: got %+v", rows[0])
 	}
 }
+
+func TestClientTrafficMap(t *testing.T) {
+	st := openTemp(t)
+	seedClientAndNodes(t, st)
+	// c1 holds a peer on each node.
+	for _, p := range []dbmodel.ClientWGPeer{
+		{ClientID: "c1", NodeID: "n1", PublicKey: "pub1"},
+		{ClientID: "c1", NodeID: "n2", PublicKey: "pub2"},
+	} {
+		if err := st.UpsertClientWGPeer(p); err != nil {
+			t.Fatalf("UpsertClientWGPeer: %v", err)
+		}
+	}
+	if err := st.UpsertPeerTraffic([]dbmodel.PeerTraffic{
+		{NodeID: "n1", PublicKey: "pub1", RxBytes: 100, TxBytes: 50},
+		{NodeID: "n2", PublicKey: "pub2", RxBytes: 200, TxBytes: 70},
+		{NodeID: "n1", PublicKey: "unrelated", RxBytes: 999, TxBytes: 999},
+	}); err != nil {
+		t.Fatalf("UpsertPeerTraffic: %v", err)
+	}
+	m, err := st.ClientTrafficMap()
+	if err != nil {
+		t.Fatalf("ClientTrafficMap: %v", err)
+	}
+	got := m["c1"]
+	if got[0] != 300 || got[1] != 120 {
+		t.Fatalf("client c1 traffic = rx %d tx %d, want 300/120", got[0], got[1])
+	}
+}

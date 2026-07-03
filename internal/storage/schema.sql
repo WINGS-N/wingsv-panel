@@ -231,3 +231,13 @@ CREATE TABLE IF NOT EXISTS connection_log (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_conn_identity ON connection_log(node_id, session_id, stream_id, started_unix);
 CREATE INDEX IF NOT EXISTS idx_conn_first_seen ON connection_log(first_seen);
 CREATE INDEX IF NOT EXISTS idx_conn_last_seen ON connection_log(last_seen);
+
+-- M4 stats: per-peer counters, joined with client_wg_peers for per-client traffic.
+CREATE TABLE IF NOT EXISTS peer_traffic (
+    node_id TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    rx_bytes INTEGER NOT NULL DEFAULT 0,
+    tx_bytes INTEGER NOT NULL DEFAULT 0,
+    sampled_unix INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (node_id, public_key)
+);
