@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 	guardianpb "v.wingsnet.org/internal/gen/guardianpb"
 	wingsvpb "v.wingsnet.org/internal/gen/wingsvpb"
 	"v.wingsnet.org/internal/preview"
+	"v.wingsnet.org/internal/relayclient"
 	"v.wingsnet.org/internal/storage"
 )
 
@@ -234,7 +236,17 @@ func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (str
 	if parsedHost, _, splitErr := net.SplitHostPort(node.GRPCEndpoint); splitErr == nil {
 		host = parsedHost
 	}
-	return net.JoinHostPort(host, vkTurnDefaultDTLSPort), nil
+	// Prefer the relay's own DTLS listen port (reported over gRPC); fall back to the
+	// convention default when the node is unreachable or does not report it.
+	port := vkTurnDefaultDTLSPort
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	if st, sErr := relayclient.New(node.GRPCToken).NodeStatus(ctx, node); sErr == nil {
+		if _, reportedPort, pErr := net.SplitHostPort(st.ListenEndpoint); pErr == nil && reportedPort != "" {
+			port = reportedPort
+		}
+	}
+	return net.JoinHostPort(host, port), nil
 }
 
 func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, admin storage.Admin) {

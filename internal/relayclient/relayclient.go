@@ -101,6 +101,9 @@ type RelayStatus struct {
 	ActiveSessions uint64
 	RxBytes        uint64
 	TxBytes        uint64
+	// ListenEndpoint is the relay's DTLS data-plane listen address, used to derive
+	// the endpoint apps dial (paired with the node's public host).
+	ListenEndpoint string
 }
 
 // Flow is one active relay stream on a node.
@@ -233,7 +236,11 @@ func (p *Provisioner) NodeStatus(ctx context.Context, node dbmodel.ServerNode) (
 	if err != nil {
 		return RelayStatus{}, err
 	}
-	rs := RelayStatus{PeerCount: st.GetPeerCount(), ActiveSessions: st.GetActiveSessions()}
+	rs := RelayStatus{
+		PeerCount:      st.GetPeerCount(),
+		ActiveSessions: st.GetActiveSessions(),
+		ListenEndpoint: st.GetListenEndpoint(),
+	}
 	if peers, err := client.ListPeers(ctx, &relaypb.ListPeersRequest{}); err == nil {
 		for _, peer := range peers.GetPeers() {
 			rs.RxBytes += peer.GetRxBytes()
