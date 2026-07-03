@@ -11,13 +11,12 @@
     </p>
 
     <form v-if="allowGRPC" class="mt-4" @submit.prevent="onAdd">
-      <div class="form-grid">
-        <OneuiInput v-model="form.name" label="Название" placeholder="Мой релей" />
-        <OneuiInput v-model="form.grpc_endpoint" label="gRPC endpoint" placeholder="host:443" />
-        <OneuiInput v-model="form.grpc_token" label="Токен" placeholder="bearer-токен (опционально)" />
-      </div>
-      <div class="mt-3">
-        <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
+      <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
+      <div class="form-grid mt-3">
+        <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой релей" />
+        <OneuiInput v-model.trim="form.host" label="IP или домен" placeholder="relay.example.com" />
+        <OneuiInput v-model.number="form.port" label="gRPC порт" type="number" :placeholder="String(defaultPort)" />
+        <OneuiInput v-model.trim="form.grpc_token" label="Токен" placeholder="bearer-токен (опционально)" />
       </div>
       <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
       <div class="actions-row mt-3">
@@ -130,7 +129,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { Plus, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
@@ -159,11 +158,20 @@ const clientPayload = ref('');
 const clientAdding = ref(false);
 const clientError = ref('');
 
-const form = reactive({ name: '', kind: 'vk_turn_proxy', grpc_endpoint: '', grpc_token: '' });
 const kindOptions = [
   { value: 'vk_turn_proxy', label: 'VK TURN' },
   { value: 'xui', label: '3x-ui' },
 ];
+// Default gRPC ports: VK TURN relay 25612, 3x-ui panel API 25613.
+const defaultPorts = { vk_turn_proxy: 25612, xui: 25613 };
+const form = reactive({ name: '', kind: 'vk_turn_proxy', host: '', port: 25612, grpc_token: '' });
+const defaultPort = computed(() => defaultPorts[form.kind] || 25612);
+watch(
+  () => form.kind,
+  (kind) => {
+    form.port = defaultPorts[kind] || form.port;
+  },
+);
 
 const formatTs = formatUnix;
 
@@ -215,17 +223,28 @@ async function refresh() {
 
 async function onAdd() {
   addError.value = '';
+  const host = form.host.trim();
+  if (!host) {
+    addError.value = 'Укажите IP или домен';
+    return;
+  }
+  const port = Number(form.port) || defaultPort.value;
   adding.value = true;
   try {
     const res = await fetch('/api/admin/nodes', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        name: form.name.trim() || host,
+        kind: form.kind,
+        grpc_endpoint: `${host}:${port}`,
+        grpc_token: form.grpc_token.trim(),
+      }),
     });
     if (!res.ok) throw new Error(await res.text());
     form.name = '';
-    form.grpc_endpoint = '';
+    form.host = '';
     form.grpc_token = '';
     await refresh();
   } catch (err) {

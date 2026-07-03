@@ -34,6 +34,29 @@
     <TrafficSparkline :series="traffic?.series || []" class="mt-4" />
   </SamsungCard>
 
+  <SamsungCard
+    class="mt-6"
+    title="Добавить ноду"
+    subtitle="Локальный VK TURN relay или 3x-ui сервер, который опрашивает панель."
+  >
+    <form class="mt-4" @submit.prevent="addNode">
+      <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
+      <div class="node-form-grid mt-3">
+        <OneuiInput v-model.trim="form.name" label="Название" placeholder="relay.example.com" />
+        <OneuiInput v-model.trim="form.host" label="IP или домен" placeholder="relay.example.com" />
+        <OneuiInput v-model.number="form.port" label="gRPC порт" type="number" :placeholder="String(defaultPort)" />
+        <OneuiInput v-model.trim="form.token" label="Токен (bearer)" placeholder="опционально" />
+      </div>
+      <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
+      <div class="actions-row mt-3">
+        <SamsungButton type="submit" :busy="adding">
+          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+          Добавить сервер
+        </SamsungButton>
+      </div>
+    </form>
+  </SamsungCard>
+
   <SamsungCard class="mt-6" title="Ноды" subtitle="Все управляемые серверы и их статус.">
     <ul class="admin-list mt-4">
       <li v-for="n in nodes" :key="n.id" class="session-row">
@@ -45,10 +68,14 @@
           <SamsungPill v-if="!n.local" variant="neutral" class="ml-2">
             {{ n.owner_name || 'admin' }}
           </SamsungPill>
+          <span class="admin-muted ml-2">{{ nodeKindLabel(n.kind) }}</span>
         </div>
-        <span class="session-row-meta">
-          {{ n.grpc_endpoint }} · {{ n.peer_count }} пиров · {{ n.active_sessions }} сессий
-        </span>
+        <div class="session-row-meta node-row-tail">
+          <span>{{ n.grpc_endpoint }} · {{ n.peer_count }} пиров · {{ n.active_sessions }} сессий</span>
+          <SamsungIconButton variant="danger" size="small" aria-label="Удалить" @click="deleteNode(n)">
+            <Trash2 class="button-icon" aria-hidden="true" />
+          </SamsungIconButton>
+        </div>
       </li>
       <li v-if="!nodes.length" class="session-row"><span class="admin-muted">Нод пока нет.</span></li>
     </ul>
@@ -76,10 +103,15 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { Plus, Trash2 } from 'lucide-vue-next';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
+import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
 import SamsungPill from '@/components/layout/SamsungPill.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
+import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import TrafficSparkline from '@/components/domain/TrafficSparkline.vue';
 import FlowChain from '@/components/domain/FlowChain.vue';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
@@ -90,6 +122,27 @@ const nodes = ref([]);
 const flows = ref([]);
 const connections = ref([]);
 const loadError = ref('');
+const addError = ref('');
+const adding = ref(false);
+
+const kindOptions = [
+  { value: 'vk_turn_proxy', label: 'VK TURN' },
+  { value: 'xui', label: '3x-ui' },
+];
+// Default gRPC ports for a fresh form: VK TURN relay 25612, 3x-ui panel API 25613.
+const defaultPorts = { vk_turn_proxy: 25612, xui: 25613 };
+const form = reactive({ kind: 'vk_turn_proxy', name: '', host: '', port: 25612, token: '' });
+const defaultPort = computed(() => defaultPorts[form.kind] || 25612);
+watch(
+  () => form.kind,
+  (kind) => {
+    form.port = defaultPorts[kind] || form.port;
+  },
+);
+
+function nodeKindLabel(kind) {
+  return kind === 'xui' ? '3x-ui' : 'VK TURN';
+}
 
 let timer = null;
 let socketHandle = null;
@@ -120,6 +173,49 @@ async function loadAll() {
   }
 }
 
+async function addNode() {
+  addError.value = '';
+  const host = form.host.trim();
+  const port = Number(form.port) || defaultPort.value;
+  if (!host) {
+    addError.value = 'Укажите IP или домен';
+    return;
+  }
+  adding.value = true;
+  try {
+    const res = await fetch('/api/owner/nodes', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: form.kind,
+        name: form.name.trim() || host,
+        grpc_endpoint: `${host}:${port}`,
+        grpc_token: form.token.trim(),
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    form.name = '';
+    form.host = '';
+    form.token = '';
+    await loadAll();
+  } catch (err) {
+    addError.value = err.message || 'Не удалось добавить';
+  } finally {
+    adding.value = false;
+  }
+}
+
+async function deleteNode(node) {
+  try {
+    const res = await fetch(`/api/owner/nodes/${node.id}`, { method: 'DELETE', credentials: 'include' });
+    if (!res.ok) throw new Error(await res.text());
+    await loadAll();
+  } catch (err) {
+    loadError.value = err.message || 'Не удалось удалить';
+  }
+}
+
 onMounted(() => {
   loadAll();
   timer = setInterval(loadAll, 5000);
@@ -133,3 +229,16 @@ onBeforeUnmount(() => {
   if (socketHandle) socketHandle.close();
 });
 </script>
+
+<style scoped>
+.node-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+.node-row-tail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+</style>
