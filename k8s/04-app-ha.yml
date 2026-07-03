@@ -40,6 +40,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: v-wingsnet-config
+          env:
+            # Full Postgres DSN (with sslmode) kept in a Secret, not the ConfigMap.
+            - name: DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: wingsv-db-dsn
+                  key: dsn
           readinessProbe:
             httpGet:
               path: /up
