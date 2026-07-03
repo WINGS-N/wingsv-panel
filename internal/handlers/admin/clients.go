@@ -400,23 +400,115 @@ func (h *Handler) buildClientLink(
 // self-provision its wg config: it carries the client's panel token and the
 // vk-turn endpoint. Returns nil when no vk-turn endpoint is configured.
 func (h *Handler) managedTurn(clientID, name string, token []byte, vkTurnEndpoint string) *wingsvpb.Turn {
-	endpoint := strings.TrimSpace(vkTurnEndpoint)
-	if endpoint == "" {
+	if strings.TrimSpace(vkTurnEndpoint) == "" {
 		return nil
 	}
-	profile := &wingsvpb.TurnProfile{
+	return applyManagedTurnProfile(nil, clientID, name, token, vkTurnEndpoint)
+}
+
+// isManagedProfile reports whether p is a panel-managed self-provisioning profile
+// (server-issued wg config), as opposed to a manually configured one.
+func isManagedProfile(p *wingsvpb.TurnProfile) bool {
+	return p != nil && p.WgProvisioned
+}
+
+// existingManagedEndpoint returns the vk-turn endpoint of a managed profile already
+// present in turn, or "" when there is none.
+func existingManagedEndpoint(turn *wingsvpb.Turn) string {
+	if turn == nil {
+		return ""
+	}
+	for _, p := range turn.Profiles {
+		if isManagedProfile(p) {
+			return strings.TrimSpace(p.VkTurnEndpoint)
+		}
+	}
+	return ""
+}
+
+// stripManagedTurnProfiles removes any panel-managed profiles from turn, keeping the
+// client's manually configured profiles untouched. Returns turn (possibly nil).
+func stripManagedTurnProfiles(turn *wingsvpb.Turn) *wingsvpb.Turn {
+	if turn == nil {
+		return nil
+	}
+	kept := make([]*wingsvpb.TurnProfile, 0, len(turn.Profiles))
+	for _, p := range turn.Profiles {
+		if !isManagedProfile(p) {
+			kept = append(kept, p)
+		}
+	}
+	turn.Profiles = kept
+	if turn.ActiveProfileId != "" && !hasProfile(kept, turn.ActiveProfileId) {
+		if len(kept) > 0 {
+			turn.ActiveProfileId = kept[0].Id
+		} else {
+			turn.ActiveProfileId = ""
+		}
+	}
+	return turn
+}
+
+func hasProfile(profiles []*wingsvpb.TurnProfile, id string) bool {
+	for _, p := range profiles {
+		if p.Id == id {
+			return true
+		}
+	}
+	return false
+}
+
+// applyManagedTurnProfile injects or replaces the panel-managed self-provisioning
+// profile in turn, preserving the client's manually configured profiles.
+func applyManagedTurnProfile(turn *wingsvpb.Turn, clientID, name string, token []byte, endpoint string) *wingsvpb.Turn {
+	managed := &wingsvpb.TurnProfile{
 		Id:                clientID,
 		Title:             name,
 		TransportKind:     "wg",
-		VkTurnEndpoint:    endpoint,
+		VkTurnEndpoint:    strings.TrimSpace(endpoint),
 		WgProvisioned:     true,
 		ProvisionClientId: clientID,
 		ProvisionToken:    token,
 	}
-	return &wingsvpb.Turn{
-		ActiveProfileId: profile.Id,
-		Profiles:        []*wingsvpb.TurnProfile{profile},
+	if turn == nil {
+		turn = &wingsvpb.Turn{}
 	}
+	turn = stripManagedTurnProfiles(turn)
+	turn.Profiles = append(turn.Profiles, managed)
+	if turn.ActiveProfileId == "" {
+		turn.ActiveProfileId = managed.Id
+	}
+	return turn
+}
+
+// applyProvisionToConfig injects or strips the panel-managed self-provisioning
+// VK-TURN profile on a config being saved for client. The client token and the
+// resolved endpoint are filled server-side so they never round-trip through the
+// browser.
+func (h *Handler) applyProvisionToConfig(admin storage.Admin, client storage.Client, cfg *wingsvpb.Config, enable bool, vkTurnNodeID string) error {
+	if !enable {
+		cfg.Turn = stripManagedTurnProfiles(cfg.Turn)
+		return nil
+	}
+	token, err := h.store.GetClientToken(client.ID, client.OwnerAdminID)
+	if err != nil {
+		return errors.New("client token unavailable; recreate the client to enable provisioning")
+	}
+	endpoint := existingManagedEndpoint(cfg.Turn)
+	if strings.TrimSpace(vkTurnNodeID) != "" || endpoint == "" {
+		resolved, rErr := h.resolveVkTurnEndpoint(admin, vkTurnNodeID)
+		if rErr != nil {
+			return rErr
+		}
+		if strings.TrimSpace(resolved) != "" {
+			endpoint = resolved
+		}
+	}
+	if strings.TrimSpace(endpoint) == "" {
+		return errors.New("no vk-turn endpoint: select a vk-turn server")
+	}
+	cfg.Turn = applyManagedTurnProfile(cfg.Turn, client.ID, client.Name, token, endpoint)
+	return nil
 }
 
 // deriveWsURL converts an https://host[:port] base URL to wss://host[:port]/api/guardian/ws.
@@ -464,7 +556,7 @@ func (h *Handler) handleClientByID(w http.ResponseWriter, r *http.Request, admin
 	case subpath == "config" && r.Method == http.MethodGet:
 		h.respondClientConfig(w, client.ID)
 	case subpath == "config" && r.Method == http.MethodPut:
-		h.respondPushClientConfig(w, r, client)
+		h.respondPushClientConfig(w, r, admin, client)
 	case subpath == "log/control" && r.Method == http.MethodPut:
 		h.respondLogControl(w, r, client)
 	case subpath == "sync" && r.Method == http.MethodPut:
@@ -676,9 +768,17 @@ func (h *Handler) respondClientConfig(w http.ResponseWriter, clientID string) {
 type pushConfigRequest struct {
 	Config   json.RawMessage `json:"config"`
 	Revision string          `json:"revision"`
+	// Provision toggles the panel-managed self-provisioning VK-TURN profile. When
+	// non-nil it is applied server-side (the app never sees the client token):
+	// true injects/refreshes the managed profile, false strips it. Nil leaves the
+	// config's managed profile as-is.
+	Provision *bool `json:"provision"`
+	// VkTurnNodeID picks which registered vk-turn relay the managed profile points
+	// at. Empty keeps the endpoint the config already carries.
+	VkTurnNodeID string `json:"vk_turn_node_id"`
 }
 
-func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request, client storage.Client) {
+func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request, admin storage.Admin, client storage.Client) {
 	var req pushConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid body")
@@ -694,6 +794,12 @@ func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request
 	parsed.Guardian = nil
 	if !client.HasRootAccess {
 		stripRootOnlyBlocks(parsed)
+	}
+	if req.Provision != nil {
+		if err := h.applyProvisionToConfig(admin, client, parsed, *req.Provision, req.VkTurnNodeID); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 	bytesProto, err := proto.Marshal(parsed)
 	if err != nil {
