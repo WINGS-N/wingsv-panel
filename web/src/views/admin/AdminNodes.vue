@@ -128,6 +128,16 @@
     <section class="surface-card mt-6">
       <div class="admin-stats">
         <div class="stat">
+          <span class="stat-kicker">Текущая скорость</span>
+          <span class="stat-value">
+            {{ formatBytes((traffic.totals.cur_rx_rate || 0) + (traffic.totals.cur_tx_rate || 0)) }}/s
+          </span>
+          <span class="stat-meta">
+            ↓ {{ formatBytes(traffic.totals.cur_rx_rate || 0) }}/s · ↑
+            {{ formatBytes(traffic.totals.cur_tx_rate || 0) }}/s
+          </span>
+        </div>
+        <div class="stat">
           <span class="stat-kicker">Активные сессии</span>
           <span class="stat-value">{{ traffic.totals.active_sessions }}</span>
           <span class="stat-meta">{{ traffic.totals.active_streams }} потоков</span>
@@ -520,7 +530,7 @@ async function onDelete(node) {
 
 onMounted(() => {
   refresh();
-  timer = setInterval(loadStats, 5000);
+  timer = setInterval(loadStats, 3000);
   socketHandle = connectAdminSocket((event) => {
     if (event.kind === 'stats_update') loadStats();
   });

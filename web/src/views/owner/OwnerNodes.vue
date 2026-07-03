@@ -6,6 +6,16 @@
     <SamsungSectionLoader v-else-if="!traffic" />
     <div v-if="traffic" class="admin-stats">
       <div class="stat">
+        <span class="stat-kicker">Текущая скорость</span>
+        <span class="stat-value">
+          {{ formatBytes((traffic.totals.cur_rx_rate || 0) + (traffic.totals.cur_tx_rate || 0)) }}/s
+        </span>
+        <span class="stat-meta">
+          ↓ {{ formatBytes(traffic.totals.cur_rx_rate || 0) }}/s · ↑
+          {{ formatBytes(traffic.totals.cur_tx_rate || 0) }}/s
+        </span>
+      </div>
+      <div class="stat">
         <span class="stat-kicker">Активные сессии</span>
         <span class="stat-value">{{ traffic.totals.active_sessions }}</span>
         <span class="stat-meta">{{ traffic.totals.active_streams }} потоков</span>
@@ -257,6 +267,8 @@ const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id
 // live header when the relay reports no per-flow rate.
 const liveRate = computed(() => {
   const t = traffic.value?.totals || {};
+  const cur = (t.cur_rx_rate || 0) + (t.cur_tx_rate || 0);
+  if (cur > 0) return cur;
   return Math.round(((t.rx_1h || 0) + (t.tx_1h || 0)) / 3600);
 });
 
@@ -421,7 +433,7 @@ async function deleteNode(node) {
 
 onMounted(() => {
   loadAll();
-  timer = setInterval(loadAll, 5000);
+  timer = setInterval(loadAll, 3000);
   socketHandle = connectAdminSocket((event) => {
     if (event.kind === 'stats_update') loadAll();
   });
