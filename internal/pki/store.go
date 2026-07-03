@@ -15,6 +15,9 @@ const (
 	// DefaultCAValidity is the lifetime of a freshly generated panel CA. Leaf
 	// certs rotate under it, so it is deliberately long.
 	DefaultCAValidity = 10 * 365 * 24 * time.Hour
+
+	// DefaultLeafValidity is the lifetime of a served leaf certificate.
+	DefaultLeafValidity = 90 * 24 * time.Hour
 )
 
 // LoadCADir loads the CA persisted in dir by SaveCADir.

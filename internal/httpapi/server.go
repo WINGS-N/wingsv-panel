@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/config"
@@ -23,6 +25,7 @@ import (
 	adminhandler "v.wingsnet.org/internal/handlers/admin"
 	guardianhandler "v.wingsnet.org/internal/handlers/guardian"
 	ownerhandler "v.wingsnet.org/internal/handlers/owner"
+	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/provisioning"
 	"v.wingsnet.org/internal/relayclient"
@@ -482,7 +485,15 @@ func Run(ctx context.Context, cfg config.Config) error {
 		if listenErr != nil {
 			return listenErr
 		}
-		grpcServer = grpc.NewServer()
+		var grpcOpts []grpc.ServerOption
+		if ca, caErr := pki.LoadCADir(cfg.CADir); caErr == nil {
+			cert, certErr := ca.ServerTLSCertificate([]string{"localhost"}, pki.DefaultLeafValidity)
+			if certErr != nil {
+				return certErr
+			}
+			grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}})))
+		}
+		grpcServer = grpc.NewServer(grpcOpts...)
 		provisioning.NewService(store, relayclient.New(cfg.RelayToken)).Register(grpcServer)
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
