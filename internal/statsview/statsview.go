@@ -46,6 +46,8 @@ type Totals struct {
 	Tx7d           uint64 `json:"tx_7d"`
 	RxAll          uint64 `json:"rx_all"`
 	TxAll          uint64 `json:"tx_all"`
+	CurRxRate      uint64 `json:"cur_rx_rate"`
+	CurTxRate      uint64 `json:"cur_tx_rate"`
 }
 
 type Traffic struct {
@@ -169,7 +171,42 @@ func BuildTraffic(store *storage.Store, ownerAdminID int64, rng string) (Traffic
 		return Traffic{}, err
 	}
 	out.Totals.RxAll, out.Totals.TxAll = rxAll, txAll
+	out.Totals.CurRxRate, out.Totals.CurTxRate = currentRates(filtered)
 	return out, nil
+}
+
+// currentRates estimates live per-second rx/tx by differencing each node's last
+// two cumulative samples (the collector polls every ~10s). Samples must be ordered
+// by node then ascending ts. A gap wider than staleWindow is treated as the node
+// having been offline and contributes nothing.
+func currentRates(samples []dbmodel.TrafficSample) (uint64, uint64) {
+	const staleWindow = 120 // seconds
+	prev := map[string]dbmodel.TrafficSample{}
+	cur := map[string]dbmodel.TrafficSample{}
+	for _, s := range samples {
+		if c, ok := cur[s.NodeID]; ok {
+			prev[s.NodeID] = c
+		}
+		cur[s.NodeID] = s
+	}
+	var rx, tx uint64
+	for id, c := range cur {
+		p, ok := prev[id]
+		if !ok {
+			continue
+		}
+		dt := c.TsUnix - p.TsUnix
+		if dt <= 0 || dt > staleWindow {
+			continue
+		}
+		if c.RxBytes >= p.RxBytes {
+			rx += (c.RxBytes - p.RxBytes) / uint64(dt)
+		}
+		if c.TxBytes >= p.TxBytes {
+			tx += (c.TxBytes - p.TxBytes) / uint64(dt)
+		}
+	}
+	return rx, tx
 }
 
 // sinceCutoff returns the tail of an ascending-by-(node,ts) sample slice whose ts
