@@ -1,8 +1,8 @@
 <template>
   <div ref="wrapEl" class="tc-wrap">
     <div class="tc-legend">
-      <span class="tc-legend-item"><i class="tc-swatch tc-swatch-rx" /> Приём</span>
-      <span class="tc-legend-item"><i class="tc-swatch tc-swatch-tx" /> Передача</span>
+      <span class="tc-legend-item"><i class="tc-swatch tc-swatch-rx" /> Приём ↑</span>
+      <span class="tc-legend-item"><i class="tc-swatch tc-swatch-tx" /> Передача ↓</span>
       <span v-if="span" class="tc-legend-span">{{ span }}</span>
     </div>
     <svg
@@ -24,18 +24,19 @@
         {{ t.label }}
       </text>
 
+      <line class="tc-baseline" :x1="padL" :x2="W - padR" :y1="baseline" :y2="baseline" />
       <template v-if="series.length">
-        <path class="tc-area tc-area-tx" :d="areaTx" />
         <path class="tc-area tc-area-rx" :d="areaRx" />
-        <path class="tc-line tc-line-tx" :d="lineTx" fill="none" />
+        <path class="tc-area tc-area-tx" :d="areaTx" />
         <path class="tc-line tc-line-rx" :d="lineRx" fill="none" />
+        <path class="tc-line tc-line-tx" :d="lineTx" fill="none" />
       </template>
-      <text v-else class="tc-empty" :x="W / 2" :y="H / 2">нет данных</text>
+      <text v-else class="tc-empty" :x="W / 2" :y="baseline">нет данных</text>
 
       <g v-if="hover >= 0 && series.length">
         <line class="tc-cursor" :x1="hoverX" :x2="hoverX" :y1="padT" :y2="H - padB" />
-        <circle class="tc-dot tc-dot-rx" :cx="hoverX" :cy="yOf(series[hover].rx_bytes)" r="3" />
-        <circle class="tc-dot tc-dot-tx" :cx="hoverX" :cy="yOf(series[hover].tx_bytes)" r="3" />
+        <circle class="tc-dot tc-dot-rx" :cx="hoverX" :cy="rxY(series[hover].rx_bytes)" r="3" />
+        <circle class="tc-dot tc-dot-tx" :cx="hoverX" :cy="txY(series[hover].tx_bytes)" r="3" />
       </g>
     </svg>
 
@@ -60,7 +61,7 @@ const props = defineProps({
 // aspect-ratio stretch, so axis text and lines stay crisp instead of squashed.
 const wrapEl = ref(null);
 const W = ref(680);
-const H = 220;
+const H = 240;
 const padL = 56;
 const padR = 12;
 const padT = 12;
@@ -105,37 +106,45 @@ function xOf(i) {
   return padL + (i / (n - 1)) * (W.value - padL - padR);
 }
 
-function yOf(v) {
-  const t = (Number(v) || 0) / max.value;
-  return H - padB - t * (H - padT - padB);
+// Bidirectional geometry: приём (rx) grows upward from the baseline, передача
+// (tx) downward, mirrored around a shared zero line so direction reads at a glance.
+const half = (H - padT - padB) / 2;
+const baseline = padT + half;
+
+function rxY(v) {
+  return baseline - ((Number(v) || 0) / max.value) * half;
+}
+function txY(v) {
+  return baseline + ((Number(v) || 0) / max.value) * half;
 }
 
-function linePath(key) {
-  return props.series.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yOf(p[key]).toFixed(1)}`).join(' ');
+function linePath(yFn, key) {
+  return props.series.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yFn(p[key]).toFixed(1)}`).join(' ');
 }
 
-function areaPath(key) {
+function areaPath(yFn, key) {
   if (!props.series.length) return '';
   const top = props.series
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yOf(p[key]).toFixed(1)}`)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yFn(p[key]).toFixed(1)}`)
     .join(' ');
   const x0 = xOf(0).toFixed(1);
   const xn = xOf(props.series.length - 1).toFixed(1);
-  const base = (H - padB).toFixed(1);
-  return `${top} L${xn} ${base} L${x0} ${base} Z`;
+  return `${top} L${xn} ${baseline.toFixed(1)} L${x0} ${baseline.toFixed(1)} Z`;
 }
 
-const lineRx = computed(() => linePath('rx_bytes'));
-const lineTx = computed(() => linePath('tx_bytes'));
-const areaRx = computed(() => areaPath('rx_bytes'));
-const areaTx = computed(() => areaPath('tx_bytes'));
+const lineRx = computed(() => linePath(rxY, 'rx_bytes'));
+const lineTx = computed(() => linePath(txY, 'tx_bytes'));
+const areaRx = computed(() => areaPath(rxY, 'rx_bytes'));
+const areaTx = computed(() => areaPath(txY, 'tx_bytes'));
 
 const yTicks = computed(() => {
   const out = [];
-  const steps = 4;
-  for (let i = 0; i <= steps; i++) {
-    const v = (max.value / steps) * i;
-    out.push({ v, y: yOf(v), label: fmt(v) });
+  for (const f of [1, 0.5, 0, -0.5, -1]) {
+    out.push({
+      v: f,
+      y: baseline - f * half,
+      label: f === 0 ? '0' : fmt(Math.abs(f) * max.value),
+    });
   }
   return out;
 });
@@ -251,11 +260,16 @@ const tipStyle = computed(() => {
 }
 .tc-svg {
   width: 100%;
-  height: 220px;
+  height: 240px;
   display: block;
 }
 .tc-grid {
   stroke: rgba(252, 252, 252, 0.08);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.tc-baseline {
+  stroke: rgba(252, 252, 252, 0.25);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
