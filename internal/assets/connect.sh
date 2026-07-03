@@ -103,22 +103,37 @@ connect_vktp() {
   log "vk-turn-proxy node $NODE_ID connected to panel $PANEL_GRPC"
 }
 
+# xui_exec runs the x-ui binary in the given container, trying common paths.
+xui_exec() {
+  container="$1"
+  shift
+  docker exec "$container" x-ui "$@" 2>/dev/null && return 0
+  docker exec "$container" /app/x-ui "$@" 2>/dev/null && return 0
+  docker exec "$container" /usr/local/x-ui/x-ui "$@"
+}
+
 connect_xui() {
+  # x-ui grpc-connect enables the management gRPC (persisted in the DB), registers
+  # the token, and points vk-turn inbounds at the panel - covering both plain 3x-ui
+  # and vk-turn running as a 3x-ui inbound.
   container="$(docker_name_matching '3x-ui' || docker_name_matching 'x-ui' || true)"
-  log "3x-ui management gRPC needs XUI_GRPC_LISTEN set and the token registered as an API token."
   if [ -n "$container" ]; then
-    warn "3x-ui runs in container '$container'. Recreate it with the gRPC port exposed and enabled:"
-    printf '    docker rm -f %s\n' "$container"
-    printf '    docker run -d --name %s ... -p %s:%s -e XUI_GRPC_LISTEN=0.0.0.0:%s <image>\n' \
-      "$container" "$XUI_GRPC_PORT" "$XUI_GRPC_PORT" "$XUI_GRPC_PORT"
-  elif have x-ui || [ -d /etc/x-ui ]; then
-    warn "host 3x-ui detected. Set XUI_GRPC_LISTEN=0.0.0.0:$XUI_GRPC_PORT in its service environment and restart x-ui."
+    xui_exec "$container" grpc-connect "$PANEL_GRPC" "$TOKEN" "$NODE_ID" "0.0.0.0:${XUI_GRPC_PORT}" \
+      || die "x-ui grpc-connect failed in container $container"
+    docker restart "$container" >/dev/null
+    if ! docker port "$container" 2>/dev/null | grep -q ":${XUI_GRPC_PORT}"; then
+      warn "container $container does not publish port ${XUI_GRPC_PORT}; recreate it with -p ${XUI_GRPC_PORT}:${XUI_GRPC_PORT} so the panel can reach the gRPC."
+    fi
+    log "3x-ui in container $container connected to panel $PANEL_GRPC"
+  elif have x-ui; then
+    x-ui grpc-connect "$PANEL_GRPC" "$TOKEN" "$NODE_ID" "0.0.0.0:${XUI_GRPC_PORT}" \
+      || die "x-ui grpc-connect failed"
+    systemctl restart x-ui 2>/dev/null || warn "restart x-ui so the gRPC listener comes up"
+    log "3x-ui connected to panel $PANEL_GRPC"
   else
     die "3x-ui not found locally"
   fi
-  warn "Then in the 3x-ui panel: create an API token equal to <token>, and on the vk-turn inbound set"
-  warn "panel-grpc=$PANEL_GRPC and node-id=$NODE_ID (Panel provisioning section) to enable DTLS PROVISION."
-  log "3x-ui node $NODE_ID: management port $XUI_GRPC_PORT, panel $PANEL_GRPC"
+  log "3x-ui node $NODE_ID: management gRPC :$XUI_GRPC_PORT, panel $PANEL_GRPC"
 }
 
 main() {
