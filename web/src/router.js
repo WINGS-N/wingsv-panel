@@ -10,6 +10,7 @@ import AdminAccount from "./views/admin/AccountView.vue";
 import AdminMasterSettings from "./views/admin/MasterSettings.vue";
 import AdminNodes from "./views/admin/AdminNodes.vue";
 import WgPeers from "./views/shared/WgPeers.vue";
+import NodeDetail from "./views/shared/NodeDetail.vue";
 import OwnerLayout from "./views/owner/OwnerLayout.vue";
 import OwnerOverview from "./views/owner/OwnerOverview.vue";
 import OwnerNodes from "./views/owner/OwnerNodes.vue";
@@ -40,6 +41,12 @@ const router = createRouter({
         { path: "master", component: AdminMasterSettings, name: "admin-master" },
         { path: "nodes", component: AdminNodes, name: "admin-nodes" },
         {
+          path: "nodes/:id",
+          component: NodeDetail,
+          name: "admin-node-detail",
+          props: { apiBase: "/api/admin", backName: "admin-nodes" },
+        },
+        {
           path: "wgpeers",
           component: WgPeers,
           name: "admin-wgpeers",
@@ -54,6 +61,12 @@ const router = createRouter({
         { path: "", redirect: "/owner/overview" },
         { path: "overview", component: OwnerOverview, name: "owner-overview" },
         { path: "nodes", component: OwnerNodes, name: "owner-nodes" },
+        {
+          path: "nodes/:id",
+          component: NodeDetail,
+          name: "owner-node-detail",
+          props: { apiBase: "/api/owner", backName: "owner-nodes" },
+        },
         {
           path: "wgpeers",
           component: WgPeers,

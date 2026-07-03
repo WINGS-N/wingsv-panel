@@ -79,7 +79,9 @@
     <ul class="admin-list mt-4">
       <li v-for="n in nodes" :key="n.id" class="session-row">
         <div>
-          <strong class="session-row-actor">{{ n.name || n.id }}</strong>
+          <router-link class="node-link" :to="{ name: 'admin-node-detail', params: { id: n.id } }">
+            <strong class="session-row-actor">{{ n.name || n.id }}</strong>
+          </router-link>
           <SamsungPill :variant="n.status === 'online' ? 'online' : 'offline'" class="ml-2">
             {{ n.status }}
           </SamsungPill>
@@ -649,5 +651,12 @@ onBeforeUnmount(() => {
   white-space: pre-wrap;
   word-break: break-all;
   margin: 0;
+}
+.node-link {
+  text-decoration: none;
+}
+.node-link:hover .session-row-actor {
+  color: #4b8dff;
+  text-decoration: underline;
 }
 </style>
