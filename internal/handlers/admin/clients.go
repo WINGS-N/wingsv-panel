@@ -70,6 +70,8 @@ type clientView struct {
 	BackendType             string `json:"backend_type"`
 	HasRootAccess           bool   `json:"has_root_access"`
 	VkOAuthAuthorized       bool   `json:"vk_oauth_authorized"`
+	TrafficRx               uint64 `json:"traffic_rx"`
+	TrafficTx               uint64 `json:"traffic_tx"`
 }
 
 func toClientView(c storage.Client) clientView {
@@ -169,10 +171,15 @@ func (h *Handler) handleClients(w http.ResponseWriter, r *http.Request, admin st
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		traffic, _ := h.store.ClientTrafficMap()
 		out := make([]clientView, 0, len(clients))
 		for _, c := range clients {
 			view := toClientView(c)
 			h.hydrateBackendType(&view, c.ID)
+			if t, ok := traffic[c.ID]; ok {
+				view.TrafficRx = t[0]
+				view.TrafficTx = t[1]
+			}
 			out = append(out, view)
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"clients": out})

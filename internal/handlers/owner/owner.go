@@ -283,6 +283,8 @@ type clientView struct {
 	DeviceModel        string `json:"device_model"`
 	OSVersion          string `json:"os_version"`
 	AppVersion         string `json:"app_version"`
+	TrafficRx          uint64 `json:"traffic_rx"`
+	TrafficTx          uint64 `json:"traffic_tx"`
 }
 
 func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
@@ -308,10 +310,11 @@ func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ sto
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	traffic, _ := h.store.ClientTrafficMap()
 	out := make([]clientView, 0, len(clients))
 	for _, c := range clients {
 		brief := briefByID[c.OwnerAdminID]
-		out = append(out, clientView{
+		view := clientView{
 			ID:                 c.ID,
 			Name:               c.Name,
 			OwnerID:            c.OwnerAdminID,
@@ -323,7 +326,12 @@ func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ sto
 			DeviceModel:        c.DeviceModel,
 			OSVersion:          c.OSVersion,
 			AppVersion:         c.AppVersion,
-		})
+		}
+		if t, ok := traffic[c.ID]; ok {
+			view.TrafficRx = t[0]
+			view.TrafficTx = t[1]
+		}
+		out = append(out, view)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"clients": out})
 }
