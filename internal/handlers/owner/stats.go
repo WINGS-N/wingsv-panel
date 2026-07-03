@@ -18,7 +18,7 @@ func (h *Handler) handleStatsTraffic(w http.ResponseWriter, r *http.Request, _ s
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	out, err := statsview.BuildTraffic(h.store, localNodeOwnerID, r.URL.Query().Get("range"))
+	out, err := statsview.BuildTraffic(h.store, localNodeOwnerID, r.URL.Query().Get("range"), r.URL.Query().Get("node"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to build traffic stats")
 		return
@@ -31,7 +31,7 @@ func (h *Handler) handleStatsFlows(w http.ResponseWriter, r *http.Request, _ sto
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	flows, err := statsview.BuildFlows(h.store, localNodeOwnerID)
+	flows, err := statsview.BuildFlows(h.store, localNodeOwnerID, r.URL.Query().Get("node"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read flows")
 		return
@@ -60,7 +60,7 @@ func (h *Handler) handleStatsConnections(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	limit, offset := parseLimit(r), parseOffset(r)
-	conns, total, err := statsview.BuildConnections(h.store, localNodeOwnerID, limit, offset)
+	conns, total, err := statsview.BuildConnections(h.store, localNodeOwnerID, limit, offset, r.URL.Query().Get("node"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read connection log")
 		return

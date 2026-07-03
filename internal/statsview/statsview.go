@@ -110,13 +110,22 @@ func ResolveRange(key string) string {
 // BuildTraffic builds the dashboard traffic view for the given owner's nodes. rng
 // selects the chart window (24h|7d|month); the tile totals (1h/24h/7d/all-time)
 // are always computed regardless of the selected chart range.
-func BuildTraffic(store *storage.Store, ownerAdminID int64, rng string) (Traffic, error) {
+func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string) (Traffic, error) {
 	rng = ResolveRange(rng)
 	rc := trafficRanges[rng]
 	mode, _ := store.GetPanelMode()
 	nodes, err := store.ListServerNodesByOwner(storage.ServerNodeVKTurnProxy, ownerAdminID)
 	if err != nil {
 		return Traffic{}, err
+	}
+	if nodeFilter != "" {
+		kept := nodes[:0]
+		for _, n := range nodes {
+			if n.ID == nodeFilter {
+				kept = append(kept, n)
+			}
+		}
+		nodes = kept
 	}
 	out := Traffic{Mode: string(mode), GeneratedAt: time.Now().Unix(), Range: rng}
 	out.Totals.Nodes = len(nodes)
@@ -223,12 +232,14 @@ func sinceCutoff(samples []dbmodel.TrafficSample, cutoff int64) []dbmodel.Traffi
 	return out
 }
 
-// BuildFlows returns the current live flows for the given owner's nodes.
-func BuildFlows(store *storage.Store, ownerAdminID int64) ([]Flow, error) {
+// BuildFlows returns the current live flows for the given owner's nodes,
+// optionally narrowed to a single node (nodeFilter, empty = all owned).
+func BuildFlows(store *storage.Store, ownerAdminID int64, nodeFilter string) ([]Flow, error) {
 	ids, err := ownedNodeIDs(store, ownerAdminID)
 	if err != nil {
 		return nil, err
 	}
+	ids = filterNodeIDs(ids, nodeFilter)
 	flows, err := store.ListFlowsForNodes(ids)
 	if err != nil {
 		return nil, err
@@ -291,11 +302,13 @@ func BuildFlowHistory(store *storage.Store, ownerAdminID int64, window string) (
 
 // BuildConnections returns a page of the connection log for the given owner's
 // nodes, newest-first, plus the total row count so the UI can paginate.
-func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset int) ([]Connection, int64, error) {
+// nodeFilter narrows to a single node (empty = all owned).
+func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset int, nodeFilter string) ([]Connection, int64, error) {
 	ids, err := ownedNodeIDs(store, ownerAdminID)
 	if err != nil {
 		return nil, 0, err
 	}
+	ids = filterNodeIDs(ids, nodeFilter)
 	total, err := store.CountConnectionLogForNodes(ids)
 	if err != nil {
 		return nil, 0, err
@@ -325,6 +338,21 @@ func ownedNodeIDs(store *storage.Store, ownerAdminID int64) ([]string, error) {
 		ids = append(ids, n.ID)
 	}
 	return ids, nil
+}
+
+// filterNodeIDs narrows an owned-node set to a single node for the per-node
+// drill-down. An empty filter keeps them all; a filter that names a node the
+// caller does not own returns nothing (so no cross-owner data leaks).
+func filterNodeIDs(ids []string, nodeFilter string) []string {
+	if nodeFilter == "" {
+		return ids
+	}
+	for _, id := range ids {
+		if id == nodeFilter {
+			return []string{nodeFilter}
+		}
+	}
+	return nil
 }
 
 // aggregateTrafficSeries turns per-node cumulative counters into a combined
