@@ -558,6 +558,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return relayclient.New(token)
 	}
 	go collector.New(store, relayFactory, collector.Options{
+		Interval: 3 * time.Second,
 		OnCollected: func(string) {
 			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
 		},

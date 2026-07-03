@@ -62,7 +62,7 @@ type Collector struct {
 // New builds a collector, filling any unset option with its default.
 func New(store Store, newRelay RelayFactory, opts Options) *Collector {
 	if opts.Interval <= 0 {
-		opts.Interval = 10 * time.Second
+		opts.Interval = 3 * time.Second
 	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = 5 * time.Second
