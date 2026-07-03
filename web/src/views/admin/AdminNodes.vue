@@ -122,14 +122,18 @@
     </section>
 
     <SamsungCard class="mt-6" title="Трафик" subtitle="Приём и передача за последние 24 часа.">
-      <TrafficSparkline :series="traffic.series || []" class="mt-4" />
+      <TrafficChart :series="traffic.series || []" class="mt-4" />
     </SamsungCard>
 
-    <SamsungCard class="mt-6" title="Цепочки соединений" subtitle="Клиент → поток → назначение.">
-      <FlowChain :flows="flows" class="mt-4" />
+    <SamsungCard class="mt-6" title="Граф потоков" subtitle="Клиент → реле → назначение, толщина = объём.">
+      <FlowGraph :flows="flows" :node-names="nodeNames" class="mt-4" />
     </SamsungCard>
 
-    <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения через ваши ноды.">
+    <SamsungCard
+      class="mt-6"
+      title="Журнал соединений"
+      subtitle="Недавние соединения через ваши ноды (хранятся сутки)."
+    >
       <ul class="admin-list mt-4">
         <li v-for="c in connections" :key="c.node_id + c.session_id + c.stream_id + c.first_seen" class="session-row">
           <div>
@@ -145,6 +149,20 @@
           <span class="admin-muted">Соединений пока не было.</span>
         </li>
       </ul>
+      <div v-if="connTotal > connLimit" class="conn-pager mt-4">
+        <SamsungButton variant="secondary" size="small" :disabled="connOffset === 0" @click="pageConns(-1)">
+          Назад
+        </SamsungButton>
+        <span class="conn-pager-info">{{ connRangeLabel }}</span>
+        <SamsungButton
+          variant="secondary"
+          size="small"
+          :disabled="connOffset + connLimit >= connTotal"
+          @click="pageConns(1)"
+        >
+          Далее
+        </SamsungButton>
+      </div>
     </SamsungCard>
   </template>
 </template>
@@ -160,8 +178,8 @@ import SamsungPill from '@/components/layout/SamsungPill.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import OneuiTextarea from '@/components/controls/OneuiTextarea.vue';
-import TrafficSparkline from '@/components/domain/TrafficSparkline.vue';
-import FlowChain from '@/components/domain/FlowChain.vue';
+import TrafficChart from '@/components/domain/TrafficChart.vue';
+import FlowGraph from '@/components/domain/FlowGraph.vue';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { formatBytes, formatUnix } from '@/utils/format.js';
 
@@ -170,6 +188,9 @@ const allowGRPC = ref(false);
 const traffic = ref(null);
 const flows = ref([]);
 const connections = ref([]);
+const connTotal = ref(0);
+const connOffset = ref(0);
+const connLimit = 50;
 const loadError = ref('');
 const addError = ref('');
 const adding = ref(false);
@@ -197,6 +218,22 @@ watch(
 
 const formatTs = formatUnix;
 
+const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id, n.name || n.id])));
+
+const connRangeLabel = computed(() => {
+  if (!connTotal.value) return '';
+  const from = connOffset.value + 1;
+  const to = Math.min(connOffset.value + connLimit, connTotal.value);
+  return `${from}-${to} из ${connTotal.value}`;
+});
+
+function pageConns(dir) {
+  const next = connOffset.value + dir * connLimit;
+  if (next < 0 || next >= connTotal.value) return;
+  connOffset.value = next;
+  loadStats();
+}
+
 let timer = null;
 let socketHandle = null;
 
@@ -222,17 +259,19 @@ async function loadStats() {
     traffic.value = null;
     flows.value = [];
     connections.value = [];
+    connTotal.value = 0;
     return;
   }
   try {
     const [t, f, c] = await Promise.all([
       fetchJSON('/api/admin/stats/traffic'),
       fetchJSON('/api/admin/stats/flows'),
-      fetchJSON('/api/admin/stats/connections?limit=50'),
+      fetchJSON(`/api/admin/stats/connections?limit=${connLimit}&offset=${connOffset.value}`),
     ]);
     traffic.value = t;
     flows.value = f.flows || [];
     connections.value = c.connections || [];
+    connTotal.value = c.total || 0;
   } catch (err) {
     loadError.value = err.message || 'Не удалось загрузить статистику';
   }
@@ -363,5 +402,15 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.conn-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+.conn-pager-info {
+  font-size: 13px;
+  color: rgba(252, 252, 252, 0.55);
 }
 </style>

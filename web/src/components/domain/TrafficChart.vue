@@ -1,0 +1,279 @@
+<template>
+  <div class="tc-wrap">
+    <div class="tc-legend">
+      <span class="tc-legend-item"><i class="tc-swatch tc-swatch-rx" /> Приём</span>
+      <span class="tc-legend-item"><i class="tc-swatch tc-swatch-tx" /> Передача</span>
+      <span v-if="span" class="tc-legend-span">{{ span }}</span>
+    </div>
+    <svg
+      class="tc-svg"
+      :viewBox="`0 0 ${W} ${H}`"
+      preserveAspectRatio="none"
+      role="img"
+      :aria-label="ariaLabel"
+      @pointermove="onMove"
+      @pointerleave="hover = -1"
+    >
+      <line v-for="g in yTicks" :key="'yg' + g.v" class="tc-grid" :x1="padL" :x2="W - padR" :y1="g.y" :y2="g.y" />
+      <text v-for="g in yTicks" :key="'yl' + g.v" class="tc-axis" :x="padL - 6" :y="g.y + 3" text-anchor="end">
+        {{ g.label }}
+      </text>
+
+      <text v-for="t in xTicks" :key="'xl' + t.v" class="tc-axis" :x="t.x" :y="H - 6" text-anchor="middle">
+        {{ t.label }}
+      </text>
+
+      <template v-if="series.length">
+        <path class="tc-area tc-area-tx" :d="areaTx" />
+        <path class="tc-area tc-area-rx" :d="areaRx" />
+        <path class="tc-line tc-line-tx" :d="lineTx" fill="none" />
+        <path class="tc-line tc-line-rx" :d="lineRx" fill="none" />
+      </template>
+      <text v-else class="tc-empty" :x="W / 2" :y="H / 2">нет данных</text>
+
+      <g v-if="hover >= 0 && series.length">
+        <line class="tc-cursor" :x1="hoverX" :x2="hoverX" :y1="padT" :y2="H - padB" />
+        <circle class="tc-dot tc-dot-rx" :cx="hoverX" :cy="yOf(series[hover].rx_bytes)" r="3" />
+        <circle class="tc-dot tc-dot-tx" :cx="hoverX" :cy="yOf(series[hover].tx_bytes)" r="3" />
+      </g>
+    </svg>
+
+    <div v-if="hover >= 0 && series.length" class="tc-tip" :style="tipStyle">
+      <div class="tc-tip-time">{{ tipTime }}</div>
+      <div class="tc-tip-row"><i class="tc-swatch tc-swatch-rx" />{{ fmt(series[hover].rx_bytes) }}</div>
+      <div class="tc-tip-row"><i class="tc-swatch tc-swatch-tx" />{{ fmt(series[hover].tx_bytes) }}</div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref } from 'vue';
+import { formatBytes } from '@/utils/format.js';
+
+const props = defineProps({
+  series: { type: Array, default: () => [] },
+  ariaLabel: { type: String, default: 'График трафика' },
+});
+
+// viewBox space; the SVG stretches to its container but keeps these coordinates.
+const W = 680;
+const H = 220;
+const padL = 56;
+const padR = 12;
+const padT = 12;
+const padB = 24;
+
+const fmt = (b) => formatBytes(Number(b) || 0);
+
+const max = computed(() => {
+  let m = 1;
+  for (const p of props.series) {
+    m = Math.max(m, Number(p.rx_bytes) || 0, Number(p.tx_bytes) || 0);
+  }
+  return niceCeil(m);
+});
+
+// niceCeil rounds a max up to a clean 1/2/5 x 10^n so the axis labels read well.
+function niceCeil(v) {
+  if (v <= 1) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const base = Math.pow(10, exp);
+  const f = v / base;
+  const step = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+  return step * base;
+}
+
+function xOf(i) {
+  const n = props.series.length;
+  if (n <= 1) return padL + (W - padL - padR) / 2;
+  return padL + (i / (n - 1)) * (W - padL - padR);
+}
+
+function yOf(v) {
+  const t = (Number(v) || 0) / max.value;
+  return H - padB - t * (H - padT - padB);
+}
+
+function linePath(key) {
+  return props.series.map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yOf(p[key]).toFixed(1)}`).join(' ');
+}
+
+function areaPath(key) {
+  if (!props.series.length) return '';
+  const top = props.series
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(i).toFixed(1)} ${yOf(p[key]).toFixed(1)}`)
+    .join(' ');
+  const x0 = xOf(0).toFixed(1);
+  const xn = xOf(props.series.length - 1).toFixed(1);
+  const base = (H - padB).toFixed(1);
+  return `${top} L${xn} ${base} L${x0} ${base} Z`;
+}
+
+const lineRx = computed(() => linePath('rx_bytes'));
+const lineTx = computed(() => linePath('tx_bytes'));
+const areaRx = computed(() => areaPath('rx_bytes'));
+const areaTx = computed(() => areaPath('tx_bytes'));
+
+const yTicks = computed(() => {
+  const out = [];
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const v = (max.value / steps) * i;
+    out.push({ v, y: yOf(v), label: fmt(v) });
+  }
+  return out;
+});
+
+const xTicks = computed(() => {
+  const n = props.series.length;
+  if (!n) return [];
+  const want = Math.min(5, n);
+  const out = [];
+  for (let i = 0; i < want; i++) {
+    const idx = want === 1 ? 0 : Math.round((i / (want - 1)) * (n - 1));
+    out.push({ v: idx, x: xOf(idx), label: hhmm(props.series[idx].ts) });
+  }
+  return out;
+});
+
+function hhmm(ts) {
+  const d = new Date((Number(ts) || 0) * 1000);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+const span = computed(() => {
+  const n = props.series.length;
+  if (n < 2) return '';
+  return `${hhmm(props.series[0].ts)} - ${hhmm(props.series[n - 1].ts)}`;
+});
+
+const hover = ref(-1);
+
+function onMove(e) {
+  const n = props.series.length;
+  if (!n) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const rel = ((e.clientX - rect.left) / rect.width) * W;
+  const frac = (rel - padL) / (W - padL - padR);
+  let idx = Math.round(frac * (n - 1));
+  idx = Math.max(0, Math.min(n - 1, idx));
+  hover.value = idx;
+}
+
+const hoverX = computed(() => (hover.value >= 0 ? xOf(hover.value) : 0));
+const tipTime = computed(() => (hover.value >= 0 ? hhmm(props.series[hover.value].ts) : ''));
+const tipStyle = computed(() => {
+  const leftPct = (hoverX.value / W) * 100;
+  const side = leftPct > 60 ? 'right' : 'left';
+  return side === 'right'
+    ? { right: `${(100 - leftPct).toFixed(1)}%`, left: 'auto' }
+    : { left: `${leftPct.toFixed(1)}%`, right: 'auto' };
+});
+</script>
+
+<style scoped>
+.tc-wrap {
+  position: relative;
+  width: 100%;
+}
+.tc-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: rgba(252, 252, 252, 0.7);
+}
+.tc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tc-legend-span {
+  margin-left: auto;
+  color: rgba(252, 252, 252, 0.45);
+}
+.tc-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.tc-swatch-rx {
+  background: #4b8dff;
+}
+.tc-swatch-tx {
+  background: #b07cff;
+}
+.tc-svg {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+.tc-grid {
+  stroke: rgba(252, 252, 252, 0.08);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.tc-axis {
+  fill: rgba(252, 252, 252, 0.45);
+  font-size: 10px;
+  font-family: 'SamsungOne', system-ui, sans-serif;
+}
+.tc-line {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.tc-line-rx {
+  stroke: #4b8dff;
+}
+.tc-line-tx {
+  stroke: #b07cff;
+}
+.tc-area-rx {
+  fill: rgba(75, 141, 255, 0.16);
+}
+.tc-area-tx {
+  fill: rgba(176, 124, 255, 0.12);
+}
+.tc-cursor {
+  stroke: rgba(252, 252, 252, 0.3);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.tc-dot-rx {
+  fill: #4b8dff;
+}
+.tc-dot-tx {
+  fill: #b07cff;
+}
+.tc-empty {
+  fill: rgba(252, 252, 252, 0.4);
+  font-size: 14px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.tc-tip {
+  position: absolute;
+  top: 34px;
+  transform: translateX(8px);
+  background: #1b1b1e;
+  border: 1px solid rgba(252, 252, 252, 0.14);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #fbfbfb;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.tc-tip-time {
+  color: rgba(252, 252, 252, 0.55);
+  margin-bottom: 4px;
+}
+.tc-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+</style>
