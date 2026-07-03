@@ -220,6 +220,16 @@
           <OneuiSwitch v-model="remoteControl" />
         </div>
 
+        <template v-if="vkTurnNodeOptions.length">
+          <label class="field-label mt-4">VK TURN сервер</label>
+          <p class="admin-muted remote-toggle-hint">Реле, к которому клиент подключится и выпустит wg-конфиг.</p>
+          <OneuiSelect
+            :model-value="vkTurnNodeId"
+            :options="vkTurnNodeOptions"
+            @update:model-value="vkTurnNodeId = $event"
+          />
+        </template>
+
         <label class="field-label mt-4">Заполнение конфигурации</label>
         <OneuiRadioGroup v-model="seedMode" :options="seedModeOptions" variant="pill" />
 
@@ -402,6 +412,9 @@ function scrollToTable() {
 const showCreate = ref(false);
 const newName = ref('');
 const remoteControl = ref(true);
+const vkTurnNodes = ref([]);
+const vkTurnNodeId = ref('');
+const vkTurnNodeOptions = computed(() => vkTurnNodes.value.map((n) => ({ value: n.id, label: n.name || n.id })));
 const creating = ref(false);
 const createError = ref('');
 const lastCreatedLink = ref('');
@@ -456,6 +469,20 @@ async function loadClients() {
   }
 }
 
+async function loadVkTurnNodes() {
+  try {
+    const res = await fetch('/api/admin/nodes', { credentials: 'include' });
+    if (!res.ok) return;
+    const data = await res.json();
+    vkTurnNodes.value = (data.nodes || []).filter((n) => n.kind === 'vk_turn_proxy');
+    if (!vkTurnNodeId.value && vkTurnNodes.value.length) {
+      vkTurnNodeId.value = vkTurnNodes.value[0].id;
+    }
+  } catch {
+    // Non-fatal: without nodes the form falls back to the configured endpoint.
+  }
+}
+
 function openCreate() {
   showCreate.value = true;
   newName.value = '';
@@ -505,6 +532,9 @@ async function createClient() {
       periodic_interval_minutes: Math.max(15, Number(syncIntervalMinutes.value) || 30),
       remote_control: remoteControl.value,
     };
+    if (vkTurnNodeId.value) {
+      reqBody.vk_turn_node_id = vkTurnNodeId.value;
+    }
     if (seedMode.value === 'clone' && seedFromClientId.value) {
       reqBody.seed_from_client_id = seedFromClientId.value;
     } else if (seedMode.value === 'link' && seedLink.value) {
@@ -581,6 +611,7 @@ function formatTs(iso) {
 
 onMounted(() => {
   loadClients();
+  loadVkTurnNodes();
   socketHandle = connectAdminSocket((event) => {
     if (event.kind === 'status_update' || event.kind === 'error') {
       // Re-fetch list on presence-related events; cheaper than diffing.
