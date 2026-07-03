@@ -37,6 +37,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/clients", h.requireOwner(h.handleAllClients))
 	mux.HandleFunc("/api/owner/audit", h.requireOwner(h.handleAudit))
 	mux.HandleFunc("/api/owner/stats", h.requireOwner(h.handleStats))
+	mux.HandleFunc("/api/owner/stats/traffic", h.requireOwner(h.handleStatsTraffic))
+	mux.HandleFunc("/api/owner/stats/flows", h.requireOwner(h.handleStatsFlows))
+	mux.HandleFunc("/api/owner/stats/connections", h.requireOwner(h.handleStatsConnections))
 	mux.HandleFunc("/api/owner/settings", h.requireOwner(h.handleSettings))
 	mux.HandleFunc("/api/owner/invites", h.requireOwner(h.handleInvites))
 	mux.HandleFunc("/api/owner/invites/", h.requireOwner(h.handleInviteByToken))
@@ -411,39 +414,76 @@ func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request, _ storage.
 
 type settingsRequest struct {
 	RegistrationMode string `json:"registration_mode"`
+	// Pointer so an omitted field leaves the current value untouched.
+	AllowAdminGRPC *bool `json:"allow_admin_grpc"`
+}
+
+func (h *Handler) settingsPayload() (map[string]any, error) {
+	mode, err := h.store.GetPlatformSetting(storage.SettingRegistrationMode, auth.RegistrationModeOpen)
+	if err != nil {
+		return nil, err
+	}
+	allowGRPC, err := h.store.GetPlatformSetting(storage.SettingAllowAdminGRPC, "false")
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"registration_mode": mode,
+		"allow_admin_grpc":  allowGRPC == "true",
+	}, nil
 }
 
 func (h *Handler) handleSettings(w http.ResponseWriter, r *http.Request, owner storage.Admin) {
 	switch r.Method {
 	case http.MethodGet:
-		mode, err := h.store.GetPlatformSetting(storage.SettingRegistrationMode, auth.RegistrationModeOpen)
+		payload, err := h.settingsPayload()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"registration_mode": mode})
+		writeJSON(w, http.StatusOK, payload)
 	case http.MethodPut:
 		var req settingsRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid body")
 			return
 		}
-		mode := strings.TrimSpace(req.RegistrationMode)
-		if mode != auth.RegistrationModeOpen &&
-			mode != auth.RegistrationModeInvite &&
-			mode != auth.RegistrationModeClosed {
-			writeError(w, http.StatusBadRequest, "unknown registration_mode")
-			return
+		if mode := strings.TrimSpace(req.RegistrationMode); mode != "" {
+			if mode != auth.RegistrationModeOpen &&
+				mode != auth.RegistrationModeInvite &&
+				mode != auth.RegistrationModeClosed {
+				writeError(w, http.StatusBadRequest, "unknown registration_mode")
+				return
+			}
+			if err := h.store.SetPlatformSetting(storage.SettingRegistrationMode, mode); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			_ = h.store.AppendAudit(storage.AuditEntry{
+				ActorAdminID: owner.ID, ActorUsername: owner.Username,
+				Action: "owner.registration_mode_changed", Message: mode, IP: clientIP(r),
+			})
 		}
-		if err := h.store.SetPlatformSetting(storage.SettingRegistrationMode, mode); err != nil {
+		if req.AllowAdminGRPC != nil {
+			value := "false"
+			if *req.AllowAdminGRPC {
+				value = "true"
+			}
+			if err := h.store.SetPlatformSetting(storage.SettingAllowAdminGRPC, value); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			_ = h.store.AppendAudit(storage.AuditEntry{
+				ActorAdminID: owner.ID, ActorUsername: owner.Username,
+				Action: "owner.allow_admin_grpc_changed", Message: value, IP: clientIP(r),
+			})
+		}
+		payload, err := h.settingsPayload()
+		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		_ = h.store.AppendAudit(storage.AuditEntry{
-			ActorAdminID: owner.ID, ActorUsername: owner.Username,
-			Action: "owner.registration_mode_changed", Message: mode, IP: clientIP(r),
-		})
-		writeJSON(w, http.StatusOK, map[string]any{"registration_mode": mode})
+		writeJSON(w, http.StatusOK, payload)
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
