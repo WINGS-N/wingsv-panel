@@ -139,7 +139,24 @@
     </SamsungCard>
 
     <SamsungCard class="mt-6" title="Граф потоков" subtitle="Клиент → реле → назначение, толщина = объём.">
-      <FlowGraph :flows="flows" :node-names="nodeNames" class="mt-4" />
+      <template #actions>
+        <div class="flow-controls">
+          <OneuiRadioGroup
+            v-model="flowMode"
+            :options="flowModeOptions"
+            variant="pill"
+            @update:model-value="loadStats"
+          />
+          <OneuiRadioGroup
+            v-if="flowMode === 'historical'"
+            v-model="flowWindow"
+            :options="flowWindowOptions"
+            variant="pill"
+            @update:model-value="loadStats"
+          />
+        </div>
+      </template>
+      <FlowGraph :flows="flows" :node-names="nodeNames" :client-names="clientNames" :mode="flowMode" class="mt-4" />
     </SamsungCard>
 
     <SamsungCard
@@ -200,6 +217,18 @@ const nodes = ref([]);
 const allowGRPC = ref(false);
 const traffic = ref(null);
 const flows = ref([]);
+const clientNames = ref({});
+const flowMode = ref('live');
+const flowWindow = ref('1h');
+const flowModeOptions = [
+  { value: 'live', label: 'Живой' },
+  { value: 'historical', label: 'История' },
+];
+const flowWindowOptions = [
+  { value: '1h', label: '1ч' },
+  { value: '6h', label: '6ч' },
+  { value: '24h', label: '24ч' },
+];
 const connections = ref([]);
 const connTotal = ref(0);
 const connOffset = ref(0);
@@ -305,13 +334,18 @@ async function loadStats() {
     return;
   }
   try {
+    const flowPath =
+      flowMode.value === 'historical'
+        ? `/api/admin/stats/flowhistory?window=${flowWindow.value}`
+        : '/api/admin/stats/flows';
     const [t, f, c] = await Promise.all([
       fetchJSON(`/api/admin/stats/traffic?range=${trafficRange.value}`),
-      fetchJSON('/api/admin/stats/flows'),
+      fetchJSON(flowPath),
       fetchJSON(`/api/admin/stats/connections?limit=${connLimit}&offset=${connOffset.value}`),
     ]);
     traffic.value = t;
     flows.value = f.flows || [];
+    clientNames.value = f.client_names || {};
     connections.value = c.connections || [];
     connTotal.value = c.total || 0;
   } catch (err) {
@@ -503,5 +537,10 @@ onBeforeUnmount(() => {
 .traffic-period-meta {
   font-size: 12px;
   color: rgba(252, 252, 252, 0.5);
+}
+.flow-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 </style>

@@ -1,71 +1,146 @@
 <template>
   <div ref="wrap" class="fg-wrap" @pointermove="track">
-    <template v-if="graph">
-      <div class="fg-legend">
-        <span>Клиенты</span>
-        <span>Реле</span>
-        <span>Назначения</span>
+    <div class="fg-header">
+      <div class="fg-stat">
+        <span class="fg-stat-label">{{ mode === 'live' ? 'Сейчас' : 'Объём за период' }}</span>
+        <span class="fg-stat-value">{{ headerThroughput }}</span>
       </div>
-      <svg class="fg-svg" :viewBox="`0 0 ${W} ${graph.height}`" role="img" aria-label="Граф потоков трафика">
+      <div class="fg-stat">
+        <span class="fg-stat-label">Потоки</span>
+        <span class="fg-stat-value">{{ flows.length }}</span>
+      </div>
+      <div class="fg-stat">
+        <span class="fg-stat-label">Топ-потребитель</span>
+        <span class="fg-stat-value">{{ topTalker }}</span>
+      </div>
+      <div class="fg-legend">
+        <span v-for="p in legend" :key="p.key" class="fg-legend-item">
+          <i class="fg-swatch" :style="{ background: p.color }" />{{ p.key }}
+        </span>
+      </div>
+    </div>
+
+    <svg
+      v-if="graph"
+      class="fg-svg"
+      :width="W"
+      :height="graph.height"
+      :viewBox="`0 0 ${W} ${graph.height}`"
+      role="img"
+      aria-label="Граф потоков трафика"
+      @click="clearSelection"
+    >
+      <path
+        v-for="l in graph.links"
+        :key="l.key"
+        class="fg-link"
+        :class="{ 'fg-link-dim': dimmed(l), 'fg-link-hot': hoveredLink === l.key }"
+        :d="l.d"
+        :style="{ fill: l.color }"
+        @pointerenter="hoveredLink = l.key"
+        @pointerleave="hoveredLink = ''"
+        @click.stop="pinLink(l)"
+      />
+
+      <template v-if="mode === 'live'">
         <path
-          v-for="(l, i) in graph.links"
-          :key="'lk' + i"
-          class="fg-link"
-          :class="{ 'fg-link-hot': hovered === i }"
-          :d="l.d"
-          :style="{ strokeWidth: 0 }"
-          @pointerenter="hovered = i"
-          @pointerleave="hovered = -1"
+          v-for="l in graph.links"
+          :key="'flow' + l.key"
+          class="fg-flow"
+          :class="{ 'fg-link-dim': dimmed(l) }"
+          :d="l.center"
+          :style="{ stroke: l.color, animationDuration: l.flowDur }"
         />
-        <g v-for="(a, i) in graph.arrows" :key="'ar' + i">
-          <path class="fg-arrow" :d="a" />
-        </g>
+      </template>
 
-        <g v-for="node in graph.nodes" :key="node.id">
-          <rect class="fg-node" :class="node.colClass" :x="node.x" :y="node.y" :width="NODEW" :height="node.h" rx="3" />
-          <text
-            v-if="node.h >= 10"
-            class="fg-label"
-            :class="'fg-label-' + node.col"
-            :x="node.labelX"
-            :y="node.y + node.h / 2"
-            :text-anchor="node.anchor"
-          >
-            {{ node.label }}
-          </text>
-        </g>
-      </svg>
-    </template>
-    <p v-else class="fg-empty">Нет активных соединений.</p>
+      <path v-for="a in graph.arrows" :key="a.key" class="fg-arrow" :class="{ 'fg-link-dim': dimmed(a) }" :d="a.d" />
 
-    <div v-if="hovered >= 0 && graph" class="fg-tip" :style="tipStyle">
-      <div class="fg-tip-path">{{ graph.links[hovered].label }}</div>
-      <div class="fg-tip-bytes">{{ fmt(graph.links[hovered].bytes) }}</div>
+      <g v-for="node in graph.nodes" :key="node.id">
+        <rect
+          class="fg-node"
+          :class="[node.colClass, { 'fg-node-dim': nodeDimmed(node), 'fg-node-sel': selected === node.id }]"
+          :x="node.x"
+          :y="node.y"
+          :width="NODEW"
+          :height="node.h"
+          rx="3"
+          @pointerenter="hoveredNode = node.id"
+          @pointerleave="hoveredNode = ''"
+          @click.stop="toggleNode(node.id)"
+        />
+        <text
+          v-if="node.h >= 9"
+          class="fg-label"
+          :class="{ 'fg-node-dim': nodeDimmed(node) }"
+          :x="node.labelX"
+          :y="node.y + node.h / 2"
+          :text-anchor="node.anchor"
+          @click.stop="toggleNode(node.id)"
+        >
+          {{ node.label }}
+        </text>
+      </g>
+    </svg>
+    <p v-else class="fg-empty">Нет данных о потоках за выбранный период.</p>
+
+    <div v-if="tip" class="fg-tip" :style="tipStyle">
+      <div class="fg-tip-path">{{ tip.label }}</div>
+      <div class="fg-tip-bytes">всего {{ fmt(tip.rx + tip.tx) }} · ↓ {{ fmt(tip.rx) }} · ↑ {{ fmt(tip.tx) }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { formatBytes } from '@/utils/format.js';
 
 const props = defineProps({
   flows: { type: Array, default: () => [] },
   nodeNames: { type: Object, default: () => ({}) },
+  clientNames: { type: Object, default: () => ({}) },
+  mode: { type: String, default: 'live' }, // live | historical
   maxPerColumn: { type: Number, default: 8 },
 });
 
-const W = 720;
 const NODEW = 11;
 const PADY = 16;
 const GAP = 9;
 const CAP_H = 150;
-const COLS = { c: 150, r: 355, d: 559 };
+
+// Per-protocol colours; unknown protocols fall back to grey. Keys are lower-cased
+// so the legend and links agree.
+const PROTO_COLORS = {
+  dtls: '#4b8dff',
+  wg: '#5ecb9e',
+  wireguard: '#5ecb9e',
+  tcp: '#b07cff',
+  udp: '#f2a65a',
+  quic: '#e46a9b',
+};
+const OTHER_COLOR = 'rgba(200,200,210,0.5)';
+const WELL_KNOWN_PORTS = { 443: 'HTTPS', 80: 'HTTP', 53: 'DNS', 22: 'SSH', 25: 'SMTP', 993: 'IMAPS', 3478: 'STUN' };
 
 const fmt = (b) => formatBytes(Number(b) || 0);
 
 const wrap = ref(null);
-const hovered = ref(-1);
+const W = ref(720);
+let ro = null;
+onMounted(() => {
+  if (!wrap.value) return;
+  ro = new ResizeObserver((entries) => {
+    const w = entries[0]?.contentRect?.width || 0;
+    if (w > 0) W.value = Math.max(360, Math.round(w));
+  });
+  ro.observe(wrap.value);
+});
+onBeforeUnmount(() => {
+  if (ro) ro.disconnect();
+});
+
+const hoveredLink = ref('');
+const pinnedLink = ref(null);
+const hoveredNode = ref('');
+const selected = ref('');
 const pos = ref({ x: 0, y: 0 });
 
 function track(e) {
@@ -75,16 +150,30 @@ function track(e) {
   pos.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-const tipStyle = computed(() => ({
-  left: `${Math.min(pos.value.x + 12, 300)}px`,
-  top: `${pos.value.y + 12}px`,
-}));
+function protoColor(p) {
+  return PROTO_COLORS[(p || '').toLowerCase()] || OTHER_COLOR;
+}
+
+function clientLabel(ip) {
+  return props.clientNames[ip] || ip || '-';
+}
+
+function destLabel(remote) {
+  const s = remote || '-';
+  const idx = s.lastIndexOf(':');
+  if (idx > 0) {
+    const port = Number(s.slice(idx + 1));
+    const svc = WELL_KNOWN_PORTS[port];
+    if (svc) return `${s} ${svc}`;
+  }
+  return s;
+}
 
 function label(kind, key) {
   if (key === '__other__') return 'прочие';
   if (kind === 'r') return props.nodeNames[key] || (key.length > 10 ? key.slice(0, 8) : key);
-  const s = key || '-';
-  return s.length > 26 ? s.slice(0, 25) + '...' : s;
+  const s = kind === 'c' ? clientLabel(key) : destLabel(key);
+  return s.length > 28 ? s.slice(0, 27) + '...' : s;
 }
 
 // fold keeps the top-N keys by bytes and collapses the rest into __other__ so the
@@ -117,30 +206,56 @@ const graph = computed(() => {
   const flows = props.flows.filter((f) => (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0) > 0);
   if (!flows.length) return null;
 
+  const cols = { c: 0.2 * W.value, r: 0.5 * W.value, d: 0.8 * W.value };
+  const bytesOf = (f) => (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0);
+
   const cTot = new Map();
   const rTot = new Map();
   const dTot = new Map();
   const add = (m, k, v) => m.set(k, (m.get(k) || 0) + v);
   for (const f of flows) {
-    const bytes = (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0);
-    add(cTot, f.client_ip || '-', bytes);
-    add(rTot, f.node_id || '-', bytes);
-    add(dTot, f.remote || '-', bytes);
+    const b = bytesOf(f);
+    add(cTot, f.client_ip || '-', b);
+    add(rTot, f.node_id || '-', b);
+    add(dTot, f.remote || '-', b);
   }
   const c = fold(cTot, props.maxPerColumn);
   const r = fold(rTot, props.maxPerColumn);
   const d = fold(dTot, props.maxPerColumn);
 
+  // Link accumulators carry rx/tx, a rate (live), and per-protocol byte tallies so
+  // a folded link takes the colour of its dominant protocol.
   const linkCR = new Map();
   const linkRD = new Map();
+  const acc = (m, key, f) => {
+    let e = m.get(key);
+    if (!e) {
+      e = { rx: 0, tx: 0, rate: 0, protos: new Map() };
+      m.set(key, e);
+    }
+    e.rx += Number(f.rx_bytes) || 0;
+    e.tx += Number(f.tx_bytes) || 0;
+    e.rate += (Number(f.rx_rate) || 0) + (Number(f.tx_rate) || 0);
+    add(e.protos, (f.protocol || '').toLowerCase(), bytesOf(f));
+  };
   for (const f of flows) {
-    const bytes = (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0);
     const ck = c.map.get(f.client_ip || '-');
     const rk = r.map.get(f.node_id || '-');
     const dk = d.map.get(f.remote || '-');
-    add(linkCR, ck + '' + rk, bytes);
-    add(linkRD, rk + '' + dk, bytes);
+    acc(linkCR, ck + '|' + rk, f);
+    acc(linkRD, rk + '|' + dk, f);
   }
+  const dominantProto = (protos) => {
+    let best = '';
+    let bestB = -1;
+    for (const [p, b] of protos) {
+      if (b > bestB) {
+        bestB = b;
+        best = p;
+      }
+    }
+    return best;
+  };
 
   const total = [...cTot.values()].reduce((a, b) => a + b, 0) || 1;
   const maxCount = Math.max(c.order.length, r.order.length, d.order.length);
@@ -151,11 +266,11 @@ const graph = computed(() => {
 
   const nodes = [];
   const nodeIndex = new Map();
-  function layout(col, colKey, order, bytesOf, x, labelX, anchor) {
-    const colH = order.reduce((s, k) => s + Math.max(2, bytesOf.get(k) * scale), 0) + (order.length - 1) * GAP;
+  function layout(colKey, order, bytesMap, x, labelX, anchor) {
+    const colH = order.reduce((s, k) => s + Math.max(2, bytesMap.get(k) * scale), 0) + (order.length - 1) * GAP;
     let y = (height - colH) / 2;
     for (const k of order) {
-      const h = Math.max(2, bytesOf.get(k) * scale);
+      const h = Math.max(2, bytesMap.get(k) * scale);
       const node = {
         id: colKey + ':' + k,
         col: colKey,
@@ -165,54 +280,161 @@ const graph = computed(() => {
         h,
         labelX,
         anchor,
-        label: label(colKey, k) + '  ' + fmt(bytesOf.get(k)),
+        label: label(colKey, k) + '  ' + fmt(bytesMap.get(k)),
         outY: y,
         inY: y,
       };
       nodes.push(node);
-      nodeIndex.set(colKey + ':' + k, node);
+      nodeIndex.set(node.id, node);
       y += h + GAP;
     }
   }
-  layout('c', 'c', c.order, c.bytesOf, COLS.c - NODEW, COLS.c - NODEW - 8, 'end');
-  layout('r', 'r', r.order, r.bytesOf, COLS.r, COLS.r + NODEW / 2, 'middle');
-  layout('d', 'd', d.order, d.bytesOf, COLS.d, COLS.d + NODEW + 8, 'start');
+  layout('c', c.order, c.bytesOf, cols.c - NODEW, cols.c - NODEW - 8, 'end');
+  layout('r', r.order, r.bytesOf, cols.r, cols.r + NODEW / 2, 'middle');
+  layout('d', d.order, d.bytesOf, cols.d, cols.d + NODEW + 8, 'start');
 
   const links = [];
   const arrows = [];
-  function ribbon(srcNode, dstNode, bytes, srcLabel, dstLabel) {
+  function ribbon(srcId, dstId, e, srcLabel, dstLabel) {
+    const src = nodeIndex.get(srcId);
+    const dst = nodeIndex.get(dstId);
+    if (!src || !dst) return;
+    const bytes = e.rx + e.tx;
     const w = Math.max(1, bytes * scale);
-    const x1 = srcNode.x + NODEW;
-    const x2 = dstNode.x;
-    const sy = srcNode.outY;
-    const ty = dstNode.inY;
-    srcNode.outY += w;
-    dstNode.inY += w;
+    const x1 = src.x + NODEW;
+    const x2 = dst.x;
+    const sy = src.outY;
+    const ty = dst.inY;
+    src.outY += w;
+    dst.inY += w;
     const xm = (x1 + x2) / 2;
-    const d =
+    const dPath =
       `M${x1} ${sy} C${xm} ${sy} ${xm} ${ty} ${x2} ${ty}` +
       ` L${x2} ${ty + w} C${xm} ${ty + w} ${xm} ${sy + w} ${x1} ${sy + w} Z`;
-    links.push({ d, bytes, label: srcLabel + ' → ' + dstLabel });
-    const ac = ty + w / 2;
-    const ax = x2 - 1;
-    arrows.push(`M${ax - 7} ${ac - 4} L${ax} ${ac} L${ax - 7} ${ac + 4} Z`);
+    const sc = sy + w / 2;
+    const tc = ty + w / 2;
+    const color = protoColor(dominantProto(e.protos));
+    // Faster links animate quicker; clamp so nothing is dizzying or frozen.
+    const flowDur = `${Math.max(0.6, 5 - Math.log10(1 + e.rate / 1024)).toFixed(2)}s`;
+    links.push({
+      key: srcId + '>' + dstId,
+      d: dPath,
+      center: `M${x1} ${sc} C${xm} ${sc} ${xm} ${tc} ${x2} ${tc}`,
+      color,
+      rx: e.rx,
+      tx: e.tx,
+      src: srcId,
+      dst: dstId,
+      flowDur,
+      label: srcLabel + ' → ' + dstLabel,
+    });
+    arrows.push({
+      key: srcId + '>' + dstId,
+      d: `M${x2 - 8} ${tc - 4} L${x2 - 1} ${tc} L${x2 - 8} ${tc + 4} Z`,
+      src: srcId,
+      dst: dstId,
+    });
   }
 
   for (const ck of c.order) {
     for (const rk of r.order) {
-      const bytes = linkCR.get(ck + '' + rk);
-      if (bytes) ribbon(nodeIndex.get('c:' + ck), nodeIndex.get('r:' + rk), bytes, label('c', ck), label('r', rk));
+      const e = linkCR.get(ck + '|' + rk);
+      if (e) ribbon('c:' + ck, 'r:' + rk, e, label('c', ck), label('r', rk));
     }
   }
   for (const rk of r.order) {
     for (const dk of d.order) {
-      const bytes = linkRD.get(rk + '' + dk);
-      if (bytes) ribbon(nodeIndex.get('r:' + rk), nodeIndex.get('d:' + dk), bytes, label('r', rk), label('d', dk));
+      const e = linkRD.get(rk + '|' + dk);
+      if (e) ribbon('r:' + rk, 'd:' + dk, e, label('r', rk), label('d', dk));
     }
   }
 
   return { height, nodes, links, arrows };
 });
+
+const legend = computed(() => {
+  const seen = new Map();
+  for (const f of props.flows) {
+    const p = (f.protocol || '').toLowerCase();
+    if (p && !seen.has(p)) seen.set(p, protoColor(p));
+  }
+  return [...seen.entries()].map(([key, color]) => ({ key, color }));
+});
+
+const headerThroughput = computed(() => {
+  if (props.mode === 'live') {
+    let rate = 0;
+    for (const f of props.flows) rate += (Number(f.rx_rate) || 0) + (Number(f.tx_rate) || 0);
+    return fmt(rate) + '/с';
+  }
+  let bytes = 0;
+  for (const f of props.flows) bytes += (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0);
+  return fmt(bytes);
+});
+
+const topTalker = computed(() => {
+  const per = new Map();
+  for (const f of props.flows) {
+    const k = f.client_ip || '-';
+    per.set(k, (per.get(k) || 0) + (Number(f.rx_bytes) || 0) + (Number(f.tx_bytes) || 0));
+  }
+  let best = '';
+  let bestB = -1;
+  for (const [k, v] of per) {
+    if (v > bestB) {
+      bestB = v;
+      best = k;
+    }
+  }
+  return best ? clientLabel(best) : '—';
+});
+
+// Selection/hover: a node click pins isolation; hovering a node or link lights up
+// only the connected ribbons and endpoints, dimming the rest.
+const activeNode = computed(() => selected.value || hoveredNode.value);
+const activeLinkKey = computed(() => (pinnedLink.value ? pinnedLink.value.key : hoveredLink.value));
+
+function dimmed(l) {
+  if (activeLinkKey.value) return l.key !== activeLinkKey.value;
+  if (activeNode.value) return l.src !== activeNode.value && l.dst !== activeNode.value;
+  return false;
+}
+function nodeDimmed(node) {
+  if (activeLinkKey.value) {
+    const l = graph.value?.links.find((x) => x.key === activeLinkKey.value);
+    return !l || (l.src !== node.id && l.dst !== node.id);
+  }
+  if (activeNode.value) {
+    if (node.id === activeNode.value) return false;
+    return !graph.value?.links.some(
+      (l) => (l.src === activeNode.value && l.dst === node.id) || (l.dst === activeNode.value && l.src === node.id),
+    );
+  }
+  return false;
+}
+
+function toggleNode(id) {
+  selected.value = selected.value === id ? '' : id;
+  pinnedLink.value = null;
+}
+function pinLink(l) {
+  pinnedLink.value = pinnedLink.value && pinnedLink.value.key === l.key ? null : l;
+  selected.value = '';
+}
+function clearSelection() {
+  selected.value = '';
+  pinnedLink.value = null;
+}
+
+const tip = computed(() => {
+  const key = activeLinkKey.value;
+  if (!key) return null;
+  return graph.value?.links.find((l) => l.key === key) || null;
+});
+const tipStyle = computed(() => ({
+  left: `${Math.min(pos.value.x + 12, W.value - 180)}px`,
+  top: `${pos.value.y + 12}px`,
+}));
 </script>
 
 <style scoped>
@@ -220,13 +442,44 @@ const graph = computed(() => {
   position: relative;
   width: 100%;
 }
+.fg-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.fg-stat {
+  display: flex;
+  flex-direction: column;
+}
+.fg-stat-label {
+  font-size: 11px;
+  color: rgba(252, 252, 252, 0.45);
+}
+.fg-stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fbfbfb;
+}
 .fg-legend {
   display: flex;
-  justify-content: space-between;
+  gap: 12px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.fg-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
-  color: rgba(252, 252, 252, 0.45);
-  margin-bottom: 6px;
-  padding: 0 4px;
+  color: rgba(252, 252, 252, 0.6);
+}
+.fg-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  display: inline-block;
 }
 .fg-svg {
   width: 100%;
@@ -234,19 +487,39 @@ const graph = computed(() => {
   display: block;
 }
 .fg-link {
-  fill: rgba(75, 141, 255, 0.22);
+  opacity: 0.85;
   stroke: none;
-  transition: fill 0.12s ease;
+  transition:
+    opacity 0.12s ease,
+    fill 0.12s ease;
   cursor: pointer;
 }
 .fg-link-hot {
-  fill: rgba(75, 141, 255, 0.55);
+  opacity: 1;
+}
+.fg-link-dim {
+  opacity: 0.12;
+}
+.fg-flow {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 2 10;
+  opacity: 0.9;
+  vector-effect: non-scaling-stroke;
+  animation: fg-dash linear infinite;
+  pointer-events: none;
+}
+@keyframes fg-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
 }
 .fg-arrow {
-  fill: rgba(75, 141, 255, 0.7);
+  fill: rgba(252, 252, 252, 0.55);
 }
 .fg-node {
-  fill: #4b8dff;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
 }
 .fg-node-c {
   fill: #4b8dff;
@@ -257,11 +530,19 @@ const graph = computed(() => {
 .fg-node-d {
   fill: #5ecb9e;
 }
+.fg-node-dim {
+  opacity: 0.22;
+}
+.fg-node-sel {
+  stroke: #fbfbfb;
+  stroke-width: 1.5;
+}
 .fg-label {
   fill: rgba(252, 252, 252, 0.82);
   font-size: 10px;
   dominant-baseline: middle;
   font-family: 'SamsungOne', system-ui, sans-serif;
+  cursor: pointer;
 }
 .fg-empty {
   color: rgba(252, 252, 252, 0.55);

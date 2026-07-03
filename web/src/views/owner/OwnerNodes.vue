@@ -73,7 +73,19 @@
   </SamsungCard>
 
   <SamsungCard class="mt-6" title="Граф потоков" subtitle="Клиент → реле → назначение, толщина = объём.">
-    <FlowGraph :flows="flows" :node-names="nodeNames" class="mt-4" />
+    <template #actions>
+      <div class="flow-controls">
+        <OneuiRadioGroup v-model="flowMode" :options="flowModeOptions" variant="pill" @update:model-value="loadAll" />
+        <OneuiRadioGroup
+          v-if="flowMode === 'historical'"
+          v-model="flowWindow"
+          :options="flowWindowOptions"
+          variant="pill"
+          @update:model-value="loadAll"
+        />
+      </div>
+    </template>
+    <FlowGraph :flows="flows" :node-names="nodeNames" :client-names="clientNames" :mode="flowMode" class="mt-4" />
   </SamsungCard>
 
   <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения через ноды (хранятся сутки).">
@@ -152,6 +164,18 @@ import { formatBytes, formatUnix } from '@/utils/format.js';
 const traffic = ref(null);
 const nodes = ref([]);
 const flows = ref([]);
+const clientNames = ref({});
+const flowMode = ref('live');
+const flowWindow = ref('1h');
+const flowModeOptions = [
+  { value: 'live', label: 'Живой' },
+  { value: 'historical', label: 'История' },
+];
+const flowWindowOptions = [
+  { value: '1h', label: '1ч' },
+  { value: '6h', label: '6ч' },
+  { value: '24h', label: '24ч' },
+];
 const connections = ref([]);
 const connTotal = ref(0);
 const connOffset = ref(0);
@@ -236,17 +260,23 @@ async function fetchJSON(path) {
   return res.json();
 }
 
+const flowPath = () =>
+  flowMode.value === 'historical'
+    ? `/api/owner/stats/flowhistory?window=${flowWindow.value}`
+    : '/api/owner/stats/flows';
+
 async function loadAll() {
   try {
     const [t, n, f, c] = await Promise.all([
       fetchJSON(`/api/owner/stats/traffic?range=${trafficRange.value}`),
       fetchJSON('/api/owner/nodes'),
-      fetchJSON('/api/owner/stats/flows'),
+      fetchJSON(flowPath()),
       fetchJSON(`/api/owner/stats/connections?limit=${connLimit}&offset=${connOffset.value}`),
     ]);
     traffic.value = t;
     nodes.value = n.nodes || [];
     flows.value = f.flows || [];
+    clientNames.value = f.client_names || {};
     connections.value = c.connections || [];
     connTotal.value = c.total || 0;
     loadError.value = '';
@@ -404,5 +434,10 @@ onBeforeUnmount(() => {
 .traffic-period-meta {
   font-size: 12px;
   color: rgba(252, 252, 252, 0.5);
+}
+.flow-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 </style>
