@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS server_nodes (
     kind TEXT NOT NULL,
     name TEXT NOT NULL DEFAULT '',
     grpc_endpoint TEXT NOT NULL DEFAULT '',
+    grpc_token TEXT NOT NULL DEFAULT '',
     ca_pin BLOB,
     status TEXT NOT NULL DEFAULT 'unknown',
     owner_admin_id INTEGER NOT NULL DEFAULT 0,

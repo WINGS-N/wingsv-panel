@@ -82,3 +82,40 @@ func TestServerNodeCRUD(t *testing.T) {
 		t.Fatalf("DeleteServerNode missing = %v, want ErrNotFound", err)
 	}
 }
+
+func TestListServerNodesByOwner(t *testing.T) {
+	st := openTemp(t)
+	mk := func(id string, owner int64, token string) {
+		if _, err := st.CreateServerNode(dbmodel.ServerNode{
+			ID: id, Kind: ServerNodeVKTurnProxy, Name: id, GRPCEndpoint: "x:1",
+			GRPCToken: token, OwnerAdminID: owner,
+		}); err != nil {
+			t.Fatalf("CreateServerNode %s: %v", id, err)
+		}
+	}
+	mk("local1", 0, "")
+	mk("local2", 0, "")
+	mk("ext1", 7, "tok7")
+
+	local, err := st.ListServerNodesByOwner(ServerNodeVKTurnProxy, 0)
+	if err != nil {
+		t.Fatalf("ListServerNodesByOwner local: %v", err)
+	}
+	if len(local) != 2 {
+		t.Fatalf("want 2 panel-local nodes, got %d", len(local))
+	}
+	ext, err := st.ListServerNodesByOwner(ServerNodeVKTurnProxy, 7)
+	if err != nil {
+		t.Fatalf("ListServerNodesByOwner ext: %v", err)
+	}
+	if len(ext) != 1 || ext[0].ID != "ext1" || ext[0].GRPCToken != "tok7" {
+		t.Fatalf("want admin 7's single node with its token, got %+v", ext)
+	}
+	all, err := st.ListServerNodes("")
+	if err != nil {
+		t.Fatalf("ListServerNodes: %v", err)
+	}
+	if len(all) != 3 {
+		t.Fatalf("want 3 nodes total, got %d", len(all))
+	}
+}

@@ -176,8 +176,12 @@ type ServerNode struct {
 	Kind         string `gorm:"column:kind;not null;index"`
 	Name         string `gorm:"column:name;not null"`
 	GRPCEndpoint string `gorm:"column:grpc_endpoint;not null"`
-	CAPin        []byte `gorm:"column:ca_pin"`
-	Status       string `gorm:"column:status;not null"`
+	// GRPCToken is the bearer credential the node's Relay/Panel gRPC checks. Empty
+	// for a panel-local node (the collector falls back to the configured relay
+	// token); set for an admin's own external endpoint.
+	GRPCToken string `gorm:"column:grpc_token;not null;default:''"`
+	CAPin     []byte `gorm:"column:ca_pin"`
+	Status    string `gorm:"column:status;not null"`
 	// OwnerAdminID is 0 for a panel-local node the owner deploys and manages
 	// (its provisioning and stats are owner-only), or the id of the admin who
 	// registered it as their own external vk-turn-proxy / 3x-ui gRPC endpoint.

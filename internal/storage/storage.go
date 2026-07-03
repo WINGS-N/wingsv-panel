@@ -183,6 +183,7 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE clients ADD COLUMN has_root_access INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE clients ADD COLUMN vk_oauth_authorized INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE server_nodes ADD COLUMN grpc_token TEXT NOT NULL DEFAULT ''`,
 	} {
 		if _, err := db.Exec(alter); err != nil {
 			if !strings.Contains(err.Error(), "duplicate column name") {
