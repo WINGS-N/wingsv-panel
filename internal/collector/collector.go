@@ -36,7 +36,12 @@ type Relay interface {
 
 // Options tune the poll cadence and retention. Zero values fall back to defaults.
 type Options struct {
-	Interval         time.Duration
+	Interval time.Duration
+	// PersistInterval decouples how often a full time-series sample plus the flow
+	// and connection snapshots are written from how often node status is polled.
+	// Status (online/offline) is refreshed every Interval; the heavier rows are
+	// written every PersistInterval, so a fast poll cadence does not bloat the DB.
+	PersistInterval  time.Duration
 	Timeout          time.Duration
 	TrafficRetention time.Duration
 	ConnRetention    time.Duration
@@ -65,12 +70,18 @@ type Collector struct {
 	// failures counts consecutive poll failures per node for offline hysteresis.
 	// Only the single Run goroutine touches it, so no lock is needed.
 	failures map[string]int
+	// lastPersist gates the heavy time-series/flow/connection writes so they run
+	// on PersistInterval rather than every poll.
+	lastPersist time.Time
 }
 
 // New builds a collector, filling any unset option with its default.
 func New(store Store, newRelay RelayFactory, opts Options) *Collector {
 	if opts.Interval <= 0 {
 		opts.Interval = 3 * time.Second
+	}
+	if opts.PersistInterval <= 0 {
+		opts.PersistInterval = 15 * time.Second
 	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = 5 * time.Second
@@ -112,21 +123,31 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 		log.Printf("collector: list nodes: %v", err)
 		return
 	}
+	now := c.opts.Now()
+	// Write the heavy rows only every PersistInterval; every cycle still refreshes
+	// each node's online/offline status cheaply.
+	persist := now.Sub(c.lastPersist) >= c.opts.PersistInterval
+	if persist {
+		c.lastPersist = now
+	}
 	for _, node := range nodes {
-		if err := c.collectNode(ctx, node); err != nil {
+		if err := c.collectNode(ctx, node, persist); err != nil {
 			log.Printf("collector: node %s (%s): %v", node.ID, node.GRPCEndpoint, err)
 		}
 	}
-	now := c.opts.Now()
-	if err := c.store.PruneTrafficBefore(now.Add(-c.opts.TrafficRetention)); err != nil {
-		log.Printf("collector: prune traffic: %v", err)
-	}
-	if err := c.store.PruneConnectionsBefore(now.Add(-c.opts.ConnRetention)); err != nil {
-		log.Printf("collector: prune connections: %v", err)
+	// Pruning only needs to run on the persist cycle - nothing new accumulates
+	// between persists, and a DELETE scan every poll is wasteful on sqlite.
+	if persist {
+		if err := c.store.PruneTrafficBefore(now.Add(-c.opts.TrafficRetention)); err != nil {
+			log.Printf("collector: prune traffic: %v", err)
+		}
+		if err := c.store.PruneConnectionsBefore(now.Add(-c.opts.ConnRetention)); err != nil {
+			log.Printf("collector: prune connections: %v", err)
+		}
 	}
 }
 
-func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode) error {
+func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode, persist bool) error {
 	ctx, cancel := context.WithTimeout(ctx, c.opts.Timeout)
 	defer cancel()
 
@@ -143,6 +164,11 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode) er
 		return err
 	}
 	c.failures[node.ID] = 0
+	// Between persist cycles just keep the status fresh; skip the heavier RPCs and
+	// writes so a fast poll cadence stays cheap.
+	if !persist {
+		return c.store.UpdateServerNodeStatus(node.ID, "online", now)
+	}
 	stats, err := relay.FlowStats(ctx, node)
 	if err != nil {
 		return err

@@ -557,8 +557,15 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 		return relayclient.New(token)
 	}
+	// Postgres/MariaDB persist every poll for the freshest charts; sqlite's single
+	// writer file gets a slower persist cadence so a fast poll does not bloat it.
+	persistInterval := 3 * time.Second
+	if store.IsSQLite() {
+		persistInterval = 15 * time.Second
+	}
 	go collector.New(store, relayFactory, collector.Options{
-		Interval: 3 * time.Second,
+		Interval:        3 * time.Second,
+		PersistInterval: persistInterval,
 		OnCollected: func(string) {
 			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
 		},

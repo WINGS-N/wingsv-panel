@@ -58,6 +58,13 @@ type Store struct {
 	driver Driver
 }
 
+// Driver reports the active database backend, so callers can tune behaviour that
+// matters for sqlite's single-writer file (e.g. how often to persist samples).
+func (s *Store) Driver() Driver { return s.driver }
+
+// IsSQLite reports whether the store is backed by the single-writer sqlite file.
+func (s *Store) IsSQLite() bool { return s.driver == DriverSQLite }
+
 // rebind rewrites `?` placeholders to `$1, $2, ...` for PostgreSQL; sqlite and
 // mariadb use `?` natively so the query is returned unchanged. The raw queries
 // never contain a literal `?`, so a positional counter is sufficient.
