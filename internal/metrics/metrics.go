@@ -21,6 +21,7 @@ import (
 // implements it.
 type NodeStatser interface {
 	NodeStatus(ctx context.Context, node dbmodel.ServerNode) (relayclient.RelayStatus, error)
+	FlowStats(ctx context.Context, node dbmodel.ServerNode) (relayclient.FlowStats, error)
 }
 
 // Hub reports live WebSocket connection counts.
@@ -47,6 +48,10 @@ type Collector struct {
 	nodeSessions  *prometheus.Desc
 	nodeRx        *prometheus.Desc
 	nodeTx        *prometheus.Desc
+	nodeStreams   *prometheus.Desc
+	nodeAvgLife   *prometheus.Desc
+	nodeTotal     *prometheus.Desc
+	nodeByProto   *prometheus.Desc
 }
 
 func NewCollector(store *storage.Store, hub Hub, nodes NodeStatser) *Collector {
@@ -69,6 +74,10 @@ func NewCollector(store *storage.Store, hub Hub, nodes NodeStatser) *Collector {
 		nodeSessions:  d("wingsv_vkturn_active_sessions", "Active relay sessions on the node.", "node"),
 		nodeRx:        d("wingsv_vkturn_rx_bytes", "Aggregate peer RX bytes on the node.", "node"),
 		nodeTx:        d("wingsv_vkturn_tx_bytes", "Aggregate peer TX bytes on the node.", "node"),
+		nodeStreams:   d("wingsv_vkturn_active_streams", "Active relay streams on the node.", "node"),
+		nodeAvgLife:   d("wingsv_vkturn_avg_session_lifetime_seconds", "Average closed-session lifetime.", "node"),
+		nodeTotal:     d("wingsv_vkturn_sessions_total", "Total relay sessions since start.", "node"),
+		nodeByProto:   d("wingsv_vkturn_streams_by_protocol", "Active relay streams by protocol.", "node", "protocol"),
 	}
 }
 
@@ -76,6 +85,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, desc := range []*prometheus.Desc{
 		c.clientsTotal, c.clientsOnline, c.adminsTotal, c.wsClients, c.wsAdmins,
 		c.serverNodes, c.nodeUp, c.nodePeers, c.nodeSessions, c.nodeRx, c.nodeTx,
+		c.nodeStreams, c.nodeAvgLife, c.nodeTotal, c.nodeByProto,
 	} {
 		ch <- desc
 	}
@@ -128,6 +138,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		gauge(c.nodeSessions, float64(st.ActiveSessions), node.ID)
 		ch <- prometheus.MustNewConstMetric(c.nodeRx, prometheus.CounterValue, float64(st.RxBytes), node.ID)
 		ch <- prometheus.MustNewConstMetric(c.nodeTx, prometheus.CounterValue, float64(st.TxBytes), node.ID)
+
+		fctx, fcancel := context.WithTimeout(context.Background(), c.timeout)
+		fs, fsErr := c.nodes.FlowStats(fctx, node)
+		fcancel()
+		if fsErr == nil {
+			gauge(c.nodeStreams, float64(fs.ActiveStreams), node.ID)
+			gauge(c.nodeAvgLife, fs.AvgSessionLifetimeSeconds, node.ID)
+			ch <- prometheus.MustNewConstMetric(c.nodeTotal, prometheus.CounterValue, float64(fs.TotalSessions), node.ID)
+			for proto, n := range fs.StreamsByProtocol {
+				gauge(c.nodeByProto, float64(n), node.ID, proto)
+			}
+		}
 	}
 }
 

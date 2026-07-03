@@ -94,6 +94,87 @@ type RelayStatus struct {
 	TxBytes        uint64
 }
 
+// Flow is one active relay stream on a node.
+type Flow struct {
+	SessionID   string
+	StreamID    uint32
+	ClientIP    string
+	Remote      string
+	Protocol    string
+	Version     uint32
+	RxBytes     uint64
+	TxBytes     uint64
+	RxRate      uint64
+	TxRate      uint64
+	StartedUnix int64
+}
+
+// FlowStats aggregates a node's relay activity.
+type FlowStats struct {
+	ActiveStreams             uint32
+	ActiveSessions            uint32
+	TotalSessions             uint64
+	AvgSessionLifetimeSeconds float64
+	ServerRxBytes             uint64
+	ServerTxBytes             uint64
+	StreamsByProtocol         map[string]uint32
+}
+
+// ListFlows returns the node's active relay streams (client IP:port, session and
+// stream ids, per-flow traffic) for the panel's flow view.
+func (p *Provisioner) ListFlows(ctx context.Context, node dbmodel.ServerNode) ([]Flow, error) {
+	conn, err := p.dial(node)
+	if err != nil {
+		return nil, fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	resp, err := relaypb.NewRelayClient(conn).ListFlows(p.authCtx(ctx), &relaypb.ListFlowsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Flow, 0, len(resp.GetFlows()))
+	for _, f := range resp.GetFlows() {
+		out = append(out, Flow{
+			SessionID:   f.GetSessionId(),
+			StreamID:    f.GetStreamId(),
+			ClientIP:    f.GetClientIp(),
+			Remote:      f.GetRemote(),
+			Protocol:    f.GetProtocol(),
+			Version:     f.GetVersion(),
+			RxBytes:     f.GetRxBytes(),
+			TxBytes:     f.GetTxBytes(),
+			RxRate:      f.GetRxRate(),
+			TxRate:      f.GetTxRate(),
+			StartedUnix: f.GetStartedUnix(),
+		})
+	}
+	return out, nil
+}
+
+// FlowStats returns a node's aggregate relay activity.
+func (p *Provisioner) FlowStats(ctx context.Context, node dbmodel.ServerNode) (FlowStats, error) {
+	conn, err := p.dial(node)
+	if err != nil {
+		return FlowStats{}, fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	st, err := relaypb.NewRelayClient(conn).GetFlowStats(p.authCtx(ctx), &relaypb.GetFlowStatsRequest{})
+	if err != nil {
+		return FlowStats{}, err
+	}
+	return FlowStats{
+		ActiveStreams:             st.GetActiveStreams(),
+		ActiveSessions:            st.GetActiveSessions(),
+		TotalSessions:             st.GetTotalSessions(),
+		AvgSessionLifetimeSeconds: st.GetAvgSessionLifetimeSeconds(),
+		ServerRxBytes:             st.GetServerRxBytes(),
+		ServerTxBytes:             st.GetServerTxBytes(),
+		StreamsByProtocol:         st.GetStreamsByProtocol(),
+	}, nil
+}
+
 // NodeStatus queries a node's Relay API for its status and aggregate peer
 // traffic.
 func (p *Provisioner) NodeStatus(ctx context.Context, node dbmodel.ServerNode) (RelayStatus, error) {

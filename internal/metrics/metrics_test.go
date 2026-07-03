@@ -28,6 +28,13 @@ func (f fakeNodes) NodeStatus(context.Context, dbmodel.ServerNode) (relayclient.
 	return f.st, f.err
 }
 
+func (f fakeNodes) FlowStats(context.Context, dbmodel.ServerNode) (relayclient.FlowStats, error) {
+	return relayclient.FlowStats{
+		ActiveStreams: 4, TotalSessions: 9, AvgSessionLifetimeSeconds: 30,
+		StreamsByProtocol: map[string]uint32{"mu": 3, "mainline": 1},
+	}, nil
+}
+
 func TestCollectorExposition(t *testing.T) {
 	st, err := storage.Open(storage.Options{Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "m.db")})
 	if err != nil {
@@ -71,6 +78,10 @@ func TestCollectorExposition(t *testing.T) {
 		`wingsv_vkturn_active_sessions{node="n1"} 3`,
 		`wingsv_vkturn_rx_bytes{node="n1"} 100`,
 		`wingsv_vkturn_tx_bytes{node="n1"} 200`,
+		`wingsv_vkturn_active_streams{node="n1"} 4`,
+		`wingsv_vkturn_avg_session_lifetime_seconds{node="n1"} 30`,
+		`wingsv_vkturn_sessions_total{node="n1"} 9`,
+		`wingsv_vkturn_streams_by_protocol{node="n1",protocol="mu"} 3`,
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("metrics output missing %q", want)

@@ -23,10 +23,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Relay_GetStatus_FullMethodName  = "/vkturn.control.v1.Relay/GetStatus"
-	Relay_ListPeers_FullMethodName  = "/vkturn.control.v1.Relay/ListPeers"
-	Relay_CreatePeer_FullMethodName = "/vkturn.control.v1.Relay/CreatePeer"
-	Relay_DeletePeer_FullMethodName = "/vkturn.control.v1.Relay/DeletePeer"
+	Relay_GetStatus_FullMethodName    = "/vkturn.control.v1.Relay/GetStatus"
+	Relay_ListPeers_FullMethodName    = "/vkturn.control.v1.Relay/ListPeers"
+	Relay_CreatePeer_FullMethodName   = "/vkturn.control.v1.Relay/CreatePeer"
+	Relay_DeletePeer_FullMethodName   = "/vkturn.control.v1.Relay/DeletePeer"
+	Relay_ListFlows_FullMethodName    = "/vkturn.control.v1.Relay/ListFlows"
+	Relay_GetFlowStats_FullMethodName = "/vkturn.control.v1.Relay/GetFlowStats"
 )
 
 // RelayClient is the client API for Relay service.
@@ -37,6 +39,8 @@ type RelayClient interface {
 	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*Peers, error)
 	CreatePeer(ctx context.Context, in *CreatePeerRequest, opts ...grpc.CallOption) (*Peer, error)
 	DeletePeer(ctx context.Context, in *DeletePeerRequest, opts ...grpc.CallOption) (*DeletePeerResponse, error)
+	ListFlows(ctx context.Context, in *ListFlowsRequest, opts ...grpc.CallOption) (*Flows, error)
+	GetFlowStats(ctx context.Context, in *GetFlowStatsRequest, opts ...grpc.CallOption) (*FlowStats, error)
 }
 
 type relayClient struct {
@@ -87,6 +91,26 @@ func (c *relayClient) DeletePeer(ctx context.Context, in *DeletePeerRequest, opt
 	return out, nil
 }
 
+func (c *relayClient) ListFlows(ctx context.Context, in *ListFlowsRequest, opts ...grpc.CallOption) (*Flows, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Flows)
+	err := c.cc.Invoke(ctx, Relay_ListFlows_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *relayClient) GetFlowStats(ctx context.Context, in *GetFlowStatsRequest, opts ...grpc.CallOption) (*FlowStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FlowStats)
+	err := c.cc.Invoke(ctx, Relay_GetFlowStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RelayServer is the server API for Relay service.
 // All implementations must embed UnimplementedRelayServer
 // for forward compatibility.
@@ -95,6 +119,8 @@ type RelayServer interface {
 	ListPeers(context.Context, *ListPeersRequest) (*Peers, error)
 	CreatePeer(context.Context, *CreatePeerRequest) (*Peer, error)
 	DeletePeer(context.Context, *DeletePeerRequest) (*DeletePeerResponse, error)
+	ListFlows(context.Context, *ListFlowsRequest) (*Flows, error)
+	GetFlowStats(context.Context, *GetFlowStatsRequest) (*FlowStats, error)
 	mustEmbedUnimplementedRelayServer()
 }
 
@@ -116,6 +142,12 @@ func (UnimplementedRelayServer) CreatePeer(context.Context, *CreatePeerRequest) 
 }
 func (UnimplementedRelayServer) DeletePeer(context.Context, *DeletePeerRequest) (*DeletePeerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePeer not implemented")
+}
+func (UnimplementedRelayServer) ListFlows(context.Context, *ListFlowsRequest) (*Flows, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListFlows not implemented")
+}
+func (UnimplementedRelayServer) GetFlowStats(context.Context, *GetFlowStatsRequest) (*FlowStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFlowStats not implemented")
 }
 func (UnimplementedRelayServer) mustEmbedUnimplementedRelayServer() {}
 func (UnimplementedRelayServer) testEmbeddedByValue()               {}
@@ -210,6 +242,42 @@ func _Relay_DeletePeer_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Relay_ListFlows_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListFlowsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RelayServer).ListFlows(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Relay_ListFlows_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RelayServer).ListFlows(ctx, req.(*ListFlowsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Relay_GetFlowStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFlowStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RelayServer).GetFlowStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Relay_GetFlowStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RelayServer).GetFlowStats(ctx, req.(*GetFlowStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Relay_ServiceDesc is the grpc.ServiceDesc for Relay service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +300,14 @@ var Relay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeletePeer",
 			Handler:    _Relay_DeletePeer_Handler,
+		},
+		{
+			MethodName: "ListFlows",
+			Handler:    _Relay_ListFlows_Handler,
+		},
+		{
+			MethodName: "GetFlowStats",
+			Handler:    _Relay_GetFlowStats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
