@@ -373,6 +373,7 @@ func (h *Handler) buildClientLink(
 ) (string, error) {
 	cfg := &wingsvpb.Config{Ver: 1}
 	cfg.Turn = h.managedTurn(clientID, name, token, vkTurnEndpoint)
+	markVkTurnBackend(cfg)
 	if remoteControl {
 		cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN
 		cfg.Guardian = &wingsvpb.Guardian{
@@ -410,6 +411,31 @@ func (h *Handler) managedTurn(clientID, name string, token []byte, vkTurnEndpoin
 // (server-issued wg config), as opposed to a manually configured one.
 func isManagedProfile(p *wingsvpb.TurnProfile) bool {
 	return p != nil && p.WgProvisioned
+}
+
+// markVkTurnBackend stamps the top-level backend + tunnel mode on a config that
+// carries a managed VK-TURN profile. Without this the app leaves config.backend
+// UNSPECIFIED, treats the import as backend-preserving (updateBackendType=false)
+// and never switches to VK TURN, so it keeps connecting on the old backend and
+// never runs the DTLS provisioning exchange.
+func markVkTurnBackend(cfg *wingsvpb.Config) {
+	if cfg == nil || cfg.Turn == nil {
+		return
+	}
+	hasManaged := false
+	for _, p := range cfg.Turn.Profiles {
+		if isManagedProfile(p) {
+			hasManaged = true
+			break
+		}
+	}
+	if !hasManaged {
+		return
+	}
+	cfg.Backend = wingsvpb.BackendType_BACKEND_TYPE_VK_TURN
+	if cfg.Turn.TunnelMode == wingsvpb.TunnelMode_TUNNEL_MODE_UNSPECIFIED {
+		cfg.Turn.TunnelMode = wingsvpb.TunnelMode_TUNNEL_MODE_WIREGUARD
+	}
 }
 
 // existingManagedEndpoint returns the vk-turn endpoint of a managed profile already
@@ -508,6 +534,7 @@ func (h *Handler) applyProvisionToConfig(admin storage.Admin, client storage.Cli
 		return errors.New("no vk-turn endpoint: select a vk-turn server")
 	}
 	cfg.Turn = applyManagedTurnProfile(cfg.Turn, client.ID, client.Name, token, endpoint)
+	markVkTurnBackend(cfg)
 	return nil
 }
 
