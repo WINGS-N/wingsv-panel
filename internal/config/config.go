@@ -35,6 +35,7 @@ type Config struct {
 }
 
 func Load() Config {
+	fileVals = loadConfigFile()
 	return Config{
 		ListenAddr:         getEnv("LISTEN_ADDR", ":8080"),
 		PublicBaseURL:      strings.TrimRight(getEnv("PUBLIC_BASE_URL", "https://v.wingsnet.org"), "/"),
@@ -59,8 +60,72 @@ func Load() Config {
 	}
 }
 
+// fileVals holds values read from the on-disk config file (a flat KEY = "value"
+// TOML subset), refreshed by Load. Precedence is env > file > default: an env var
+// always wins, the file fills gaps, then the hard-coded fallback.
+var fileVals = map[string]string{}
+
+// loadConfigFile reads /etc/wings/panel/config.toml (override with the
+// WINGS_PANEL_CONFIG env var). It parses only flat KEY = value lines with the same
+// KEY names as the env vars; nested tables and arrays are not supported - this is
+// a standalone-binary convenience, not a full TOML config. A missing file yields
+// an empty map so env/defaults still apply.
+func loadConfigFile() map[string]string {
+	path := strings.TrimSpace(os.Getenv("WINGS_PANEL_CONFIG"))
+	if path == "" {
+		path = "/etc/wings/panel/config.toml"
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return map[string]string{}
+	}
+	out := map[string]string{}
+	for _, raw := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		eq := strings.IndexByte(line, '=')
+		if eq < 0 {
+			continue
+		}
+		key := strings.TrimSpace(line[:eq])
+		if key == "" {
+			continue
+		}
+		out[key] = unquoteTOMLValue(strings.TrimSpace(line[eq+1:]))
+	}
+	return out
+}
+
+// unquoteTOMLValue strips surrounding quotes from a quoted value, or drops a
+// trailing inline comment from a bare value.
+func unquoteTOMLValue(v string) string {
+	if len(v) >= 2 && (v[0] == '"' || v[0] == '\'') {
+		if end := strings.IndexByte(v[1:], v[0]); end >= 0 {
+			return v[1 : 1+end]
+		}
+	}
+	if hash := strings.IndexByte(v, '#'); hash >= 0 {
+		v = v[:hash]
+	}
+	return strings.TrimSpace(v)
+}
+
+// lookup returns a setting from the environment (highest priority) or the config
+// file, or "" when neither has it.
+func lookup(key string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	if value, ok := fileVals[key]; ok {
+		return strings.TrimSpace(value)
+	}
+	return ""
+}
+
 func parseBoolEnv(key string, fallback bool) bool {
-	value := strings.TrimSpace(os.Getenv(key))
+	value := lookup(key)
 	if value == "" {
 		return fallback
 	}
@@ -74,15 +139,14 @@ func parseBoolEnv(key string, fallback bool) bool {
 }
 
 func getEnv(key string, fallback string) string {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return fallback
+	if value := lookup(key); value != "" {
+		return value
 	}
-	return value
+	return fallback
 }
 
 func ParseIntEnv(key string, fallback int) int {
-	value := strings.TrimSpace(os.Getenv(key))
+	value := lookup(key)
 	if value == "" {
 		return fallback
 	}
