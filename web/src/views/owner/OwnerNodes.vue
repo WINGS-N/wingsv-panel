@@ -6,21 +6,14 @@
     <SamsungSectionLoader v-else-if="!traffic" />
     <div v-if="traffic" class="admin-stats">
       <div class="stat">
-        <span class="stat-kicker">Трафик за 24ч</span>
-        <span class="stat-value">{{ formatBytes(traffic.totals.rx_24h + traffic.totals.tx_24h) }}</span>
-        <span class="stat-meta">
-          ↓ {{ formatBytes(traffic.totals.rx_24h) }} · ↑ {{ formatBytes(traffic.totals.tx_24h) }}
-        </span>
-      </div>
-      <div class="stat">
         <span class="stat-kicker">Активные сессии</span>
         <span class="stat-value">{{ traffic.totals.active_sessions }}</span>
         <span class="stat-meta">{{ traffic.totals.active_streams }} потоков</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Пиры</span>
+        <span class="stat-kicker" title="Пир — это WireGuard-подключение клиента, заведённое на ноде"> Пиры </span>
         <span class="stat-value">{{ traffic.totals.peer_count }}</span>
-        <span class="stat-meta">на {{ traffic.totals.nodes }} нодах</span>
+        <span class="stat-meta">WG-конфиги клиентов на {{ traffic.totals.nodes }} нодах</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">Ноды онлайн</span>
@@ -30,7 +23,17 @@
     </div>
   </section>
 
-  <SamsungCard class="mt-6" title="Трафик" subtitle="Приём и передача за последние 24 часа.">
+  <SamsungCard class="mt-6" title="Трафик" subtitle="Приём и передача по нодам.">
+    <template #actions>
+      <OneuiRadioGroup v-model="trafficRange" :options="rangeOptions" variant="pill" @update:model-value="loadAll" />
+    </template>
+    <div v-if="traffic" class="traffic-periods mt-4">
+      <div v-for="p in periods" :key="p.key" class="traffic-period">
+        <span class="traffic-period-label">{{ p.label }}</span>
+        <span class="traffic-period-value">{{ formatBytes(p.rx + p.tx) }}</span>
+        <span class="traffic-period-meta">↓ {{ formatBytes(p.rx) }} · ↑ {{ formatBytes(p.tx) }}</span>
+      </div>
+    </div>
     <TrafficChart :series="traffic?.series || []" class="mt-4" />
   </SamsungCard>
 
@@ -179,6 +182,22 @@ function nodeKindLabel(kind) {
 
 const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id, n.name || n.id])));
 
+const trafficRange = ref('24h');
+const rangeOptions = [
+  { value: '24h', label: '24ч' },
+  { value: '7d', label: '7д' },
+  { value: 'month', label: 'месяц' },
+];
+const periods = computed(() => {
+  const t = traffic.value?.totals || {};
+  return [
+    { key: '1h', label: 'за час', rx: t.rx_1h || 0, tx: t.tx_1h || 0 },
+    { key: '24h', label: 'за 24ч', rx: t.rx_24h || 0, tx: t.tx_24h || 0 },
+    { key: '7d', label: 'за неделю', rx: t.rx_7d || 0, tx: t.tx_7d || 0 },
+    { key: 'all', label: 'за всё время', rx: t.rx_all || 0, tx: t.tx_all || 0 },
+  ];
+});
+
 const copiedId = ref('');
 async function copyId(id) {
   try {
@@ -220,7 +239,7 @@ async function fetchJSON(path) {
 async function loadAll() {
   try {
     const [t, n, f, c] = await Promise.all([
-      fetchJSON('/api/owner/stats/traffic'),
+      fetchJSON(`/api/owner/stats/traffic?range=${trafficRange.value}`),
       fetchJSON('/api/owner/nodes'),
       fetchJSON('/api/owner/stats/flows'),
       fetchJSON(`/api/owner/stats/connections?limit=${connLimit}&offset=${connOffset.value}`),
@@ -360,5 +379,30 @@ onBeforeUnmount(() => {
 .node-id-copied {
   font-size: 12px;
   color: #5ecb9e;
+}
+.traffic-periods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+.traffic-period {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(252, 252, 252, 0.04);
+}
+.traffic-period-label {
+  font-size: 12px;
+  color: rgba(252, 252, 252, 0.55);
+}
+.traffic-period-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.traffic-period-meta {
+  font-size: 12px;
+  color: rgba(252, 252, 252, 0.5);
 }
 </style>
