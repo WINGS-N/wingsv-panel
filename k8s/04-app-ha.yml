@@ -1,16 +1,27 @@
+# Multi-replica HA variant of the app Deployment. Apply this instead of
+# 04-app.yml when running the panel stateless behind a shared Postgres database.
+#
+# Requirements (see docs/HA.md):
+#   - The config map sets DB_KIND=pgsql and DB_DSN to the shared Postgres. That
+#     database is the single source of truth AND the cross-replica bus
+#     (LISTEN/NOTIFY), so admin fanout and device ConfigPush reach whichever
+#     replica holds a given WS. No PVC is mounted: the pods are stateless.
+#   - The pinned CA (for SPKI-pin deploys) is a shared Secret so every replica
+#     serves the same pin; leaf certs rotate freely under it.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: app
   namespace: v-wingsnet
 spec:
-  replicas: 1
-  # Single-node default: SQLite has a single writer; with a ReadWriteOnce PVC the
-  # rolling strategy would deadlock the new pod waiting on the old one, so Recreate
-  # forces the old pod to release the volume first. For a stateless multi-replica
-  # deploy apply 04-app-ha.yml instead (shared Postgres + the LISTEN/NOTIFY bus).
+  replicas: 2
+  # Postgres has no single-writer limit and the bus is external to the pods, so a
+  # rolling update brings replicas up/down without a stateful handoff.
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: app
@@ -59,24 +70,3 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
-          volumeMounts:
-            - name: data
-              mountPath: /data
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: app-data
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: app-service
-  namespace: v-wingsnet
-spec:
-  selector:
-    app: app
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
-  type: ClusterIP
