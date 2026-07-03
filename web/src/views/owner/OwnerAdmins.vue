@@ -75,6 +75,16 @@
       />
     </div>
 
+    <h3 class="admin-section-subtitle mt-6">Внешние gRPC администраторов</h3>
+    <div class="keyval mt-2">
+      <span class="keyval-label">
+        Разрешить админам подключать свои VK TURN / 3x-ui эндпоинты и видеть их статистику
+      </span>
+      <span class="keyval-value">
+        <OneuiSwitch :model-value="allowAdminGRPC" @update:model-value="setAllowAdminGRPC" />
+      </span>
+    </div>
+
     <div v-if="registrationState.mode === 'invite'" class="mt-4">
       <div class="actions-row">
         <SamsungButton variant="secondary" @click="onCreateInvite">
@@ -177,6 +187,7 @@ import { Clock, Copy, Eye, KeyRound, Plus, Trash2, X, Infinity as InfinityIcon }
 import { registrationState, refreshRegistrationStatus, avatarUrlFor } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
+import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
@@ -188,6 +199,7 @@ const admins = ref([]);
 const adminsLoaded = ref(false);
 const invites = ref([]);
 const loadError = ref('');
+const allowAdminGRPC = ref(false);
 const showCreate = ref(false);
 const newUsername = ref('');
 const newPassword = ref('');
@@ -339,6 +351,31 @@ async function onResetSubmit() {
   }
 }
 
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/owner/settings', { credentials: 'include' });
+    if (res.ok) {
+      const body = await res.json();
+      allowAdminGRPC.value = !!body.allow_admin_grpc;
+    }
+  } catch {}
+}
+
+async function setAllowAdminGRPC(value) {
+  try {
+    const res = await fetch('/api/owner/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allow_admin_grpc: value }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    allowAdminGRPC.value = value;
+  } catch (err) {
+    loadError.value = err.message;
+  }
+}
+
 async function setRegistrationMode(mode) {
   if (registrationState.value.mode === mode) return;
   try {
@@ -397,6 +434,7 @@ onMounted(() => {
   refreshRegistrationStatus();
   loadAdmins();
   loadInvites();
+  loadSettings();
 });
 </script>
 
