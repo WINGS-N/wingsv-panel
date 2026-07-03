@@ -51,6 +51,17 @@ func (h *Handler) handleNodes(w http.ResponseWriter, r *http.Request, admin stor
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		// The owner also owns the panel-local nodes (owner_admin_id 0) added in the
+		// owner console, so surface them here as their servers too.
+		if auth.IsOwner(admin) {
+			// owner_admin_id 0 marks the panel-local nodes owned by the owner.
+			local, lerr := h.store.ListServerNodesByOwner("", 0)
+			if lerr != nil {
+				writeError(w, http.StatusInternalServerError, lerr.Error())
+				return
+			}
+			nodes = append(nodes, local...)
+		}
 		out := make([]adminNodeView, 0, len(nodes))
 		for _, n := range nodes {
 			out = append(out, h.nodeToView(n))
