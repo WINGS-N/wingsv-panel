@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 //go:embed schema.sql
@@ -50,8 +53,43 @@ func NormalizeDriver(s string) (Driver, error) {
 }
 
 type Store struct {
-	gdb *gorm.DB
-	db  *sql.DB
+	gdb    *gorm.DB
+	db     *sql.DB
+	driver Driver
+}
+
+// rebind rewrites `?` placeholders to `$1, $2, ...` for PostgreSQL; sqlite and
+// mariadb use `?` natively so the query is returned unchanged. The raw queries
+// never contain a literal `?`, so a positional counter is sufficient.
+func (s *Store) rebind(query string) string {
+	if s.driver != DriverPostgres {
+		return query
+	}
+	var b strings.Builder
+	b.Grow(len(query) + 8)
+	n := 0
+	for i := 0; i < len(query); i++ {
+		if query[i] == '?' {
+			n++
+			b.WriteByte('$')
+			b.WriteString(strconv.Itoa(n))
+			continue
+		}
+		b.WriteByte(query[i])
+	}
+	return b.String()
+}
+
+func (s *Store) query(q string, args ...any) (*sql.Rows, error) {
+	return s.db.Query(s.rebind(q), args...)
+}
+
+func (s *Store) queryRow(q string, args ...any) *sql.Row {
+	return s.db.QueryRow(s.rebind(q), args...)
+}
+
+func (s *Store) exec(q string, args ...any) (sql.Result, error) {
+	return s.db.Exec(s.rebind(q), args...)
 }
 
 // Open connects to the configured backend, applies the schema, and runs the
@@ -105,11 +143,19 @@ func Open(opts Options) (*Store, error) {
 		_ = sqlDB.Close()
 		return nil, err
 	}
+	// sqlite keeps its embedded schema.sql (existing DBs upgrade in place); pgsql
+	// and mariadb have no hand-written DDL, so dbmodel is their schema source.
+	if driver != DriverSQLite {
+		if err := dbmodel.AutoMigrate(gdb); err != nil {
+			_ = sqlDB.Close()
+			return nil, fmt.Errorf("storage: automigrate %s: %w", driver, err)
+		}
+	}
 	if err := migrateAdminUsernamesToLower(gdb); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("storage: migrate admin usernames: %w", err)
 	}
-	return &Store{gdb: gdb, db: sqlDB}, nil
+	return &Store{gdb: gdb, db: sqlDB, driver: driver}, nil
 }
 
 // applySchema creates tables and adds any missing columns. sqlite is fully

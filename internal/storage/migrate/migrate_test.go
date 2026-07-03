@@ -25,7 +25,7 @@ func TestMigrateSqliteRoundtrip(t *testing.T) {
 	client := dbmodel.Client{
 		ID: "c1", OwnerAdminID: admin.ID, Name: "dev", TokenHash: "th", TokenPlain: []byte("raw"),
 		HWID: "hw", SyncMode: "always", PeriodicIntervalMinutes: 30, CreatedAtUnix: 333,
-		LogRuntimeEnabled: true, HasRootAccess: true,
+		LogRuntimeEnabled: 1, HasRootAccess: 1,
 	}
 	if err := g.Create(&client).Error; err != nil {
 		t.Fatalf("seed client: %v", err)
@@ -64,7 +64,7 @@ func TestMigrateSqliteRoundtrip(t *testing.T) {
 		t.Fatalf("read client: %v", err)
 	}
 	if gotClient.OwnerAdminID != admin.ID || gotClient.Name != "dev" || gotClient.CreatedAtUnix != 333 ||
-		!gotClient.LogRuntimeEnabled || !gotClient.HasRootAccess || string(gotClient.TokenPlain) != "raw" {
+		gotClient.LogRuntimeEnabled != 1 || gotClient.HasRootAccess != 1 || string(gotClient.TokenPlain) != "raw" {
 		t.Fatalf("client not copied faithfully: %+v", gotClient)
 	}
 	var gotCfg dbmodel.ClientConfig

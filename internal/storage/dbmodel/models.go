@@ -11,12 +11,12 @@ type Admin struct {
 	ID                 int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	Username           string `gorm:"column:username;uniqueIndex;not null"`
 	PasswordHash       string `gorm:"column:password_hash;not null"`
-	MustChangePassword bool   `gorm:"column:must_change_password;not null"`
-	Role               string `gorm:"column:role;not null"`
-	LastLoginAt        int64  `gorm:"column:last_login_at;not null"`
-	AvatarMime         string `gorm:"column:avatar_mime;not null"`
+	MustChangePassword int64  `gorm:"column:must_change_password;not null;default:0"`
+	Role               string `gorm:"column:role;not null;default:'admin'"`
+	LastLoginAt        int64  `gorm:"column:last_login_at;not null;default:0"`
+	AvatarMime         string `gorm:"column:avatar_mime;not null;default:''"`
 	AvatarPNG          []byte `gorm:"column:avatar_png"`
-	AvatarVersion      int64  `gorm:"column:avatar_version;not null"`
+	AvatarVersion      int64  `gorm:"column:avatar_version;not null;default:0"`
 	CreatedAtUnix      int64  `gorm:"column:created_at;not null"`
 	UpdatedAtUnix      int64  `gorm:"column:updated_at;not null"`
 }
@@ -38,21 +38,21 @@ type Client struct {
 	Name                    string `gorm:"column:name;not null"`
 	TokenHash               string `gorm:"column:token_hash;not null"`
 	TokenPlain              []byte `gorm:"column:token_plain"`
-	HWID                    string `gorm:"column:hwid;not null"`
-	DeviceName              string `gorm:"column:device_name;not null"`
-	DeviceModel             string `gorm:"column:device_model;not null"`
-	OSVersion               string `gorm:"column:os_version;not null"`
-	AppVersion              string `gorm:"column:app_version;not null"`
+	HWID                    string `gorm:"column:hwid;not null;default:''"`
+	DeviceName              string `gorm:"column:device_name;not null;default:''"`
+	DeviceModel             string `gorm:"column:device_model;not null;default:''"`
+	OSVersion               string `gorm:"column:os_version;not null;default:''"`
+	AppVersion              string `gorm:"column:app_version;not null;default:''"`
 	CreatedAtUnix           int64  `gorm:"column:created_at;not null"`
-	LastSeenAt              int64  `gorm:"column:last_seen_at;not null"`
-	Online                  bool   `gorm:"column:online;not null"`
-	LogRuntimeEnabled       bool   `gorm:"column:log_runtime_enabled;not null"`
-	LogProxyEnabled         bool   `gorm:"column:log_proxy_enabled;not null"`
-	LogXrayEnabled          bool   `gorm:"column:log_xray_enabled;not null"`
-	SyncMode                string `gorm:"column:sync_mode;not null"`
-	PeriodicIntervalMinutes int64  `gorm:"column:periodic_interval_minutes;not null"`
-	HasRootAccess           bool   `gorm:"column:has_root_access;not null"`
-	VKOAuthAuthorized       bool   `gorm:"column:vk_oauth_authorized;not null"`
+	LastSeenAt              int64  `gorm:"column:last_seen_at;not null;default:0"`
+	Online                  int64  `gorm:"column:online;not null;default:0"`
+	LogRuntimeEnabled       int64  `gorm:"column:log_runtime_enabled;not null;default:1"`
+	LogProxyEnabled         int64  `gorm:"column:log_proxy_enabled;not null;default:1"`
+	LogXrayEnabled          int64  `gorm:"column:log_xray_enabled;not null;default:0"`
+	SyncMode                string `gorm:"column:sync_mode;not null;default:'always'"`
+	PeriodicIntervalMinutes int64  `gorm:"column:periodic_interval_minutes;not null;default:30"`
+	HasRootAccess           int64  `gorm:"column:has_root_access;not null;default:0"`
+	VKOAuthAuthorized       int64  `gorm:"column:vk_oauth_authorized;not null;default:0"`
 }
 
 func (Client) TableName() string { return "clients" }
@@ -112,7 +112,7 @@ type PendingCommand struct {
 	ID             int64  `gorm:"column:id;primaryKey;autoIncrement"`
 	ClientID       string `gorm:"column:client_id;not null;index"`
 	CommandType    int64  `gorm:"column:command_type;not null"`
-	SubscriptionID string `gorm:"column:subscription_id;not null"`
+	SubscriptionID string `gorm:"column:subscription_id;not null;default:''"`
 	QueuedAt       int64  `gorm:"column:queued_at;not null"`
 	ExpiresAt      int64  `gorm:"column:expires_at;not null"`
 }
@@ -153,7 +153,7 @@ type InviteToken struct {
 	Token            string `gorm:"column:token;primaryKey"`
 	CreatedAtUnix    int64  `gorm:"column:created_at;not null"`
 	ExpiresAt        int64  `gorm:"column:expires_at;not null"`
-	UsedAt           int64  `gorm:"column:used_at;not null"`
+	UsedAt           int64  `gorm:"column:used_at;not null;default:0"`
 	UsedByAdminID    *int64 `gorm:"column:used_by_admin_id"`
 	CreatedByAdminID *int64 `gorm:"column:created_by_admin_id"`
 }
@@ -163,8 +163,8 @@ func (InviteToken) TableName() string { return "invite_tokens" }
 type AdminMasterConfig struct {
 	AdminID                 int64  `gorm:"column:admin_id;primaryKey"`
 	ConfigProto             []byte `gorm:"column:config_proto"`
-	SyncMode                string `gorm:"column:sync_mode;not null"`
-	PeriodicIntervalMinutes int64  `gorm:"column:periodic_interval_minutes;not null"`
+	SyncMode                string `gorm:"column:sync_mode;not null;default:'always'"`
+	PeriodicIntervalMinutes int64  `gorm:"column:periodic_interval_minutes;not null;default:30"`
 	ScopeFlags              string `gorm:"column:scope_flags;not null"`
 	UpdatedAtUnix           int64  `gorm:"column:updated_at;not null"`
 }
@@ -178,7 +178,7 @@ type ServerNode struct {
 	GRPCEndpoint  string `gorm:"column:grpc_endpoint;not null"`
 	CAPin         []byte `gorm:"column:ca_pin"`
 	Status        string `gorm:"column:status;not null"`
-	LastSeenAt    int64  `gorm:"column:last_seen_at;not null"`
+	LastSeenAt    int64  `gorm:"column:last_seen_at;not null;default:0"`
 	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
 }
 

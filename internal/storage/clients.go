@@ -30,7 +30,7 @@ type Client struct {
 
 func (s *Store) CreateClient(id string, ownerAdminID int64, name, tokenHash string, tokenPlain []byte) (Client, error) {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`INSERT INTO clients (id, owner_admin_id, name, token_hash, token_plain, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		id, ownerAdminID, name, tokenHash, tokenPlain, now,
 	)
@@ -45,7 +45,7 @@ func (s *Store) CreateClient(id string, ownerAdminID int64, name, tokenHash stri
 // return ErrNotFound — the admin must regenerate the wingsv:// link by
 // recreating the client.
 func (s *Store) GetClientToken(id string, ownerAdminID int64) ([]byte, error) {
-	row := s.db.QueryRow(
+	row := s.queryRow(
 		`SELECT token_plain FROM clients WHERE id = ? AND owner_admin_id = ?`,
 		id, ownerAdminID,
 	)
@@ -66,7 +66,7 @@ func (s *Store) GetClientToken(id string, ownerAdminID int64) ([]byte, error) {
 // UpdateClientToken replaces token hash + plaintext token. Used by the rotate
 // flow — after this, the previous token becomes invalid.
 func (s *Store) UpdateClientToken(id string, ownerAdminID int64, tokenHash string, tokenPlain []byte) error {
-	res, err := s.db.Exec(
+	res, err := s.exec(
 		`UPDATE clients SET token_hash = ?, token_plain = ? WHERE id = ? AND owner_admin_id = ?`,
 		tokenHash, tokenPlain, id, ownerAdminID,
 	)
@@ -84,7 +84,7 @@ func (s *Store) UpdateClientToken(id string, ownerAdminID int64, tokenHash strin
 }
 
 func (s *Store) DeleteClient(id string, ownerAdminID int64) error {
-	res, err := s.db.Exec(`DELETE FROM clients WHERE id = ? AND owner_admin_id = ?`, id, ownerAdminID)
+	res, err := s.exec(`DELETE FROM clients WHERE id = ? AND owner_admin_id = ?`, id, ownerAdminID)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (s *Store) DeleteClient(id string, ownerAdminID int64) error {
 }
 
 func (s *Store) FindClientByID(id string) (Client, error) {
-	row := s.db.QueryRow(`
+	row := s.queryRow(`
 		SELECT id, owner_admin_id, name, token_hash, hwid, device_name, device_model,
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
@@ -110,7 +110,7 @@ func (s *Store) FindClientByID(id string) (Client, error) {
 }
 
 func (s *Store) ListClientsByOwner(ownerAdminID int64) ([]Client, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.query(`
 		SELECT id, owner_admin_id, name, token_hash, hwid, device_name, device_model,
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
@@ -133,7 +133,7 @@ func (s *Store) ListClientsByOwner(ownerAdminID int64) ([]Client, error) {
 }
 
 func (s *Store) ListAllClients() ([]Client, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.query(`
 		SELECT id, owner_admin_id, name, token_hash, hwid, device_name, device_model,
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
@@ -162,7 +162,7 @@ type ClientCounts struct {
 
 func (s *Store) CountClients() (ClientCounts, error) {
 	var c ClientCounts
-	row := s.db.QueryRow(`SELECT COUNT(1), COALESCE(SUM(online), 0) FROM clients`)
+	row := s.queryRow(`SELECT COUNT(1), COALESCE(SUM(online), 0) FROM clients`)
 	if err := row.Scan(&c.Total, &c.Online); err != nil {
 		return ClientCounts{}, err
 	}
@@ -171,7 +171,7 @@ func (s *Store) CountClients() (ClientCounts, error) {
 
 func (s *Store) CountClientsByOwner(ownerAdminID int64) (ClientCounts, error) {
 	var c ClientCounts
-	row := s.db.QueryRow(
+	row := s.queryRow(
 		`SELECT COUNT(1), COALESCE(SUM(online), 0) FROM clients WHERE owner_admin_id = ?`,
 		ownerAdminID,
 	)
@@ -184,7 +184,7 @@ func (s *Store) CountClientsByOwner(ownerAdminID int64) (ClientCounts, error) {
 func (s *Store) UpdateClientPresence(id string, online bool, devInfo *ClientDeviceInfo) error {
 	now := time.Now().UTC().UnixMilli()
 	if devInfo != nil {
-		_, err := s.db.Exec(`
+		_, err := s.exec(`
 			UPDATE clients SET online = ?, last_seen_at = ?,
 			                   hwid = ?, device_name = ?, device_model = ?, os_version = ?, app_version = ?
 			WHERE id = ?`,
@@ -193,7 +193,7 @@ func (s *Store) UpdateClientPresence(id string, online bool, devInfo *ClientDevi
 			id)
 		return err
 	}
-	_, err := s.db.Exec(`UPDATE clients SET online = ?, last_seen_at = ? WHERE id = ?`,
+	_, err := s.exec(`UPDATE clients SET online = ?, last_seen_at = ? WHERE id = ?`,
 		boolToInt(online), now, id)
 	return err
 }
@@ -207,7 +207,7 @@ type ClientDeviceInfo struct {
 }
 
 func (s *Store) UpdateClientLogControl(id string, ownerAdminID int64, runtime, proxy, xray bool) error {
-	res, err := s.db.Exec(`
+	res, err := s.exec(`
 		UPDATE clients SET log_runtime_enabled = ?, log_proxy_enabled = ?, log_xray_enabled = ?
 		WHERE id = ? AND owner_admin_id = ?`,
 		boolToInt(runtime), boolToInt(proxy), boolToInt(xray), id, ownerAdminID)
@@ -225,7 +225,7 @@ func (s *Store) UpdateClientLogControl(id string, ownerAdminID int64, runtime, p
 }
 
 func (s *Store) MarkAllClientsOffline() error {
-	_, err := s.db.Exec(`UPDATE clients SET online = 0`)
+	_, err := s.exec(`UPDATE clients SET online = 0`)
 	return err
 }
 
@@ -233,7 +233,7 @@ func (s *Store) MarkAllClientsOffline() error {
 // sent in its RuntimeState. Panel uses this to hide / strip root-only config
 // blocks when the client has no root grant.
 func (s *Store) UpdateClientRootAccess(id string, hasRoot bool) error {
-	_, err := s.db.Exec(`UPDATE clients SET has_root_access = ? WHERE id = ?`, boolToInt(hasRoot), id)
+	_, err := s.exec(`UPDATE clients SET has_root_access = ? WHERE id = ?`, boolToInt(hasRoot), id)
 	return err
 }
 
@@ -242,7 +242,7 @@ func (s *Store) UpdateClientRootAccess(id string, hasRoot bool) error {
 // "Generate VK link" admin button - without an active VK OAuth token on the
 // device the command would just bounce with an error.
 func (s *Store) UpdateClientVkOAuthAuthorized(id string, authorized bool) error {
-	_, err := s.db.Exec(`UPDATE clients SET vk_oauth_authorized = ? WHERE id = ?`, boolToInt(authorized), id)
+	_, err := s.exec(`UPDATE clients SET vk_oauth_authorized = ? WHERE id = ?`, boolToInt(authorized), id)
 	return err
 }
 
@@ -301,7 +301,7 @@ func (s *Store) UpdateClientSync(id string, ownerAdminID int64, mode string, int
 	if intervalMinutes <= 0 {
 		intervalMinutes = 30
 	}
-	res, err := s.db.Exec(`
+	res, err := s.exec(`
 		UPDATE clients SET sync_mode = ?, periodic_interval_minutes = ?
 		WHERE id = ? AND owner_admin_id = ?`,
 		mode, intervalMinutes, id, ownerAdminID)

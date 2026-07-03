@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"v.wingsnet.org/internal/storage/dbmodel"
@@ -47,7 +48,7 @@ func (s *Store) AppendAudit(entry AuditEntry) error {
 	if entry.ActorAdminID > 0 {
 		actor = sql.NullInt64{Int64: entry.ActorAdminID, Valid: true}
 	}
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`INSERT INTO audit_log (ts, actor_admin_id, actor_username, action, target_type, target_id, message, ip)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, actor, entry.ActorUsername, entry.Action, entry.TargetType, entry.TargetID, entry.Message, entry.IP,
@@ -81,7 +82,7 @@ func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
 	}
 	q += ` ORDER BY ts DESC LIMIT ?`
 	args = append(args, limit)
-	rows, err := s.db.Query(q, args...)
+	rows, err := s.query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,22 +103,22 @@ func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
 
 // PruneAuditOlderThan deletes entries older than `cutoff`. Caller decides cadence.
 func (s *Store) PruneAuditOlderThan(cutoff time.Time) error {
-	_, err := s.db.Exec(`DELETE FROM audit_log WHERE ts < ?`, cutoff.UTC().UnixMilli())
+	_, err := s.exec(`DELETE FROM audit_log WHERE ts < ?`, cutoff.UTC().UnixMilli())
 	return err
 }
 
 // ===== platform_settings =====
 
 func (s *Store) GetPlatformSetting(key, fallback string) (string, error) {
-	var val string
-	err := s.db.QueryRow(`SELECT value FROM platform_settings WHERE key = ?`, key).Scan(&val)
-	if errors.Is(err, sql.ErrNoRows) {
+	var row dbmodel.PlatformSetting
+	err := s.gdb.Where(&dbmodel.PlatformSetting{Key: key}).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return fallback, nil
 	}
 	if err != nil {
 		return "", err
 	}
-	return val, nil
+	return row.Value, nil
 }
 
 func (s *Store) SetPlatformSetting(key, value string) error {
@@ -144,7 +145,7 @@ func (s *Store) CreateInvite(token string, expiresAt time.Time, createdByAdminID
 	if !expiresAt.IsZero() {
 		exp = expiresAt.UTC().UnixMilli()
 	}
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`INSERT INTO invite_tokens (token, created_at, expires_at, created_by_admin_id) VALUES (?, ?, ?, ?)`,
 		token, now, exp, createdByAdminID,
 	)
@@ -167,7 +168,7 @@ func (s *Store) ListInvites(includeUsed bool) ([]InviteToken, error) {
 		q += ` WHERE used_at = 0`
 	}
 	q += ` ORDER BY created_at DESC LIMIT 200`
-	rows, err := s.db.Query(q)
+	rows, err := s.query(q)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,7 @@ func (s *Store) ListInvites(includeUsed bool) ([]InviteToken, error) {
 }
 
 func (s *Store) DeleteInvite(token string) error {
-	_, err := s.db.Exec(`DELETE FROM invite_tokens WHERE token = ?`, token)
+	_, err := s.exec(`DELETE FROM invite_tokens WHERE token = ?`, token)
 	return err
 }
 
@@ -200,7 +201,7 @@ func (s *Store) RedeemInvite(token string, adminID int64) error {
 		return ErrNotFound
 	}
 	now := time.Now().UTC().UnixMilli()
-	res, err := s.db.Exec(
+	res, err := s.exec(
 		`UPDATE invite_tokens SET used_at = ?, used_by_admin_id = ?
 		 WHERE token = ? AND used_at = 0
 		 AND (expires_at = 0 OR expires_at > ?)`,

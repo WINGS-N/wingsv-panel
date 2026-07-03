@@ -45,7 +45,7 @@ func (s *Store) UpsertClientConfig(clientID string, configProto []byte, revision
 }
 
 func (s *Store) GetClientConfig(clientID string) (ClientConfig, error) {
-	row := s.db.QueryRow(`SELECT client_id, config_proto, revision, updated_at, config_version FROM client_configs WHERE client_id = ?`, clientID)
+	row := s.queryRow(`SELECT client_id, config_proto, revision, updated_at, config_version FROM client_configs WHERE client_id = ?`, clientID)
 	var c ClientConfig
 	var updatedAt int64
 	err := row.Scan(&c.ClientID, &c.ConfigProto, &c.Revision, &updatedAt, &c.ConfigVersion)
@@ -78,7 +78,7 @@ func (s *Store) UpsertClientRuntime(clientID string, runtimeProto []byte) error 
 }
 
 func (s *Store) GetClientRuntime(clientID string) ([]byte, time.Time, error) {
-	row := s.db.QueryRow(`SELECT runtime_proto, updated_at FROM client_runtime WHERE client_id = ?`, clientID)
+	row := s.queryRow(`SELECT runtime_proto, updated_at FROM client_runtime WHERE client_id = ?`, clientID)
 	var b []byte
 	var updatedAt int64
 	err := row.Scan(&b, &updatedAt)
@@ -107,7 +107,7 @@ func (s *Store) UpsertClientInstalledApps(clientID string, appsProto []byte) err
 }
 
 func (s *Store) GetClientInstalledApps(clientID string) ([]byte, time.Time, error) {
-	row := s.db.QueryRow(`SELECT apps_proto, updated_at FROM client_installed_apps WHERE client_id = ?`, clientID)
+	row := s.queryRow(`SELECT apps_proto, updated_at FROM client_installed_apps WHERE client_id = ?`, clientID)
 	var b []byte
 	var updatedAt int64
 	err := row.Scan(&b, &updatedAt)
@@ -124,32 +124,44 @@ func (s *Store) UpsertPackageMetadata(items []PackageMetadata) error {
 	if len(items) == 0 {
 		return nil
 	}
+	packages := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.Package != "" {
+			packages = append(packages, item.Package)
+		}
+	}
+	// Preserve the stored label / icon when the incoming value is empty. Done in
+	// Go rather than a dialect-specific CASE/NULLIF upsert expression.
+	existing, err := s.GetPackageMetadataMap(packages)
+	if err != nil {
+		return err
+	}
 	now := time.Now().UTC().UnixMilli()
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	stmt, err := tx.Prepare(`
-		INSERT INTO package_metadata (package, label, icon_png, updated_at)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(package) DO UPDATE SET
-			label = CASE WHEN excluded.label != '' THEN excluded.label ELSE package_metadata.label END,
-			icon_png = COALESCE(NULLIF(excluded.icon_png, X''), package_metadata.icon_png),
-			updated_at = excluded.updated_at`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
+	rows := make([]dbmodel.PackageMetadata, 0, len(items))
 	for _, item := range items {
 		if item.Package == "" {
 			continue
 		}
-		if _, err := stmt.Exec(item.Package, item.Label, item.IconPNG, now); err != nil {
-			return err
+		label, icon := item.Label, item.IconPNG
+		if prev, ok := existing[item.Package]; ok {
+			if label == "" {
+				label = prev.Label
+			}
+			if len(icon) == 0 {
+				icon = prev.IconPNG
+			}
 		}
+		rows = append(rows, dbmodel.PackageMetadata{
+			Package: item.Package, Label: label, IconPNG: icon, UpdatedAtUnix: now,
+		})
 	}
-	return tx.Commit()
+	if len(rows) == 0 {
+		return nil
+	}
+	return s.gdb.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "package"}},
+		DoUpdates: clause.AssignmentColumns([]string{"label", "icon_png", "updated_at"}),
+	}).CreateInBatches(rows, 100).Error
 }
 
 func (s *Store) GetPackageMetadataMap(packages []string) (map[string]PackageMetadata, error) {
@@ -165,7 +177,7 @@ func (s *Store) GetPackageMetadataMap(packages []string) (map[string]PackageMeta
 		placeholders = append(placeholders, '?')
 		args = append(args, p)
 	}
-	rows, err := s.db.Query(`SELECT package, label, icon_png FROM package_metadata WHERE package IN (`+string(placeholders)+`)`, args...)
+	rows, err := s.query(`SELECT package, label, icon_png FROM package_metadata WHERE package IN (`+string(placeholders)+`)`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +194,7 @@ func (s *Store) GetPackageMetadataMap(packages []string) (map[string]PackageMeta
 }
 
 func (s *Store) GetClientReportedConfig(clientID string) ([]byte, time.Time, error) {
-	row := s.db.QueryRow(`SELECT config_proto, updated_at FROM client_reported_configs WHERE client_id = ?`, clientID)
+	row := s.queryRow(`SELECT config_proto, updated_at FROM client_reported_configs WHERE client_id = ?`, clientID)
 	var b []byte
 	var updatedAt int64
 	err := row.Scan(&b, &updatedAt)

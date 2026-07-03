@@ -25,7 +25,7 @@ type MasterConfig struct {
 }
 
 func (s *Store) GetMasterConfig(adminID int64) (MasterConfig, error) {
-	row := s.db.QueryRow(
+	row := s.queryRow(
 		`SELECT admin_id, config_proto, sync_mode, periodic_interval_minutes, scope_flags, updated_at
 		 FROM admin_master_config WHERE admin_id = ?`,
 		adminID,

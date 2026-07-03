@@ -16,7 +16,7 @@ type AdminSession struct {
 func (s *Store) CreateSession(id string, adminID int64, ttl time.Duration) (AdminSession, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`INSERT INTO admin_sessions (id, admin_id, expires_at, created_at) VALUES (?, ?, ?, ?)`,
 		id, adminID, expiresAt.UnixMilli(), now.UnixMilli(),
 	)
@@ -27,7 +27,7 @@ func (s *Store) CreateSession(id string, adminID int64, ttl time.Duration) (Admi
 }
 
 func (s *Store) LookupSession(id string) (AdminSession, error) {
-	row := s.db.QueryRow(
+	row := s.queryRow(
 		`SELECT id, admin_id, expires_at, created_at FROM admin_sessions WHERE id = ?`,
 		id,
 	)
@@ -49,11 +49,11 @@ func (s *Store) LookupSession(id string) (AdminSession, error) {
 }
 
 func (s *Store) DeleteSession(id string) error {
-	_, err := s.db.Exec(`DELETE FROM admin_sessions WHERE id = ?`, id)
+	_, err := s.exec(`DELETE FROM admin_sessions WHERE id = ?`, id)
 	return err
 }
 
 func (s *Store) PurgeExpiredSessions() error {
-	_, err := s.db.Exec(`DELETE FROM admin_sessions WHERE expires_at < ?`, time.Now().UTC().UnixMilli())
+	_, err := s.exec(`DELETE FROM admin_sessions WHERE expires_at < ?`, time.Now().UTC().UnixMilli())
 	return err
 }

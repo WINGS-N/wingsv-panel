@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 const (
@@ -30,19 +32,19 @@ func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role
 		role = RoleAdmin
 	}
 	now := time.Now().UTC().UnixMilli()
-	res, err := s.db.Exec(
-		`INSERT INTO admins (username, password_hash, must_change_password, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		username, passwordHash, boolToInt(mustChange), role, now, now,
-	)
-	if err != nil {
-		return Admin{}, err
+	row := dbmodel.Admin{
+		Username:           username,
+		PasswordHash:       passwordHash,
+		MustChangePassword: int64(boolToInt(mustChange)),
+		Role:               role,
+		CreatedAtUnix:      now,
+		UpdatedAtUnix:      now,
 	}
-	id, err := res.LastInsertId()
-	if err != nil {
+	if err := s.gdb.Create(&row).Error; err != nil {
 		return Admin{}, err
 	}
 	return Admin{
-		ID:                 id,
+		ID:                 row.ID,
 		Username:           username,
 		PasswordHash:       passwordHash,
 		MustChangePassword: mustChange,
@@ -55,17 +57,17 @@ func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role
 const adminColumns = `id, username, password_hash, must_change_password, role, last_login_at, avatar_version, created_at, updated_at`
 
 func (s *Store) FindAdminByUsername(username string) (Admin, error) {
-	row := s.db.QueryRow(`SELECT `+adminColumns+` FROM admins WHERE username = ?`, username)
+	row := s.queryRow(`SELECT `+adminColumns+` FROM admins WHERE username = ?`, username)
 	return scanAdmin(row)
 }
 
 func (s *Store) FindAdminByID(id int64) (Admin, error) {
-	row := s.db.QueryRow(`SELECT `+adminColumns+` FROM admins WHERE id = ?`, id)
+	row := s.queryRow(`SELECT `+adminColumns+` FROM admins WHERE id = ?`, id)
 	return scanAdmin(row)
 }
 
 func (s *Store) ListAdmins() ([]Admin, error) {
-	rows, err := s.db.Query(`SELECT ` + adminColumns + ` FROM admins ORDER BY created_at ASC`)
+	rows, err := s.query(`SELECT ` + adminColumns + ` FROM admins ORDER BY created_at ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +85,7 @@ func (s *Store) ListAdmins() ([]Admin, error) {
 
 func (s *Store) UpdateAdminPassword(id int64, passwordHash string, requireChange bool) error {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`UPDATE admins SET password_hash = ?, must_change_password = ?, updated_at = ? WHERE id = ?`,
 		passwordHash, boolToInt(requireChange), now, id,
 	)
@@ -92,18 +94,18 @@ func (s *Store) UpdateAdminPassword(id int64, passwordHash string, requireChange
 
 func (s *Store) UpdateAdminRole(id int64, role string) error {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`UPDATE admins SET role = ?, updated_at = ? WHERE id = ?`, role, now, id)
+	_, err := s.exec(`UPDATE admins SET role = ?, updated_at = ? WHERE id = ?`, role, now, id)
 	return err
 }
 
 func (s *Store) MarkAdminLogin(id int64) error {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`UPDATE admins SET last_login_at = ? WHERE id = ?`, now, id)
+	_, err := s.exec(`UPDATE admins SET last_login_at = ? WHERE id = ?`, now, id)
 	return err
 }
 
 func (s *Store) DeleteAdmin(id int64) error {
-	res, err := s.db.Exec(`DELETE FROM admins WHERE id = ?`, id)
+	res, err := s.exec(`DELETE FROM admins WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -119,13 +121,13 @@ func (s *Store) DeleteAdmin(id int64) error {
 
 func (s *Store) CountAdmins() (int, error) {
 	var count int
-	err := s.db.QueryRow(`SELECT COUNT(1) FROM admins`).Scan(&count)
+	err := s.queryRow(`SELECT COUNT(1) FROM admins`).Scan(&count)
 	return count, err
 }
 
 func (s *Store) FirstAdminID() (int64, error) {
 	var id int64
-	err := s.db.QueryRow(`SELECT MIN(id) FROM admins`).Scan(&id)
+	err := s.queryRow(`SELECT MIN(id) FROM admins`).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrNotFound
 	}
@@ -136,7 +138,7 @@ func (s *Store) FirstAdminID() (int64, error) {
 // currently exists. Used on startup to migrate pre-role databases.
 func (s *Store) EnsureAtLeastOneOwner() error {
 	var count int
-	if err := s.db.QueryRow(`SELECT COUNT(1) FROM admins WHERE role = ?`, RoleOwner).Scan(&count); err != nil {
+	if err := s.queryRow(`SELECT COUNT(1) FROM admins WHERE role = ?`, RoleOwner).Scan(&count); err != nil {
 		return err
 	}
 	if count > 0 {
@@ -186,7 +188,7 @@ func scanAdminFromScanner(scanner rowScanner) (Admin, error) {
 // URLs invalidate.
 func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, error) {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`UPDATE admins
 		 SET avatar_mime = ?, avatar_png = ?, avatar_version = avatar_version + 1, updated_at = ?
 		 WHERE id = ?`,
@@ -196,7 +198,7 @@ func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, erro
 		return 0, err
 	}
 	var version int64
-	if err := s.db.QueryRow(`SELECT avatar_version FROM admins WHERE id = ?`, id).Scan(&version); err != nil {
+	if err := s.queryRow(`SELECT avatar_version FROM admins WHERE id = ?`, id).Scan(&version); err != nil {
 		return 0, err
 	}
 	return version, nil
@@ -205,7 +207,7 @@ func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, erro
 // GetAdminAvatar returns the stored avatar bytes and mime. Empty bytes mean
 // no custom avatar was uploaded (frontend falls back to default).
 func (s *Store) GetAdminAvatar(id int64) (mime string, data []byte, version int64, err error) {
-	row := s.db.QueryRow(`SELECT COALESCE(avatar_mime, ''), avatar_png, avatar_version FROM admins WHERE id = ?`, id)
+	row := s.queryRow(`SELECT COALESCE(avatar_mime, ''), avatar_png, avatar_version FROM admins WHERE id = ?`, id)
 	if err = row.Scan(&mime, &data, &version); err != nil {
 		return "", nil, 0, err
 	}
@@ -216,7 +218,7 @@ func (s *Store) GetAdminAvatar(id int64) (mime string, data []byte, version int6
 // to the default image.
 func (s *Store) ClearAdminAvatar(id int64) error {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(
+	_, err := s.exec(
 		`UPDATE admins SET avatar_mime = '', avatar_png = NULL,
 		 avatar_version = avatar_version + 1, updated_at = ? WHERE id = ?`,
 		now, id,

@@ -2,6 +2,11 @@ package storage
 
 import (
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 const MaxLogLinesPerStream = 10000
@@ -16,39 +21,39 @@ func (s *Store) AppendClientLogs(clientID string, stream int32, baseSeq int64, l
 	if len(lines) == 0 {
 		return nil
 	}
-	tx, err := s.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	stmt, err := tx.Prepare(`INSERT OR IGNORE INTO client_logs (client_id, stream, seq, ts, text) VALUES (?, ?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
+	rows := make([]dbmodel.ClientLog, len(lines))
 	for i, ln := range lines {
-		seq := baseSeq + int64(i)
-		ts := ln.TS.UTC().UnixMilli()
-		if _, err := stmt.Exec(clientID, stream, seq, ts, ln.Text); err != nil {
-			return err
+		rows[i] = dbmodel.ClientLog{
+			ClientID: clientID,
+			Stream:   int64(stream),
+			Seq:      baseSeq + int64(i),
+			Ts:       ln.TS.UTC().UnixMilli(),
+			Text:     ln.Text,
 		}
 	}
-	if _, err := tx.Exec(`
-		DELETE FROM client_logs WHERE client_id = ? AND stream = ?
-		AND seq <= (
-			SELECT COALESCE(MAX(seq), 0) - ? FROM client_logs WHERE client_id = ? AND stream = ?
-		)`,
-		clientID, stream, MaxLogLinesPerStream, clientID, stream); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&rows).Error; err != nil {
+			return err
+		}
+		// Trim to the most recent MaxLogLinesPerStream. Compute the threshold in
+		// two steps rather than a self-referencing subquery, which MySQL rejects.
+		var maxSeq int64
+		if err := tx.Model(&dbmodel.ClientLog{}).
+			Where("client_id = ? AND stream = ?", clientID, stream).
+			Select("COALESCE(MAX(seq), 0)").Scan(&maxSeq).Error; err != nil {
+			return err
+		}
+		threshold := maxSeq - MaxLogLinesPerStream
+		return tx.Where("client_id = ? AND stream = ? AND seq <= ?", clientID, stream, threshold).
+			Delete(&dbmodel.ClientLog{}).Error
+	})
 }
 
 func (s *Store) ReadClientLogs(clientID string, stream int32, sinceSeq int64, limit int) ([]LogLine, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
-	rows, err := s.db.Query(`
+	rows, err := s.query(`
 		SELECT seq, ts, text FROM client_logs
 		WHERE client_id = ? AND stream = ? AND seq > ?
 		ORDER BY seq ASC LIMIT ?`,

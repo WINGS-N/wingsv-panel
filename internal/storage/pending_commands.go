@@ -2,6 +2,8 @@ package storage
 
 import (
 	"time"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 // PendingCommand is a guardian command queued for delivery the next time the
@@ -31,14 +33,17 @@ func (s *Store) EnqueuePendingCommand(clientID string, commandType int32, subscr
 func (s *Store) EnqueuePendingCommandWithTTL(clientID string, commandType int32, subscriptionID string, ttl time.Duration) (int64, error) {
 	now := time.Now().UTC()
 	expires := now.Add(ttl)
-	res, err := s.db.Exec(
-		`INSERT INTO pending_commands (client_id, command_type, subscription_id, queued_at, expires_at) VALUES (?, ?, ?, ?, ?)`,
-		clientID, commandType, subscriptionID, now.UnixMilli(), expires.UnixMilli(),
-	)
-	if err != nil {
+	row := dbmodel.PendingCommand{
+		ClientID:       clientID,
+		CommandType:    int64(commandType),
+		SubscriptionID: subscriptionID,
+		QueuedAt:       now.UnixMilli(),
+		ExpiresAt:      expires.UnixMilli(),
+	}
+	if err := s.gdb.Create(&row).Error; err != nil {
 		return 0, err
 	}
-	return res.LastInsertId()
+	return row.ID, nil
 }
 
 // EnqueuePendingCommandDedup inserts only when no unexpired row with the same
@@ -46,7 +51,7 @@ func (s *Store) EnqueuePendingCommandWithTTL(clientID string, commandType int32,
 // (id, true) on insert, (0, false) when an existing row covered the request.
 func (s *Store) EnqueuePendingCommandDedup(clientID string, commandType int32, subscriptionID string) (int64, bool, error) {
 	now := time.Now().UTC().UnixMilli()
-	row := s.db.QueryRow(
+	row := s.queryRow(
 		`SELECT id FROM pending_commands WHERE client_id = ? AND command_type = ? AND subscription_id = ? AND expires_at > ? LIMIT 1`,
 		clientID, commandType, subscriptionID, now,
 	)
@@ -66,11 +71,11 @@ func (s *Store) EnqueuePendingCommandDedup(clientID string, commandType int32, s
 // side effect.
 func (s *Store) DrainPendingCommands(clientID string) ([]PendingCommand, error) {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.db.Exec(`DELETE FROM pending_commands WHERE expires_at <= ?`, now)
+	_, err := s.exec(`DELETE FROM pending_commands WHERE expires_at <= ?`, now)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(
+	rows, err := s.query(
 		`SELECT id, client_id, command_type, subscription_id, queued_at, expires_at FROM pending_commands WHERE client_id = ? ORDER BY queued_at ASC`,
 		clientID,
 	)
@@ -93,7 +98,7 @@ func (s *Store) DrainPendingCommands(clientID string) ([]PendingCommand, error) 
 		return nil, err
 	}
 	if len(out) > 0 {
-		_, err := s.db.Exec(`DELETE FROM pending_commands WHERE client_id = ?`, clientID)
+		_, err := s.exec(`DELETE FROM pending_commands WHERE client_id = ?`, clientID)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +111,7 @@ func (s *Store) DrainPendingCommands(clientID string) ([]PendingCommand, error) 
 // queue length back to the panel UI.
 func (s *Store) CountPendingCommands(clientID string, commandType int32) (int, error) {
 	now := time.Now().UTC().UnixMilli()
-	row := s.db.QueryRow(
+	row := s.queryRow(
 		`SELECT COUNT(*) FROM pending_commands WHERE client_id = ? AND command_type = ? AND expires_at > ?`,
 		clientID, commandType, now,
 	)

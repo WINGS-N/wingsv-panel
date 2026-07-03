@@ -1,25 +1,24 @@
 package storage
 
 import (
-	"database/sql"
 	"errors"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 func (s *Store) KVGet(key string) ([]byte, error) {
-	row := s.db.QueryRow(`SELECT value FROM kv WHERE key = ?`, key)
-	var v []byte
-	err := row.Scan(&v)
-	if errors.Is(err, sql.ErrNoRows) {
+	var row dbmodel.KV
+	err := s.gdb.Where(&dbmodel.KV{Key: key}).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	return v, nil
+	return row.Value, nil
 }
 
 func (s *Store) KVSet(key string, value []byte) error {
