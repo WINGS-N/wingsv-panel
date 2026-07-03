@@ -5,12 +5,12 @@ package xuiclient
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"v.wingsnet.org/internal/gen/xuipb"
@@ -37,7 +37,10 @@ func WithContextDialer(d func(context.Context, string) (net.Conn, error)) Option
 }
 
 func New(opts ...Option) *Client {
-	c := &Client{creds: insecure.NewCredentials()}
+	// 3x-ui serves its Panel gRPC over TLS (reusing the panel web certificate).
+	// Encrypt the transport but skip chain verification - the bearer API token is
+	// the authenticator, and the node cert may not match its gRPC hostname.
+	c := &Client{creds: credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})}
 	for _, opt := range opts {
 		opt(c)
 	}

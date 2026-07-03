@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -37,9 +38,12 @@ func TestAddClientSendsTokenAndPayload(t *testing.T) {
 	go func() { _ = gs.Serve(lis) }()
 	t.Cleanup(gs.Stop)
 
-	client := New(WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-		return lis.DialContext(ctx)
-	}))
+	client := New(
+		WithTransportCredentials(insecure.NewCredentials()),
+		WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return lis.DialContext(ctx)
+		}),
+	)
 	node := dbmodel.ServerNode{ID: "x1", Kind: "xui", GRPCEndpoint: "passthrough:///bufnet", GRPCToken: "xui-tok"}
 	needRestart, err := client.AddClient(context.Background(), node, `{"email":"u1"}`)
 	if err != nil {
