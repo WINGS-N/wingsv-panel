@@ -64,6 +64,12 @@ message Guardian {
   string admin_username = 7;
   int64 admin_id = 8;
   int64 admin_avatar_version = 9;
+  // SPKI pins (raw 32-byte SHA-256 of the panel CA SubjectPublicKeyInfo) the app
+  // must accept for the panel's control-plane TLS (Guardian WSS + panel gRPC),
+  // used when the panel has no public certificate. Empty means verify against
+  // the system trust store (a public / ACME certificate). Multiple entries allow
+  // CA rotation with overlap. This never applies to the VK TURN DTLS relay.
+  repeated bytes server_ca_pins = 10;
 }
 
 enum GuardianSyncMode {
