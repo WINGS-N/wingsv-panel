@@ -197,32 +197,32 @@
         </p>
         <OneuiInput v-model.trim="newName" label="Имя клиента" placeholder="Например, телефон Никиты" class="mt-4" />
 
-        <label class="field-label mt-4">Режим синхронизации</label>
-        <OneuiRadioGroup v-model="syncMode" :options="syncModeOptions" variant="pill" />
-        <div v-if="syncMode === 'periodic'" class="form-row form-row-stack mt-2">
-          <OneuiInput
-            v-model.number="syncIntervalMinutes"
-            label="Интервал (мин, минимум 15)"
-            type="number"
-            :min="15"
-            narrow
-          />
-        </div>
+        <label class="field-label mt-4">Тип управления</label>
+        <OneuiRadioGroup v-model="managementType" :options="managementTypeOptions" variant="pill" />
+        <p class="admin-muted remote-toggle-hint">
+          Полный — панель управляет конфигурацией удалённо (Guardian, WSS-контроль). Только выдача конфигурации — панель
+          лишь выдаёт wg-конфиг по токену, без удалённого контроля.
+        </p>
 
-        <div v-if="selfProvisioning" class="remote-toggle-row mt-4">
-          <div>
-            <span class="field-label">Управлять конфигурацией удалённо через панель</span>
-            <p class="admin-muted remote-toggle-hint">
-              Вкл — ссылка с Guardian (WSS-контроль). Выкл — автономная ссылка VK TURN-профиля; клиент сам выпускает
-              wg-конфиг по токену.
-            </p>
+        <template v-if="managementType === 'full'">
+          <label class="field-label mt-4">Режим синхронизации</label>
+          <OneuiRadioGroup v-model="syncMode" :options="syncModeOptions" variant="pill" />
+          <div v-if="syncMode === 'periodic'" class="form-row form-row-stack mt-2">
+            <OneuiInput
+              v-model.number="syncIntervalMinutes"
+              label="Интервал (мин, минимум 15)"
+              type="number"
+              :min="15"
+              narrow
+            />
           </div>
-          <OneuiSwitch v-model="remoteControl" />
-        </div>
+        </template>
 
         <template v-if="vkTurnNodeOptions.length">
           <label class="field-label mt-4">VK TURN сервер</label>
-          <p class="admin-muted remote-toggle-hint">Реле, к которому клиент подключится и выпустит wg-конфиг.</p>
+          <p class="admin-muted remote-toggle-hint">
+            Реле, к которому клиент подключится и автоматически выпустит wg-конфиг. «Не выбран» — без автоматической wg.
+          </p>
           <OneuiSelect
             :model-value="vkTurnNodeId"
             :options="vkTurnNodeOptions"
@@ -311,13 +311,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-vue-next';
-import { authState, myAvatarUrl, selfProvisioning } from '@/stores/auth.js';
+import { authState, myAvatarUrl } from '@/stores/auth.js';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { formatBytes } from '@/utils/format.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
-import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiTextarea from '@/components/controls/OneuiTextarea.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
@@ -411,10 +410,17 @@ function scrollToTable() {
 
 const showCreate = ref(false);
 const newName = ref('');
-const remoteControl = ref(true);
+const managementType = ref('full');
+const managementTypeOptions = [
+  { value: 'full', label: 'Полный' },
+  { value: 'config', label: 'Только выдача конфигурации' },
+];
 const vkTurnNodes = ref([]);
 const vkTurnNodeId = ref('');
-const vkTurnNodeOptions = computed(() => vkTurnNodes.value.map((n) => ({ value: n.id, label: n.name || n.id })));
+const vkTurnNodeOptions = computed(() => [
+  { value: '', label: 'Не выбран' },
+  ...vkTurnNodes.value.map((n) => ({ value: n.id, label: n.name || n.id })),
+]);
 const creating = ref(false);
 const createError = ref('');
 const lastCreatedLink = ref('');
@@ -475,9 +481,6 @@ async function loadVkTurnNodes() {
     if (!res.ok) return;
     const data = await res.json();
     vkTurnNodes.value = (data.nodes || []).filter((n) => n.kind === 'vk_turn_proxy');
-    if (!vkTurnNodeId.value && vkTurnNodes.value.length) {
-      vkTurnNodeId.value = vkTurnNodes.value[0].id;
-    }
   } catch {
     // Non-fatal: without nodes the form falls back to the configured endpoint.
   }
@@ -486,7 +489,8 @@ async function loadVkTurnNodes() {
 function openCreate() {
   showCreate.value = true;
   newName.value = '';
-  remoteControl.value = true;
+  managementType.value = 'full';
+  vkTurnNodeId.value = '';
   createError.value = '';
   lastCreatedLink.value = '';
   createdQr.value = '';
@@ -530,7 +534,7 @@ async function createClient() {
       name: newName.value,
       sync_mode: syncMode.value,
       periodic_interval_minutes: Math.max(15, Number(syncIntervalMinutes.value) || 30),
-      remote_control: remoteControl.value,
+      remote_control: managementType.value === 'full',
     };
     if (vkTurnNodeId.value) {
       reqBody.vk_turn_node_id = vkTurnNodeId.value;
