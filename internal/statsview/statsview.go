@@ -110,11 +110,11 @@ func ResolveRange(key string) string {
 // BuildTraffic builds the dashboard traffic view for the given owner's nodes. rng
 // selects the chart window (24h|7d|month); the tile totals (1h/24h/7d/all-time)
 // are always computed regardless of the selected chart range.
-func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string) (Traffic, error) {
+func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string, extraOwners ...int64) (Traffic, error) {
 	rng = ResolveRange(rng)
 	rc := trafficRanges[rng]
 	mode, _ := store.GetPanelMode()
-	nodes, err := store.ListServerNodesByOwner(storage.ServerNodeVKTurnProxy, ownerAdminID)
+	nodes, err := store.ListServerNodesByOwners(storage.ServerNodeVKTurnProxy, append([]int64{ownerAdminID}, extraOwners...))
 	if err != nil {
 		return Traffic{}, err
 	}
@@ -234,8 +234,8 @@ func sinceCutoff(samples []dbmodel.TrafficSample, cutoff int64) []dbmodel.Traffi
 
 // BuildFlows returns the current live flows for the given owner's nodes,
 // optionally narrowed to a single node (nodeFilter, empty = all owned).
-func BuildFlows(store *storage.Store, ownerAdminID int64, nodeFilter string) ([]Flow, error) {
-	ids, err := ownedNodeIDs(store, ownerAdminID)
+func BuildFlows(store *storage.Store, ownerAdminID int64, nodeFilter string, extraOwners ...int64) ([]Flow, error) {
+	ids, err := ownedNodeIDs(store, ownerAdminID, extraOwners...)
 	if err != nil {
 		return nil, err
 	}
@@ -257,8 +257,8 @@ func BuildFlows(store *storage.Store, ownerAdminID int64, nodeFilter string) ([]
 
 // ClientNames maps a managed client's tunnel IP to its name for the owner's
 // nodes, so the flow graph can label clients by name instead of raw IP.
-func ClientNames(store *storage.Store, ownerAdminID int64) (map[string]string, error) {
-	ids, err := ownedNodeIDs(store, ownerAdminID)
+func ClientNames(store *storage.Store, ownerAdminID int64, extraOwners ...int64) (map[string]string, error) {
+	ids, err := ownedNodeIDs(store, ownerAdminID, extraOwners...)
 	if err != nil {
 		return nil, err
 	}
@@ -277,12 +277,12 @@ var flowHistoryWindows = map[string]time.Duration{
 // connection-log paths aggregated over the selected window (default 1h), shaped
 // like Flow so the same graph component renders it. Rates are zero (no live rate
 // for past traffic).
-func BuildFlowHistory(store *storage.Store, ownerAdminID int64, window string) ([]Flow, error) {
+func BuildFlowHistory(store *storage.Store, ownerAdminID int64, window string, extraOwners ...int64) ([]Flow, error) {
 	dur, ok := flowHistoryWindows[window]
 	if !ok {
 		dur = time.Hour
 	}
-	ids, err := ownedNodeIDs(store, ownerAdminID)
+	ids, err := ownedNodeIDs(store, ownerAdminID, extraOwners...)
 	if err != nil {
 		return nil, err
 	}
@@ -303,8 +303,8 @@ func BuildFlowHistory(store *storage.Store, ownerAdminID int64, window string) (
 // BuildConnections returns a page of the connection log for the given owner's
 // nodes, newest-first, plus the total row count so the UI can paginate.
 // nodeFilter narrows to a single node (empty = all owned).
-func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset int, nodeFilter string) ([]Connection, int64, error) {
-	ids, err := ownedNodeIDs(store, ownerAdminID)
+func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset int, nodeFilter string, extraOwners ...int64) ([]Connection, int64, error) {
+	ids, err := ownedNodeIDs(store, ownerAdminID, extraOwners...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -328,8 +328,8 @@ func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset in
 	return out, total, nil
 }
 
-func ownedNodeIDs(store *storage.Store, ownerAdminID int64) ([]string, error) {
-	nodes, err := store.ListServerNodesByOwner(storage.ServerNodeVKTurnProxy, ownerAdminID)
+func ownedNodeIDs(store *storage.Store, ownerAdminID int64, extraOwners ...int64) ([]string, error) {
+	nodes, err := store.ListServerNodesByOwners(storage.ServerNodeVKTurnProxy, append([]int64{ownerAdminID}, extraOwners...))
 	if err != nil {
 		return nil, err
 	}

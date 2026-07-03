@@ -4,20 +4,31 @@ import (
 	"net/http"
 	"strconv"
 
+	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/statsview"
 	"v.wingsnet.org/internal/storage"
 )
 
-// An admin sees the traffic dashboard only for the external vk-turn-proxy /
-// 3x-ui nodes they registered themselves (owner_admin_id == admin.ID). The
-// panel-local nodes the owner runs are owner-only and never surfaced here.
+// An admin sees the traffic dashboard for the external vk-turn-proxy / 3x-ui
+// nodes they registered themselves (owner_admin_id == admin.ID). The owner also
+// owns the panel-local nodes (owner_admin_id 0), so their "my servers" view
+// includes those too via localExtra.
+
+// localExtra returns the panel-local owner id (0) as an extra scope for the owner,
+// so the owner's my-servers stats also cover the nodes added in the owner console.
+func localExtra(admin storage.Admin) []int64 {
+	if auth.IsOwner(admin) {
+		return []int64{0}
+	}
+	return nil
+}
 
 func (h *Handler) handleStatsTraffic(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	out, err := statsview.BuildTraffic(h.store, admin.ID, r.URL.Query().Get("range"), r.URL.Query().Get("node"))
+	out, err := statsview.BuildTraffic(h.store, admin.ID, r.URL.Query().Get("range"), r.URL.Query().Get("node"), localExtra(admin)...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to build traffic stats")
 		return
@@ -30,12 +41,12 @@ func (h *Handler) handleStatsFlows(w http.ResponseWriter, r *http.Request, admin
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	flows, err := statsview.BuildFlows(h.store, admin.ID, r.URL.Query().Get("node"))
+	flows, err := statsview.BuildFlows(h.store, admin.ID, r.URL.Query().Get("node"), localExtra(admin)...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read flows")
 		return
 	}
-	names, _ := statsview.ClientNames(h.store, admin.ID)
+	names, _ := statsview.ClientNames(h.store, admin.ID, localExtra(admin)...)
 	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
 }
 
@@ -44,12 +55,12 @@ func (h *Handler) handleStatsFlowHistory(w http.ResponseWriter, r *http.Request,
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	flows, err := statsview.BuildFlowHistory(h.store, admin.ID, r.URL.Query().Get("window"))
+	flows, err := statsview.BuildFlowHistory(h.store, admin.ID, r.URL.Query().Get("window"), localExtra(admin)...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read flow history")
 		return
 	}
-	names, _ := statsview.ClientNames(h.store, admin.ID)
+	names, _ := statsview.ClientNames(h.store, admin.ID, localExtra(admin)...)
 	writeJSON(w, http.StatusOK, map[string]any{"flows": flows, "client_names": names})
 }
 
@@ -70,7 +81,7 @@ func (h *Handler) handleStatsConnections(w http.ResponseWriter, r *http.Request,
 			offset = n
 		}
 	}
-	conns, total, err := statsview.BuildConnections(h.store, admin.ID, limit, offset, r.URL.Query().Get("node"))
+	conns, total, err := statsview.BuildConnections(h.store, admin.ID, limit, offset, r.URL.Query().Get("node"), localExtra(admin)...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read connection log")
 		return

@@ -88,6 +88,24 @@ func (s *Store) ListServerNodesByOwner(kind string, ownerAdminID int64) ([]dbmod
 	return nodes, nil
 }
 
+// ListServerNodesByOwners lists nodes owned by any of the given admin ids. It lets
+// the owner see both their own nodes and the panel-local (owner_admin_id 0) ones
+// in a single view.
+func (s *Store) ListServerNodesByOwners(kind string, ownerIDs []int64) ([]dbmodel.ServerNode, error) {
+	if len(ownerIDs) == 0 {
+		return nil, nil
+	}
+	q := s.gdb.Order("created_at asc").Where("owner_admin_id IN ?", ownerIDs)
+	if kind != "" {
+		q = q.Where("kind = ?", kind)
+	}
+	var nodes []dbmodel.ServerNode
+	if err := q.Find(&nodes).Error; err != nil {
+		return nil, err
+	}
+	return nodes, nil
+}
+
 func (s *Store) GetServerNode(id string) (dbmodel.ServerNode, error) {
 	var n dbmodel.ServerNode
 	err := s.gdb.Where("id = ?", id).First(&n).Error
