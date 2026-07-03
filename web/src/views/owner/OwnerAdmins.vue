@@ -321,7 +321,7 @@ async function onResetSubmit() {
   resetting.value = true;
   resetError.value = '';
   try {
-    const res = await fetch(`/api/owner/admins/${resetTarget.value.id}/reset-password`, {
+    const res = await fetch(`/api/owner/admins/${resetTarget.value.id}/password/reset`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

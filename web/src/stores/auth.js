@@ -34,7 +34,7 @@ export async function refreshSession() {
 
 export async function refreshRegistrationStatus() {
   try {
-    const res = await fetch("/api/admin/registration-status");
+    const res = await fetch("/api/admin/registration/status");
     if (res.ok) {
       const data = await res.json();
       registrationState.value = { mode: data.mode || "open", loaded: true };

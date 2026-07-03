@@ -824,7 +824,7 @@ async function onRotateToken() {
   }
   busyRotate.value = true;
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}/rotate-token`, {
+    const res = await fetch(`/api/admin/clients/${id.value}/token/rotate`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -1408,7 +1408,7 @@ function saveSyncSettings() {
 
 async function loadInstalledApps() {
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}/installed-apps`, { credentials: 'include' });
+    const res = await fetch(`/api/admin/clients/${id.value}/apps/installed`, { credentials: 'include' });
     if (!res.ok) return;
     const body = await res.json();
     installedApps.value = body.apps || [];
@@ -1420,7 +1420,7 @@ async function refreshInstalledApps() {
   if (busyAppsRefresh.value) return;
   busyAppsRefresh.value = true;
   try {
-    await fetch(`/api/admin/clients/${id.value}/installed-apps/refresh`, {
+    await fetch(`/api/admin/clients/${id.value}/apps/refresh`, {
       method: 'POST',
       credentials: 'include',
     });
@@ -1506,7 +1506,7 @@ async function copyProfileLink(profile) {
 async function refreshSubscription(subscriptionId) {
   busyRefresh.value = subscriptionId;
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}/refresh-subscription`, {
+    const res = await fetch(`/api/admin/clients/${id.value}/subscription/refresh`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -1526,7 +1526,7 @@ async function refreshSubscription(subscriptionId) {
 async function refreshAllSubscriptions() {
   busyRefresh.value = 'all';
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}/refresh-subscription`, {
+    const res = await fetch(`/api/admin/clients/${id.value}/subscription/refresh`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -1597,7 +1597,7 @@ async function importProfile() {
   busyProfileImport.value = true;
   profileImportError.value = '';
   try {
-    const res = await fetch('/api/admin/decode-link', {
+    const res = await fetch('/api/admin/link/decode', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -1811,7 +1811,7 @@ async function sendCommand(type) {
 async function toggleLog(streamId, enabled) {
   logToggles.value = { ...logToggles.value, [streamId]: enabled };
   try {
-    await fetch(`/api/admin/clients/${id.value}/log-control`, {
+    await fetch(`/api/admin/clients/${id.value}/log/control`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -1857,7 +1857,7 @@ async function showLink() {
 
 async function ensureLink() {
   if (wingsvLink.value) return wingsvLink.value;
-  const res = await fetch(`/api/admin/clients/${id.value}/wingsv-link`, { credentials: 'include' });
+  const res = await fetch(`/api/admin/clients/${id.value}/link/wingsv`, { credentials: 'include' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || 'Ссылка недоступна');
@@ -1916,7 +1916,7 @@ async function importFromLink() {
   busyImport.value = true;
   importError.value = '';
   try {
-    const res = await fetch('/api/admin/decode-link', {
+    const res = await fetch('/api/admin/link/decode', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

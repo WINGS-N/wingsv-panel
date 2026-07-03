@@ -277,7 +277,7 @@ async function onSeed() {
     const body = {};
     if (seedMode.value === 'clone') body.from_client_id = seedFromClientId.value;
     else if (seedMode.value === 'link') body.from_wingsv_link = seedLink.value;
-    const res = await fetch('/api/admin/master-config/seed', {
+    const res = await fetch('/api/admin/master/config/seed', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -303,7 +303,7 @@ async function load() {
   loading.value = true;
   loadError.value = '';
   try {
-    const res = await fetch('/api/admin/master-config', { credentials: 'include' });
+    const res = await fetch('/api/admin/master/config', { credentials: 'include' });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     const flags = Array.isArray(data.scope_flags) ? data.scope_flags : [];
@@ -345,7 +345,7 @@ async function onSave() {
         scopeFlags.sync && syncMode.value === 'periodic' ? Math.max(15, Number(syncIntervalMinutes.value) || 30) : 0,
       scope_flags: flags,
     };
-    const res = await fetch('/api/admin/master-config', {
+    const res = await fetch('/api/admin/master/config', {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -381,7 +381,7 @@ async function performApply() {
   applyError.value = '';
   applyResult.value = null;
   try {
-    const res = await fetch('/api/admin/master-config/apply', {
+    const res = await fetch('/api/admin/master/config/apply', {
       method: 'POST',
       credentials: 'include',
     });
