@@ -45,6 +45,43 @@ func (s *Store) ListClientWGPeers(clientID string) ([]dbmodel.ClientWGPeer, erro
 	return peers, nil
 }
 
+// ClientWGPeerView is a managed WireGuard peer enriched with its client and node
+// names, for the WG-configs management screen.
+type ClientWGPeerView struct {
+	ClientID        string `json:"client_id"`
+	ClientName      string `json:"client_name"`
+	OwnerAdminID    int64  `json:"owner_admin_id"`
+	NodeID          string `json:"node_id"`
+	NodeName        string `json:"node_name"`
+	PublicKey       string `json:"public_key"`
+	AllowedIPs      string `json:"allowed_ips"`
+	ServerPublicKey string `json:"server_public_key"`
+	Endpoint        string `json:"endpoint"`
+	CreatedAtUnix   int64  `json:"created_at"`
+}
+
+// ListClientWGPeersForOwner lists managed WireGuard peers, newest-first, joined
+// with client and node names. all=true (owner) returns every peer; otherwise only
+// peers of clients owned by ownerAdminID.
+func (s *Store) ListClientWGPeersForOwner(ownerAdminID int64, all bool) ([]ClientWGPeerView, error) {
+	q := s.gdb.Table("client_wg_peers AS p").
+		Joins("JOIN clients AS c ON c.id = p.client_id").
+		Joins("LEFT JOIN server_nodes AS n ON n.id = p.node_id").
+		Select("p.client_id AS client_id, c.name AS client_name, c.owner_admin_id AS owner_admin_id, " +
+			"p.node_id AS node_id, COALESCE(n.name, '') AS node_name, p.public_key AS public_key, " +
+			"p.allowed_ips AS allowed_ips, p.server_public_key AS server_public_key, p.endpoint AS endpoint, " +
+			"p.created_at AS created_at_unix").
+		Order("p.created_at desc")
+	if !all {
+		q = q.Where("c.owner_admin_id = ?", ownerAdminID)
+	}
+	var rows []ClientWGPeerView
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 // DeleteClientWGPeer removes one client-node peer, reporting ErrNotFound when absent.
 func (s *Store) DeleteClientWGPeer(clientID, nodeID string) error {
 	res := s.gdb.Where("client_id = ? AND node_id = ?", clientID, nodeID).Delete(&dbmodel.ClientWGPeer{})

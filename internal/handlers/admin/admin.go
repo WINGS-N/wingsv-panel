@@ -59,6 +59,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/stats/connections", h.requireAuth(h.handleStatsConnections))
 	mux.HandleFunc("/api/admin/nodes", h.requireAuth(h.handleNodes))
 	mux.HandleFunc("/api/admin/nodes/", h.requireAuth(h.handleNodeByID))
+	mux.HandleFunc("/api/admin/wgpeers", h.requireAuth(h.handleWGPeers))
+	mux.HandleFunc("/api/admin/wgpeers/", h.requireAuth(h.handleWGPeerByID))
 	mux.HandleFunc("/api/admin/avatars/", h.handleAvatar)
 	mux.HandleFunc("/api/admin/me/avatar", h.requireAuth(h.handleMyAvatar))
 	mux.HandleFunc("/api/admin/master/config", h.requireAuth(h.handleMasterConfig))
