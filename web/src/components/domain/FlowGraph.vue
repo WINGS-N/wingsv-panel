@@ -432,21 +432,27 @@ function nodeDimmed(node) {
   return false;
 }
 
-function toggleNode(id) {
-  // Clicking a folded "прочие" bucket expands its column to full detail (and back).
+// expandOtherFor toggles a column's "прочие" bucket to full detail when the given
+// node id is that bucket. Returns true if it handled the id.
+function expandOtherFor(id) {
   const sep = id.indexOf(':');
+  if (id.slice(sep + 1) !== '__other__') return false;
   const col = id.slice(0, sep);
-  const key = id.slice(sep + 1);
-  if (key === '__other__') {
-    expanded.value = { ...expanded.value, [col]: !expanded.value[col] };
-    selected.value = '';
-    pinnedLink.value = null;
-    return;
-  }
+  expanded.value = { ...expanded.value, [col]: !expanded.value[col] };
+  selected.value = '';
+  pinnedLink.value = null;
+  return true;
+}
+
+function toggleNode(id) {
+  if (expandOtherFor(id)) return;
   selected.value = selected.value === id ? '' : id;
   pinnedLink.value = null;
 }
 function pinLink(l) {
+  // A ribbon touching a folded "прочие" bucket expands that column instead of
+  // pinning, so clicking the flow itself drills in.
+  if (expandOtherFor(l.src) || expandOtherFor(l.dst)) return;
   pinnedLink.value = pinnedLink.value && pinnedLink.value.key === l.key ? null : l;
   selected.value = '';
 }
