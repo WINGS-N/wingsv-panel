@@ -2,7 +2,9 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -19,6 +21,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"v.wingsnet.org/internal/auth"
+	"v.wingsnet.org/internal/bus"
 	"v.wingsnet.org/internal/collector"
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/githubapi"
@@ -477,6 +480,21 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return err
 	}
 	hub := guardianhub.New()
+	// Cross-replica bus: on a shared Postgres HA database, admin fanout and device
+	// ConfigPush reach whichever replica holds the target WS. sqlite / mariadb
+	// single-node deploys stay on the no-op bus (purely local delivery).
+	var msgBus bus.Bus = bus.Nop{}
+	if isPostgresKind(cfg.DBKind) && cfg.DBDSN != "" {
+		pgBus, busErr := bus.NewPostgres(ctx, cfg.DBDSN)
+		if busErr != nil {
+			return busErr
+		}
+		defer pgBus.Close()
+		msgBus = pgBus
+	}
+	hub.AttachBus(msgBus, randomInstanceID())
+	go func() { _ = msgBus.Run(ctx) }()
+
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           New(cfg, store, authSvc, hub).Handler(),
@@ -557,4 +575,24 @@ func Run(ctx context.Context, cfg config.Config) error {
 	}
 	<-shutdownDone
 	return nil
+}
+
+// isPostgresKind reports whether the configured DB is Postgres, the only backend
+// whose LISTEN/NOTIFY the cross-replica bus rides.
+func isPostgresKind(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "pgsql", "postgres", "postgresql":
+		return true
+	}
+	return false
+}
+
+// randomInstanceID identifies this replica so bus admin fanout skips the sinks
+// the publisher already delivered to locally.
+func randomInstanceID() string {
+	raw := make([]byte, 8)
+	if _, err := rand.Read(raw); err != nil {
+		return "instance"
+	}
+	return hex.EncodeToString(raw)
 }

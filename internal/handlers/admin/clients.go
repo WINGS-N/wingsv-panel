@@ -586,12 +586,12 @@ func tsRFC(t time.Time) string {
 }
 
 func (h *Handler) respondDeleteClient(w http.ResponseWriter, client storage.Client) {
+	h.hub.SendToClient(client.ID, &guardianpb.Frame{
+		Payload: &guardianpb.Frame_Error{
+			Error: &guardianpb.ServerError{Code: "revoked", Message: "client deleted by admin"},
+		},
+	}, client.Online)
 	if sink := h.hub.ClientSink(client.ID); sink != nil {
-		_ = sink.SendFrame(&guardianpb.Frame{
-			Payload: &guardianpb.Frame_Error{
-				Error: &guardianpb.ServerError{Code: "revoked", Message: "client deleted by admin"},
-			},
-		})
 		sink.Close("revoked")
 	}
 	if err := h.store.DeleteClient(client.ID, client.OwnerAdminID); err != nil {
@@ -653,15 +653,12 @@ func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request
 	// Stamp ConfigVersion in the outgoing proto so device persists the same
 	// version locally and reports it back in next ClientHello.
 	parsed.ConfigVersion = configVersion
-	online := h.hub.ClientSink(client.ID) != nil
-	if sink := h.hub.ClientSink(client.ID); sink != nil {
-		_ = sink.SendFrame(&guardianpb.Frame{
-			Payload: &guardianpb.Frame_ConfigPush{
-				ConfigPush: &guardianpb.ConfigPush{Config: parsed, Revision: revision},
-			},
-		})
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "revision": revision, "online": online, "config_version": configVersion})
+	h.hub.SendToClient(client.ID, &guardianpb.Frame{
+		Payload: &guardianpb.Frame_ConfigPush{
+			ConfigPush: &guardianpb.ConfigPush{Config: parsed, Revision: revision},
+		},
+	}, client.Online)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "revision": revision, "online": client.Online, "config_version": configVersion})
 }
 
 type logControlRequest struct {
@@ -680,17 +677,15 @@ func (h *Handler) respondLogControl(w http.ResponseWriter, r *http.Request, clie
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if sink := h.hub.ClientSink(client.ID); sink != nil {
-		_ = sink.SendFrame(&guardianpb.Frame{
-			Payload: &guardianpb.Frame_LogControl{
-				LogControl: &guardianpb.LogControl{
-					RuntimeEnabled: req.Runtime,
-					ProxyEnabled:   req.Proxy,
-					XrayEnabled:    req.XRay,
-				},
+	h.hub.SendToClient(client.ID, &guardianpb.Frame{
+		Payload: &guardianpb.Frame_LogControl{
+			LogControl: &guardianpb.LogControl{
+				RuntimeEnabled: req.Runtime,
+				ProxyEnabled:   req.Proxy,
+				XrayEnabled:    req.XRay,
 			},
-		})
-	}
+		},
+	}, client.Online)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -726,34 +721,30 @@ func (h *Handler) respondCommand(w http.ResponseWriter, r *http.Request, client 
 		writeError(w, http.StatusBadRequest, "unknown command type")
 		return
 	}
-	sink := h.hub.ClientSink(client.ID)
-	if sink == nil {
-		if !queueableCommands[cmdType] {
-			writeError(w, http.StatusServiceUnavailable, "client offline")
-			return
-		}
-		queued, err := h.enqueueOfflineCommand(client.ID, cmdType, "", req.Count)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusAccepted, map[string]any{"queued": true, "queued_count": queued})
-		return
-	}
 	id, err := auth.GenerateClientID()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := sink.SendFrame(&guardianpb.Frame{
+	frame := &guardianpb.Frame{
 		Payload: &guardianpb.Frame_Command{
 			Command: &guardianpb.Command{Type: cmdType, Id: id},
 		},
-	}); err != nil {
-		writeError(w, http.StatusServiceUnavailable, err.Error())
+	}
+	if h.hub.SendToClient(client.ID, frame, client.Online) {
+		writeJSON(w, http.StatusAccepted, map[string]any{"id": id})
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]any{"id": id})
+	if !queueableCommands[cmdType] {
+		writeError(w, http.StatusServiceUnavailable, "client offline")
+		return
+	}
+	queued, err := h.enqueueOfflineCommand(client.ID, cmdType, "", req.Count)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"queued": true, "queued_count": queued})
 }
 
 // enqueueOfflineCommand persists a queueable command (or several) for an
@@ -828,30 +819,26 @@ func (h *Handler) respondRefreshSubscription(w http.ResponseWriter, r *http.Requ
 	if subID != "" {
 		cmdType = guardianpb.CommandType_COMMAND_TYPE_REFRESH_SUBSCRIPTION
 	}
-	sink := h.hub.ClientSink(client.ID)
-	if sink == nil {
-		queued, err := h.enqueueOfflineCommand(client.ID, cmdType, subID, 0)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusAccepted, map[string]any{"queued": true, "queued_count": queued})
-		return
-	}
 	id, err := auth.GenerateClientID()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := sink.SendFrame(&guardianpb.Frame{
+	frame := &guardianpb.Frame{
 		Payload: &guardianpb.Frame_Command{
 			Command: &guardianpb.Command{Type: cmdType, Id: id, SubscriptionId: subID},
 		},
-	}); err != nil {
-		writeError(w, http.StatusServiceUnavailable, err.Error())
+	}
+	if h.hub.SendToClient(client.ID, frame, client.Online) {
+		writeJSON(w, http.StatusAccepted, map[string]any{"id": id})
 		return
 	}
-	writeJSON(w, http.StatusAccepted, map[string]any{"id": id})
+	queued, err := h.enqueueOfflineCommand(client.ID, cmdType, subID, 0)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"queued": true, "queued_count": queued})
 }
 
 func parseLogStream(name string) (guardianpb.LogStream, bool) {
@@ -910,22 +897,20 @@ func (h *Handler) respondSync(w http.ResponseWriter, r *http.Request, client sto
 	// Push the new sync mode to the device live. Carries only sync_mode +
 	// interval inside Guardian (no credentials) — applyConfigPush keeps the
 	// credential fields untouched and just re-applies the runner.
-	if sink := h.hub.ClientSink(client.ID); sink != nil {
-		_ = sink.SendFrame(&guardianpb.Frame{
-			Payload: &guardianpb.Frame_ConfigPush{
-				ConfigPush: &guardianpb.ConfigPush{
-					Config: &wingsvpb.Config{
-						Ver: 1,
-						Guardian: &wingsvpb.Guardian{
-							SyncMode:                syncModeToProto(mode),
-							PeriodicIntervalMinutes: uint32(periodic),
-						},
+	h.hub.SendToClient(client.ID, &guardianpb.Frame{
+		Payload: &guardianpb.Frame_ConfigPush{
+			ConfigPush: &guardianpb.ConfigPush{
+				Config: &wingsvpb.Config{
+					Ver: 1,
+					Guardian: &wingsvpb.Guardian{
+						SyncMode:                syncModeToProto(mode),
+						PeriodicIntervalMinutes: uint32(periodic),
 					},
-					Revision: "sync",
 				},
+				Revision: "sync",
 			},
-		})
-	}
+		},
+	}, client.Online)
 	writeJSON(w, http.StatusOK, map[string]any{"sync_mode": mode, "periodic_interval_minutes": periodic})
 }
 
@@ -957,22 +942,18 @@ func (h *Handler) respondInstalledApps(w http.ResponseWriter, client storage.Cli
 }
 
 func (h *Handler) respondRefreshInstalledApps(w http.ResponseWriter, client storage.Client) {
-	sink := h.hub.ClientSink(client.ID)
-	if sink == nil {
-		writeError(w, http.StatusServiceUnavailable, "client offline")
-		return
-	}
 	id, err := auth.GenerateClientID()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := sink.SendFrame(&guardianpb.Frame{
+	frame := &guardianpb.Frame{
 		Payload: &guardianpb.Frame_Command{
 			Command: &guardianpb.Command{Type: guardianpb.CommandType_COMMAND_TYPE_REFRESH_INSTALLED_APPS, Id: id},
 		},
-	}); err != nil {
-		writeError(w, http.StatusServiceUnavailable, err.Error())
+	}
+	if !h.hub.SendToClient(client.ID, frame, client.Online) {
+		writeError(w, http.StatusServiceUnavailable, "client offline")
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"id": id})

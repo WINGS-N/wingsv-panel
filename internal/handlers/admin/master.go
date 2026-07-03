@@ -158,13 +158,12 @@ func (h *Handler) handleMasterConfigApply(w http.ResponseWriter, r *http.Request
 		if flags[scopeSync] && master.SyncMode != "" {
 			_ = h.store.UpdateClientSync(client.ID, admin.ID, master.SyncMode, master.PeriodicIntervalMinutes)
 		}
-		if sink := h.hub.ClientSink(client.ID); sink != nil {
-			pushFrame := &guardianpb.Frame{
-				Payload: &guardianpb.Frame_ConfigPush{
-					ConfigPush: &guardianpb.ConfigPush{Config: desired, Revision: "master"},
-				},
-			}
-			_ = sink.SendFrame(pushFrame)
+		pushFrame := &guardianpb.Frame{
+			Payload: &guardianpb.Frame_ConfigPush{
+				ConfigPush: &guardianpb.ConfigPush{Config: desired, Revision: "master"},
+			},
+		}
+		if h.hub.SendToClient(client.ID, pushFrame, client.Online) {
 			if flags[scopeSync] && master.SyncMode != "" {
 				syncCfg := &wingsvpb.Config{
 					Ver: 1,
@@ -173,11 +172,11 @@ func (h *Handler) handleMasterConfigApply(w http.ResponseWriter, r *http.Request
 						PeriodicIntervalMinutes: uint32(master.PeriodicIntervalMinutes),
 					},
 				}
-				_ = sink.SendFrame(&guardianpb.Frame{
+				h.hub.SendToClient(client.ID, &guardianpb.Frame{
 					Payload: &guardianpb.Frame_ConfigPush{
 						ConfigPush: &guardianpb.ConfigPush{Config: syncCfg, Revision: "master-sync"},
 					},
-				})
+				}, client.Online)
 			}
 			pushed++
 		}
