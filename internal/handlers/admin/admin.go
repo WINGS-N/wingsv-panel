@@ -179,7 +179,13 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
-	writeJSON(w, http.StatusOK, adminMePayload(admin))
+	payload := adminMePayload(admin)
+	// self_provisioning tells the client-create form whether an autonomous
+	// VK-TURN-profile link is possible: it needs a vk-turn endpoint the app can
+	// self-enroll against. Without it the only valid link shape is Guardian, so
+	// the remote-control toggle is hidden and remote control is forced on.
+	payload["self_provisioning"] = strings.TrimSpace(h.cfg.VkTurnEndpoint) != ""
+	writeJSON(w, http.StatusOK, payload)
 }
 
 func adminMePayload(admin storage.Admin) map[string]any {
