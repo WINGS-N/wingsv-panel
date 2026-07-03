@@ -98,6 +98,42 @@ type ClientTraffic struct {
 	LastOnline int64
 }
 
+// WireguardClient is a wg peer minted on a 3x-ui node's WireGuard inbound.
+type WireguardClient struct {
+	PrivateKey      string
+	PublicKey       string
+	Address         string
+	ServerPublicKey string
+	MTU             uint32
+	Endpoint        string
+}
+
+// CreateWireguardClient adds a wg peer to a node's WireGuard inbound and returns
+// its config. Idempotent on clientID. An empty inboundTag selects the first
+// WireGuard inbound.
+func (c *Client) CreateWireguardClient(ctx context.Context, node dbmodel.ServerNode, inboundTag, clientID string) (WireguardClient, error) {
+	conn, err := c.dial(node)
+	if err != nil {
+		return WireguardClient{}, fmt.Errorf("dial xui node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+	resp, err := xuipb.NewPanelClient(conn).CreateWireguardClient(
+		authCtx(ctx, node.GRPCToken),
+		&xuipb.CreateWireguardClientRequest{InboundTag: inboundTag, ClientId: clientID},
+	)
+	if err != nil {
+		return WireguardClient{}, err
+	}
+	return WireguardClient{
+		PrivateKey:      resp.GetPrivateKey(),
+		PublicKey:       resp.GetPublicKey(),
+		Address:         resp.GetAddress(),
+		ServerPublicKey: resp.GetServerPublicKey(),
+		MTU:             resp.GetMtu(),
+		Endpoint:        resp.GetEndpoint(),
+	}, nil
+}
+
 // AddClient creates an inbound client from the JSON payload the 3x-ui REST API
 // binds, returning whether xray needs a restart to apply it.
 func (c *Client) AddClient(ctx context.Context, node dbmodel.ServerNode, payloadJSON string) (bool, error) {

@@ -36,6 +36,7 @@ import (
 	"v.wingsnet.org/internal/relayclient"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
+	"v.wingsnet.org/internal/xuiclient"
 	"v.wingsnet.org/web"
 )
 
@@ -518,7 +519,16 @@ func Run(ctx context.Context, cfg config.Config) error {
 			grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}})))
 		}
 		grpcServer = grpc.NewServer(grpcOpts...)
-		provisioning.NewService(store, relayclient.New(cfg.RelayToken)).Register(grpcServer)
+		provSvc := provisioning.NewService(store, relayclient.New(cfg.RelayToken))
+		if cfg.XuiWGNodeID != "" {
+			provSvc.SetWGProvider(&xuiWGProvider{
+				store:      store,
+				xui:        xuiclient.New(),
+				nodeID:     cfg.XuiWGNodeID,
+				inboundTag: cfg.XuiWGInboundTag,
+			})
+		}
+		provSvc.Register(grpcServer)
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
 		}()

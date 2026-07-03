@@ -38,17 +38,31 @@ type PeerProvisioner interface {
 	CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey, allowedIPs string) (Peer, error)
 }
 
+// WGProvider mints a client's WireGuard config out-of-band - for example on a
+// 3x-ui node over its Panel gRPC, when that node runs the real WireGuard rather
+// than the relay. When set it takes precedence over the relay PeerProvisioner.
+type WGProvider interface {
+	ProvisionWG(ctx context.Context, clientID string) (Peer, error)
+}
+
 // Service implements provisioningpb.ProvisioningServer.
 type Service struct {
 	provisioningpb.UnimplementedProvisioningServer
 	store       *storage.Store
 	provisioner PeerProvisioner
+	wgProvider  WGProvider
 	allowedIPs  string
 	mtu         uint32
 }
 
 func NewService(store *storage.Store, provisioner PeerProvisioner) *Service {
 	return &Service{store: store, provisioner: provisioner, allowedIPs: "0.0.0.0/0", mtu: defaultMTU}
+}
+
+// SetWGProvider routes wg minting through an out-of-band provider (e.g. a 3x-ui
+// node) instead of the calling relay node. nil restores the relay path.
+func (s *Service) SetWGProvider(p WGProvider) {
+	s.wgProvider = p
 }
 
 // Register attaches the service to a gRPC server.
@@ -79,6 +93,27 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 	}
 	if !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Out-of-band wg (e.g. a 3x-ui node running the real WireGuard): mint the peer
+	// there, persist it against the calling node and return it. No relay peerstore
+	// or cross-node replication - the 3x-ui inbound owns the peer set.
+	if s.wgProvider != nil {
+		peer, provErr := s.wgProvider.ProvisionWG(ctx, req.GetClientId())
+		if provErr != nil {
+			return nil, status.Error(codes.Internal, "provision wg: "+provErr.Error())
+		}
+		if err := s.store.UpsertClientWGPeer(dbmodel.ClientWGPeer{
+			ClientID:        req.GetClientId(),
+			NodeID:          req.GetNodeId(),
+			PublicKey:       peer.PublicKey,
+			PrivateKey:      peer.PrivateKey,
+			AllowedIPs:      peer.AllowedIPs,
+			ServerPublicKey: peer.ServerPublicKey,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
 	}
 
 	peer, err := s.provisioner.CreatePeer(ctx, node, "", "")
