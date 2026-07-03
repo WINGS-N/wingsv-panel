@@ -45,17 +45,17 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/login", h.handleLogin)
 	mux.HandleFunc("/api/admin/logout", h.handleLogout)
 	mux.HandleFunc("/api/admin/register", h.handleRegister)
-	mux.HandleFunc("/api/admin/registration-status", h.handleRegistrationStatus)
+	mux.HandleFunc("/api/admin/registration/status", h.handleRegistrationStatus)
 	mux.HandleFunc("/api/admin/me", h.requireAuth(h.handleMe))
 	mux.HandleFunc("/api/admin/password", h.requireAuth(h.handleChangePassword))
 	mux.HandleFunc("/api/admin/clients", h.requireAuth(h.handleClients))
 	mux.HandleFunc("/api/admin/clients/", h.requireAuth(h.handleClientByID))
-	mux.HandleFunc("/api/admin/decode-link", h.requireAuth(h.handleDecodeLink))
+	mux.HandleFunc("/api/admin/link/decode", h.requireAuth(h.handleDecodeLink))
 	mux.HandleFunc("/api/admin/avatars/", h.handleAvatar)
 	mux.HandleFunc("/api/admin/me/avatar", h.requireAuth(h.handleMyAvatar))
-	mux.HandleFunc("/api/admin/master-config", h.requireAuth(h.handleMasterConfig))
-	mux.HandleFunc("/api/admin/master-config/apply", h.requireAuth(h.handleMasterConfigApply))
-	mux.HandleFunc("/api/admin/master-config/seed", h.requireAuth(h.handleMasterConfigSeed))
+	mux.HandleFunc("/api/admin/master/config", h.requireAuth(h.handleMasterConfig))
+	mux.HandleFunc("/api/admin/master/config/apply", h.requireAuth(h.handleMasterConfigApply))
+	mux.HandleFunc("/api/admin/master/config/seed", h.requireAuth(h.handleMasterConfigSeed))
 }
 
 type loginRequest struct {

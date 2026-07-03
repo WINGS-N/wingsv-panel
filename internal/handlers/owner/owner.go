@@ -197,7 +197,7 @@ func (h *Handler) handleAdminByID(w http.ResponseWriter, r *http.Request, owner 
 	switch {
 	case subpath == "" && r.Method == http.MethodDelete:
 		h.respondDeleteAdmin(w, r, owner, id)
-	case subpath == "reset-password" && r.Method == http.MethodPost:
+	case subpath == "password/reset" && r.Method == http.MethodPost:
 		h.respondResetPassword(w, r, owner, id)
 	default:
 		writeError(w, http.StatusNotFound, "unknown route")

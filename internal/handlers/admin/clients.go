@@ -355,23 +355,23 @@ func (h *Handler) handleClientByID(w http.ResponseWriter, r *http.Request, admin
 		h.respondClientConfig(w, client.ID)
 	case subpath == "config" && r.Method == http.MethodPut:
 		h.respondPushClientConfig(w, r, client)
-	case subpath == "log-control" && r.Method == http.MethodPut:
+	case subpath == "log/control" && r.Method == http.MethodPut:
 		h.respondLogControl(w, r, client)
 	case subpath == "sync" && r.Method == http.MethodPut:
 		h.respondSync(w, r, client, admin)
 	case subpath == "command" && r.Method == http.MethodPost:
 		h.respondCommand(w, r, client)
-	case subpath == "wingsv-link" && r.Method == http.MethodGet:
+	case subpath == "link/wingsv" && r.Method == http.MethodGet:
 		h.respondWingsvLink(w, client, admin)
 	case strings.HasPrefix(subpath, "logs") && r.Method == http.MethodGet:
 		h.respondLogs(w, r, client)
-	case subpath == "rotate-token" && r.Method == http.MethodPost:
+	case subpath == "token/rotate" && r.Method == http.MethodPost:
 		h.respondRotateToken(w, r, client, admin)
-	case subpath == "refresh-subscription" && r.Method == http.MethodPost:
+	case subpath == "subscription/refresh" && r.Method == http.MethodPost:
 		h.respondRefreshSubscription(w, r, client)
-	case subpath == "installed-apps" && r.Method == http.MethodGet:
+	case subpath == "apps/installed" && r.Method == http.MethodGet:
 		h.respondInstalledApps(w, client)
-	case subpath == "installed-apps/refresh" && r.Method == http.MethodPost:
+	case subpath == "apps/refresh" && r.Method == http.MethodPost:
 		h.respondRefreshInstalledApps(w, client)
 	default:
 		writeError(w, http.StatusNotFound, "unknown route")
