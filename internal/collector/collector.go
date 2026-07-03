@@ -52,11 +52,19 @@ type Options struct {
 // admin's external node uses the token stored on the node).
 type RelayFactory func(node dbmodel.ServerNode) Relay
 
+// offlineThreshold is how many consecutive failed polls mark a node offline.
+// A single blip at the 3s cadence must not flap the status, so status only drops
+// after a few misses (~9s); it recovers to online on the first success.
+const offlineThreshold = 3
+
 // Collector polls vk-turn-proxy nodes on a ticker and persists their stats.
 type Collector struct {
 	store    Store
 	newRelay RelayFactory
 	opts     Options
+	// failures counts consecutive poll failures per node for offline hysteresis.
+	// Only the single Run goroutine touches it, so no lock is needed.
+	failures map[string]int
 }
 
 // New builds a collector, filling any unset option with its default.
@@ -78,7 +86,7 @@ func New(store Store, newRelay RelayFactory, opts Options) *Collector {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
-	return &Collector{store: store, newRelay: newRelay, opts: opts}
+	return &Collector{store: store, newRelay: newRelay, opts: opts, failures: map[string]int{}}
 }
 
 // Run polls once immediately, then on every tick until ctx is cancelled.
@@ -126,9 +134,15 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode) er
 	now := c.opts.Now().Unix()
 	status, err := relay.NodeStatus(ctx, node)
 	if err != nil {
-		_ = c.store.UpdateServerNodeStatus(node.ID, "offline", now)
+		// Hold the last status through transient blips; drop to offline only after
+		// several consecutive misses so a single slow poll doesn't flap the UI.
+		c.failures[node.ID]++
+		if c.failures[node.ID] >= offlineThreshold {
+			_ = c.store.UpdateServerNodeStatus(node.ID, "offline", now)
+		}
 		return err
 	}
+	c.failures[node.ID] = 0
 	stats, err := relay.FlowStats(ctx, node)
 	if err != nil {
 		return err

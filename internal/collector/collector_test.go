@@ -117,13 +117,22 @@ func TestCollectOncePersistsAndNotifies(t *testing.T) {
 	}
 }
 
-func TestCollectNodeMarksOfflineOnError(t *testing.T) {
+func TestCollectNodeMarksOfflineAfterRepeatedErrors(t *testing.T) {
 	store := newFakeStore(dbmodel.ServerNode{ID: "n1", Kind: "vk_turn_proxy"})
 	relay := &fakeRelay{statusErr: errors.New("dial fail")}
 	c := New(store, func(dbmodel.ServerNode) Relay { return relay }, Options{Now: func() time.Time { return time.Unix(1, 0) }})
+
+	// A single blip must not flap the status offline (hysteresis).
 	c.CollectOnce(context.Background())
+	if store.statuses["n1"] == "offline" {
+		t.Fatalf("one failure should not mark offline yet")
+	}
+	// After offlineThreshold consecutive failures it drops to offline.
+	for i := 1; i < offlineThreshold; i++ {
+		c.CollectOnce(context.Background())
+	}
 	if store.statuses["n1"] != "offline" {
-		t.Fatalf("node should be marked offline, got %q", store.statuses["n1"])
+		t.Fatalf("node should be offline after %d failures, got %q", offlineThreshold, store.statuses["n1"])
 	}
 	if len(store.samples) != 0 {
 		t.Fatalf("no sample should be written when the node is unreachable, got %d", len(store.samples))

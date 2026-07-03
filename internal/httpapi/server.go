@@ -568,6 +568,10 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// here for reachability and Xray core state so the UI can show they are up.
 	go func() {
 		xc := xuiclient.New()
+		// Consecutive-failure counts for offline hysteresis, mirroring the collector,
+		// so a slow 3x-ui poll does not flap the node's status in the UI.
+		const xuiOfflineThreshold = 3
+		failures := map[string]int{}
 		poll := func() {
 			nodes, err := store.ListServerNodes(storage.ServerNodeXUI)
 			if err != nil {
@@ -579,9 +583,13 @@ func Run(ctx context.Context, cfg config.Config) error {
 				cancel()
 				now := time.Now().Unix()
 				if sErr != nil {
-					_ = store.UpdateXuiNodeStatus(n.ID, "offline", "", "", now)
+					failures[n.ID]++
+					if failures[n.ID] >= xuiOfflineThreshold {
+						_ = store.UpdateXuiNodeStatus(n.ID, "offline", "", "", now)
+					}
 					continue
 				}
+				failures[n.ID] = 0
 				_ = store.UpdateXuiNodeStatus(n.ID, "online", st.XrayState, st.XrayVersion, now)
 			}
 			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
