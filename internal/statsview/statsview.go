@@ -5,12 +5,30 @@
 package statsview
 
 import (
+	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
+
+// trafficCache memoises the heavy traffic aggregation for a few seconds. The
+// collector only writes new samples every persist interval, so serving a slightly
+// stale payload keeps many dashboard pollers (every 3s) from each re-scanning a
+// week-to-month of samples - the read cost that would otherwise sink sqlite.
+const trafficCacheTTL = 5 * time.Second
+
+var (
+	trafficCacheMu sync.Mutex
+	trafficCache   = map[string]trafficCacheEntry{}
+)
+
+type trafficCacheEntry struct {
+	at  time.Time
+	val Traffic
+}
 
 type SeriesPoint struct {
 	Ts      int64  `json:"ts"`
@@ -112,6 +130,25 @@ func ResolveRange(key string) string {
 // are always computed regardless of the selected chart range.
 func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string, extraOwners ...int64) (Traffic, error) {
 	rng = ResolveRange(rng)
+	key := fmt.Sprintf("%d|%v|%s|%s", ownerAdminID, extraOwners, rng, nodeFilter)
+	now := time.Now()
+	trafficCacheMu.Lock()
+	if e, ok := trafficCache[key]; ok && now.Sub(e.at) < trafficCacheTTL {
+		trafficCacheMu.Unlock()
+		return e.val, nil
+	}
+	trafficCacheMu.Unlock()
+
+	out, err := buildTraffic(store, ownerAdminID, rng, nodeFilter, extraOwners...)
+	if err == nil {
+		trafficCacheMu.Lock()
+		trafficCache[key] = trafficCacheEntry{at: now, val: out}
+		trafficCacheMu.Unlock()
+	}
+	return out, err
+}
+
+func buildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string, extraOwners ...int64) (Traffic, error) {
 	rc := trafficRanges[rng]
 	mode, _ := store.GetPanelMode()
 	nodes, err := store.ListServerNodesByOwners(storage.ServerNodeVKTurnProxy, append([]int64{ownerAdminID}, extraOwners...))
