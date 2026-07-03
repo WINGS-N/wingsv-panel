@@ -52,6 +52,7 @@ type Collector struct {
 	nodeAvgLife   *prometheus.Desc
 	nodeTotal     *prometheus.Desc
 	nodeByProto   *prometheus.Desc
+	nodeAllTime   *prometheus.Desc
 }
 
 func NewCollector(store *storage.Store, hub Hub, nodes NodeStatser) *Collector {
@@ -78,6 +79,7 @@ func NewCollector(store *storage.Store, hub Hub, nodes NodeStatser) *Collector {
 		nodeAvgLife:   d("wingsv_vkturn_avg_session_lifetime_seconds", "Average closed-session lifetime.", "node"),
 		nodeTotal:     d("wingsv_vkturn_sessions_total", "Total relay sessions since start.", "node"),
 		nodeByProto:   d("wingsv_vkturn_streams_by_protocol", "Active relay streams by protocol.", "node", "protocol"),
+		nodeAllTime:   d("wingsv_vkturn_traffic_alltime_bytes", "All-time transferred bytes per node, durable across relay restarts.", "node", "dir"),
 	}
 }
 
@@ -85,7 +87,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, desc := range []*prometheus.Desc{
 		c.clientsTotal, c.clientsOnline, c.adminsTotal, c.wsClients, c.wsAdmins,
 		c.serverNodes, c.nodeUp, c.nodePeers, c.nodeSessions, c.nodeRx, c.nodeTx,
-		c.nodeStreams, c.nodeAvgLife, c.nodeTotal, c.nodeByProto,
+		c.nodeStreams, c.nodeAvgLife, c.nodeTotal, c.nodeByProto, c.nodeAllTime,
 	} {
 		ch <- desc
 	}
@@ -106,6 +108,15 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	if c.hub != nil {
 		gauge(c.wsClients, float64(c.hub.ClientCount()))
 		gauge(c.wsAdmins, float64(c.hub.AdminCount()))
+	}
+
+	// Durable all-time traffic per node comes from the DB accumulator, so it is
+	// reported even for nodes that are currently offline.
+	if totals, err := c.store.ListNodeTrafficTotals(); err == nil {
+		for _, t := range totals {
+			ch <- prometheus.MustNewConstMetric(c.nodeAllTime, prometheus.CounterValue, float64(t.RxTotal), t.NodeID, "rx")
+			ch <- prometheus.MustNewConstMetric(c.nodeAllTime, prometheus.CounterValue, float64(t.TxTotal), t.NodeID, "tx")
+		}
 	}
 
 	nodes, err := c.store.ListServerNodes("")
