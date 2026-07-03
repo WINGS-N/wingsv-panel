@@ -41,6 +41,10 @@
         </div>
         <div class="session-row-meta node-row-tail">
           <span>{{ n.peer_count }} пиров · {{ n.active_sessions }} сессий</span>
+          <SamsungButton v-if="n.kind === 'xui'" variant="secondary" size="small" @click="openAddClient(n)">
+            <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+            Клиент
+          </SamsungButton>
           <SamsungIconButton variant="danger" size="small" aria-label="Удалить" @click="onDelete(n)">
             <Trash2 class="button-icon" aria-hidden="true" />
           </SamsungIconButton>
@@ -48,6 +52,26 @@
       </li>
     </ul>
   </SamsungCard>
+
+  <SamsungModal
+    :model-value="!!clientNode"
+    :busy="clientAdding"
+    title="Новый inbound-клиент 3x-ui"
+    @update:model-value="closeAddClient"
+  >
+    <p class="body-copy">
+      JSON настроек клиента (в том же виде, что принимает REST 3x-ui): email, id/пароль, лимиты и т.п.
+    </p>
+    <OneuiTextarea v-model="clientPayload" rows="6" label="payload_json" placeholder='{"email":"user1", ...}' />
+    <p v-if="clientError" class="state-error mt-2">{{ clientError }}</p>
+    <template #actions>
+      <SamsungButton :busy="clientAdding" @click="submitAddClient">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Создать
+      </SamsungButton>
+      <SamsungButton variant="secondary" :disabled="clientAdding" @click="closeAddClient">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
 
   <template v-if="traffic && nodes.length">
     <section class="surface-card mt-6">
@@ -111,9 +135,11 @@ import { Plus, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
 import SamsungPill from '@/components/layout/SamsungPill.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
+import OneuiTextarea from '@/components/controls/OneuiTextarea.vue';
 import TrafficSparkline from '@/components/domain/TrafficSparkline.vue';
 import FlowChain from '@/components/domain/FlowChain.vue';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
@@ -127,6 +153,11 @@ const connections = ref([]);
 const loadError = ref('');
 const addError = ref('');
 const adding = ref(false);
+
+const clientNode = ref(null);
+const clientPayload = ref('');
+const clientAdding = ref(false);
+const clientError = ref('');
 
 const form = reactive({ name: '', kind: 'vk_turn_proxy', grpc_endpoint: '', grpc_token: '' });
 const kindOptions = [
@@ -201,6 +232,36 @@ async function onAdd() {
     addError.value = err.message || 'Не удалось добавить';
   } finally {
     adding.value = false;
+  }
+}
+
+function openAddClient(node) {
+  clientNode.value = node;
+  clientPayload.value = '';
+  clientError.value = '';
+}
+
+function closeAddClient() {
+  clientNode.value = null;
+}
+
+async function submitAddClient() {
+  if (!clientNode.value) return;
+  clientAdding.value = true;
+  clientError.value = '';
+  try {
+    const res = await fetch(`/api/admin/nodes/${clientNode.value.id}/clients`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload_json: clientPayload.value }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    clientNode.value = null;
+  } catch (err) {
+    clientError.value = err.message || 'Не удалось создать клиента';
+  } finally {
+    clientAdding.value = false;
   }
 }
 
