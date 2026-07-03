@@ -38,13 +38,20 @@ type Totals struct {
 	ActiveStreams  uint32 `json:"active_streams"`
 	RxBytes        uint64 `json:"rx_bytes"`
 	TxBytes        uint64 `json:"tx_bytes"`
+	Rx1h           uint64 `json:"rx_1h"`
+	Tx1h           uint64 `json:"tx_1h"`
 	Rx24h          uint64 `json:"rx_24h"`
 	Tx24h          uint64 `json:"tx_24h"`
+	Rx7d           uint64 `json:"rx_7d"`
+	Tx7d           uint64 `json:"tx_7d"`
+	RxAll          uint64 `json:"rx_all"`
+	TxAll          uint64 `json:"tx_all"`
 }
 
 type Traffic struct {
 	Mode        string        `json:"mode"`
 	GeneratedAt int64         `json:"generated_at"`
+	Range       string        `json:"range"`
 	Totals      Totals        `json:"totals"`
 	Nodes       []Node        `json:"nodes"`
 	Series      []SeriesPoint `json:"series"`
@@ -78,18 +85,44 @@ type Connection struct {
 	LastSeen  int64  `json:"last_seen"`
 }
 
-// BuildTraffic returns the dashboard aggregate for the given owner's nodes.
-func BuildTraffic(store *storage.Store, ownerAdminID int64) (Traffic, error) {
+// trafficRange maps a UI range key to the chart window and its bucket width.
+type trafficRange struct {
+	window    time.Duration
+	bucketSec int64
+}
+
+var trafficRanges = map[string]trafficRange{
+	"24h":   {window: 24 * time.Hour, bucketSec: 60},
+	"7d":    {window: 7 * 24 * time.Hour, bucketSec: 3600},
+	"month": {window: 30 * 24 * time.Hour, bucketSec: 6 * 3600},
+}
+
+// ResolveRange normalises a range key, defaulting to 24h.
+func ResolveRange(key string) string {
+	if _, ok := trafficRanges[key]; ok {
+		return key
+	}
+	return "24h"
+}
+
+// BuildTraffic builds the dashboard traffic view for the given owner's nodes. rng
+// selects the chart window (24h|7d|month); the tile totals (1h/24h/7d/all-time)
+// are always computed regardless of the selected chart range.
+func BuildTraffic(store *storage.Store, ownerAdminID int64, rng string) (Traffic, error) {
+	rng = ResolveRange(rng)
+	rc := trafficRanges[rng]
 	mode, _ := store.GetPanelMode()
 	nodes, err := store.ListServerNodesByOwner(storage.ServerNodeVKTurnProxy, ownerAdminID)
 	if err != nil {
 		return Traffic{}, err
 	}
-	out := Traffic{Mode: string(mode), GeneratedAt: time.Now().Unix()}
+	out := Traffic{Mode: string(mode), GeneratedAt: time.Now().Unix(), Range: rng}
 	out.Totals.Nodes = len(nodes)
 	owned := make(map[string]bool, len(nodes))
+	ids := make([]string, 0, len(nodes))
 	for _, n := range nodes {
 		owned[n.ID] = true
+		ids = append(ids, n.ID)
 		node := Node{ID: n.ID, Name: n.Name, Status: n.Status, LastSeen: n.LastSeenAt}
 		if latest, lerr := store.LatestTrafficSample(n.ID); lerr == nil {
 			node.PeerCount = latest.PeerCount
@@ -108,7 +141,14 @@ func BuildTraffic(store *storage.Store, ownerAdminID int64) (Traffic, error) {
 		out.Totals.TxBytes += node.TxBytes
 		out.Nodes = append(out.Nodes, node)
 	}
-	samples, err := store.ListTrafficSince(time.Now().Add(-24 * time.Hour).Unix())
+	// Load enough history to cover both the chart window and the widest tile
+	// window (7d), in one query, then slice per need.
+	now := time.Now()
+	loadWindow := rc.window
+	if week := 7 * 24 * time.Hour; week > loadWindow {
+		loadWindow = week
+	}
+	samples, err := store.ListTrafficSince(now.Add(-loadWindow).Unix())
 	if err != nil {
 		return Traffic{}, err
 	}
@@ -118,8 +158,32 @@ func BuildTraffic(store *storage.Store, ownerAdminID int64) (Traffic, error) {
 			filtered = append(filtered, s)
 		}
 	}
-	out.Series, out.Totals.Rx24h, out.Totals.Tx24h = aggregateTrafficSeries(filtered, 60)
+
+	out.Series, _, _ = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-rc.window).Unix()), rc.bucketSec)
+	_, out.Totals.Rx1h, out.Totals.Tx1h = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-time.Hour).Unix()), rc.bucketSec)
+	_, out.Totals.Rx24h, out.Totals.Tx24h = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-24*time.Hour).Unix()), rc.bucketSec)
+	_, out.Totals.Rx7d, out.Totals.Tx7d = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-7*24*time.Hour).Unix()), rc.bucketSec)
+
+	rxAll, txAll, err := store.SumNodeTrafficTotals(ids)
+	if err != nil {
+		return Traffic{}, err
+	}
+	out.Totals.RxAll, out.Totals.TxAll = rxAll, txAll
 	return out, nil
+}
+
+// sinceCutoff returns the tail of an ascending-by-(node,ts) sample slice whose ts
+// is at or after cutoff, preserving the node grouping aggregateTrafficSeries needs.
+// The slice is scanned rather than binary-searched because it is grouped by node,
+// not globally sorted by ts.
+func sinceCutoff(samples []dbmodel.TrafficSample, cutoff int64) []dbmodel.TrafficSample {
+	out := make([]dbmodel.TrafficSample, 0, len(samples))
+	for _, s := range samples {
+		if s.TsUnix >= cutoff {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // BuildFlows returns the current live flows for the given owner's nodes.

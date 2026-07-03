@@ -18,7 +18,7 @@ func (h *Handler) handleStatsTraffic(w http.ResponseWriter, r *http.Request, _ s
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	out, err := statsview.BuildTraffic(h.store, localNodeOwnerID)
+	out, err := statsview.BuildTraffic(h.store, localNodeOwnerID, r.URL.Query().Get("range"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to build traffic stats")
 		return
