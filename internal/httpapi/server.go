@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"v.wingsnet.org/internal/assets"
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/bus"
 	"v.wingsnet.org/internal/collector"
@@ -34,7 +35,6 @@ import (
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/provisioning"
 	"v.wingsnet.org/internal/relayclient"
-	"v.wingsnet.org/internal/assets"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
 	"v.wingsnet.org/internal/xuiclient"
