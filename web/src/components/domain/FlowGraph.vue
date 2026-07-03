@@ -100,6 +100,9 @@ const props = defineProps({
   clientNames: { type: Object, default: () => ({}) },
   mode: { type: String, default: 'live' }, // live | historical
   maxPerColumn: { type: Number, default: 16 },
+  // Recent average throughput (bytes/sec) from the parent, used for the live
+  // header when the relay reports no per-flow rate.
+  liveRate: { type: Number, default: 0 },
 });
 
 const NODEW = 11;
@@ -142,6 +145,8 @@ const hoveredLink = ref('');
 const pinnedLink = ref(null);
 const hoveredNode = ref('');
 const selected = ref('');
+// Columns whose folded "прочие" bucket the operator expanded to full detail.
+const expanded = ref({ c: false, r: false, d: false });
 const pos = ref({ x: 0, y: 0 });
 
 function track(e) {
@@ -171,7 +176,7 @@ function destLabel(remote) {
 }
 
 function label(kind, key) {
-  if (key === '__other__') return 'прочие';
+  if (key === '__other__') return expanded.value[kind] ? 'прочие ▾' : 'прочие ▸';
   if (kind === 'r') return props.nodeNames[key] || (key.length > 10 ? key.slice(0, 8) : key);
   const s = kind === 'c' ? clientLabel(key) : destLabel(key);
   return s.length > 28 ? s.slice(0, 27) + '...' : s;
@@ -220,9 +225,10 @@ const graph = computed(() => {
     add(rTot, f.node_id || '-', b);
     add(dTot, f.remote || '-', b);
   }
-  const c = fold(cTot, props.maxPerColumn);
-  const r = fold(rTot, props.maxPerColumn);
-  const d = fold(dTot, props.maxPerColumn);
+  const limit = (col) => (expanded.value[col] ? Infinity : props.maxPerColumn);
+  const c = fold(cTot, limit('c'));
+  const r = fold(rTot, limit('r'));
+  const d = fold(dTot, limit('d'));
 
   // Link accumulators carry rx/tx, a rate (live), and per-protocol byte tallies so
   // a folded link takes the colour of its dominant protocol.
@@ -373,8 +379,11 @@ const legend = computed(() => {
 
 const headerThroughput = computed(() => {
   if (props.mode === 'live') {
+    // Prefer live per-flow rates; the relay may report none, so fall back to the
+    // parent's recent average so the figure is not stuck at 0 while traffic flows.
     let rate = 0;
     for (const f of props.flows) rate += (Number(f.rx_rate) || 0) + (Number(f.tx_rate) || 0);
+    if (rate <= 0) rate = props.liveRate || 0;
     return fmt(rate) + '/s';
   }
   let bytes = 0;
@@ -424,6 +433,16 @@ function nodeDimmed(node) {
 }
 
 function toggleNode(id) {
+  // Clicking a folded "прочие" bucket expands its column to full detail (and back).
+  const sep = id.indexOf(':');
+  const col = id.slice(0, sep);
+  const key = id.slice(sep + 1);
+  if (key === '__other__') {
+    expanded.value = { ...expanded.value, [col]: !expanded.value[col] };
+    selected.value = '';
+    pinnedLink.value = null;
+    return;
+  }
   selected.value = selected.value === id ? '' : id;
   pinnedLink.value = null;
 }

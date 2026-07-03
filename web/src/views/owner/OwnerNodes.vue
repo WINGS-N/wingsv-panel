@@ -85,7 +85,14 @@
         />
       </div>
     </template>
-    <FlowGraph :flows="flows" :node-names="nodeNames" :client-names="clientNames" :mode="flowMode" class="mt-4" />
+    <FlowGraph
+      :flows="flows"
+      :node-names="nodeNames"
+      :client-names="clientNames"
+      :mode="flowMode"
+      :live-rate="liveRate"
+      class="mt-4"
+    />
   </SamsungCard>
 
   <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения через ноды (хранятся сутки).">
@@ -120,6 +127,10 @@
 
   <SamsungModal :model-value="showAdd" :busy="adding" title="Новый сервер" @update:model-value="closeAdd">
     <p class="body-copy">Локальная нода панели — VK TURN relay или 3x-ui. Панель опрашивает её по gRPC.</p>
+    <template v-if="!connectCommand">
+      <label class="field-label mt-4">Способ подключения</label>
+      <OneuiRadioGroup v-model="addMode" :options="addModeOptions" variant="pill" />
+    </template>
     <label class="field-label mt-4">Тип сервера</label>
     <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
     <OneuiInput v-model.trim="form.name" label="Название" placeholder="relay.example.com" class="mt-4" />
@@ -133,7 +144,17 @@
         class="node-endpoint-port"
       />
     </div>
-    <OneuiInput v-model.trim="form.token" label="Токен (bearer)" placeholder="опционально" class="mt-3" />
+    <OneuiInput
+      v-if="addMode === 'manual'"
+      v-model.trim="form.token"
+      label="Токен (bearer)"
+      placeholder="опционально"
+      class="mt-3"
+    />
+    <p v-if="addMode === 'command' && !connectCommand" class="admin-muted mt-2">
+      Токен сгенерируется автоматически. После создания скопируйте команду и выполните её на хосте ноды — она
+      подключится к панели сама.
+    </p>
     <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
 
     <div v-if="connectCommand" class="connect-block mt-4">
@@ -148,7 +169,7 @@
     <template #actions>
       <SamsungButton v-if="!connectCommand" :busy="adding" @click="addNode">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-        Создать
+        {{ addMode === 'command' ? 'Создать и получить команду' : 'Создать' }}
       </SamsungButton>
       <SamsungButton variant="secondary" :disabled="adding" @click="closeAdd">
         {{ connectCommand ? 'Готово' : 'Отмена' }}
@@ -197,6 +218,19 @@ const addError = ref('');
 const adding = ref(false);
 const showAdd = ref(false);
 const connectCommand = ref('');
+const addMode = ref('command');
+const addModeOptions = [
+  { value: 'command', label: 'Командой' },
+  { value: 'manual', label: 'Вручную (gRPC)' },
+];
+
+// genToken mints a node bearer token client-side for the command flow, so the
+// operator never hand-enters credentials.
+function genToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 const kindOptions = [
   { value: 'vk_turn_proxy', label: 'VK TURN' },
@@ -218,6 +252,13 @@ function nodeKindLabel(kind) {
 }
 
 const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id, n.name || n.id])));
+
+// Recent average throughput (bytes/sec) over the last hour, for the flow graph's
+// live header when the relay reports no per-flow rate.
+const liveRate = computed(() => {
+  const t = traffic.value?.totals || {};
+  return Math.round(((t.rx_1h || 0) + (t.tx_1h || 0)) / 3600);
+});
 
 const trafficRange = ref('24h');
 const rangeOptions = [
@@ -301,6 +342,7 @@ async function loadAll() {
 function openAdd() {
   addError.value = '';
   connectCommand.value = '';
+  addMode.value = 'command';
   form.name = '';
   form.host = '';
   form.token = '';
@@ -320,6 +362,9 @@ async function addNode() {
   if (!host) {
     addError.value = 'Укажите IP или домен';
     return;
+  }
+  if (addMode.value === 'command') {
+    form.token = genToken();
   }
   adding.value = true;
   try {
