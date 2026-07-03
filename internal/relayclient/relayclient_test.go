@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -39,9 +40,12 @@ func TestCreatePeerMapsResponse(t *testing.T) {
 	go func() { _ = gs.Serve(lis) }()
 	t.Cleanup(gs.Stop)
 
-	prov := New("s3cret", WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-		return lis.DialContext(ctx)
-	}))
+	prov := New("s3cret",
+		WithTransportCredentials(insecure.NewCredentials()),
+		WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return lis.DialContext(ctx)
+		}),
+	)
 	peer, err := prov.CreatePeer(
 		context.Background(),
 		dbmodel.ServerNode{ID: "n1", GRPCEndpoint: "passthrough:///bufnet"},

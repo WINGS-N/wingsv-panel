@@ -6,12 +6,12 @@ package relayclient
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"v.wingsnet.org/internal/gen/relaypb"
@@ -42,9 +42,11 @@ func WithContextDialer(d func(context.Context, string) (net.Conn, error)) Option
 }
 
 // New builds a Provisioner. token, when set, is sent as a bearer credential the
-// node's Relay API checks.
+// node's Relay API checks. The transport is TLS by default (chain verification is
+// skipped - the node cert may be self-signed and the bearer token authenticates);
+// pass WithTransportCredentials to pin the panel CA instead.
 func New(token string, opts ...Option) *Provisioner {
-	p := &Provisioner{token: token, creds: insecure.NewCredentials()}
+	p := &Provisioner{token: token, creds: credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})}
 	for _, opt := range opts {
 		opt(p)
 	}
