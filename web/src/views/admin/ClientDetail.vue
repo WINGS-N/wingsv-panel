@@ -1022,6 +1022,7 @@ async function loadDetail() {
     // config already carries; afterwards leave the admin's toggle untouched.
     if (!provisionSeeded.value && configDraftSeeded.value) {
       provisionEnabled.value = (formValue.value?.turn?.profiles || []).some((p) => p.wgProvisioned);
+      matchProvisionNodeFromConfig();
       provisionSeeded.value = true;
     }
     // Lazy-load the wingsv:// link so the QR card on Конфигурация has data
@@ -1040,12 +1041,31 @@ function onProvisionEnabled(v) {
 function onProvisionNode(v) {
   provisionNodeId.value = v || '';
 }
+function hostOf(endpoint) {
+  return String(endpoint || '')
+    .trim()
+    .split(':')[0]
+    .toLowerCase();
+}
+// The saved config carries the managed profile's vk-turn endpoint, not a node id.
+// Reflect the admin's earlier choice in the selector by matching that endpoint's
+// host back to a registered vk-turn node (grpc_endpoint host). Skips when the
+// admin has already picked a node this session.
+function matchProvisionNodeFromConfig() {
+  if (provisionNodeId.value) return;
+  const managed = (formValue.value?.turn?.profiles || []).find((p) => p.wgProvisioned);
+  const host = hostOf(managed?.vkTurnEndpoint);
+  if (!host) return;
+  const match = vkTurnNodes.value.find((n) => hostOf(n.grpc_endpoint) === host);
+  if (match) provisionNodeId.value = match.id;
+}
 async function loadVkTurnNodes() {
   try {
     const res = await fetch('/api/admin/nodes', { credentials: 'include' });
     if (!res.ok) return;
     const data = await res.json();
     vkTurnNodes.value = (data.nodes || []).filter((n) => n.kind === 'vk_turn_proxy');
+    matchProvisionNodeFromConfig();
   } catch {
     // Non-fatal: without nodes the selector just offers "Не выбран".
   }
