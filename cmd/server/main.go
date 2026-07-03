@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"v.wingsnet.org/internal/config"
@@ -27,9 +28,42 @@ func main() {
 		runDB(cfg, args[1:])
 	case "ca":
 		runCA(cfg, args[1:])
+	case "connect":
+		runConnect(cfg, args[1:])
 	default:
-		log.Fatalf("unknown command %q; use one of: serve, db, ca", args[0])
+		log.Fatalf("unknown command %q; use one of: serve, db, ca, connect", args[0])
 	}
+}
+
+// runConnect prints the ready-to-paste connector command for a registered node,
+// so an operator can wire that node to the panel from the panel host's CLI.
+func runConnect(cfg config.Config, args []string) {
+	if len(args) != 1 {
+		log.Fatal("usage: wingsv-panel connect <node-id>")
+	}
+	opts, err := driverOptions(cfg, cfg.DBKind)
+	if err != nil {
+		log.Fatal(err)
+	}
+	store, err := storage.Open(opts)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	node, err := store.GetServerNode(args[0])
+	if err != nil {
+		log.Fatalf("node %q: %v", args[0], err)
+	}
+	host := strings.TrimPrefix(strings.TrimPrefix(cfg.PublicBaseURL, "https://"), "http://")
+	kind := "vktp"
+	if node.Kind == "xui" {
+		kind = "xui"
+	}
+	token := node.GRPCToken
+	if token == "" {
+		token = "<token>"
+	}
+	fmt.Printf("curl -fsSL %s/connect.sh | sh -s -- grpc connect %s:443 %s %s %s\n",
+		strings.TrimRight(cfg.PublicBaseURL, "/"), host, token, node.ID, kind)
 }
 
 func runServe(cfg config.Config) {
