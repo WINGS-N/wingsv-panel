@@ -20,6 +20,9 @@ type ClientSink interface {
 type AdminEvent struct {
 	ClientID string
 	Frame    *guardianpb.Frame
+	// Kind, when set with a nil Frame, is a non-device event (e.g. "stats_update")
+	// forwarded to the admin WS verbatim instead of being derived from a frame.
+	Kind string
 }
 
 type AdminSink interface {
@@ -108,6 +111,23 @@ func (h *Hub) FanoutToAdmin(adminID int64, ev AdminEvent) {
 	sinks := make([]AdminSink, 0, len(h.admins[adminID]))
 	for sink := range h.admins[adminID] {
 		sinks = append(sinks, sink)
+	}
+	h.mu.RUnlock()
+	for _, s := range sinks {
+		s.SendEvent(ev)
+	}
+}
+
+// BroadcastToAdmins delivers a non-device event to every connected admin WS. The
+// stats collector uses it to nudge dashboards to refetch; each client then pulls
+// only the scope it is allowed to see.
+func (h *Hub) BroadcastToAdmins(ev AdminEvent) {
+	h.mu.RLock()
+	sinks := make([]AdminSink, 0)
+	for _, set := range h.admins {
+		for sink := range set {
+			sinks = append(sinks, sink)
+		}
 	}
 	h.mu.RUnlock()
 	for _, s := range sinks {

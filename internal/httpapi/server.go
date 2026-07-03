@@ -518,7 +518,11 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 		return relayclient.New(token)
 	}
-	go collector.New(store, relayFactory, collector.Options{}).Run(ctx)
+	go collector.New(store, relayFactory, collector.Options{
+		OnCollected: func(string) {
+			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
+		},
+	}).Run(ctx)
 
 	// Audit log rotation: drop entries older than 30 days every 6h.
 	const auditRetention = 30 * 24 * time.Hour

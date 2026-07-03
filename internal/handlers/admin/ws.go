@@ -92,7 +92,17 @@ type wsEvent struct {
 
 func writeEvent(ctx context.Context, conn *websocket.Conn, ev guardianhub.AdminEvent) error {
 	if ev.Frame == nil {
-		return nil
+		// A frame-less event carries its kind directly (e.g. a stats-refresh nudge).
+		if ev.Kind == "" {
+			return nil
+		}
+		bytesJSON, err := json.Marshal(wsEvent{Kind: ev.Kind})
+		if err != nil {
+			return err
+		}
+		writeCtx, cancel := context.WithTimeout(ctx, adminWriteTimeout)
+		defer cancel()
+		return conn.Write(writeCtx, websocket.MessageText, bytesJSON)
 	}
 	envelope, err := buildAdminEnvelope(ev.ClientID, ev.Frame)
 	if err != nil {
