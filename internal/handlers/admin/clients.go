@@ -196,6 +196,10 @@ type createClientRequest struct {
 	SeedFromLink            string `json:"seed_from_wingsv_link"`
 	SyncMode                string `json:"sync_mode"`
 	PeriodicIntervalMinutes int    `json:"periodic_interval_minutes"`
+	// RemoteControl selects the enrollment-link shape: nil/true embeds the
+	// Guardian block (WSS remote control); false emits a plain VK-TURN-profile
+	// link. Both carry a managed VK-TURN profile when a vk-turn endpoint is set.
+	RemoteControl *bool `json:"remote_control"`
 }
 
 func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -252,24 +256,10 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 		return
 	}
 
-	link, err := preview.BuildWingsLink(&wingsvpb.Config{
-		Ver:  1,
-		Type: wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN,
-		Guardian: &wingsvpb.Guardian{
-			WsUrl:                   deriveWsURL(h.cfg.PublicBaseURL),
-			ClientId:                clientID,
-			ClientToken:             tokenBytes,
-			ClientName:              name,
-			SyncMode:                syncModeToProto(syncMode),
-			PeriodicIntervalMinutes: uint32(periodic),
-			AdminUsername:           admin.Username,
-			AdminId:                 admin.ID,
-			AdminAvatarVersion:      admin.AvatarVersion,
-			ServerCaPins:            h.caPins,
-		},
-	})
+	remoteControl := req.RemoteControl == nil || *req.RemoteControl
+	link, err := h.buildClientLink(clientID, name, tokenBytes, syncMode, periodic, admin, remoteControl)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -314,6 +304,66 @@ func (h *Handler) resolveSeedConfig(req createClientRequest, admin storage.Admin
 		return out, nil
 	}
 	return nil, nil
+}
+
+// buildClientLink builds a client's wingsv:// enrollment link. remoteControl ON
+// embeds the Guardian block (WSS remote config control); OFF emits a plain
+// VK-TURN-profile link. Both carry a managed VK-TURN profile (when a vk-turn
+// endpoint is configured) so the app self-provisions its wg config over DTLS.
+func (h *Handler) buildClientLink(
+	clientID, name string,
+	token []byte,
+	syncMode string,
+	periodic int,
+	admin storage.Admin,
+	remoteControl bool,
+) (string, error) {
+	cfg := &wingsvpb.Config{Ver: 1}
+	cfg.Turn = h.managedTurn(clientID, name, token)
+	if remoteControl {
+		cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN
+		cfg.Guardian = &wingsvpb.Guardian{
+			WsUrl:                   deriveWsURL(h.cfg.PublicBaseURL),
+			ClientId:                clientID,
+			ClientToken:             token,
+			ClientName:              name,
+			SyncMode:                syncModeToProto(syncMode),
+			PeriodicIntervalMinutes: uint32(periodic),
+			AdminUsername:           admin.Username,
+			AdminId:                 admin.ID,
+			AdminAvatarVersion:      admin.AvatarVersion,
+			ServerCaPins:            h.caPins,
+		}
+		return preview.BuildWingsLink(cfg)
+	}
+	if cfg.Turn == nil {
+		return "", errors.New("set VK_TURN_ENDPOINT to issue a profile link without remote control")
+	}
+	cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_VK_TURN_PROFILE
+	return preview.BuildWingsLink(cfg)
+}
+
+// managedTurn builds the panel-managed VK-TURN profile that lets the app
+// self-provision its wg config: it carries the client's panel token and the
+// vk-turn endpoint. Returns nil when no vk-turn endpoint is configured.
+func (h *Handler) managedTurn(clientID, name string, token []byte) *wingsvpb.Turn {
+	endpoint := strings.TrimSpace(h.cfg.VkTurnEndpoint)
+	if endpoint == "" {
+		return nil
+	}
+	profile := &wingsvpb.TurnProfile{
+		Id:                clientID,
+		Title:             name,
+		TransportKind:     "wg",
+		VkTurnEndpoint:    endpoint,
+		WgProvisioned:     true,
+		ProvisionClientId: clientID,
+		ProvisionToken:    token,
+	}
+	return &wingsvpb.Turn{
+		ActiveProfileId: profile.Id,
+		Profiles:        []*wingsvpb.TurnProfile{profile},
+	}
 }
 
 // deriveWsURL converts an https://host[:port] base URL to wss://host[:port]/api/guardian/ws.
@@ -369,7 +419,7 @@ func (h *Handler) handleClientByID(w http.ResponseWriter, r *http.Request, admin
 	case subpath == "command" && r.Method == http.MethodPost:
 		h.respondCommand(w, r, client)
 	case subpath == "link/wingsv" && r.Method == http.MethodGet:
-		h.respondWingsvLink(w, client, admin)
+		h.respondWingsvLink(w, r, client, admin)
 	case strings.HasPrefix(subpath, "logs") && r.Method == http.MethodGet:
 		h.respondLogs(w, r, client)
 	case subpath == "token/rotate" && r.Method == http.MethodPost:
@@ -418,7 +468,7 @@ func (h *Handler) handleDecodeLink(w http.ResponseWriter, r *http.Request, admin
 	writeJSON(w, http.StatusOK, map[string]any{"config": asJSON})
 }
 
-func (h *Handler) respondWingsvLink(w http.ResponseWriter, client storage.Client, admin storage.Admin) {
+func (h *Handler) respondWingsvLink(w http.ResponseWriter, r *http.Request, client storage.Client, admin storage.Admin) {
 	// admin зарезервирован для будущего audit-логирования при owner-доступе;
 	// для query-к store достаточно owner_admin_id самого клиента.
 	_ = admin
@@ -427,24 +477,12 @@ func (h *Handler) respondWingsvLink(w http.ResponseWriter, client storage.Client
 		writeError(w, http.StatusNotFound, "token not available — recreate the client to regenerate")
 		return
 	}
-	link, err := preview.BuildWingsLink(&wingsvpb.Config{
-		Ver:  1,
-		Type: wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN,
-		Guardian: &wingsvpb.Guardian{
-			WsUrl:                   deriveWsURL(h.cfg.PublicBaseURL),
-			ClientId:                client.ID,
-			ClientToken:             tokenBytes,
-			ClientName:              client.Name,
-			SyncMode:                syncModeToProto(client.SyncMode),
-			PeriodicIntervalMinutes: uint32(client.PeriodicIntervalMinutes),
-			AdminUsername:           admin.Username,
-			AdminId:                 admin.ID,
-			AdminAvatarVersion:      admin.AvatarVersion,
-			ServerCaPins:            h.caPins,
-		},
-	})
+	remoteControl := r.URL.Query().Get("remote") != "0"
+	link, err := h.buildClientLink(
+		client.ID, client.Name, tokenBytes, client.SyncMode, client.PeriodicIntervalMinutes, admin, remoteControl,
+	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"wingsv_link": link})

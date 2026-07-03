@@ -7,18 +7,22 @@ import (
 )
 
 type Config struct {
-	ListenAddr             string
-	PublicBaseURL          string
-	AssetLinksJSON         string
-	GitHubRepo             string
-	ReleaseAssetSuffix     string
-	StaticDir              string
-	DBPath                 string
-	DBKind                 string
-	DBDSN                  string
-	CADir                  string
-	ProvisioningListen     string
-	RelayToken             string
+	ListenAddr         string
+	PublicBaseURL      string
+	AssetLinksJSON     string
+	GitHubRepo         string
+	ReleaseAssetSuffix string
+	StaticDir          string
+	DBPath             string
+	DBKind             string
+	DBDSN              string
+	CADir              string
+	ProvisioningListen string
+	RelayToken         string
+	// VkTurnEndpoint is the VK TURN relay address the app dials to reach the
+	// panel-local vk-turn-proxy node. It is embedded in managed VK-TURN-profile
+	// enrollment links so the app can self-provision its wg config (M3).
+	VkTurnEndpoint         string
 	BootstrapAdminUsername string
 	BootstrapAdminPassword string
 	SessionSecure          bool
@@ -40,6 +44,7 @@ func Load() Config {
 		CADir:                  getEnv("CA_DIR", "./certs"),
 		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
 		RelayToken:             getEnv("RELAY_TOKEN", ""),
+		VkTurnEndpoint:         getEnv("VK_TURN_ENDPOINT", ""),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
 		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", "admin"),
 		SessionSecure:          parseBoolEnv("SESSION_SECURE", true),
