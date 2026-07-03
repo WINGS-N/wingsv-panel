@@ -32,6 +32,7 @@ import (
 	"v.wingsnet.org/internal/provisioning"
 	"v.wingsnet.org/internal/relayclient"
 	"v.wingsnet.org/internal/storage"
+	"v.wingsnet.org/internal/storage/dbmodel"
 	"v.wingsnet.org/web"
 )
 
@@ -505,13 +506,19 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}()
 	}
 
-	// Stats collector: in wg/awg mode, poll vk-turn-proxy nodes and persist their
-	// traffic time-series, live-flow snapshot and connection-log history for the
-	// dashboard and flow-chain views.
-	if mode, modeErr := store.GetPanelMode(); modeErr == nil && mode == storage.PanelModeWGAWG {
-		statsCollector := collector.New(store, relayclient.New(cfg.RelayToken), collector.Options{})
-		go statsCollector.Run(ctx)
+	// Stats collector: poll every vk-turn-proxy node (panel-local and the external
+	// endpoints admins register) with its own credentials, persisting the traffic
+	// time-series, live-flow snapshot and connection-log history for the dashboard
+	// and flow-chain views. A local node with no stored token falls back to the
+	// configured relay token.
+	relayFactory := func(node dbmodel.ServerNode) collector.Relay {
+		token := node.GRPCToken
+		if token == "" {
+			token = cfg.RelayToken
+		}
+		return relayclient.New(token)
 	}
+	go collector.New(store, relayFactory, collector.Options{}).Run(ctx)
 
 	// Audit log rotation: drop entries older than 30 days every 6h.
 	const auditRetention = 30 * 24 * time.Hour

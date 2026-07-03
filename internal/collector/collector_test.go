@@ -70,7 +70,7 @@ func TestCollectOncePersistsAndNotifies(t *testing.T) {
 		},
 	}
 	var notified []string
-	c := New(store, relay, Options{
+	c := New(store, func(dbmodel.ServerNode) Relay { return relay }, Options{
 		Now:         func() time.Time { return time.Unix(1000, 0) },
 		OnCollected: func(nodeID string) { notified = append(notified, nodeID) },
 	})
@@ -102,7 +102,7 @@ func TestCollectOncePersistsAndNotifies(t *testing.T) {
 func TestCollectNodeMarksOfflineOnError(t *testing.T) {
 	store := newFakeStore(dbmodel.ServerNode{ID: "n1", Kind: "vk_turn_proxy"})
 	relay := &fakeRelay{statusErr: errors.New("dial fail")}
-	c := New(store, relay, Options{Now: func() time.Time { return time.Unix(1, 0) }})
+	c := New(store, func(dbmodel.ServerNode) Relay { return relay }, Options{Now: func() time.Time { return time.Unix(1, 0) }})
 	c.CollectOnce(context.Background())
 	if store.statuses["n1"] != "offline" {
 		t.Fatalf("node should be marked offline, got %q", store.statuses["n1"])

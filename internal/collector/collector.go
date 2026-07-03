@@ -44,15 +44,20 @@ type Options struct {
 	Now func() time.Time
 }
 
+// RelayFactory returns the gRPC client for a node, so each node is polled with
+// its own credentials (a panel-local node uses the configured relay token; an
+// admin's external node uses the token stored on the node).
+type RelayFactory func(node dbmodel.ServerNode) Relay
+
 // Collector polls vk-turn-proxy nodes on a ticker and persists their stats.
 type Collector struct {
-	store Store
-	relay Relay
-	opts  Options
+	store    Store
+	newRelay RelayFactory
+	opts     Options
 }
 
 // New builds a collector, filling any unset option with its default.
-func New(store Store, relay Relay, opts Options) *Collector {
+func New(store Store, newRelay RelayFactory, opts Options) *Collector {
 	if opts.Interval <= 0 {
 		opts.Interval = 10 * time.Second
 	}
@@ -68,7 +73,7 @@ func New(store Store, relay Relay, opts Options) *Collector {
 	if opts.Now == nil {
 		opts.Now = time.Now
 	}
-	return &Collector{store: store, relay: relay, opts: opts}
+	return &Collector{store: store, newRelay: newRelay, opts: opts}
 }
 
 // Run polls once immediately, then on every tick until ctx is cancelled.
@@ -112,17 +117,18 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode) er
 	ctx, cancel := context.WithTimeout(ctx, c.opts.Timeout)
 	defer cancel()
 
+	relay := c.newRelay(node)
 	now := c.opts.Now().Unix()
-	status, err := c.relay.NodeStatus(ctx, node)
+	status, err := relay.NodeStatus(ctx, node)
 	if err != nil {
 		_ = c.store.UpdateServerNodeStatus(node.ID, "offline", now)
 		return err
 	}
-	stats, err := c.relay.FlowStats(ctx, node)
+	stats, err := relay.FlowStats(ctx, node)
 	if err != nil {
 		return err
 	}
-	flows, err := c.relay.ListFlows(ctx, node)
+	flows, err := relay.ListFlows(ctx, node)
 	if err != nil {
 		return err
 	}
