@@ -185,6 +185,60 @@ func (s *Store) UpsertPeerTraffic(rows []dbmodel.PeerTraffic) error {
 	}).Create(&rows).Error
 }
 
+// AccumulateNodeTraffic folds a node's latest cumulative counters into its
+// persistent all-time totals. It adds the non-negative delta since the previous
+// reading (a smaller reading is a relay restart and adds zero), then stores the
+// new reading as the baseline. Survives sample pruning, so all-time is durable.
+func (s *Store) AccumulateNodeTraffic(nodeID string, rxCumulative, txCumulative uint64) error {
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
+		var row dbmodel.NodeTrafficTotal
+		err := tx.Where("node_id = ?", nodeID).First(&row).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return tx.Create(&dbmodel.NodeTrafficTotal{
+				NodeID: nodeID, LastRx: rxCumulative, LastTx: txCumulative,
+			}).Error
+		}
+		if err != nil {
+			return err
+		}
+		if rxCumulative >= row.LastRx {
+			row.RxTotal += rxCumulative - row.LastRx
+		}
+		if txCumulative >= row.LastTx {
+			row.TxTotal += txCumulative - row.LastTx
+		}
+		row.LastRx, row.LastTx = rxCumulative, txCumulative
+		return tx.Save(&row).Error
+	})
+}
+
+// SumNodeTrafficTotals returns the all-time transferred bytes across the given
+// nodes. An empty node set returns zero.
+func (s *Store) SumNodeTrafficTotals(nodeIDs []string) (uint64, uint64, error) {
+	if len(nodeIDs) == 0 {
+		return 0, 0, nil
+	}
+	var row struct {
+		Rx int64
+		Tx int64
+	}
+	err := s.gdb.Model(&dbmodel.NodeTrafficTotal{}).
+		Where("node_id IN ?", nodeIDs).
+		Select("COALESCE(SUM(rx_total),0) AS rx, COALESCE(SUM(tx_total),0) AS tx").
+		Scan(&row).Error
+	if err != nil {
+		return 0, 0, err
+	}
+	return uint64(row.Rx), uint64(row.Tx), nil
+}
+
+// ListNodeTrafficTotals returns the durable all-time accumulator row per node.
+func (s *Store) ListNodeTrafficTotals() ([]dbmodel.NodeTrafficTotal, error) {
+	var rows []dbmodel.NodeTrafficTotal
+	err := s.gdb.Find(&rows).Error
+	return rows, err
+}
+
 // ClientTrafficMap sums peer traffic per managed client (joined via the peers a
 // client holds across nodes), so the client list can render a traffic column in
 // one query. Clients with no peers are absent from the map.

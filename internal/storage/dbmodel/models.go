@@ -279,6 +279,20 @@ type PeerTraffic struct {
 
 func (PeerTraffic) TableName() string { return "peer_traffic" }
 
+// NodeTrafficTotal is a per-node persistent accumulator of transferred bytes, so
+// all-time totals survive sample-retention pruning and relay counter resets.
+// last_rx/last_tx hold the previous cumulative reading; each poll adds the
+// non-negative delta (a smaller reading means the relay restarted, adding zero).
+type NodeTrafficTotal struct {
+	NodeID  string `gorm:"column:node_id;primaryKey"`
+	RxTotal uint64 `gorm:"column:rx_total;not null;default:0"`
+	TxTotal uint64 `gorm:"column:tx_total;not null;default:0"`
+	LastRx  uint64 `gorm:"column:last_rx;not null;default:0"`
+	LastTx  uint64 `gorm:"column:last_tx;not null;default:0"`
+}
+
+func (NodeTrafficTotal) TableName() string { return "node_traffic_total" }
+
 // All returns every model in parent-first order so a row copy inserts referenced
 // rows before the rows that point at them.
 func All() []any {
@@ -304,6 +318,7 @@ func All() []any {
 		&FlowSnapshot{},
 		&ConnectionLog{},
 		&PeerTraffic{},
+		&NodeTrafficTotal{},
 	}
 }
 

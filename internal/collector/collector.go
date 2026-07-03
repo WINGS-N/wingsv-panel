@@ -17,6 +17,7 @@ import (
 type Store interface {
 	ListServerNodes(kind string) ([]dbmodel.ServerNode, error)
 	InsertTrafficSample(dbmodel.TrafficSample) error
+	AccumulateNodeTraffic(nodeID string, rxCumulative, txCumulative uint64) error
 	ReplaceFlows(nodeID string, flows []dbmodel.FlowSnapshot) error
 	RecordConnections([]dbmodel.ConnectionLog) error
 	UpsertPeerTraffic([]dbmodel.PeerTraffic) error
@@ -67,7 +68,9 @@ func New(store Store, newRelay RelayFactory, opts Options) *Collector {
 		opts.Timeout = 5 * time.Second
 	}
 	if opts.TrafficRetention <= 0 {
-		opts.TrafficRetention = 7 * 24 * time.Hour
+		// A month of samples backs the 24h / 7d / month chart ranges; all-time
+		// totals live in the durable NodeTrafficTotal accumulator, not here.
+		opts.TrafficRetention = 31 * 24 * time.Hour
 	}
 	if opts.ConnRetention <= 0 {
 		opts.ConnRetention = 24 * time.Hour
@@ -145,6 +148,9 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode) er
 		PeerCount:      status.PeerCount,
 	}); err != nil {
 		return err
+	}
+	if err := c.store.AccumulateNodeTraffic(node.ID, stats.ServerRxBytes, stats.ServerTxBytes); err != nil {
+		log.Printf("collector: node %s accumulate traffic: %v", node.ID, err)
 	}
 
 	snaps := make([]dbmodel.FlowSnapshot, 0, len(flows))

@@ -29,6 +29,9 @@ func (f *fakeStore) InsertTrafficSample(s dbmodel.TrafficSample) error {
 	f.samples = append(f.samples, s)
 	return nil
 }
+func (f *fakeStore) AccumulateNodeTraffic(nodeID string, rxCumulative, txCumulative uint64) error {
+	return nil
+}
 func (f *fakeStore) ReplaceFlows(nodeID string, flows []dbmodel.FlowSnapshot) error {
 	f.flows[nodeID] = flows
 	return nil
