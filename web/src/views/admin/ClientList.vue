@@ -117,6 +117,7 @@
             </th>
             <th>Устройство</th>
             <th>OS / WINGS V</th>
+            <th>Трафик</th>
             <th>
               <button class="th-sort" type="button" @click="setSort('status')">
                 Статус {{ sortIndicator('status') }}
@@ -144,6 +145,7 @@
             <td data-label="Бэкенд">{{ client.backend_type || '—' }}</td>
             <td data-label="Устройство">{{ client.device_model || '—' }}</td>
             <td data-label="OS / WINGS V">{{ client.os_version || '—' }} · {{ client.app_version || '—' }}</td>
+            <td data-label="Трафик">{{ trafficText(client) }}</td>
             <td data-label="Статус">
               <SamsungPill :variant="client.online ? 'online' : 'offline'">
                 {{ client.online ? 'Онлайн' : 'Оффлайн' }}
@@ -287,6 +289,7 @@ import { useRouter } from 'vue-router';
 import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-vue-next';
 import { authState, myAvatarUrl } from '@/stores/auth.js';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
+import { formatBytes } from '@/utils/format.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
@@ -297,6 +300,11 @@ import SamsungModal from '@/components/layout/SamsungModal.vue';
 import SamsungPill from '@/components/layout/SamsungPill.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
+
+function trafficText(client) {
+  const total = (Number(client.traffic_rx) || 0) + (Number(client.traffic_tx) || 0);
+  return total > 0 ? formatBytes(total) : '—';
+}
 
 const router = useRouter();
 const clients = ref([]);
