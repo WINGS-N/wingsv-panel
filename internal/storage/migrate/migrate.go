@@ -6,6 +6,7 @@ package migrate
 
 import (
 	"fmt"
+	"reflect"
 
 	"gorm.io/gorm"
 
@@ -80,8 +81,24 @@ func copyTable[T any](src, dst *gorm.DB) (int64, error) {
 	if len(rows) == 0 {
 		return 0, nil
 	}
+	for i := range rows {
+		normalizeBytes(&rows[i])
+	}
 	if err := dst.CreateInBatches(rows, 200).Error; err != nil {
 		return 0, err
 	}
 	return int64(len(rows)), nil
+}
+
+// normalizeBytes replaces nil byte-slice fields with empty slices. SQLite is lax
+// about NOT NULL, so a column can hold NULL there; Postgres and MariaDB reject a
+// NULL into a NOT NULL bytea/blob, so an empty slice keeps the copy portable.
+func normalizeBytes(row any) {
+	v := reflect.ValueOf(row).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		f := v.Field(i)
+		if f.Kind() == reflect.Slice && f.Type().Elem().Kind() == reflect.Uint8 && f.IsNil() && f.CanSet() {
+			f.Set(reflect.MakeSlice(f.Type(), 0, 0))
+		}
+	}
 }
