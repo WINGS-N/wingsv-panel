@@ -36,6 +36,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/admins/", h.requireOwner(h.handleAdminByID))
 	mux.HandleFunc("/api/owner/clients", h.requireOwner(h.handleAllClients))
 	mux.HandleFunc("/api/owner/nodes", h.requireOwner(h.handleNodes))
+	mux.HandleFunc("/api/owner/nodes/", h.requireOwner(h.handleNodeByID))
 	mux.HandleFunc("/api/owner/audit", h.requireOwner(h.handleAudit))
 	mux.HandleFunc("/api/owner/stats", h.requireOwner(h.handleStats))
 	mux.HandleFunc("/api/owner/stats/traffic", h.requireOwner(h.handleStatsTraffic))

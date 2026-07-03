@@ -1,9 +1,14 @@
 package owner
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
+	"strings"
 
 	"v.wingsnet.org/internal/storage"
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 type nodeView struct {
@@ -21,14 +26,98 @@ type nodeView struct {
 	CreatedAt      int64  `json:"created_at"`
 }
 
-// handleNodes lists every managed server node with its status, mirroring the
-// owner all-clients view: panel-local nodes (owner_admin_id 0) plus the external
-// endpoints admins registered, tagged with the owning admin.
-func (h *Handler) handleNodes(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
-	if r.Method != http.MethodGet {
+// handleNodes lists every managed server node with its status (GET) or registers
+// a new panel-local node (POST). The list mirrors the owner all-clients view:
+// panel-local nodes (owner_admin_id 0) plus the external endpoints admins added,
+// tagged with the owning admin.
+func (h *Handler) handleNodes(w http.ResponseWriter, r *http.Request, owner storage.Admin) {
+	switch r.Method {
+	case http.MethodGet:
+		h.respondListNodes(w, r)
+	case http.MethodPost:
+		h.respondCreateNode(w, r, owner)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+type createNodeRequest struct {
+	Name         string `json:"name"`
+	Kind         string `json:"kind"`
+	GRPCEndpoint string `json:"grpc_endpoint"`
+	GRPCToken    string `json:"grpc_token"`
+}
+
+// respondCreateNode registers a panel-local node (owner_admin_id 0) the owner
+// manages: a vk-turn-proxy relay or a 3x-ui server the panel polls over gRPC.
+func (h *Handler) respondCreateNode(w http.ResponseWriter, r *http.Request, owner storage.Admin) {
+	var req createNodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	kind := strings.TrimSpace(req.Kind)
+	if kind != storage.ServerNodeVKTurnProxy && kind != storage.ServerNodeXUI {
+		writeError(w, http.StatusBadRequest, "kind must be vk_turn_proxy or xui")
+		return
+	}
+	endpoint := strings.TrimSpace(req.GRPCEndpoint)
+	if endpoint == "" {
+		writeError(w, http.StatusBadRequest, "grpc_endpoint is required")
+		return
+	}
+	raw := make([]byte, 16)
+	if _, err := rand.Read(raw); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	node, err := h.store.CreateServerNode(dbmodel.ServerNode{
+		ID:           hex.EncodeToString(raw),
+		Kind:         kind,
+		Name:         strings.TrimSpace(req.Name),
+		GRPCEndpoint: endpoint,
+		GRPCToken:    strings.TrimSpace(req.GRPCToken),
+		OwnerAdminID: 0,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: owner.ID, ActorUsername: owner.Username,
+		Action: "owner.node_added", Message: endpoint, IP: clientIP(r),
+	})
+	writeJSON(w, http.StatusCreated, map[string]any{"id": node.ID})
+}
+
+// handleNodeByID lets the owner delete any node.
+func (h *Handler) handleNodeByID(w http.ResponseWriter, r *http.Request, owner storage.Admin) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/owner/nodes/")
+	if id == "" {
+		writeError(w, http.StatusNotFound, "node id missing")
+		return
+	}
+	if r.Method != http.MethodDelete {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	node, err := h.store.GetServerNode(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "node not found")
+		return
+	}
+	if err := h.store.DeleteServerNode(id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: owner.ID, ActorUsername: owner.Username,
+		Action: "owner.node_deleted", Message: node.GRPCEndpoint, IP: clientIP(r),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (h *Handler) respondListNodes(w http.ResponseWriter, r *http.Request) {
 	admins, err := h.store.ListAdmins()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
