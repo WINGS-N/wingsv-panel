@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"v.wingsnet.org/internal/auth"
+	"v.wingsnet.org/internal/collector"
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/githubapi"
 	"v.wingsnet.org/internal/guardianhub"
@@ -502,6 +503,14 @@ func Run(ctx context.Context, cfg config.Config) error {
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
 		}()
+	}
+
+	// Stats collector: in wg/awg mode, poll vk-turn-proxy nodes and persist their
+	// traffic time-series, live-flow snapshot and connection-log history for the
+	// dashboard and flow-chain views.
+	if mode, modeErr := store.GetPanelMode(); modeErr == nil && mode == storage.PanelModeWGAWG {
+		statsCollector := collector.New(store, relayclient.New(cfg.RelayToken), collector.Options{})
+		go statsCollector.Run(ctx)
 	}
 
 	// Audit log rotation: drop entries older than 30 days every 6h.
