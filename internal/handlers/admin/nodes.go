@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
@@ -113,9 +114,12 @@ func (h *Handler) handleCreateNode(w http.ResponseWriter, r *http.Request, admin
 	writeJSON(w, http.StatusCreated, h.nodeToView(node))
 }
 
-// handleNodeByID deletes one of the admin's own nodes.
+// handleNodeByID dispatches /api/admin/nodes/{id}[/clients]: DELETE the node, or
+// POST an inbound client onto a 3x-ui node.
 func (h *Handler) handleNodeByID(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
-	id := strings.TrimPrefix(r.URL.Path, "/api/admin/nodes/")
+	rest := strings.TrimPrefix(r.URL.Path, "/api/admin/nodes/")
+	parts := strings.SplitN(rest, "/", 2)
+	id := parts[0]
 	if id == "" {
 		writeError(w, http.StatusNotFound, "node id missing")
 		return
@@ -125,15 +129,27 @@ func (h *Handler) handleNodeByID(w http.ResponseWriter, r *http.Request, admin s
 		writeError(w, http.StatusNotFound, "node not found")
 		return
 	}
-	if node.OwnerAdminID != admin.ID {
+	// The owner can manage the panel-local nodes; an admin only their own.
+	if node.OwnerAdminID != admin.ID && !auth.IsOwner(admin) {
 		writeError(w, http.StatusForbidden, "not owned")
 		return
 	}
-	if r.Method != http.MethodDelete {
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-		return
+	subpath := ""
+	if len(parts) == 2 {
+		subpath = parts[1]
 	}
-	if err := h.store.DeleteServerNode(id); err != nil {
+	switch {
+	case subpath == "" && r.Method == http.MethodDelete:
+		h.respondDeleteNode(w, r, admin, node)
+	case subpath == "clients" && r.Method == http.MethodPost:
+		h.respondCreateNodeClient(w, r, admin, node)
+	default:
+		writeError(w, http.StatusNotFound, "unknown route")
+	}
+}
+
+func (h *Handler) respondDeleteNode(w http.ResponseWriter, r *http.Request, admin storage.Admin, node dbmodel.ServerNode) {
+	if err := h.store.DeleteServerNode(node.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -142,6 +158,38 @@ func (h *Handler) handleNodeByID(w http.ResponseWriter, r *http.Request, admin s
 		Action: "admin.node_deleted", Message: node.GRPCEndpoint, IP: clientIP(r),
 	})
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+type createNodeClientRequest struct {
+	// PayloadJSON is the inbound-client settings JSON the 3x-ui REST API binds.
+	PayloadJSON string `json:"payload_json"`
+}
+
+// respondCreateNodeClient adds an inbound client on a 3x-ui node via its Panel gRPC.
+func (h *Handler) respondCreateNodeClient(w http.ResponseWriter, r *http.Request, admin storage.Admin, node dbmodel.ServerNode) {
+	if node.Kind != storage.ServerNodeXUI {
+		writeError(w, http.StatusBadRequest, "node is not a 3x-ui node")
+		return
+	}
+	var req createNodeClientRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if strings.TrimSpace(req.PayloadJSON) == "" {
+		writeError(w, http.StatusBadRequest, "payload_json is required")
+		return
+	}
+	needRestart, err := h.xui.AddClient(r.Context(), node, req.PayloadJSON)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "xui add client: "+err.Error())
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: admin.ID, ActorUsername: admin.Username,
+		Action: "admin.xui_client_added", Message: node.GRPCEndpoint, IP: clientIP(r),
+	})
+	writeJSON(w, http.StatusCreated, map[string]any{"ok": true, "need_restart": needRestart})
 }
 
 func randomNodeID() (string, error) {

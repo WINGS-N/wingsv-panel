@@ -19,6 +19,7 @@ import (
 	"v.wingsnet.org/internal/guardianhub"
 	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/storage"
+	"v.wingsnet.org/internal/xuiclient"
 )
 
 type Handler struct {
@@ -26,11 +27,12 @@ type Handler struct {
 	store  *storage.Store
 	auth   *auth.Service
 	hub    *guardianhub.Hub
+	xui    *xuiclient.Client
 	caPins [][]byte
 }
 
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
-	h := &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub}
+	h := &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub, xui: xuiclient.New()}
 	// Pin mode: when a panel CA is present (no public certificate), embed its
 	// SPKI pin in every enrollment link so the app trusts the control-plane TLS.
 	if ca, err := pki.LoadCADir(cfg.CADir); err == nil {
