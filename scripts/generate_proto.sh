@@ -23,3 +23,15 @@ protoc \
 
 mv "$ROOT_DIR/wingsv.pb.go" "$WINGSV_PKG_DIR/wingsv.pb.go"
 mv "$ROOT_DIR/guardian.pb.go" "$GUARDIAN_PKG_DIR/guardian.pb.go"
+
+PROVISIONING_PKG_DIR="$OUT_DIR/provisioningpb"
+mkdir -p "$PROVISIONING_PKG_DIR"
+rm -f "$PROVISIONING_PKG_DIR/provisioning.pb.go" "$PROVISIONING_PKG_DIR/provisioning_grpc.pb.go"
+
+protoc \
+  --proto_path="$PROTO_DIR" \
+  --go_out="$ROOT_DIR" \
+  --go_opt=module=v.wingsnet.org \
+  --go-grpc_out="$ROOT_DIR" \
+  --go-grpc_opt=module=v.wingsnet.org \
+  "$PROTO_DIR/provisioning.proto"

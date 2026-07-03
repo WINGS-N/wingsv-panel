@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package wingsv.provisioning.v1;
+
+option go_package = "v.wingsnet.org/internal/gen/provisioningpb;provisioningpb";
+
+// Provisioning is served by the panel and called by a vk-turn-proxy node over
+// gRPC during app self-enroll. The node forwards the client's panel token from
+// the DTLS PROVISION exchange; the panel verifies it and returns (creating on
+// first use) the client's WireGuard config for that node. HWID travels for
+// information only and never gates access.
+service Provisioning {
+  rpc ResolveClientConfig(ResolveClientConfigRequest) returns (ResolveClientConfigResponse);
+}
+
+message ResolveClientConfigRequest {
+  string client_id = 1;
+  bytes token = 2;
+  string hwid = 3;
+  string node_id = 4;
+}
+
+message ResolveClientConfigResponse {
+  WireguardConfig wg = 1;
+}
+
+message WireguardConfig {
+  // Client private key, set only when the node generated the keypair.
+  string private_key = 1;
+  string public_key = 2;
+  // Assigned tunnel address, e.g. 10.66.66.2/32.
+  string address = 3;
+  string server_public_key = 4;
+  // Traffic the tunnel should carry, e.g. 0.0.0.0/0.
+  string allowed_ips = 5;
+  uint32 mtu = 6;
+}
