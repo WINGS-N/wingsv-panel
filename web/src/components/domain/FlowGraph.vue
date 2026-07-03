@@ -107,9 +107,12 @@ const props = defineProps({
 
 const NODEW = 11;
 const PADY = 16;
-const GAP = 9;
-const MIN_H = 14; // every kept node is at least this tall so its label always shows
-const TARGET_H = 440; // px the busiest column aims to fill; the SVG grows past it to fit
+const GAP = 6;
+// A small floor keeps a near-zero node clickable without inflating the side
+// columns past the middle relay node - so the relay plate stays as tall as the
+// total traffic and visually covers every folded tail (Sankey mass conservation).
+const MIN_H = 3;
+const TARGET_H = 460; // px the busiest column aims to fill; the SVG grows past it to fit
 
 // Per-protocol colours; unknown protocols fall back to grey. Keys are lower-cased
 // so the legend and links agree.
@@ -156,8 +159,18 @@ function track(e) {
   pos.value = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
+// hashHue maps a protocol name to a stable hue so distinct protocols not in the
+// fixed table (e.g. mu/v1 vs mainline) get distinct, repeatable colours rather
+// than sharing one grey fallback.
+function hashHue(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
 function protoColor(p) {
-  return PROTO_COLORS[(p || '').toLowerCase()] || OTHER_COLOR;
+  const k = (p || '').toLowerCase();
+  if (!k) return OTHER_COLOR;
+  return PROTO_COLORS[k] || `hsl(${hashHue(k)}, 62%, 62%)`;
 }
 
 function clientLabel(ip) {
