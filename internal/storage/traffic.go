@@ -142,21 +142,36 @@ func (s *Store) ListConnectionLog(limit int) ([]dbmodel.ConnectionLog, error) {
 	return rows, nil
 }
 
-// ListConnectionLogForNodes returns recent connections on the given nodes,
-// newest-first, capped at limit. An empty node set returns nothing.
-func (s *Store) ListConnectionLogForNodes(nodeIDs []string, limit int) ([]dbmodel.ConnectionLog, error) {
+// ListConnectionLogForNodes returns a page of connections on the given nodes,
+// newest-first: limit rows starting at offset. An empty node set returns nothing.
+func (s *Store) ListConnectionLogForNodes(nodeIDs []string, limit, offset int) ([]dbmodel.ConnectionLog, error) {
 	if len(nodeIDs) == 0 {
 		return nil, nil
 	}
 	if limit <= 0 {
 		limit = 100
 	}
+	if offset < 0 {
+		offset = 0
+	}
 	var rows []dbmodel.ConnectionLog
-	err := s.gdb.Where("node_id IN ?", nodeIDs).Order("last_seen desc").Limit(limit).Find(&rows).Error
+	err := s.gdb.Where("node_id IN ?", nodeIDs).Order("last_seen desc").
+		Limit(limit).Offset(offset).Find(&rows).Error
 	if err != nil {
 		return nil, err
 	}
 	return rows, nil
+}
+
+// CountConnectionLogForNodes returns the total connection rows on the given
+// nodes, so a paged view can render page counts. Empty node set returns 0.
+func (s *Store) CountConnectionLogForNodes(nodeIDs []string) (int64, error) {
+	if len(nodeIDs) == 0 {
+		return 0, nil
+	}
+	var n int64
+	err := s.gdb.Model(&dbmodel.ConnectionLog{}).Where("node_id IN ?", nodeIDs).Count(&n).Error
+	return n, err
 }
 
 // UpsertPeerTraffic refreshes the byte counters for a node's wg peers.

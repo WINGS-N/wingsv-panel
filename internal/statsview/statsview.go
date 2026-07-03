@@ -143,15 +143,20 @@ func BuildFlows(store *storage.Store, ownerAdminID int64) ([]Flow, error) {
 	return out, nil
 }
 
-// BuildConnections returns the recent connection log for the given owner's nodes.
-func BuildConnections(store *storage.Store, ownerAdminID int64, limit int) ([]Connection, error) {
+// BuildConnections returns a page of the connection log for the given owner's
+// nodes, newest-first, plus the total row count so the UI can paginate.
+func BuildConnections(store *storage.Store, ownerAdminID int64, limit, offset int) ([]Connection, int64, error) {
 	ids, err := ownedNodeIDs(store, ownerAdminID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	rows, err := store.ListConnectionLogForNodes(ids, limit)
+	total, err := store.CountConnectionLogForNodes(ids)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	rows, err := store.ListConnectionLogForNodes(ids, limit, offset)
+	if err != nil {
+		return nil, 0, err
 	}
 	out := make([]Connection, 0, len(rows))
 	for _, c := range rows {
@@ -161,7 +166,7 @@ func BuildConnections(store *storage.Store, ownerAdminID int64, limit int) ([]Co
 			RxBytes: c.RxBytes, TxBytes: c.TxBytes, FirstSeen: c.FirstSeenUnix, LastSeen: c.LastSeenUnix,
 		})
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func ownedNodeIDs(store *storage.Store, ownerAdminID int64) ([]string, error) {

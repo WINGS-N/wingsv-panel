@@ -44,12 +44,15 @@ func (h *Handler) handleStatsConnections(w http.ResponseWriter, r *http.Request,
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	conns, err := statsview.BuildConnections(h.store, localNodeOwnerID, parseLimit(r))
+	limit, offset := parseLimit(r), parseOffset(r)
+	conns, total, err := statsview.BuildConnections(h.store, localNodeOwnerID, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read connection log")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"connections": conns})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"connections": conns, "total": total, "limit": limit, "offset": offset,
+	})
 }
 
 func parseLimit(r *http.Request) int {
@@ -59,4 +62,13 @@ func parseLimit(r *http.Request) int {
 		}
 	}
 	return 100
+}
+
+func parseOffset(r *http.Request) int {
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return 0
 }

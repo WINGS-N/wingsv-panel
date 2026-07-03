@@ -49,10 +49,18 @@ func (h *Handler) handleStatsConnections(w http.ResponseWriter, r *http.Request,
 			limit = n
 		}
 	}
-	conns, err := statsview.BuildConnections(h.store, admin.ID, limit)
+	offset := 0
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			offset = n
+		}
+	}
+	conns, total, err := statsview.BuildConnections(h.store, admin.ID, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to read connection log")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"connections": conns})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"connections": conns, "total": total, "limit": limit, "offset": offset,
+	})
 }
