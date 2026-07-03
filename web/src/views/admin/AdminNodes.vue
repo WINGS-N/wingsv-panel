@@ -86,6 +86,9 @@
             {{ n.status }}
           </SamsungPill>
           <span class="admin-muted ml-2">{{ n.grpc_endpoint }}</span>
+          <SamsungPill v-if="n.kind === 'xui'" :variant="xrayRunning(n) ? 'online' : 'offline'" class="ml-2">
+            xray: {{ xrayLabel(n) }}
+          </SamsungPill>
           <div class="node-id-row">
             <span class="admin-muted node-id-label">ID ноды:</span>
             <code class="admin-mono node-id" :title="'Скопировать ' + n.id" @click="copyId(n.id)">{{ n.id }}</code>
@@ -315,6 +318,15 @@ const defaultPort = computed(() => form.port);
 const formatTs = formatUnix;
 
 const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id, n.name || n.id])));
+
+function xrayRunning(n) {
+  return (n.xray_state || '').toLowerCase() === 'running';
+}
+function xrayLabel(n) {
+  const st = (n.xray_state || '').toLowerCase();
+  const s = st === 'running' ? 'работает' : st || 'нет данных';
+  return n.xray_version ? `${s} ${n.xray_version}` : s;
+}
 
 const liveRate = computed(() => {
   const t = traffic.value?.totals || {};

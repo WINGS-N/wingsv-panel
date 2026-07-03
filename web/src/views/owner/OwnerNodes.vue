@@ -67,6 +67,9 @@
             {{ n.owner_name || 'admin' }}
           </SamsungPill>
           <span class="admin-muted ml-2">{{ nodeKindLabel(n.kind) }}</span>
+          <SamsungPill v-if="n.kind === 'xui'" :variant="xrayRunning(n) ? 'online' : 'offline'" class="ml-2">
+            xray: {{ xrayLabel(n) }}
+          </SamsungPill>
           <div class="node-id-row">
             <span class="admin-muted node-id-label">ID ноды:</span>
             <code class="admin-mono node-id" :title="'Скопировать ' + n.id" @click="copyId(n.id)">{{ n.id }}</code>
@@ -263,6 +266,15 @@ const defaultPort = computed(() => form.port);
 
 function nodeKindLabel(kind) {
   return kind === 'xui' ? '3x-ui' : 'VK TURN';
+}
+
+function xrayRunning(n) {
+  return (n.xray_state || '').toLowerCase() === 'running';
+}
+function xrayLabel(n) {
+  const st = (n.xray_state || '').toLowerCase();
+  const s = st === 'running' ? 'работает' : st || 'нет данных';
+  return n.xray_version ? `${s} ${n.xray_version}` : s;
 }
 
 const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id, n.name || n.id])));
