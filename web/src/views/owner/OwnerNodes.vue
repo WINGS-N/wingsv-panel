@@ -78,6 +78,18 @@
         </div>
         <div class="session-row-meta node-row-tail">
           <span>{{ n.grpc_endpoint }} · {{ n.peer_count }} пиров · {{ n.active_sessions }} сессий</span>
+          <SamsungIconButton variant="secondary" size="small" aria-label="Команда подключения" @click="openConnect(n)">
+            <Terminal class="button-icon" aria-hidden="true" />
+          </SamsungIconButton>
+          <SamsungIconButton
+            v-if="n.kind === 'vk_turn_proxy'"
+            variant="secondary"
+            size="small"
+            aria-label="Настроить wg-бэкенд"
+            @click="openEdit(n)"
+          >
+            <Pencil class="button-icon" aria-hidden="true" />
+          </SamsungIconButton>
           <SamsungIconButton variant="danger" size="small" aria-label="Удалить" @click="deleteNode(n)">
             <Trash2 class="button-icon" aria-hidden="true" />
           </SamsungIconButton>
@@ -140,14 +152,19 @@
     </div>
   </SamsungCard>
 
-  <SamsungModal :model-value="showAdd" :busy="adding" title="Новый сервер" @update:model-value="closeAdd">
+  <SamsungModal
+    :model-value="showAdd"
+    :busy="adding"
+    :title="editingId ? 'Настройка ноды' : 'Новый сервер'"
+    @update:model-value="closeAdd"
+  >
     <p class="body-copy">Локальная нода панели — VK TURN relay или 3x-ui. Панель опрашивает её по gRPC.</p>
-    <template v-if="!connectCommand">
+    <template v-if="!connectCommand && !editingId">
       <label class="field-label mt-4">Способ подключения</label>
       <OneuiRadioGroup v-model="addMode" :options="addModeOptions" variant="pill" />
     </template>
     <label class="field-label mt-4">Тип сервера</label>
-    <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" />
+    <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" :disabled="!!editingId" />
     <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой сервер" class="mt-4" />
     <div class="node-endpoint-row mt-3">
       <OneuiInput
@@ -175,6 +192,27 @@
       Токен сгенерируется автоматически. После создания скопируйте команду и выполните её на хосте ноды — она
       подключится к панели сама.
     </p>
+
+    <template v-if="form.kind === 'vk_turn_proxy' && !connectCommand">
+      <label class="field-label mt-4">WG-бэкенд провижна</label>
+      <OneuiRadioGroup v-model="form.wg_backend" :options="wgBackendOptions" variant="pill" />
+      <p class="admin-muted remote-toggle-hint">
+        Как нода выдаёт wg-конфиг managed-клиенту: своя wg на ноде или клиент на инбаунде 3x-ui.
+      </p>
+      <template v-if="form.wg_backend === 'xui'">
+        <label class="field-label mt-3">3x-ui нода</label>
+        <OneuiSelect :model-value="form.xui_node_id" :options="xuiNodeOptions" @change="onXuiNodeChange" />
+        <label class="field-label mt-3">Инбаунд</label>
+        <OneuiSelect
+          :model-value="form.xui_inbound_tag"
+          :options="inboundOptions"
+          :disabled="inboundsLoading"
+          @change="form.xui_inbound_tag = $event"
+        />
+        <p v-if="inboundsError" class="admin-muted mt-1">{{ inboundsError }}</p>
+      </template>
+    </template>
+
     <p v-if="addError" class="state-error mt-2">{{ addError }}</p>
 
     <div v-if="connectCommand" class="connect-block mt-4">
@@ -187,20 +225,40 @@
     </div>
 
     <template #actions>
-      <SamsungButton v-if="!connectCommand" :busy="adding" @click="addNode">
+      <SamsungButton v-if="!connectCommand" :busy="adding" @click="submitNode">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-        {{ addMode === 'command' ? 'Создать и получить команду' : 'Создать' }}
+        {{ editingId ? 'Сохранить' : addMode === 'command' ? 'Создать и получить команду' : 'Создать' }}
       </SamsungButton>
       <SamsungButton variant="secondary" :disabled="adding" @click="closeAdd">
         {{ connectCommand ? 'Готово' : 'Отмена' }}
       </SamsungButton>
     </template>
   </SamsungModal>
+
+  <SamsungModal :model-value="showConnect" title="Команда подключения ноды" @update:model-value="showConnect = false">
+    <p class="body-copy">Выполните на хосте ноды — включит gRPC-управление и DTLS-provisioning.</p>
+    <p v-if="connectError" class="state-error mt-2">{{ connectError }}</p>
+    <SamsungSectionLoader v-else-if="!connectCommand" />
+    <div v-else class="connect-block mt-4">
+      <pre class="connect-cmd">{{ connectCommand }}</pre>
+      <SamsungButton variant="secondary" size="small" @click="copyConnect">
+        {{ connectCopied ? 'Скопировано' : 'Скопировать' }}
+      </SamsungButton>
+    </div>
+    <template #actions>
+      <SamsungButton variant="secondary" @click="showConnect = false">Готово</SamsungButton>
+    </template>
+  </SamsungModal>
+
+  <WgPeers api-base="/api/owner" />
+  <VkLinksCard />
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { Plus, Trash2 } from 'lucide-vue-next';
+import { Pencil, Plus, Terminal, Trash2 } from 'lucide-vue-next';
+import WgPeers from '@/views/shared/WgPeers.vue';
+import VkLinksCard from '@/components/domain/VkLinksCard.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
@@ -209,6 +267,7 @@ import SamsungPill from '@/components/layout/SamsungPill.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
+import OneuiSelect from '@/components/controls/OneuiSelect.vue';
 import TrafficChart from '@/components/domain/TrafficChart.vue';
 import FlowGraph from '@/components/domain/FlowGraph.vue';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
@@ -232,12 +291,15 @@ const flowWindowOptions = [
 const connections = ref([]);
 const connTotal = ref(0);
 const connOffset = ref(0);
-const connLimit = 50;
+const connLimit = 5;
 const loadError = ref('');
 const addError = ref('');
 const adding = ref(false);
 const showAdd = ref(false);
 const connectCommand = ref('');
+const editingId = ref('');
+const showConnect = ref(false);
+const connectError = ref('');
 const addMode = ref('command');
 const addModeOptions = [
   { value: 'command', label: 'Командой' },
@@ -261,8 +323,66 @@ const kindOptions = [
 function randomPort() {
   return 20000 + Math.floor(Math.random() * 25000);
 }
-const form = reactive({ kind: 'vk_turn_proxy', name: '', host: '', port: randomPort(), token: '' });
+const form = reactive({
+  kind: 'vk_turn_proxy',
+  name: '',
+  host: '',
+  port: randomPort(),
+  token: '',
+  wg_backend: '',
+  xui_node_id: '',
+  xui_inbound_tag: '',
+});
 const defaultPort = computed(() => form.port);
+
+const wgBackendOptions = [
+  { value: '', label: 'По умолчанию' },
+  { value: 'own', label: 'Своя wg на ноде' },
+  { value: 'xui', label: 'Через 3x-ui' },
+];
+// 3x-ui nodes the wg backend can target, plus a "Не выбран" placeholder.
+const xuiNodeOptions = computed(() => [
+  { value: '', label: 'Не выбран' },
+  ...nodes.value
+    .filter((n) => n.kind === 'xui')
+    .map((n) => ({ value: n.id, label: n.name || n.grpc_endpoint || n.id })),
+]);
+const inboundOptions = ref([{ value: '', label: 'Не выбран' }]);
+const inboundsError = ref('');
+const inboundsLoading = ref(false);
+
+async function onXuiNodeChange(nodeId) {
+  form.xui_node_id = nodeId || '';
+  form.xui_inbound_tag = '';
+  inboundsError.value = '';
+  if (!form.xui_node_id) {
+    inboundOptions.value = [{ value: '', label: 'Не выбран' }];
+    return;
+  }
+  const reqNode = form.xui_node_id;
+  inboundsLoading.value = true;
+  inboundOptions.value = [{ value: '', label: 'Загрузка…' }];
+  try {
+    const res = await fetch(`/api/owner/nodes/${reqNode}/inbounds`, { credentials: 'include' });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Не удалось получить инбаунды');
+    const data = await res.json();
+    if (form.xui_node_id !== reqNode) return; // selection changed while loading
+    inboundOptions.value = [
+      { value: '', label: 'Не выбран' },
+      ...(data.inbounds || []).map((i) => ({
+        value: i.tag,
+        label: `${i.tag}${i.remark ? ' (' + i.remark + ')' : ''} · ${i.protocol}:${i.port}`,
+      })),
+    ];
+  } catch (err) {
+    if (form.xui_node_id === reqNode) {
+      inboundOptions.value = [{ value: '', label: 'Не выбран' }];
+      inboundsError.value = err.message || 'Ошибка загрузки инбаундов';
+    }
+  } finally {
+    if (form.xui_node_id === reqNode) inboundsLoading.value = false;
+  }
+}
 
 function nodeKindLabel(kind) {
   return kind === 'xui' ? '3x-ui' : 'VK TURN';
@@ -370,17 +490,84 @@ async function loadAll() {
 function openAdd() {
   addError.value = '';
   connectCommand.value = '';
+  editingId.value = '';
   addMode.value = 'command';
+  form.kind = 'vk_turn_proxy';
   form.name = '';
   form.host = '';
   form.token = '';
   form.port = randomPort();
+  form.wg_backend = '';
+  form.xui_node_id = '';
+  form.xui_inbound_tag = '';
+  inboundOptions.value = [{ value: '', label: 'Не выбран' }];
   showAdd.value = true;
+}
+
+async function openEdit(node) {
+  addError.value = '';
+  connectCommand.value = '';
+  addMode.value = 'manual';
+  editingId.value = node.id;
+  form.kind = node.kind;
+  form.name = node.name || '';
+  const [host, port] = String(node.grpc_endpoint || '').split(':');
+  form.host = host || '';
+  form.port = Number(port) || defaultPort.value;
+  form.token = '';
+  form.wg_backend = node.wg_backend || '';
+  form.xui_node_id = node.xui_node_id || '';
+  form.xui_inbound_tag = node.xui_inbound_tag || '';
+  inboundOptions.value = [{ value: '', label: 'Не выбран' }];
+  showAdd.value = true;
+  if (form.wg_backend === 'xui' && form.xui_node_id) {
+    const keepTag = node.xui_inbound_tag || '';
+    await onXuiNodeChange(form.xui_node_id);
+    form.xui_inbound_tag = keepTag;
+  }
+}
+
+async function submitNode() {
+  if (editingId.value) {
+    await saveEdit();
+  } else {
+    await addNode();
+  }
+}
+
+async function saveEdit() {
+  addError.value = '';
+  const host = form.host.trim();
+  const port = Number(form.port) || defaultPort.value;
+  adding.value = true;
+  try {
+    const res = await fetch(`/api/owner/nodes/${editingId.value}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name.trim() || host,
+        grpc_endpoint: host ? `${host}:${port}` : '',
+        grpc_token: form.token.trim(),
+        wg_backend: form.kind === 'vk_turn_proxy' ? form.wg_backend : '',
+        xui_node_id: form.wg_backend === 'xui' ? form.xui_node_id : '',
+        xui_inbound_tag: form.wg_backend === 'xui' ? form.xui_inbound_tag : '',
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Не удалось сохранить');
+    closeAdd();
+    await loadAll();
+  } catch (err) {
+    addError.value = err.message;
+  } finally {
+    adding.value = false;
+  }
 }
 
 function closeAdd() {
   showAdd.value = false;
   connectCommand.value = '';
+  editingId.value = '';
 }
 
 async function addNode() {
@@ -405,6 +592,9 @@ async function addNode() {
         name: form.name.trim() || host,
         grpc_endpoint: `${host}:${port}`,
         grpc_token: form.token.trim(),
+        wg_backend: form.kind === 'vk_turn_proxy' ? form.wg_backend : '',
+        xui_node_id: form.wg_backend === 'xui' ? form.xui_node_id : '',
+        xui_inbound_tag: form.wg_backend === 'xui' ? form.xui_inbound_tag : '',
       }),
     });
     if (!res.ok) throw new Error(await res.text());
@@ -424,6 +614,25 @@ function buildConnectCommand(nodeId, kind, token) {
   const k = kind === 'xui' ? 'xui' : 'vktp';
   const tok = token || '<token>';
   return `curl -fsSL ${origin}/connect.sh | sh -s -- grpc connect ${grpc} ${tok} ${nodeId} ${k}`;
+}
+
+async function openConnect(node) {
+  showConnect.value = true;
+  connectError.value = '';
+  connectCommand.value = '';
+  try {
+    const res = await fetch(`/api/owner/nodes/${node.id}/connect`, { credentials: 'include' });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    if (!data.grpc_token) {
+      connectError.value =
+        'У ноды нет токена в панели. Задайте его через редактирование ноды, затем откройте команду снова.';
+      return;
+    }
+    connectCommand.value = buildConnectCommand(data.id, data.kind, data.grpc_token);
+  } catch (err) {
+    connectError.value = err.message || 'Не удалось получить команду';
+  }
 }
 
 const connectCopied = ref(false);

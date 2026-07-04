@@ -90,13 +90,37 @@ const max = computed(() => {
   return niceCeil(m);
 });
 
-// niceCeil rounds a max up to a clean 1/2/5 x 10^n so the axis labels read well.
+// niceCeil rounds a max up to a clean multiple of 10^n so the axis labels read
+// well. Fine steps (not just 1/2/5) keep the scale tight against the peak, so low
+// traffic fills the chart instead of hugging the baseline - the y-axis auto-zooms
+// in on quiet periods and out on spikes because it always tracks the current peak.
 function niceCeil(v) {
   if (v <= 1) return 1;
   const exp = Math.floor(Math.log10(v));
   const base = Math.pow(10, exp);
   const f = v / base;
-  const step = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+  const step =
+    f <= 1
+      ? 1
+      : f <= 1.2
+        ? 1.2
+        : f <= 1.5
+          ? 1.5
+          : f <= 2
+            ? 2
+            : f <= 2.5
+              ? 2.5
+              : f <= 3
+                ? 3
+                : f <= 4
+                  ? 4
+                  : f <= 5
+                    ? 5
+                    : f <= 6
+                      ? 6
+                      : f <= 8
+                        ? 8
+                        : 10;
   return step * base;
 }
 

@@ -31,10 +31,7 @@
       <template v-if="provision">
         <div class="form-row">
           <label class="form-label">Разрешить клиенту автоматически создавать wg конфигурацию</label>
-          <OneuiSwitch
-            :model-value="!!provision.enabled"
-            @change="$emit('update:provisionEnabled', $event)"
-          />
+          <OneuiSwitch :model-value="!!provision.enabled" @change="$emit('update:provisionEnabled', $event)" />
         </div>
         <div v-if="provision.enabled" class="form-row">
           <label class="form-label">VK TURN сервер</label>

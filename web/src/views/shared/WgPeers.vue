@@ -1,11 +1,10 @@
 <template>
-  <section class="surface-card">
-    <h2 class="section-title">WG-конфиги</h2>
-    <p class="body-copy">Выданные клиентам WireGuard-пиры на нодах. Отзыв удаляет запись в панели.</p>
+  <SamsungCard
+    class="mt-6"
+    :title="`WG-конфиги (${peers.length})`"
+    subtitle="Выданные клиентам WireGuard-пиры на нодах. Отзыв удаляет запись в панели."
+  >
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
-  </section>
-
-  <SamsungCard class="mt-6" :title="`Пиры (${peers.length})`" subtitle="Клиент → нода → адрес в туннеле.">
     <div class="wg-filter mt-2">
       <OneuiInput v-model.trim="query" label="Поиск" placeholder="клиент, нода, адрес или ключ" />
     </div>

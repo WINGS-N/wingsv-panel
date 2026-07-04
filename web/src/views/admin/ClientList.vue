@@ -413,7 +413,7 @@ const newName = ref('');
 const managementType = ref('full');
 const managementTypeOptions = [
   { value: 'full', label: 'Полный' },
-  { value: 'config', label: 'Только выдача конфигурации' },
+  { value: 'config', label: 'Только выдача конфигурации VK TURN' },
 ];
 const vkTurnNodes = ref([]);
 const vkTurnNodeId = ref('');
