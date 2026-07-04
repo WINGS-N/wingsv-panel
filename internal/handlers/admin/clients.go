@@ -293,6 +293,20 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 	if seedConfig == nil {
 		seedConfig = &wingsvpb.Config{Ver: 1}
 	}
+
+	vkTurnEndpoint, err := h.resolveVkTurnEndpoint(admin, req.VkTurnNodeID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// The stored config is the panel's authority: it is what config-on-connect
+	// pushes to the device. It MUST carry the same managed profile as the link,
+	// or the first Guardian sync would push a managed-less config and strip the
+	// client's provisioning (wgProvisioned) right after enrollment.
+	if managed := h.managedTurn(clientID, name, tokenBytes, vkTurnEndpoint); managed != nil {
+		seedConfig.Turn = managed
+		markVkTurnBackend(seedConfig)
+	}
 	configBytes, err := proto.Marshal(seedConfig)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -303,11 +317,6 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 		return
 	}
 
-	vkTurnEndpoint, err := h.resolveVkTurnEndpoint(admin, req.VkTurnNodeID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
 	remoteControl := req.RemoteControl == nil || *req.RemoteControl
 	link, err := h.buildClientLink(clientID, name, tokenBytes, syncMode, periodic, admin, remoteControl, vkTurnEndpoint)
 	if err != nil {
