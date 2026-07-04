@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -531,6 +532,10 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 		grpcServer = grpc.NewServer(grpcOpts...)
 		provSvc := provisioning.NewService(store, relayclient.New(cfg.RelayToken))
+		// Per-node 3x-ui target (a node names its own 3x-ui inbound in the panel).
+		provSvc.SetXUIProvisioner(&xuiPerNodeProvider{xui: xuiclient.New()})
+		// Legacy panel-global default (XUI_WG_* env), used only for nodes with no
+		// per-node backend configured.
 		if cfg.XuiWGNodeID != "" {
 			provSvc.SetWGProvider(&xuiWGProvider{
 				store:      store,
@@ -540,6 +545,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 			})
 		}
 		provSvc.Register(grpcServer)
+		log.Printf("provisioning gRPC listening on %s (xui_wg_node=%q)", cfg.ProvisioningListen, cfg.XuiWGNodeID)
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
 		}()

@@ -73,6 +73,7 @@ type clientView struct {
 	BackendType             string `json:"backend_type"`
 	HasRootAccess           bool   `json:"has_root_access"`
 	VkOAuthAuthorized       bool   `json:"vk_oauth_authorized"`
+	RemoteControl           bool   `json:"remote_control"`
 	TrafficRx               uint64 `json:"traffic_rx"`
 	TrafficTx               uint64 `json:"traffic_tx"`
 }
@@ -96,6 +97,7 @@ func toClientView(c storage.Client) clientView {
 		PeriodicIntervalMinutes: c.PeriodicIntervalMinutes,
 		HasRootAccess:           c.HasRootAccess,
 		VkOAuthAuthorized:       c.VkOAuthAuthorized,
+		RemoteControl:           c.RemoteControl,
 	}
 }
 
@@ -306,6 +308,7 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 	if managed := h.managedTurn(clientID, name, tokenBytes, vkTurnEndpoint); managed != nil {
 		seedConfig.Turn = managed
 		markVkTurnBackend(seedConfig)
+		h.applyAdminVKLinks(seedConfig.Turn, admin.ID)
 	}
 	configBytes, err := proto.Marshal(seedConfig)
 	if err != nil {
@@ -318,6 +321,12 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 	}
 
 	remoteControl := req.RemoteControl == nil || *req.RemoteControl
+	// Persist the management type so every regenerated link (share, token
+	// rotation) keeps this client's shape instead of defaulting to Guardian.
+	if err := h.store.SetClientRemoteControl(clientID, admin.ID, remoteControl); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	link, err := h.buildClientLink(clientID, name, tokenBytes, syncMode, periodic, admin, remoteControl, vkTurnEndpoint)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -383,6 +392,7 @@ func (h *Handler) buildClientLink(
 	cfg := &wingsvpb.Config{Ver: 1}
 	cfg.Turn = h.managedTurn(clientID, name, token, vkTurnEndpoint)
 	markVkTurnBackend(cfg)
+	h.applyAdminVKLinks(cfg.Turn, admin.ID)
 	if remoteControl {
 		cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN
 		cfg.Guardian = &wingsvpb.Guardian{
@@ -404,6 +414,51 @@ func (h *Handler) buildClientLink(
 	}
 	cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_VK_TURN_PROFILE
 	return preview.BuildWingsLink(cfg)
+}
+
+// applyAdminVKLinks embeds the admin's shared VK Links pool into turn. The app
+// imports these append-only into its own shared settings.vkLinks (any profile
+// import only adds links, never wipes), so no merge flag is needed. No-op when
+// the admin has no links or there is no VK-TURN turn to attach them to.
+func (h *Handler) applyAdminVKLinks(turn *wingsvpb.Turn, adminID int64) {
+	if turn == nil || h.store == nil {
+		return
+	}
+	links, err := h.store.GetAdminVKLinks(adminID)
+	if err != nil || len(links) == 0 {
+		return
+	}
+	turn.Links = mergeVKLinks(turn.Links, links)
+}
+
+// mergeVKLinks unions existing and added links, trimming blanks and keeping
+// first-seen order.
+func mergeVKLinks(existing, add []string) []string {
+	seen := make(map[string]struct{}, len(existing)+len(add))
+	out := make([]string, 0, len(existing)+len(add))
+	for _, l := range existing {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+		if _, ok := seen[l]; ok {
+			continue
+		}
+		seen[l] = struct{}{}
+		out = append(out, l)
+	}
+	for _, l := range add {
+		l = strings.TrimSpace(l)
+		if l == "" {
+			continue
+		}
+		if _, ok := seen[l]; ok {
+			continue
+		}
+		seen[l] = struct{}{}
+		out = append(out, l)
+	}
+	return out
 }
 
 // managedTurn builds the panel-managed VK-TURN profile that lets the app
@@ -662,7 +717,15 @@ func (h *Handler) respondWingsvLink(w http.ResponseWriter, r *http.Request, clie
 		writeError(w, http.StatusNotFound, "token not available — recreate the client to regenerate")
 		return
 	}
-	remoteControl := r.URL.Query().Get("remote") != "0"
+	// Default to the client's stored management type; a query param can still
+	// override it (remote=0 forces a config-only link, remote=1 forces Guardian).
+	remoteControl := client.RemoteControl
+	switch r.URL.Query().Get("remote") {
+	case "0":
+		remoteControl = false
+	case "1":
+		remoteControl = true
+	}
 	vkTurnEndpoint, err := h.resolveVkTurnEndpoint(admin, r.URL.Query().Get("vk_turn_node"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -694,22 +757,23 @@ func (h *Handler) respondRotateToken(w http.ResponseWriter, r *http.Request, cli
 	if sink := h.hub.ClientSink(client.ID); sink != nil {
 		sink.Close("token_rotated")
 	}
-	link, err := preview.BuildWingsLink(&wingsvpb.Config{
-		Ver:  1,
-		Type: wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN,
-		Guardian: &wingsvpb.Guardian{
-			WsUrl:                   deriveWsURL(h.cfg.PublicBaseURL),
-			ClientId:                client.ID,
-			ClientToken:             tokenBytes,
-			ClientName:              client.Name,
-			SyncMode:                syncModeToProto(client.SyncMode),
-			PeriodicIntervalMinutes: uint32(client.PeriodicIntervalMinutes),
-			AdminUsername:           admin.Username,
-			AdminId:                 admin.ID,
-			AdminAvatarVersion:      admin.AvatarVersion,
-			ServerCaPins:            h.caPins,
-		},
-	})
+	// Rebuild the link in the client's own shape (Guardian vs config-only),
+	// carrying its managed vk-turn endpoint so a rotated config-only client keeps
+	// self-provisioning instead of silently switching to panel control.
+	vkTurnEndpoint := ""
+	if cfg, cErr := h.store.GetClientConfig(client.ID); cErr == nil && len(cfg.ConfigProto) > 0 {
+		parsed := &wingsvpb.Config{}
+		if proto.Unmarshal(cfg.ConfigProto, parsed) == nil {
+			vkTurnEndpoint = existingManagedEndpoint(parsed.Turn)
+		}
+	}
+	if vkTurnEndpoint == "" {
+		vkTurnEndpoint, _ = h.resolveVkTurnEndpoint(admin, "")
+	}
+	link, err := h.buildClientLink(
+		client.ID, client.Name, tokenBytes, client.SyncMode, client.PeriodicIntervalMinutes,
+		admin, client.RemoteControl, vkTurnEndpoint,
+	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

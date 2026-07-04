@@ -4,12 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
+)
+
+var (
+	errBadWGBackend = errors.New("wg_backend must be empty, own, or xui")
+	errBadWGTarget  = errors.New("xui_node_id is required when wg_backend is xui")
 )
 
 type adminNodeView struct {
@@ -22,6 +28,9 @@ type adminNodeView struct {
 	ActiveSessions uint32 `json:"active_sessions"`
 	XrayState      string `json:"xray_state"`
 	XrayVersion    string `json:"xray_version"`
+	WGBackend      string `json:"wg_backend"`
+	XuiNodeID      string `json:"xui_node_id"`
+	XuiInboundTag  string `json:"xui_inbound_tag"`
 	LastSeen       int64  `json:"last_seen"`
 	CreatedAt      int64  `json:"created_at"`
 }
@@ -35,6 +44,7 @@ func (h *Handler) nodeToView(n dbmodel.ServerNode) adminNodeView {
 	view := adminNodeView{
 		ID: n.ID, Kind: n.Kind, Name: n.Name, GRPCEndpoint: n.GRPCEndpoint,
 		Status: n.Status, XrayState: n.XrayState, XrayVersion: n.XrayVersion,
+		WGBackend: n.WGBackend, XuiNodeID: n.XuiNodeID, XuiInboundTag: n.XuiInboundTag,
 		LastSeen: n.LastSeenAt, CreatedAt: n.CreatedAtUnix,
 	}
 	if latest, err := h.store.LatestTrafficSample(n.ID); err == nil {
@@ -82,6 +92,26 @@ type createNodeRequest struct {
 	Kind         string `json:"kind"`
 	GRPCEndpoint string `json:"grpc_endpoint"`
 	GRPCToken    string `json:"grpc_token"`
+	// wg-backend config for a vk_turn_proxy node: how it provisions managed wg.
+	WGBackend     string `json:"wg_backend"`
+	XuiNodeID     string `json:"xui_node_id"`
+	XuiInboundTag string `json:"xui_inbound_tag"`
+}
+
+// normalizeWGBackend validates the wg-backend selection and its 3x-ui target.
+func normalizeWGBackend(backend, xuiNodeID, inboundTag string) (string, string, string, error) {
+	backend = strings.TrimSpace(backend)
+	switch backend {
+	case "", storage.WGBackendOwn:
+		return backend, "", "", nil
+	case storage.WGBackendXUI:
+		if strings.TrimSpace(xuiNodeID) == "" {
+			return "", "", "", errBadWGTarget
+		}
+		return storage.WGBackendXUI, strings.TrimSpace(xuiNodeID), strings.TrimSpace(inboundTag), nil
+	default:
+		return "", "", "", errBadWGBackend
+	}
 }
 
 func (h *Handler) handleCreateNode(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -104,18 +134,26 @@ func (h *Handler) handleCreateNode(w http.ResponseWriter, r *http.Request, admin
 		writeError(w, http.StatusBadRequest, "grpc_endpoint is required")
 		return
 	}
+	backend, xuiNodeID, inboundTag, err := normalizeWGBackend(req.WGBackend, req.XuiNodeID, req.XuiInboundTag)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	id, err := randomNodeID()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	node, err := h.store.CreateServerNode(dbmodel.ServerNode{
-		ID:           id,
-		Kind:         kind,
-		Name:         strings.TrimSpace(req.Name),
-		GRPCEndpoint: endpoint,
-		GRPCToken:    strings.TrimSpace(req.GRPCToken),
-		OwnerAdminID: admin.ID,
+		ID:            id,
+		Kind:          kind,
+		Name:          strings.TrimSpace(req.Name),
+		GRPCEndpoint:  endpoint,
+		GRPCToken:     strings.TrimSpace(req.GRPCToken),
+		OwnerAdminID:  admin.ID,
+		WGBackend:     backend,
+		XuiNodeID:     xuiNodeID,
+		XuiInboundTag: inboundTag,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -155,11 +193,87 @@ func (h *Handler) handleNodeByID(w http.ResponseWriter, r *http.Request, admin s
 	switch {
 	case subpath == "" && r.Method == http.MethodDelete:
 		h.respondDeleteNode(w, r, admin, node)
+	case subpath == "" && r.Method == http.MethodPut:
+		h.respondUpdateNode(w, r, admin, node)
+	case subpath == "inbounds" && r.Method == http.MethodGet:
+		h.respondNodeInbounds(w, r, admin, node)
+	case subpath == "connect" && r.Method == http.MethodGet:
+		respondNodeConnect(w, node)
 	case subpath == "clients" && r.Method == http.MethodPost:
 		h.respondCreateNodeClient(w, r, admin, node)
 	default:
 		writeError(w, http.StatusNotFound, "unknown route")
 	}
+}
+
+// respondNodeConnect returns the stored gRPC bearer token so the UI can rebuild
+// the one-line connect command for an already-registered node. The token is a
+// shared secret the admin set, not a hashed credential.
+func respondNodeConnect(w http.ResponseWriter, node dbmodel.ServerNode) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":            node.ID,
+		"kind":          node.Kind,
+		"grpc_endpoint": node.GRPCEndpoint,
+		"grpc_token":    node.GRPCToken,
+	})
+}
+
+// respondUpdateNode edits a node's name/endpoint/token and its wg-backend config.
+func (h *Handler) respondUpdateNode(w http.ResponseWriter, r *http.Request, admin storage.Admin, node dbmodel.ServerNode) {
+	var req createNodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	backend, xuiNodeID, inboundTag, err := normalizeWGBackend(req.WGBackend, req.XuiNodeID, req.XuiInboundTag)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	node.Name = strings.TrimSpace(req.Name)
+	if e := strings.TrimSpace(req.GRPCEndpoint); e != "" {
+		node.GRPCEndpoint = e
+	}
+	// Only overwrite the gRPC bearer token when a new one is supplied; an edit that
+	// leaves it blank must keep the existing token, or the node loses auth and goes
+	// offline.
+	if t := strings.TrimSpace(req.GRPCToken); t != "" {
+		node.GRPCToken = t
+	}
+	node.WGBackend = backend
+	node.XuiNodeID = xuiNodeID
+	node.XuiInboundTag = inboundTag
+	if err := h.store.UpdateServerNode(node); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	updated, err := h.store.GetServerNode(node.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, h.nodeToView(updated))
+}
+
+// respondNodeInbounds lists a 3x-ui node's inbounds so the panel can populate the
+// wg-backend inbound dropdown.
+func (h *Handler) respondNodeInbounds(w http.ResponseWriter, r *http.Request, _ storage.Admin, node dbmodel.ServerNode) {
+	if node.Kind != storage.ServerNodeXUI {
+		writeError(w, http.StatusBadRequest, "node is not a 3x-ui node")
+		return
+	}
+	inbounds, err := h.xui.ListInbounds(r.Context(), node)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "xui list inbounds: "+err.Error())
+		return
+	}
+	out := make([]map[string]any, 0, len(inbounds))
+	for _, in := range inbounds {
+		out = append(out, map[string]any{
+			"tag": in.Tag, "remark": in.Remark, "protocol": in.Protocol, "port": in.Port,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"inbounds": out})
 }
 
 func (h *Handler) respondDeleteNode(w http.ResponseWriter, r *http.Request, admin storage.Admin, node dbmodel.ServerNode) {
