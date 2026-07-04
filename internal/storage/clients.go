@@ -26,6 +26,10 @@ type Client struct {
 	PeriodicIntervalMinutes int
 	HasRootAccess           bool
 	VkOAuthAuthorized       bool
+	// RemoteControl records the client's management type: true = panel controls
+	// the config remotely over Guardian; false = the panel only issues the config
+	// once (provision-only). It decides the shape of every regenerated link.
+	RemoteControl bool
 }
 
 func (s *Store) CreateClient(id string, ownerAdminID int64, name, tokenHash string, tokenPlain []byte) (Client, error) {
@@ -104,7 +108,7 @@ func (s *Store) FindClientByID(id string) (Client, error) {
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
 		       sync_mode, periodic_interval_minutes,
-		       has_root_access, vk_oauth_authorized
+		       has_root_access, vk_oauth_authorized, remote_control
 		FROM clients WHERE id = ?`, id)
 	return scanClient(row)
 }
@@ -115,7 +119,7 @@ func (s *Store) ListClientsByOwner(ownerAdminID int64) ([]Client, error) {
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
 		       sync_mode, periodic_interval_minutes,
-		       has_root_access, vk_oauth_authorized
+		       has_root_access, vk_oauth_authorized, remote_control
 		FROM clients WHERE owner_admin_id = ? ORDER BY created_at DESC`, ownerAdminID)
 	if err != nil {
 		return nil, err
@@ -138,7 +142,7 @@ func (s *Store) ListAllClients() ([]Client, error) {
 		       os_version, app_version, created_at, last_seen_at, online,
 		       log_runtime_enabled, log_proxy_enabled, log_xray_enabled,
 		       sync_mode, periodic_interval_minutes,
-		       has_root_access, vk_oauth_authorized
+		       has_root_access, vk_oauth_authorized, remote_control
 		FROM clients ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -265,18 +269,19 @@ func scanClientRows(rows *sql.Rows) (Client, error) {
 func scanClientFromScanner(scanner rowScanner) (Client, error) {
 	var c Client
 	var createdAt, lastSeenAt int64
-	var online, logRuntime, logProxy, logXRay, hasRoot, vkAuth int
+	var online, logRuntime, logProxy, logXRay, hasRoot, vkAuth, remoteControl int
 	err := scanner.Scan(
 		&c.ID, &c.OwnerAdminID, &c.Name, &c.TokenHash,
 		&c.HWID, &c.DeviceName, &c.DeviceModel, &c.OSVersion, &c.AppVersion,
 		&createdAt, &lastSeenAt, &online,
 		&logRuntime, &logProxy, &logXRay,
 		&c.SyncMode, &c.PeriodicIntervalMinutes,
-		&hasRoot, &vkAuth,
+		&hasRoot, &vkAuth, &remoteControl,
 	)
 	if err != nil {
 		return Client{}, err
 	}
+	c.RemoteControl = remoteControl != 0
 	c.CreatedAt = time.UnixMilli(createdAt).UTC()
 	c.LastSeenAt = time.UnixMilli(lastSeenAt).UTC()
 	c.Online = online != 0
@@ -292,6 +297,18 @@ func scanClientFromScanner(scanner rowScanner) (Client, error) {
 		c.PeriodicIntervalMinutes = 30
 	}
 	return c, nil
+}
+
+func (s *Store) SetClientRemoteControl(id string, ownerAdminID int64, remoteControl bool) error {
+	v := 0
+	if remoteControl {
+		v = 1
+	}
+	_, err := s.exec(
+		`UPDATE clients SET remote_control = ? WHERE id = ? AND owner_admin_id = ?`,
+		v, id, ownerAdminID,
+	)
+	return err
 }
 
 func (s *Store) UpdateClientSync(id string, ownerAdminID int64, mode string, intervalMinutes int) error {

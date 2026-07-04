@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS admins (
     avatar_mime TEXT NOT NULL DEFAULT '',
     avatar_png BLOB,
     avatar_version INTEGER NOT NULL DEFAULT 0,
+    vk_links TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -40,7 +41,8 @@ CREATE TABLE IF NOT EXISTS clients (
     log_proxy_enabled INTEGER NOT NULL DEFAULT 1,
     log_xray_enabled INTEGER NOT NULL DEFAULT 0,
     sync_mode TEXT NOT NULL DEFAULT 'always',
-    periodic_interval_minutes INTEGER NOT NULL DEFAULT 30
+    periodic_interval_minutes INTEGER NOT NULL DEFAULT 30,
+    remote_control INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_clients_owner ON clients(owner_admin_id);
@@ -163,6 +165,9 @@ CREATE TABLE IF NOT EXISTS server_nodes (
     last_seen_at INTEGER NOT NULL DEFAULT 0,
     xray_state TEXT NOT NULL DEFAULT '',
     xray_version TEXT NOT NULL DEFAULT '',
+    wg_backend TEXT NOT NULL DEFAULT '',
+    xui_node_id TEXT NOT NULL DEFAULT '',
+    xui_inbound_tag TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL
 );
 

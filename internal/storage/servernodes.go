@@ -28,6 +28,15 @@ const (
 	ServerNodeXUI         = "xui"
 )
 
+// WGBackend values for a vk-turn-proxy node's managed provisioning (ServerNode.
+// WGBackend): "own" mints a peer on the node's own wg interface via the relay
+// management gRPC; "xui" mints a client on the node's configured 3x-ui inbound.
+// Empty falls back to the panel-global XUI_WG_* default.
+const (
+	WGBackendOwn = "own"
+	WGBackendXUI = "xui"
+)
+
 func (s *Store) GetPanelMode() (PanelMode, error) {
 	var row dbmodel.PlatformSetting
 	err := s.gdb.Where("key = ?", panelModeSettingKey).First(&row).Error
@@ -116,6 +125,27 @@ func (s *Store) GetServerNode(id string) (dbmodel.ServerNode, error) {
 		return dbmodel.ServerNode{}, err
 	}
 	return n, nil
+}
+
+// UpdateServerNode updates a node's editable fields (name, endpoint, token, and
+// the wg-backend provisioning config). Uses a column map so a field can be
+// cleared back to its zero value (e.g. wg_backend -> "").
+func (s *Store) UpdateServerNode(n dbmodel.ServerNode) error {
+	res := s.gdb.Model(&dbmodel.ServerNode{}).Where("id = ?", n.ID).Updates(map[string]any{
+		"name":            n.Name,
+		"grpc_endpoint":   n.GRPCEndpoint,
+		"grpc_token":      n.GRPCToken,
+		"wg_backend":      n.WGBackend,
+		"xui_node_id":     n.XuiNodeID,
+		"xui_inbound_tag": n.XuiInboundTag,
+	})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (s *Store) DeleteServerNode(id string) error {

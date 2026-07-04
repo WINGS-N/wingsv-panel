@@ -189,8 +189,15 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE client_configs ADD COLUMN config_version INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE clients ADD COLUMN has_root_access INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE clients ADD COLUMN vk_oauth_authorized INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE clients ADD COLUMN remote_control INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE admins ADD COLUMN vk_links TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE server_nodes ADD COLUMN grpc_token TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE server_nodes ADD COLUMN xray_state TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE server_nodes ADD COLUMN xray_version TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE server_nodes ADD COLUMN wg_backend TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE server_nodes ADD COLUMN xui_node_id TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE server_nodes ADD COLUMN xui_inbound_tag TEXT NOT NULL DEFAULT ''`,
 	} {
 		if _, err := db.Exec(alter); err != nil {
 			if !strings.Contains(err.Error(), "duplicate column name") {

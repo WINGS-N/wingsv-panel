@@ -17,6 +17,7 @@ type Admin struct {
 	AvatarMime         string `gorm:"column:avatar_mime;not null;default:''"`
 	AvatarPNG          []byte `gorm:"column:avatar_png"`
 	AvatarVersion      int64  `gorm:"column:avatar_version;not null;default:0"`
+	VKLinks            string `gorm:"column:vk_links;not null;default:''"`
 	CreatedAtUnix      int64  `gorm:"column:created_at;not null"`
 	UpdatedAtUnix      int64  `gorm:"column:updated_at;not null"`
 }
@@ -53,6 +54,7 @@ type Client struct {
 	PeriodicIntervalMinutes int64  `gorm:"column:periodic_interval_minutes;not null;default:30"`
 	HasRootAccess           int64  `gorm:"column:has_root_access;not null;default:0"`
 	VKOAuthAuthorized       int64  `gorm:"column:vk_oauth_authorized;not null;default:0"`
+	RemoteControl           int64  `gorm:"column:remote_control;not null;default:1"`
 }
 
 func (Client) TableName() string { return "clients" }
@@ -189,8 +191,16 @@ type ServerNode struct {
 	LastSeenAt   int64 `gorm:"column:last_seen_at;not null;default:0"`
 	// XrayState / XrayVersion are polled from a 3x-ui node's Panel gRPC so the UI
 	// can show whether its Xray core is running. Empty for vk-turn-proxy nodes.
-	XrayState     string `gorm:"column:xray_state;not null;default:''"`
-	XrayVersion   string `gorm:"column:xray_version;not null;default:''"`
+	XrayState   string `gorm:"column:xray_state;not null;default:''"`
+	XrayVersion string `gorm:"column:xray_version;not null;default:''"`
+	// WGBackend selects how a vk-turn-proxy node provisions a managed client's
+	// WireGuard config: "own" (a peer on the node's own wg interface via the relay
+	// management gRPC) or "xui" (a client on a 3x-ui node's inbound). Empty falls
+	// back to the panel's global XUI_WG_* default. XuiNodeID / XuiInboundTag name
+	// the 3x-ui node + inbound when WGBackend is "xui".
+	WGBackend     string `gorm:"column:wg_backend;not null;default:''"`
+	XuiNodeID     string `gorm:"column:xui_node_id;not null;default:''"`
+	XuiInboundTag string `gorm:"column:xui_inbound_tag;not null;default:''"`
 	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
 }
 
