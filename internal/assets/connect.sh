@@ -36,6 +36,13 @@ parse_args() {
   [ -n "$PANEL_GRPC" ] || die "missing <panel_grpc> (e.g. v.wingsnet.org:443)"
   [ -n "$TOKEN" ] || die "missing <token>"
   [ -n "$NODE_ID" ] || die "missing <node-id> (copy it from the panel node list)"
+  # The panel renders "<token>" as a placeholder when the node has no token yet.
+  # Running with it would wire a garbage credential, so refuse it explicitly.
+  case "$TOKEN" in
+    '<token>' | '<TOKEN>')
+      die "token is a placeholder ('<token>') - the node has no token in the panel yet; generate/set it in the panel first, then copy the real command"
+      ;;
+  esac
 }
 
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -59,22 +66,46 @@ detect_kind() {
   log "detected node kind: $KIND"
 }
 
+# upsert_key sets KEY = "VAL" in a flat TOML file, editing an existing active line
+# in place or appending it, and never touching any other line. This is what keeps
+# the operator's listen/udp-connect/wrap/cert settings intact.
+upsert_key() {
+  f="$1"
+  key="$2"
+  val="$3"
+  if grep -qE "^[[:space:]]*${key}[[:space:]]*=" "$f" 2>/dev/null; then
+    tmp="$f.tmp.$$"
+    awk -v k="$key" -v v="$val" '
+      !done && $0 ~ ("^[[:space:]]*" k "[[:space:]]*=") && $0 !~ /^[[:space:]]*#/ {
+        print k " = \"" v "\""; done = 1; next
+      }
+      { print }
+    ' "$f" > "$tmp" && mv "$tmp" "$f"
+  else
+    printf '%s = "%s"\n' "$key" "$val" >> "$f"
+  fi
+}
+
+# write_vktp_config MERGES the panel wiring keys into an existing config.toml,
+# preserving every other line, and backs the file up first. It NEVER truncates the
+# file - an earlier version did, which wiped operators' full relay configuration.
 write_vktp_config() {
   target_dir="$1"
   target_file="$target_dir/config.toml"
   mkdir -p "$target_dir"
-  # Preserve any listen/udp-connect the operator already relies on by only writing
-  # the panel wiring keys; vk-turn merges this file under the command-line flags,
-  # so a unit that still passes explicit flags will keep overriding these.
-  cat > "$target_file" <<EOF
-# Written by connect.sh - panel wiring for this vk-turn-proxy node.
-grpc-listen = "0.0.0.0:${VKTP_GRPC_PORT}"
-grpc-token = "${TOKEN}"
-panel-grpc = "${PANEL_GRPC}"
-node-id = "${NODE_ID}"
-panel-token = "${TOKEN}"
-EOF
-  log "wrote $target_file"
+  if [ -f "$target_file" ]; then
+    backup="$target_file.bak.$(date +%Y%m%d%H%M%S 2>/dev/null || echo bak)"
+    cp "$target_file" "$backup" && log "backed up existing config to $backup"
+  else
+    : > "$target_file"
+    log "no existing $target_file; creating one with panel wiring only"
+  fi
+  upsert_key "$target_file" grpc-listen "0.0.0.0:${VKTP_GRPC_PORT}"
+  upsert_key "$target_file" grpc-token "${TOKEN}"
+  upsert_key "$target_file" panel-grpc "${PANEL_GRPC}"
+  upsert_key "$target_file" node-id "${NODE_ID}"
+  upsert_key "$target_file" panel-token "${TOKEN}"
+  log "merged panel wiring into $target_file"
 }
 
 connect_vktp() {
@@ -89,13 +120,17 @@ connect_vktp() {
       log "restarted vk-turn-server.service"
     fi
   elif [ -n "$container" ]; then
-    # Write the config inside the container at the default path, then restart it.
+    # Merge the panel wiring into the container's config at the default path, then
+    # restart it. Seed the local copy from the container so its existing settings
+    # are preserved (a docker cp back would otherwise replace the whole file).
     docker exec "$container" sh -c "mkdir -p /etc/wings/vktp" 2>/dev/null || die "cannot exec into container $container"
+    mkdir -p /tmp/wings-vktp
+    docker cp "$container":/etc/wings/vktp/config.toml /tmp/wings-vktp/config.toml 2>/dev/null || true
     write_vktp_config "/tmp/wings-vktp"
     docker cp /tmp/wings-vktp/config.toml "$container":/etc/wings/vktp/config.toml
     rm -rf /tmp/wings-vktp
     docker restart "$container" >/dev/null
-    log "wrote config into container $container and restarted it"
+    log "merged config into container $container and restarted it"
   else
     write_vktp_config "$(dirname "$VKTP_CONFIG")"
     warn "no systemd unit or container found; wrote $VKTP_CONFIG - start vk-turn-server so it reads it."
