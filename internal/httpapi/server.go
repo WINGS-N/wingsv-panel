@@ -31,11 +31,13 @@ import (
 	adminhandler "v.wingsnet.org/internal/handlers/admin"
 	guardianhandler "v.wingsnet.org/internal/handlers/guardian"
 	ownerhandler "v.wingsnet.org/internal/handlers/owner"
+	"v.wingsnet.org/internal/livestats"
 	"v.wingsnet.org/internal/metrics"
 	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/provisioning"
 	"v.wingsnet.org/internal/relayclient"
+	"v.wingsnet.org/internal/statsview"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
 	"v.wingsnet.org/internal/xuiclient"
@@ -575,6 +577,19 @@ func Run(ctx context.Context, cfg config.Config) error {
 		OnCollected: func(string) {
 			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
 		},
+	}).Run(ctx)
+
+	// Live speed: a long-lived StreamFlowStats subscription per relay feeds an
+	// in-memory rate cache the dashboard current-speed tile reads, so the number
+	// tracks the last second instead of the collector's DB-sample cadence.
+	liveStore := livestats.NewStore()
+	statsview.SetLiveRates(liveStore.RatesFor)
+	go livestats.NewStreamer(store, liveStore, func(node dbmodel.ServerNode) livestats.Relay {
+		token := node.GRPCToken
+		if token == "" {
+			token = cfg.RelayToken
+		}
+		return relayclient.New(token)
 	}).Run(ctx)
 
 	// The collector above only polls vk-turn-proxy relays. 3x-ui nodes are polled
