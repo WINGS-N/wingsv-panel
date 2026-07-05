@@ -89,12 +89,14 @@
             {{ n.owner_name || 'admin' }}
           </SamsungPill>
           <span class="admin-muted ml-2">{{ nodeKindLabel(n.kind) }}</span>
-          <SamsungPill v-if="n.kind === 'xui'" :variant="xrayRunning(n) ? 'online' : 'offline'" class="ml-2">
-            xray: {{ xrayLabel(n) }}
-          </SamsungPill>
-          <SamsungPill v-if="n.kind === 'vk_turn_proxy' && n.relay_version" variant="neutral" class="ml-2">
-            relay: {{ n.relay_version }}
-          </SamsungPill>
+          <div v-if="n.kind === 'xui' || (n.kind === 'vk_turn_proxy' && n.relay_version)" class="node-version-row">
+            <SamsungPill v-if="n.kind === 'xui'" :variant="xrayRunning(n) ? 'online' : 'offline'">
+              xray: {{ xrayLabel(n) }}
+            </SamsungPill>
+            <SamsungPill v-if="n.kind === 'vk_turn_proxy' && n.relay_version" variant="neutral">
+              relay: {{ n.relay_version }}
+            </SamsungPill>
+          </div>
           <div class="node-id-row">
             <span class="admin-muted node-id-label">ID ноды:</span>
             <code class="admin-mono node-id" :title="'Скопировать ' + n.id" @click="copyId(n.id)">{{ n.id }}</code>
@@ -768,6 +770,13 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin-top: 4px;
+  flex-wrap: wrap;
+}
+.node-version-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
   flex-wrap: wrap;
 }
 .node-id-label {
