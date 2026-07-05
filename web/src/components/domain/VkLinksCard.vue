@@ -18,12 +18,7 @@
     </ul>
 
     <div class="vk-link-add mt-3">
-      <OneuiInput
-        v-model.trim="draft"
-        label="Новая VK-ссылка"
-        placeholder="vk-link или ok.ru OAuth ссылка"
-        @keyup.enter="addLink"
-      />
+      <OneuiInput v-model.trim="draft" label="Новая VK-ссылка" placeholder="vk-link" @keyup.enter="addLink" />
       <SamsungButton variant="secondary" :disabled="!draft" @click="addLink">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
         Добавить
