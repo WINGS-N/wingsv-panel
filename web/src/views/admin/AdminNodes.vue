@@ -138,10 +138,6 @@
         </div>
         <div class="session-row-meta node-row-tail">
           <span>{{ n.peer_count }} пиров · {{ n.active_sessions }} сессий</span>
-          <SamsungButton v-if="n.kind === 'xui'" variant="secondary" size="small" @click="openAddClient(n)">
-            <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-            Клиент
-          </SamsungButton>
           <SamsungIconButton variant="secondary" size="small" aria-label="Команда подключения" @click="openConnect(n)">
             <Terminal class="button-icon" aria-hidden="true" />
           </SamsungIconButton>
