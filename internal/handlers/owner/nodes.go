@@ -251,10 +251,10 @@ func (h *Handler) respondListNodes(w http.ResponseWriter, r *http.Request) {
 	out := make([]nodeView, 0, len(nodes))
 	for _, n := range nodes {
 		view := nodeView{
-			ID:           n.ID,
-			Kind:         n.Kind,
-			Name:         n.Name,
-			GRPCEndpoint: n.GRPCEndpoint,
+			ID:            n.ID,
+			Kind:          n.Kind,
+			Name:          n.Name,
+			GRPCEndpoint:  n.GRPCEndpoint,
 			Status:        n.Status,
 			OwnerID:       n.OwnerAdminID,
 			Local:         n.OwnerAdminID == 0,
