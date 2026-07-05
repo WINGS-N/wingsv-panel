@@ -571,29 +571,33 @@ func Run(ctx context.Context, cfg config.Config) error {
 	if store.IsSQLite() {
 		persistInterval = 15 * time.Second
 	}
+	// Live stats: a StreamFlowStats/StreamFlows subscription per relay feeds an
+	// in-memory cache the dashboard reads and pushes per-node data to the admin WS.
+	// The same Ingest hooks are driven by the collector's unary polls below, so live
+	// data reaches the socket even against a relay too old to stream.
+	liveStore := livestats.NewStore()
+	statsview.SetLiveRates(liveStore.RatesFor)
+	liveEmit := func(kind string, payload []byte) {
+		hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: kind, Data: payload})
+	}
+	liveStreamer := livestats.NewStreamer(store, liveStore, func(node dbmodel.ServerNode) livestats.Relay {
+		token := node.GRPCToken
+		if token == "" {
+			token = cfg.RelayToken
+		}
+		return relayclient.New(token)
+	}, liveEmit)
+	go liveStreamer.Run(ctx)
+
 	go collector.New(store, relayFactory, collector.Options{
 		Interval:        3 * time.Second,
 		PersistInterval: persistInterval,
 		OnCollected: func(string) {
 			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
 		},
+		OnFlowStats: liveStreamer.Ingest,
+		OnFlows:     liveStreamer.IngestFlows,
 	}).Run(ctx)
-
-	// Live speed: a long-lived StreamFlowStats subscription per relay feeds an
-	// in-memory rate cache the dashboard current-speed tile reads, so the number
-	// tracks the last second instead of the collector's DB-sample cadence.
-	liveStore := livestats.NewStore()
-	statsview.SetLiveRates(liveStore.RatesFor)
-	liveEmit := func(kind string, payload []byte) {
-		hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: kind, Data: payload})
-	}
-	go livestats.NewStreamer(store, liveStore, func(node dbmodel.ServerNode) livestats.Relay {
-		token := node.GRPCToken
-		if token == "" {
-			token = cfg.RelayToken
-		}
-		return relayclient.New(token)
-	}, liveEmit).Run(ctx)
 
 	// The collector above only polls vk-turn-proxy relays. 3x-ui nodes are polled
 	// here for reachability and Xray core state so the UI can show they are up.

@@ -192,22 +192,48 @@ func (s *Streamer) reconcile(ctx context.Context, active map[string]context.Canc
 	}
 }
 
+// Ingest folds a fresh FlowStats snapshot for a node into the live store and
+// pushes it to the admin WS. Called both by the per-node stream (1s) and by the
+// collector's unary poll (so live data flows even against a relay too old to
+// stream), whichever reports first; the store just keeps the newest.
+func (s *Streamer) Ingest(nodeID string, st relayclient.FlowStats) {
+	rxRate, txRate := s.live.update(nodeID, st.ServerRxBytes, st.ServerTxBytes, time.Now())
+	if s.emit == nil {
+		return
+	}
+	payload, err := json.Marshal(NodeStats{
+		NodeID: nodeID, RxRate: rxRate, TxRate: txRate,
+		RxBytes: st.ServerRxBytes, TxBytes: st.ServerTxBytes,
+		ActiveStreams: st.ActiveStreams, ActiveSessions: st.ActiveSessions,
+		TotalSessions: st.TotalSessions, StreamsByProtocol: st.StreamsByProtocol,
+	})
+	if err == nil {
+		s.emit("node_stats", payload)
+	}
+}
+
+// IngestFlows pushes a node's active-flow list to the admin WS as node_flows.
+func (s *Streamer) IngestFlows(nodeID string, flows []relayclient.Flow) {
+	if s.emit == nil {
+		return
+	}
+	msg := nodeFlowsMsg{NodeID: nodeID, Flows: make([]flowMsg, 0, len(flows))}
+	for _, f := range flows {
+		msg.Flows = append(msg.Flows, flowMsg{
+			NodeID: nodeID, SessionID: f.SessionID, StreamID: f.StreamID,
+			ClientIP: f.ClientIP, Remote: f.Remote, Protocol: f.Protocol, Version: f.Version,
+			RxBytes: f.RxBytes, TxBytes: f.TxBytes, RxRate: f.RxRate, TxRate: f.TxRate, Started: f.StartedUnix,
+		})
+	}
+	if payload, err := json.Marshal(msg); err == nil {
+		s.emit("node_flows", payload)
+	}
+}
+
 func (s *Streamer) streamNode(ctx context.Context, node dbmodel.ServerNode) {
 	for ctx.Err() == nil {
 		err := s.newRelay(node).StreamFlowStats(ctx, node, func(st relayclient.FlowStats) {
-			rxRate, txRate := s.live.update(node.ID, st.ServerRxBytes, st.ServerTxBytes, time.Now())
-			if s.emit == nil {
-				return
-			}
-			payload, mErr := json.Marshal(NodeStats{
-				NodeID: node.ID, RxRate: rxRate, TxRate: txRate,
-				RxBytes: st.ServerRxBytes, TxBytes: st.ServerTxBytes,
-				ActiveStreams: st.ActiveStreams, ActiveSessions: st.ActiveSessions,
-				TotalSessions: st.TotalSessions, StreamsByProtocol: st.StreamsByProtocol,
-			})
-			if mErr == nil {
-				s.emit("node_stats", payload)
-			}
+			s.Ingest(node.ID, st)
 		})
 		if ctx.Err() != nil {
 			return
@@ -231,17 +257,7 @@ func (s *Streamer) streamFlows(ctx context.Context, node dbmodel.ServerNode) {
 	}
 	for ctx.Err() == nil {
 		err := s.newRelay(node).StreamFlows(ctx, node, func(flows []relayclient.Flow) {
-			msg := nodeFlowsMsg{NodeID: node.ID, Flows: make([]flowMsg, 0, len(flows))}
-			for _, f := range flows {
-				msg.Flows = append(msg.Flows, flowMsg{
-					NodeID: node.ID, SessionID: f.SessionID, StreamID: f.StreamID,
-					ClientIP: f.ClientIP, Remote: f.Remote, Protocol: f.Protocol, Version: f.Version,
-					RxBytes: f.RxBytes, TxBytes: f.TxBytes, RxRate: f.RxRate, TxRate: f.TxRate, Started: f.StartedUnix,
-				})
-			}
-			if payload, mErr := json.Marshal(msg); mErr == nil {
-				s.emit("node_flows", payload)
-			}
+			s.IngestFlows(node.ID, flows)
 		})
 		if ctx.Err() != nil {
 			return

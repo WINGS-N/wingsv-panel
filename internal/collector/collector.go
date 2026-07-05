@@ -49,6 +49,12 @@ type Options struct {
 	// OnCollected fires after a node's cycle persists, so the HTTP layer can push
 	// a live update. It is called synchronously; keep it cheap (a channel send).
 	OnCollected func(nodeID string)
+	// OnFlowStats / OnFlows fire with a node's freshly polled aggregate stats and
+	// active flows, so the HTTP layer can push them to the admin WS - live data over
+	// the socket even when the relay is too old to stream. Called on the persist
+	// cycle (where these RPCs already run); keep them cheap.
+	OnFlowStats func(nodeID string, stats relayclient.FlowStats)
+	OnFlows     func(nodeID string, flows []relayclient.Flow)
 	// Now is injectable for tests; defaults to time.Now.
 	Now func() time.Time
 }
@@ -178,6 +184,15 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode, pe
 	flows, err := relay.ListFlows(ctx, node)
 	if err != nil {
 		return err
+	}
+	// Push the freshly polled stats/flows to the admin WS so the dashboard gets live
+	// data over the socket without a REST refetch - and without depending on the
+	// relay's streaming RPCs (this uses the unary polls above).
+	if c.opts.OnFlowStats != nil {
+		c.opts.OnFlowStats(node.ID, stats)
+	}
+	if c.opts.OnFlows != nil {
+		c.opts.OnFlows(node.ID, flows)
 	}
 
 	if err := c.store.InsertTrafficSample(dbmodel.TrafficSample{
