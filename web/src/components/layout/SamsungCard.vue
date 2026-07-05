@@ -1,29 +1,64 @@
 <template>
   <section :class="['surface-card', $attrs.class]">
-    <header v-if="kicker || title || $slots.title || $slots.actions" class="admin-card-header">
+    <header
+      v-if="kicker || title || $slots.title || $slots.actions"
+      :class="['admin-card-header', collapsible ? 'admin-card-header-collapsible' : '']"
+      @click="collapsible ? (open = !open) : null"
+    >
       <div>
         <div v-if="kicker" class="text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker">
           {{ kicker }}
         </div>
         <slot name="title">
-          <h2 v-if="title" class="admin-card-title">{{ title }}</h2>
+          <h2 v-if="title" class="admin-card-title">
+            <ChevronDown
+              v-if="collapsible"
+              :class="['card-chevron', open ? 'card-chevron-open' : '']"
+              aria-hidden="true"
+            />
+            {{ title }}
+          </h2>
         </slot>
-        <p v-if="subtitle" class="body-copy">{{ subtitle }}</p>
+        <p v-if="subtitle && (!collapsible || open)" class="body-copy">{{ subtitle }}</p>
         <slot name="subtitle" />
       </div>
-      <div v-if="$slots.actions" class="flex items-center gap-2">
+      <div v-if="$slots.actions" class="flex items-center gap-2" @click.stop>
         <slot name="actions" />
       </div>
     </header>
-    <slot />
+    <slot v-if="!collapsible || open" />
   </section>
 </template>
 
 <script setup>
-defineProps({
+import { ref } from 'vue';
+import { ChevronDown } from 'lucide-vue-next';
+
+const props = defineProps({
   kicker: { type: String, default: '' },
   title: { type: String, default: '' },
   subtitle: { type: String, default: '' },
+  collapsible: { type: Boolean, default: false },
+  defaultCollapsed: { type: Boolean, default: false },
 });
 defineOptions({ inheritAttrs: false });
+
+const open = ref(!props.defaultCollapsed);
 </script>
+
+<style scoped>
+.admin-card-header-collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+.card-chevron {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.15em;
+  transition: transform 0.2s ease;
+  transform: rotate(-90deg);
+}
+.card-chevron-open {
+  transform: rotate(0deg);
+}
+</style>

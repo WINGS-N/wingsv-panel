@@ -232,7 +232,13 @@
       <TrafficChart :series="traffic.series || []" class="mt-4" />
     </SamsungCard>
 
-    <SamsungCard class="mt-6" title="Граф потоков" subtitle="Клиент → реле → назначение, толщина = объём.">
+    <SamsungCard
+      collapsible
+      default-collapsed
+      class="mt-6"
+      title="Граф потоков"
+      subtitle="Клиент → реле → назначение, толщина = объём."
+    >
       <template #actions>
         <div class="flow-controls">
           <OneuiRadioGroup
@@ -260,7 +266,13 @@
       />
     </SamsungCard>
 
-    <SamsungCard class="mt-6" title="Журнал соединений" subtitle="Недавние соединения через ваши ноды (хранятся час).">
+    <SamsungCard
+      collapsible
+      default-collapsed
+      class="mt-6"
+      title="Журнал соединений"
+      subtitle="Недавние соединения через ваши ноды (хранятся час)."
+    >
       <ul class="admin-list mt-4">
         <li v-for="c in connections" :key="c.node_id + c.session_id + c.stream_id + c.first_seen" class="session-row">
           <div>
