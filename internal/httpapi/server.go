@@ -584,13 +584,16 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// tracks the last second instead of the collector's DB-sample cadence.
 	liveStore := livestats.NewStore()
 	statsview.SetLiveRates(liveStore.RatesFor)
+	liveEmit := func(kind string, payload []byte) {
+		hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: kind, Data: payload})
+	}
 	go livestats.NewStreamer(store, liveStore, func(node dbmodel.ServerNode) livestats.Relay {
 		token := node.GRPCToken
 		if token == "" {
 			token = cfg.RelayToken
 		}
 		return relayclient.New(token)
-	}).Run(ctx)
+	}, liveEmit).Run(ctx)
 
 	// The collector above only polls vk-turn-proxy relays. 3x-ui nodes are polled
 	// here for reachability and Xray core state so the UI can show they are up.

@@ -6,6 +6,7 @@ package livestats
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"sync"
 	"time"
@@ -38,8 +39,8 @@ type nodeSample struct {
 func NewStore() *Store { return &Store{nodes: map[string]nodeSample{}} }
 
 // update folds a fresh cumulative-byte snapshot in, deriving per-second rates from
-// the delta since the previous snapshot for that node.
-func (s *Store) update(id string, rxBytes, txBytes uint64, now time.Time) {
+// the delta since the previous snapshot for that node, and returns those rates.
+func (s *Store) update(id string, rxBytes, txBytes uint64, now time.Time) (rxRate, txRate uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	next := nodeSample{rxBytes: rxBytes, txBytes: txBytes, at: now}
@@ -54,6 +55,7 @@ func (s *Store) update(id string, rxBytes, txBytes uint64, now time.Time) {
 		}
 	}
 	s.nodes[id] = next
+	return next.rxRate, next.txRate
 }
 
 func (s *Store) drop(id string) {
@@ -90,17 +92,33 @@ type Lister interface {
 	ListServerNodes(kind string) ([]dbmodel.ServerNode, error)
 }
 
+// NodeStats is the per-node live snapshot pushed to the admin WS on every relay
+// update, so the dashboard updates speed/sessions/streams without refetching.
+type NodeStats struct {
+	NodeID            string            `json:"node_id"`
+	RxRate            uint64            `json:"rx_rate"`
+	TxRate            uint64            `json:"tx_rate"`
+	RxBytes           uint64            `json:"rx_bytes"`
+	TxBytes           uint64            `json:"tx_bytes"`
+	ActiveStreams     uint32            `json:"active_streams"`
+	ActiveSessions    uint32            `json:"active_sessions"`
+	TotalSessions     uint64            `json:"total_sessions"`
+	StreamsByProtocol map[string]uint32 `json:"streams_by_protocol,omitempty"`
+}
+
 // Streamer maintains one StreamFlowStats subscription per vk-turn-proxy node and
-// writes each push into a Store.
+// writes each push into a Store, optionally emitting it to the admin WS.
 type Streamer struct {
 	store    Lister
 	live     *Store
 	newRelay func(dbmodel.ServerNode) Relay
+	emit     func(kind string, payload []byte)
 }
 
 // NewStreamer wires a streamer over a node lister and a per-node relay factory.
-func NewStreamer(store Lister, live *Store, newRelay func(dbmodel.ServerNode) Relay) *Streamer {
-	return &Streamer{store: store, live: live, newRelay: newRelay}
+// emit (optional) pushes each per-node snapshot to the admin WS.
+func NewStreamer(store Lister, live *Store, newRelay func(dbmodel.ServerNode) Relay, emit func(kind string, payload []byte)) *Streamer {
+	return &Streamer{store: store, live: live, newRelay: newRelay, emit: emit}
 }
 
 // Run keeps a stream open per node until ctx is cancelled, reconciling the node
@@ -152,7 +170,19 @@ func (s *Streamer) reconcile(ctx context.Context, active map[string]context.Canc
 func (s *Streamer) streamNode(ctx context.Context, node dbmodel.ServerNode) {
 	for ctx.Err() == nil {
 		err := s.newRelay(node).StreamFlowStats(ctx, node, func(st relayclient.FlowStats) {
-			s.live.update(node.ID, st.ServerRxBytes, st.ServerTxBytes, time.Now())
+			rxRate, txRate := s.live.update(node.ID, st.ServerRxBytes, st.ServerTxBytes, time.Now())
+			if s.emit == nil {
+				return
+			}
+			payload, mErr := json.Marshal(NodeStats{
+				NodeID: node.ID, RxRate: rxRate, TxRate: txRate,
+				RxBytes: st.ServerRxBytes, TxBytes: st.ServerTxBytes,
+				ActiveStreams: st.ActiveStreams, ActiveSessions: st.ActiveSessions,
+				TotalSessions: st.TotalSessions, StreamsByProtocol: st.StreamsByProtocol,
+			})
+			if mErr == nil {
+				s.emit("node_stats", payload)
+			}
 		})
 		if ctx.Err() != nil {
 			return
