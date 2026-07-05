@@ -37,23 +37,23 @@
       </template>
       <text v-else class="tc-empty" :x="W / 2" :y="baseline">нет данных за период</text>
 
-      <g v-if="hover >= 0 && series.length">
+      <g v-if="hoverPoint">
         <line class="tc-cursor" :x1="hoverX" :x2="hoverX" :y1="padT" :y2="H - padB" />
-        <circle class="tc-dot tc-dot-rx" :cx="hoverX" :cy="rxY(series[hover].rx_bytes)" r="3" />
-        <circle class="tc-dot tc-dot-tx" :cx="hoverX" :cy="txY(series[hover].tx_bytes)" r="3" />
+        <circle class="tc-dot tc-dot-rx" :cx="hoverX" :cy="rxY(hoverPoint.rx_bytes)" r="3" />
+        <circle class="tc-dot tc-dot-tx" :cx="hoverX" :cy="txY(hoverPoint.tx_bytes)" r="3" />
       </g>
     </svg>
 
-    <div v-if="hover >= 0 && series.length" class="tc-tip" :style="tipStyle">
+    <div v-if="hoverPoint" class="tc-tip" :style="tipStyle">
       <div class="tc-tip-time">{{ tipTime }}</div>
-      <div class="tc-tip-row"><i class="tc-swatch tc-swatch-rx" />{{ fmt(series[hover].rx_bytes) }}</div>
-      <div class="tc-tip-row"><i class="tc-swatch tc-swatch-tx" />{{ fmt(series[hover].tx_bytes) }}</div>
+      <div class="tc-tip-row"><i class="tc-swatch tc-swatch-rx" />{{ fmt(hoverPoint.rx_bytes) }}</div>
+      <div class="tc-tip-row"><i class="tc-swatch tc-swatch-tx" />{{ fmt(hoverPoint.tx_bytes) }}</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { formatBytes } from '@/utils/format.js';
 
 const props = defineProps({
@@ -230,6 +230,15 @@ const span = computed(() => {
 
 const hover = ref(-1);
 
+// A stale hover index would point past a shorter series after a range/sample
+// switch and crash the tooltip accessors, so drop it whenever the data changes.
+watch(
+  () => props.series,
+  () => {
+    hover.value = -1;
+  },
+);
+
 function onMove(e) {
   const n = props.series.length;
   if (!n) return;
@@ -241,8 +250,11 @@ function onMove(e) {
   hover.value = idx;
 }
 
-const hoverX = computed(() => (hover.value >= 0 ? xOf(hover.value) : 0));
-const tipTime = computed(() => (hover.value >= 0 ? tickLabel(props.series[hover.value].ts) : ''));
+const hoverPoint = computed(() =>
+  hover.value >= 0 && hover.value < props.series.length ? props.series[hover.value] : null,
+);
+const hoverX = computed(() => (hoverPoint.value ? xOf(hover.value) : 0));
+const tipTime = computed(() => (hoverPoint.value ? tickLabel(hoverPoint.value.ts) : ''));
 const tipStyle = computed(() => {
   const leftPct = (hoverX.value / W.value) * 100;
   const side = leftPct > 60 ? 'right' : 'left';
