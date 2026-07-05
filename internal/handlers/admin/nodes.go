@@ -51,6 +51,12 @@ func (h *Handler) nodeToView(n dbmodel.ServerNode) adminNodeView {
 		view.PeerCount = latest.PeerCount
 		view.ActiveSessions = latest.ActiveSessions
 	}
+	// The relay-reported peer count is 0 for an xui-backend node (its peers live on
+	// the 3x-ui node) and also when the relay is unreachable; fall back to the
+	// panel's provisioned-peer count so the UI shows real numbers.
+	if c := uint32(h.store.CountClientWGPeersForNode(n.ID)); c > view.PeerCount {
+		view.PeerCount = c
+	}
 	return view
 }
 

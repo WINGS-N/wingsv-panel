@@ -124,6 +124,15 @@ func (s *Store) XUIBackedPeersForNode(xuiNodeID string) ([]XUIBackedPeer, error)
 	return rows, err
 }
 
+// CountClientWGPeersForNode returns how many provisioned managed peers a node has.
+// This is the panel's authoritative provisioned-peer count, backend-agnostic: it
+// covers xui-backend nodes whose peers live on a 3x-ui node the relay cannot see.
+func (s *Store) CountClientWGPeersForNode(nodeID string) int {
+	var n int64
+	s.gdb.Table("client_wg_peers").Where("node_id = ?", nodeID).Count(&n)
+	return int(n)
+}
+
 // DeleteClientWGPeer removes one client-node peer, reporting ErrNotFound when absent.
 func (s *Store) DeleteClientWGPeer(clientID, nodeID string) error {
 	res := s.gdb.Where("client_id = ? AND node_id = ?", clientID, nodeID).Delete(&dbmodel.ClientWGPeer{})

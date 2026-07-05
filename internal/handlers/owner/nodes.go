@@ -272,6 +272,11 @@ func (h *Handler) respondListNodes(w http.ResponseWriter, r *http.Request) {
 			view.PeerCount = latest.PeerCount
 			view.ActiveSessions = latest.ActiveSessions
 		}
+		// Fall back to the panel's provisioned-peer count when the relay reports 0
+		// (xui-backend node, or relay unreachable).
+		if c := uint32(h.store.CountClientWGPeersForNode(n.ID)); c > view.PeerCount {
+			view.PeerCount = c
+		}
 		out = append(out, view)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"nodes": out})
