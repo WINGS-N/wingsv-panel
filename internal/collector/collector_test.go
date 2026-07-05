@@ -51,6 +51,8 @@ func (f *fakeStore) UpdateServerNodeStatus(id, status string, _ int64) error {
 	return nil
 }
 
+func (f *fakeStore) UpdateServerNodeRelayVersion(_, _ string) error { return nil }
+
 type fakeRelay struct {
 	status    relayclient.RelayStatus
 	stats     relayclient.FlowStats
