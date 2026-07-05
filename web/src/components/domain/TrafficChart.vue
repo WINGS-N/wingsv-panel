@@ -25,13 +25,17 @@
       </text>
 
       <line class="tc-baseline" :x1="padL" :x2="W - padR" :y1="baseline" :y2="baseline" />
-      <template v-if="series.length">
+      <template v-if="series.length >= 2">
         <path class="tc-area tc-area-rx" :d="areaRx" />
         <path class="tc-area tc-area-tx" :d="areaTx" />
         <path class="tc-line tc-line-rx" :d="lineRx" fill="none" />
         <path class="tc-line tc-line-tx" :d="lineTx" fill="none" />
       </template>
-      <text v-else class="tc-empty" :x="W / 2" :y="baseline">нет данных</text>
+      <template v-else-if="series.length === 1">
+        <circle class="tc-dot tc-dot-rx" :cx="x(0)" :cy="rxY(series[0].rx_bytes)" r="3.5" />
+        <circle class="tc-dot tc-dot-tx" :cx="x(0)" :cy="txY(series[0].tx_bytes)" r="3.5" />
+      </template>
+      <text v-else class="tc-empty" :x="W / 2" :y="baseline">нет данных за период</text>
 
       <g v-if="hover >= 0 && series.length">
         <line class="tc-cursor" :x1="hoverX" :x2="hoverX" :y1="padT" :y2="H - padB" />

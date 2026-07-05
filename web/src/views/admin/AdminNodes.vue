@@ -211,19 +211,25 @@
 
     <SamsungCard class="mt-6" title="Трафик" subtitle="Приём и передача по вашим нодам.">
       <template #actions>
-        <div class="flow-controls">
-          <OneuiRadioGroup
-            v-model="trafficRange"
-            :options="rangeOptions"
-            variant="pill"
-            @update:model-value="loadStats"
-          />
-          <OneuiRadioGroup
-            v-model="trafficSample"
-            :options="sampleOptions"
-            variant="pill"
-            @update:model-value="loadStats"
-          />
+        <div class="traffic-controls">
+          <div class="control-group">
+            <span class="control-label">Окно</span>
+            <OneuiRadioGroup
+              v-model="trafficRange"
+              :options="rangeOptions"
+              variant="pill"
+              @update:model-value="loadTraffic"
+            />
+          </div>
+          <div class="control-group">
+            <span class="control-label">Интервал</span>
+            <OneuiRadioGroup
+              v-model="trafficSample"
+              :options="sampleOptions"
+              variant="pill"
+              @update:model-value="loadTraffic"
+            />
+          </div>
         </div>
       </template>
       <div class="traffic-periods mt-4">
@@ -233,7 +239,10 @@
           <span class="traffic-period-meta">↓ {{ formatBytes(p.rx) }} · ↑ {{ formatBytes(p.tx) }}</span>
         </div>
       </div>
-      <TrafficChart :series="traffic.series || []" class="mt-4" />
+      <div class="traffic-chart-wrap mt-4">
+        <TrafficChart :series="traffic.series || []" :class="{ 'is-loading': trafficLoading }" />
+        <SamsungSectionLoader v-if="trafficLoading" class="traffic-chart-loader" />
+      </div>
     </SamsungCard>
 
     <SamsungCard
@@ -320,6 +329,7 @@ import WgPeers from '@/views/shared/WgPeers.vue';
 import VkLinksCard from '@/components/domain/VkLinksCard.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
+import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
 import SamsungModal from '@/components/layout/SamsungModal.vue';
 import SamsungPill from '@/components/layout/SamsungPill.vue';
@@ -477,6 +487,23 @@ const sampleOptions = [
   { value: '30m', label: '30м' },
   { value: '1h', label: '1ч' },
 ];
+const trafficLoading = ref(false);
+
+// Changing range/sample reloads only the chart, keeping the previous one dimmed
+// under a loader instead of blanking it during the fetch.
+async function loadTraffic() {
+  if (!nodes.value.length) return;
+  trafficLoading.value = true;
+  try {
+    traffic.value = await fetchJSON(
+      `/api/admin/stats/traffic?range=${trafficRange.value}&sample=${trafficSample.value}`,
+    );
+  } catch {
+    // keep the previous chart on a transient error
+  } finally {
+    trafficLoading.value = false;
+  }
+}
 const periods = computed(() => {
   const t = traffic.value?.totals || {};
   return [
@@ -866,6 +893,38 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+.traffic-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wings-kicker, #8b95a5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.traffic-chart-wrap {
+  position: relative;
+}
+.traffic-chart-wrap .is-loading {
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
+}
+.traffic-chart-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 .connect-block {
   display: flex;
