@@ -1,12 +1,13 @@
 syntax = "proto3";
 
-// Package and service names mirror vk-turn-proxy's proto/control.proto exactly so
-// the generated method paths line up; only go_package differs. This is the panel
-// side (client) of that contract, used to manage a node's tunnel peers.
 package vkturn.control.v1;
 
-option go_package = "v.wingsnet.org/internal/gen/relaypb;relaypb";
+option go_package = "github.com/cacggghp/vk-turn-proxy/controlpb;controlpb";
 
+// Relay is the management API the wingsv-panel calls over gRPC to drive a
+// vk-turn-proxy node: inspect status and manage the WireGuard/AmneziaWG peers
+// that back the tunnel. It is distinct from the DTLS relay data plane and from
+// the app self-enroll path (which reaches the panel over its own gRPC).
 service Relay {
   rpc GetStatus(GetStatusRequest) returns (Status);
   rpc ListPeers(ListPeersRequest) returns (Peers);
@@ -14,10 +15,16 @@ service Relay {
   rpc DeletePeer(DeletePeerRequest) returns (DeletePeerResponse);
   rpc ListFlows(ListFlowsRequest) returns (Flows);
   rpc GetFlowStats(GetFlowStatsRequest) returns (FlowStats);
+  // StreamFlowStats pushes a FlowStats snapshot on a fast cadence so the panel
+  // shows live speed/traffic without polling each node. Same payload as
+  // GetFlowStats; the panel keeps the connection open and reads deltas.
+  rpc StreamFlowStats(GetFlowStatsRequest) returns (stream FlowStats);
 }
 
 message ListFlowsRequest {}
 
+// Flow is one active relay stream: the panel renders these as connection chains
+// (client IP:port -> session/stream -> relay).
 message Flow {
   string session_id = 1;
   uint32 stream_id = 2;
@@ -55,8 +62,8 @@ message Status {
   string wg_interface = 2;
   uint32 peer_count = 3;
   uint64 active_sessions = 4;
-  // The relay's DTLS data-plane listen address, so the panel can derive the
-  // endpoint apps dial without a separate configuration.
+  // The relay's DTLS data-plane listen address (the -listen flag), so the panel
+  // can derive the endpoint apps dial without a separate configuration.
   string listen_endpoint = 5;
 }
 
@@ -67,12 +74,17 @@ message Peers {
 }
 
 message CreatePeerRequest {
+  // Client WireGuard public key (base64). Empty asks the server to generate a
+  // keypair and return the private key in the Peer response.
   string public_key = 1;
+  // Optional tunnel address (CIDR). Empty allocates the next free address from
+  // the node pool.
   string allowed_ips = 2;
 }
 
 message Peer {
   string public_key = 1;
+  // Set only when the server generated the keypair on this request.
   string private_key = 2;
   string allowed_ips = 3;
   string server_public_key = 4;

@@ -2,11 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.35.0
-// source: relay.proto
-
-// Package and service names mirror vk-turn-proxy's proto/control.proto exactly so
-// the generated method paths line up; only go_package differs. This is the panel
-// side (client) of that contract, used to manage a node's tunnel peers.
+// source: control.proto
 
 package relaypb
 
@@ -33,7 +29,7 @@ type ListFlowsRequest struct {
 
 func (x *ListFlowsRequest) Reset() {
 	*x = ListFlowsRequest{}
-	mi := &file_relay_proto_msgTypes[0]
+	mi := &file_control_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +41,7 @@ func (x *ListFlowsRequest) String() string {
 func (*ListFlowsRequest) ProtoMessage() {}
 
 func (x *ListFlowsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[0]
+	mi := &file_control_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,9 +54,11 @@ func (x *ListFlowsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFlowsRequest.ProtoReflect.Descriptor instead.
 func (*ListFlowsRequest) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{0}
+	return file_control_proto_rawDescGZIP(), []int{0}
 }
 
+// Flow is one active relay stream: the panel renders these as connection chains
+// (client IP:port -> session/stream -> relay).
 type Flow struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
@@ -80,7 +78,7 @@ type Flow struct {
 
 func (x *Flow) Reset() {
 	*x = Flow{}
-	mi := &file_relay_proto_msgTypes[1]
+	mi := &file_control_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -92,7 +90,7 @@ func (x *Flow) String() string {
 func (*Flow) ProtoMessage() {}
 
 func (x *Flow) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[1]
+	mi := &file_control_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -105,7 +103,7 @@ func (x *Flow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flow.ProtoReflect.Descriptor instead.
 func (*Flow) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{1}
+	return file_control_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Flow) GetSessionId() string {
@@ -194,7 +192,7 @@ type Flows struct {
 
 func (x *Flows) Reset() {
 	*x = Flows{}
-	mi := &file_relay_proto_msgTypes[2]
+	mi := &file_control_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -206,7 +204,7 @@ func (x *Flows) String() string {
 func (*Flows) ProtoMessage() {}
 
 func (x *Flows) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[2]
+	mi := &file_control_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -219,7 +217,7 @@ func (x *Flows) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Flows.ProtoReflect.Descriptor instead.
 func (*Flows) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{2}
+	return file_control_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Flows) GetFlows() []*Flow {
@@ -237,7 +235,7 @@ type GetFlowStatsRequest struct {
 
 func (x *GetFlowStatsRequest) Reset() {
 	*x = GetFlowStatsRequest{}
-	mi := &file_relay_proto_msgTypes[3]
+	mi := &file_control_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -249,7 +247,7 @@ func (x *GetFlowStatsRequest) String() string {
 func (*GetFlowStatsRequest) ProtoMessage() {}
 
 func (x *GetFlowStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[3]
+	mi := &file_control_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -262,7 +260,7 @@ func (x *GetFlowStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFlowStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetFlowStatsRequest) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{3}
+	return file_control_proto_rawDescGZIP(), []int{3}
 }
 
 type FlowStats struct {
@@ -280,7 +278,7 @@ type FlowStats struct {
 
 func (x *FlowStats) Reset() {
 	*x = FlowStats{}
-	mi := &file_relay_proto_msgTypes[4]
+	mi := &file_control_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -292,7 +290,7 @@ func (x *FlowStats) String() string {
 func (*FlowStats) ProtoMessage() {}
 
 func (x *FlowStats) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[4]
+	mi := &file_control_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -305,7 +303,7 @@ func (x *FlowStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FlowStats.ProtoReflect.Descriptor instead.
 func (*FlowStats) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{4}
+	return file_control_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *FlowStats) GetActiveStreams() uint32 {
@@ -365,7 +363,7 @@ type GetStatusRequest struct {
 
 func (x *GetStatusRequest) Reset() {
 	*x = GetStatusRequest{}
-	mi := &file_relay_proto_msgTypes[5]
+	mi := &file_control_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -377,7 +375,7 @@ func (x *GetStatusRequest) String() string {
 func (*GetStatusRequest) ProtoMessage() {}
 
 func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[5]
+	mi := &file_control_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -390,7 +388,7 @@ func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStatusRequest) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{5}
+	return file_control_proto_rawDescGZIP(), []int{5}
 }
 
 type Status struct {
@@ -399,8 +397,8 @@ type Status struct {
 	WgInterface    string                 `protobuf:"bytes,2,opt,name=wg_interface,json=wgInterface,proto3" json:"wg_interface,omitempty"`
 	PeerCount      uint32                 `protobuf:"varint,3,opt,name=peer_count,json=peerCount,proto3" json:"peer_count,omitempty"`
 	ActiveSessions uint64                 `protobuf:"varint,4,opt,name=active_sessions,json=activeSessions,proto3" json:"active_sessions,omitempty"`
-	// The relay's DTLS data-plane listen address, so the panel can derive the
-	// endpoint apps dial without a separate configuration.
+	// The relay's DTLS data-plane listen address (the -listen flag), so the panel
+	// can derive the endpoint apps dial without a separate configuration.
 	ListenEndpoint string `protobuf:"bytes,5,opt,name=listen_endpoint,json=listenEndpoint,proto3" json:"listen_endpoint,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -408,7 +406,7 @@ type Status struct {
 
 func (x *Status) Reset() {
 	*x = Status{}
-	mi := &file_relay_proto_msgTypes[6]
+	mi := &file_control_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +418,7 @@ func (x *Status) String() string {
 func (*Status) ProtoMessage() {}
 
 func (x *Status) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[6]
+	mi := &file_control_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +431,7 @@ func (x *Status) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Status.ProtoReflect.Descriptor instead.
 func (*Status) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{6}
+	return file_control_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Status) GetVersion() string {
@@ -479,7 +477,7 @@ type ListPeersRequest struct {
 
 func (x *ListPeersRequest) Reset() {
 	*x = ListPeersRequest{}
-	mi := &file_relay_proto_msgTypes[7]
+	mi := &file_control_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -491,7 +489,7 @@ func (x *ListPeersRequest) String() string {
 func (*ListPeersRequest) ProtoMessage() {}
 
 func (x *ListPeersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[7]
+	mi := &file_control_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -504,7 +502,7 @@ func (x *ListPeersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPeersRequest.ProtoReflect.Descriptor instead.
 func (*ListPeersRequest) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{7}
+	return file_control_proto_rawDescGZIP(), []int{7}
 }
 
 type Peers struct {
@@ -516,7 +514,7 @@ type Peers struct {
 
 func (x *Peers) Reset() {
 	*x = Peers{}
-	mi := &file_relay_proto_msgTypes[8]
+	mi := &file_control_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -528,7 +526,7 @@ func (x *Peers) String() string {
 func (*Peers) ProtoMessage() {}
 
 func (x *Peers) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[8]
+	mi := &file_control_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -541,7 +539,7 @@ func (x *Peers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peers.ProtoReflect.Descriptor instead.
 func (*Peers) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{8}
+	return file_control_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Peers) GetPeers() []*Peer {
@@ -552,16 +550,20 @@ func (x *Peers) GetPeers() []*Peer {
 }
 
 type CreatePeerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PublicKey     string                 `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	AllowedIps    string                 `protobuf:"bytes,2,opt,name=allowed_ips,json=allowedIps,proto3" json:"allowed_ips,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Client WireGuard public key (base64). Empty asks the server to generate a
+	// keypair and return the private key in the Peer response.
+	PublicKey string `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	// Optional tunnel address (CIDR). Empty allocates the next free address from
+	// the node pool.
+	AllowedIps    string `protobuf:"bytes,2,opt,name=allowed_ips,json=allowedIps,proto3" json:"allowed_ips,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreatePeerRequest) Reset() {
 	*x = CreatePeerRequest{}
-	mi := &file_relay_proto_msgTypes[9]
+	mi := &file_control_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -573,7 +575,7 @@ func (x *CreatePeerRequest) String() string {
 func (*CreatePeerRequest) ProtoMessage() {}
 
 func (x *CreatePeerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[9]
+	mi := &file_control_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -586,7 +588,7 @@ func (x *CreatePeerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePeerRequest.ProtoReflect.Descriptor instead.
 func (*CreatePeerRequest) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{9}
+	return file_control_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreatePeerRequest) GetPublicKey() string {
@@ -604,21 +606,22 @@ func (x *CreatePeerRequest) GetAllowedIps() string {
 }
 
 type Peer struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	PublicKey       string                 `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	PrivateKey      string                 `protobuf:"bytes,2,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
-	AllowedIps      string                 `protobuf:"bytes,3,opt,name=allowed_ips,json=allowedIps,proto3" json:"allowed_ips,omitempty"`
-	ServerPublicKey string                 `protobuf:"bytes,4,opt,name=server_public_key,json=serverPublicKey,proto3" json:"server_public_key,omitempty"`
-	RxBytes         uint64                 `protobuf:"varint,5,opt,name=rx_bytes,json=rxBytes,proto3" json:"rx_bytes,omitempty"`
-	TxBytes         uint64                 `protobuf:"varint,6,opt,name=tx_bytes,json=txBytes,proto3" json:"tx_bytes,omitempty"`
-	CreatedUnix     int64                  `protobuf:"varint,7,opt,name=created_unix,json=createdUnix,proto3" json:"created_unix,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	PublicKey string                 `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	// Set only when the server generated the keypair on this request.
+	PrivateKey      string `protobuf:"bytes,2,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"`
+	AllowedIps      string `protobuf:"bytes,3,opt,name=allowed_ips,json=allowedIps,proto3" json:"allowed_ips,omitempty"`
+	ServerPublicKey string `protobuf:"bytes,4,opt,name=server_public_key,json=serverPublicKey,proto3" json:"server_public_key,omitempty"`
+	RxBytes         uint64 `protobuf:"varint,5,opt,name=rx_bytes,json=rxBytes,proto3" json:"rx_bytes,omitempty"`
+	TxBytes         uint64 `protobuf:"varint,6,opt,name=tx_bytes,json=txBytes,proto3" json:"tx_bytes,omitempty"`
+	CreatedUnix     int64  `protobuf:"varint,7,opt,name=created_unix,json=createdUnix,proto3" json:"created_unix,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Peer) Reset() {
 	*x = Peer{}
-	mi := &file_relay_proto_msgTypes[10]
+	mi := &file_control_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -630,7 +633,7 @@ func (x *Peer) String() string {
 func (*Peer) ProtoMessage() {}
 
 func (x *Peer) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[10]
+	mi := &file_control_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -643,7 +646,7 @@ func (x *Peer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peer.ProtoReflect.Descriptor instead.
 func (*Peer) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{10}
+	return file_control_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Peer) GetPublicKey() string {
@@ -704,7 +707,7 @@ type DeletePeerRequest struct {
 
 func (x *DeletePeerRequest) Reset() {
 	*x = DeletePeerRequest{}
-	mi := &file_relay_proto_msgTypes[11]
+	mi := &file_control_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -716,7 +719,7 @@ func (x *DeletePeerRequest) String() string {
 func (*DeletePeerRequest) ProtoMessage() {}
 
 func (x *DeletePeerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[11]
+	mi := &file_control_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -729,7 +732,7 @@ func (x *DeletePeerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePeerRequest.ProtoReflect.Descriptor instead.
 func (*DeletePeerRequest) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{11}
+	return file_control_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeletePeerRequest) GetPublicKey() string {
@@ -747,7 +750,7 @@ type DeletePeerResponse struct {
 
 func (x *DeletePeerResponse) Reset() {
 	*x = DeletePeerResponse{}
-	mi := &file_relay_proto_msgTypes[12]
+	mi := &file_control_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -759,7 +762,7 @@ func (x *DeletePeerResponse) String() string {
 func (*DeletePeerResponse) ProtoMessage() {}
 
 func (x *DeletePeerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_relay_proto_msgTypes[12]
+	mi := &file_control_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -772,14 +775,14 @@ func (x *DeletePeerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePeerResponse.ProtoReflect.Descriptor instead.
 func (*DeletePeerResponse) Descriptor() ([]byte, []int) {
-	return file_relay_proto_rawDescGZIP(), []int{12}
+	return file_control_proto_rawDescGZIP(), []int{12}
 }
 
-var File_relay_proto protoreflect.FileDescriptor
+var File_control_proto protoreflect.FileDescriptor
 
-const file_relay_proto_rawDesc = "" +
+const file_control_proto_rawDesc = "" +
 	"\n" +
-	"\vrelay.proto\x12\x11vkturn.control.v1\"\x12\n" +
+	"\rcontrol.proto\x12\x11vkturn.control.v1\"\x12\n" +
 	"\x10ListFlowsRequest\"\xb8\x02\n" +
 	"\x04Flow\x12\x1d\n" +
 	"\n" +
@@ -839,7 +842,7 @@ const file_relay_proto_rawDesc = "" +
 	"\x11DeletePeerRequest\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\tR\tpublicKey\"\x14\n" +
-	"\x12DeletePeerResponse2\xea\x03\n" +
+	"\x12DeletePeerResponse2\xc5\x04\n" +
 	"\x05Relay\x12K\n" +
 	"\tGetStatus\x12#.vkturn.control.v1.GetStatusRequest\x1a\x19.vkturn.control.v1.Status\x12J\n" +
 	"\tListPeers\x12#.vkturn.control.v1.ListPeersRequest\x1a\x18.vkturn.control.v1.Peers\x12K\n" +
@@ -848,22 +851,23 @@ const file_relay_proto_rawDesc = "" +
 	"\n" +
 	"DeletePeer\x12$.vkturn.control.v1.DeletePeerRequest\x1a%.vkturn.control.v1.DeletePeerResponse\x12J\n" +
 	"\tListFlows\x12#.vkturn.control.v1.ListFlowsRequest\x1a\x18.vkturn.control.v1.Flows\x12T\n" +
-	"\fGetFlowStats\x12&.vkturn.control.v1.GetFlowStatsRequest\x1a\x1c.vkturn.control.v1.FlowStatsB-Z+v.wingsnet.org/internal/gen/relaypb;relaypbb\x06proto3"
+	"\fGetFlowStats\x12&.vkturn.control.v1.GetFlowStatsRequest\x1a\x1c.vkturn.control.v1.FlowStats\x12Y\n" +
+	"\x0fStreamFlowStats\x12&.vkturn.control.v1.GetFlowStatsRequest\x1a\x1c.vkturn.control.v1.FlowStats0\x01B7Z5github.com/cacggghp/vk-turn-proxy/controlpb;controlpbb\x06proto3"
 
 var (
-	file_relay_proto_rawDescOnce sync.Once
-	file_relay_proto_rawDescData []byte
+	file_control_proto_rawDescOnce sync.Once
+	file_control_proto_rawDescData []byte
 )
 
-func file_relay_proto_rawDescGZIP() []byte {
-	file_relay_proto_rawDescOnce.Do(func() {
-		file_relay_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_relay_proto_rawDesc), len(file_relay_proto_rawDesc)))
+func file_control_proto_rawDescGZIP() []byte {
+	file_control_proto_rawDescOnce.Do(func() {
+		file_control_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_control_proto_rawDesc), len(file_control_proto_rawDesc)))
 	})
-	return file_relay_proto_rawDescData
+	return file_control_proto_rawDescData
 }
 
-var file_relay_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
-var file_relay_proto_goTypes = []any{
+var file_control_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_control_proto_goTypes = []any{
 	(*ListFlowsRequest)(nil),    // 0: vkturn.control.v1.ListFlowsRequest
 	(*Flow)(nil),                // 1: vkturn.control.v1.Flow
 	(*Flows)(nil),               // 2: vkturn.control.v1.Flows
@@ -879,7 +883,7 @@ var file_relay_proto_goTypes = []any{
 	(*DeletePeerResponse)(nil),  // 12: vkturn.control.v1.DeletePeerResponse
 	nil,                         // 13: vkturn.control.v1.FlowStats.StreamsByProtocolEntry
 }
-var file_relay_proto_depIdxs = []int32{
+var file_control_proto_depIdxs = []int32{
 	1,  // 0: vkturn.control.v1.Flows.flows:type_name -> vkturn.control.v1.Flow
 	13, // 1: vkturn.control.v1.FlowStats.streams_by_protocol:type_name -> vkturn.control.v1.FlowStats.StreamsByProtocolEntry
 	10, // 2: vkturn.control.v1.Peers.peers:type_name -> vkturn.control.v1.Peer
@@ -889,39 +893,41 @@ var file_relay_proto_depIdxs = []int32{
 	11, // 6: vkturn.control.v1.Relay.DeletePeer:input_type -> vkturn.control.v1.DeletePeerRequest
 	0,  // 7: vkturn.control.v1.Relay.ListFlows:input_type -> vkturn.control.v1.ListFlowsRequest
 	3,  // 8: vkturn.control.v1.Relay.GetFlowStats:input_type -> vkturn.control.v1.GetFlowStatsRequest
-	6,  // 9: vkturn.control.v1.Relay.GetStatus:output_type -> vkturn.control.v1.Status
-	8,  // 10: vkturn.control.v1.Relay.ListPeers:output_type -> vkturn.control.v1.Peers
-	10, // 11: vkturn.control.v1.Relay.CreatePeer:output_type -> vkturn.control.v1.Peer
-	12, // 12: vkturn.control.v1.Relay.DeletePeer:output_type -> vkturn.control.v1.DeletePeerResponse
-	2,  // 13: vkturn.control.v1.Relay.ListFlows:output_type -> vkturn.control.v1.Flows
-	4,  // 14: vkturn.control.v1.Relay.GetFlowStats:output_type -> vkturn.control.v1.FlowStats
-	9,  // [9:15] is the sub-list for method output_type
-	3,  // [3:9] is the sub-list for method input_type
+	3,  // 9: vkturn.control.v1.Relay.StreamFlowStats:input_type -> vkturn.control.v1.GetFlowStatsRequest
+	6,  // 10: vkturn.control.v1.Relay.GetStatus:output_type -> vkturn.control.v1.Status
+	8,  // 11: vkturn.control.v1.Relay.ListPeers:output_type -> vkturn.control.v1.Peers
+	10, // 12: vkturn.control.v1.Relay.CreatePeer:output_type -> vkturn.control.v1.Peer
+	12, // 13: vkturn.control.v1.Relay.DeletePeer:output_type -> vkturn.control.v1.DeletePeerResponse
+	2,  // 14: vkturn.control.v1.Relay.ListFlows:output_type -> vkturn.control.v1.Flows
+	4,  // 15: vkturn.control.v1.Relay.GetFlowStats:output_type -> vkturn.control.v1.FlowStats
+	4,  // 16: vkturn.control.v1.Relay.StreamFlowStats:output_type -> vkturn.control.v1.FlowStats
+	10, // [10:17] is the sub-list for method output_type
+	3,  // [3:10] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_relay_proto_init() }
-func file_relay_proto_init() {
-	if File_relay_proto != nil {
+func init() { file_control_proto_init() }
+func file_control_proto_init() {
+	if File_control_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_relay_proto_rawDesc), len(file_relay_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_control_proto_rawDesc), len(file_control_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_relay_proto_goTypes,
-		DependencyIndexes: file_relay_proto_depIdxs,
-		MessageInfos:      file_relay_proto_msgTypes,
+		GoTypes:           file_control_proto_goTypes,
+		DependencyIndexes: file_control_proto_depIdxs,
+		MessageInfos:      file_control_proto_msgTypes,
 	}.Build()
-	File_relay_proto = out.File
-	file_relay_proto_goTypes = nil
-	file_relay_proto_depIdxs = nil
+	File_control_proto = out.File
+	file_control_proto_goTypes = nil
+	file_control_proto_depIdxs = nil
 }
