@@ -617,11 +617,18 @@
   }
 
   .admin-nav {
-    @apply -mb-px flex flex-wrap items-end gap-x-8 gap-y-2;
+    @apply -mb-px flex flex-nowrap items-end gap-x-8 gap-y-2;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .admin-nav-link {
-    @apply relative inline-flex items-center gap-2 px-1 pb-3 pt-2 text-[15px] font-normal text-wings-muted no-underline transition-colors hover:text-wings-text;
+    @apply relative inline-flex flex-shrink-0 items-center gap-2 whitespace-nowrap px-1 pb-3 pt-2 text-[15px] font-normal text-wings-muted no-underline transition-colors hover:text-wings-text;
     border-bottom: 2px solid transparent;
   }
 
@@ -778,6 +785,11 @@
   .admin-pill.is-offline {
     background: rgba(255, 255, 255, 0.08);
     color: rgba(252, 252, 252, 0.55);
+  }
+
+  .admin-pill.is-info {
+    background: rgba(18, 89, 209, 0.2);
+    color: #8bb8ff;
   }
 
   .admin-pill-row {
@@ -2241,6 +2253,11 @@ body.theme-light .admin-pill.is-online {
 body.theme-light .admin-pill.is-offline {
   background: rgba(16, 19, 26, 0.08);
   color: rgba(16, 19, 26, 0.55);
+}
+
+body.theme-light .admin-pill.is-info {
+  background: rgba(18, 89, 209, 0.14);
+  color: #1259d1;
 }
 
 body.theme-light .admin-pill-button {

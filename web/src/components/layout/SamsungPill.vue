@@ -8,7 +8,7 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-  /** online | offline | neutral — maps to .admin-pill .is-* */
+  /** online | offline | info | neutral — maps to .admin-pill .is-* */
   variant: { type: String, default: 'neutral' },
 });
 
@@ -18,6 +18,8 @@ const classNames = computed(() => {
       return 'admin-pill is-online';
     case 'offline':
       return 'admin-pill is-offline';
+    case 'info':
+      return 'admin-pill is-info';
     case 'neutral':
     default:
       return 'admin-pill';
