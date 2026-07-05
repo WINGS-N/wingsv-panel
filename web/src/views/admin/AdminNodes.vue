@@ -211,12 +211,20 @@
 
     <SamsungCard class="mt-6" title="Трафик" subtitle="Приём и передача по вашим нодам.">
       <template #actions>
-        <OneuiRadioGroup
-          v-model="trafficRange"
-          :options="rangeOptions"
-          variant="pill"
-          @update:model-value="loadStats"
-        />
+        <div class="flow-controls">
+          <OneuiRadioGroup
+            v-model="trafficRange"
+            :options="rangeOptions"
+            variant="pill"
+            @update:model-value="loadStats"
+          />
+          <OneuiRadioGroup
+            v-model="trafficSample"
+            :options="sampleOptions"
+            variant="pill"
+            @update:model-value="loadStats"
+          />
+        </div>
       </template>
       <div class="traffic-periods mt-4">
         <div v-for="p in periods" :key="p.key" class="traffic-period">
@@ -462,6 +470,13 @@ const rangeOptions = [
   { value: '7d', label: '7д' },
   { value: 'month', label: 'месяц' },
 ];
+const trafficSample = ref('1m');
+const sampleOptions = [
+  { value: '1m', label: '1м' },
+  { value: '15m', label: '15м' },
+  { value: '30m', label: '30м' },
+  { value: '1h', label: '1ч' },
+];
 const periods = computed(() => {
   const t = traffic.value?.totals || {};
   return [
@@ -533,7 +548,7 @@ async function loadStats() {
         ? `/api/admin/stats/flowhistory?window=${flowWindow.value}`
         : '/api/admin/stats/flows';
     const [t, f, c] = await Promise.all([
-      fetchJSON(`/api/admin/stats/traffic?range=${trafficRange.value}`),
+      fetchJSON(`/api/admin/stats/traffic?range=${trafficRange.value}&sample=${trafficSample.value}`),
       fetchJSON(flowPath),
       fetchJSON(`/api/admin/stats/connections?limit=${connLimit}&offset=${connOffset.value}`),
     ]);

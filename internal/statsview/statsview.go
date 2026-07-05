@@ -127,12 +127,30 @@ func ResolveRange(key string) string {
 	return "24h"
 }
 
+// sampleBuckets maps a UI sample key to its bucket width in seconds. It lets the
+// operator pick the chart granularity independently of the range window.
+var sampleBuckets = map[string]int64{
+	"1m":  60,
+	"15m": 15 * 60,
+	"30m": 30 * 60,
+	"1h":  3600,
+}
+
+// resolveSampleSec returns the bucket width for a sample key, or def when the key
+// is empty/unknown (so the range's own default width is used).
+func resolveSampleSec(key string, def int64) int64 {
+	if s, ok := sampleBuckets[key]; ok {
+		return s
+	}
+	return def
+}
+
 // BuildTraffic builds the dashboard traffic view for the given owner's nodes. rng
 // selects the chart window (24h|7d|month); the tile totals (1h/24h/7d/all-time)
 // are always computed regardless of the selected chart range.
-func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string, extraOwners ...int64) (Traffic, error) {
+func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, sample, nodeFilter string, extraOwners ...int64) (Traffic, error) {
 	rng = ResolveRange(rng)
-	key := fmt.Sprintf("%d|%v|%s|%s", ownerAdminID, extraOwners, rng, nodeFilter)
+	key := fmt.Sprintf("%d|%v|%s|%s|%s", ownerAdminID, extraOwners, rng, sample, nodeFilter)
 	now := time.Now()
 	trafficCacheMu.Lock()
 	if e, ok := trafficCache[key]; ok && now.Sub(e.at) < trafficCacheTTL {
@@ -141,7 +159,7 @@ func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter stri
 	}
 	trafficCacheMu.Unlock()
 
-	out, err := buildTraffic(store, ownerAdminID, rng, nodeFilter, extraOwners...)
+	out, err := buildTraffic(store, ownerAdminID, rng, sample, nodeFilter, extraOwners...)
 	if err == nil {
 		trafficCacheMu.Lock()
 		trafficCache[key] = trafficCacheEntry{at: now, val: out}
@@ -150,8 +168,9 @@ func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter stri
 	return out, err
 }
 
-func buildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter string, extraOwners ...int64) (Traffic, error) {
+func buildTraffic(store *storage.Store, ownerAdminID int64, rng, sample, nodeFilter string, extraOwners ...int64) (Traffic, error) {
 	rc := trafficRanges[rng]
+	bucketSec := resolveSampleSec(sample, rc.bucketSec)
 	mode, _ := store.GetPanelMode()
 	nodes, err := store.ListServerNodesByOwners(storage.ServerNodeVKTurnProxy, append([]int64{ownerAdminID}, extraOwners...))
 	if err != nil {
@@ -209,7 +228,7 @@ func buildTraffic(store *storage.Store, ownerAdminID int64, rng, nodeFilter stri
 		}
 	}
 
-	out.Series, _, _ = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-rc.window).Unix()), rc.bucketSec)
+	out.Series, _, _ = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-rc.window).Unix()), bucketSec)
 	_, out.Totals.Rx1h, out.Totals.Tx1h = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-time.Hour).Unix()), rc.bucketSec)
 	_, out.Totals.Rx24h, out.Totals.Tx24h = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-24*time.Hour).Unix()), rc.bucketSec)
 	_, out.Totals.Rx7d, out.Totals.Tx7d = aggregateTrafficSeries(sinceCutoff(filtered, now.Add(-7*24*time.Hour).Unix()), rc.bucketSec)
