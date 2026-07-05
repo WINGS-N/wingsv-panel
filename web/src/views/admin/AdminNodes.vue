@@ -272,7 +272,7 @@
         </div>
       </template>
       <FlowGraph
-        :flows="flows"
+        :flows="graphFlows"
         :node-names="nodeNames"
         :client-names="clientNames"
         :mode="flowMode"
@@ -373,6 +373,22 @@ const liveTotals = computed(() => {
 const flows = ref([]);
 const clientNames = ref({});
 const flowMode = ref('live');
+// Live flows pushed per node over the WS; the graph renders from them (~1s) in
+// live mode once they arrive, else the initial REST-loaded flows.
+const flowsLive = ref({});
+const graphFlows = computed(() => {
+  if (flowMode.value !== 'live') return flows.value;
+  const now = Date.now();
+  const merged = [];
+  let any = false;
+  for (const n of nodes.value) {
+    const l = flowsLive.value[n.id];
+    if (!l || now - l.at > 10000) continue;
+    any = true;
+    for (const f of l.flows) merged.push(f);
+  }
+  return any ? merged : flows.value;
+});
 const flowWindow = ref('1h');
 const flowModeOptions = [
   { value: 'live', label: 'Живой' },
@@ -496,6 +512,8 @@ function xrayLabel(n) {
 
 const liveRate = computed(() => {
   const t = traffic.value?.totals || {};
+  const cur = (liveTotals.value.cur_rx_rate || 0) + (liveTotals.value.cur_tx_rate || 0);
+  if (cur > 0) return cur;
   return Math.round(((t.rx_1h || 0) + (t.tx_1h || 0)) / 3600);
 });
 
@@ -825,6 +843,11 @@ onMounted(() => {
     if (event.kind === 'stats_update') loadStats();
     else if (event.kind === 'node_stats' && event.payload && event.payload.node_id) {
       liveByNode.value = { ...liveByNode.value, [event.payload.node_id]: { ...event.payload, at: Date.now() } };
+    } else if (event.kind === 'node_flows' && event.payload && event.payload.node_id) {
+      flowsLive.value = {
+        ...flowsLive.value,
+        [event.payload.node_id]: { flows: event.payload.flows || [], at: Date.now() },
+      };
     }
   });
 });

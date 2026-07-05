@@ -143,7 +143,7 @@
       </div>
     </template>
     <FlowGraph
-      :flows="flows"
+      :flows="graphFlows"
       :node-names="nodeNames"
       :client-names="clientNames"
       :mode="flowMode"
@@ -334,6 +334,22 @@ const liveTotals = computed(() => {
   if (!any) return base;
   return { ...base, cur_rx_rate: rx, cur_tx_rate: tx, active_sessions: sessions, active_streams: streams };
 });
+// Live flows pushed per node over the WS. Once any arrive, the graph renders from
+// them (fresh ~1s); until then it uses the initial REST-loaded flows.
+const flowsLive = ref({});
+const graphFlows = computed(() => {
+  if (flowMode.value !== 'live') return flows.value;
+  const now = Date.now();
+  const merged = [];
+  let any = false;
+  for (const n of nodes.value) {
+    const l = flowsLive.value[n.id];
+    if (!l || now - l.at > 10000) continue;
+    any = true;
+    for (const f of l.flows) merged.push(f);
+  }
+  return any ? merged : flows.value;
+});
 const flows = ref([]);
 const clientNames = ref({});
 const flowMode = ref('live');
@@ -462,7 +478,7 @@ const nodeNames = computed(() => Object.fromEntries(nodes.value.map((n) => [n.id
 // live header when the relay reports no per-flow rate.
 const liveRate = computed(() => {
   const t = traffic.value?.totals || {};
-  const cur = (t.cur_rx_rate || 0) + (t.cur_tx_rate || 0);
+  const cur = (liveTotals.value.cur_rx_rate || 0) + (liveTotals.value.cur_tx_rate || 0);
   if (cur > 0) return cur;
   return Math.round(((t.rx_1h || 0) + (t.tx_1h || 0)) / 3600);
 });
@@ -745,6 +761,11 @@ onMounted(() => {
     if (event.kind === 'stats_update') loadAll();
     else if (event.kind === 'node_stats' && event.payload && event.payload.node_id) {
       liveByNode.value = { ...liveByNode.value, [event.payload.node_id]: { ...event.payload, at: Date.now() } };
+    } else if (event.kind === 'node_flows' && event.payload && event.payload.node_id) {
+      flowsLive.value = {
+        ...flowsLive.value,
+        [event.payload.node_id]: { flows: event.payload.flows || [], at: Date.now() },
+      };
     }
   });
 });
