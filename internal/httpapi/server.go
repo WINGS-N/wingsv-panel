@@ -604,6 +604,10 @@ func Run(ctx context.Context, cfg config.Config) error {
 				}
 				failures[n.ID] = 0
 				_ = store.UpdateXuiNodeStatus(n.ID, "online", st.XrayState, st.XrayVersion, now)
+				// The relay-only main collector can't see peers a vk-turn-proxy node
+				// forwards into this 3x-ui node, so collect their per-client traffic
+				// and online state straight from 3x-ui here.
+				collectXUIBackedPeerStats(ctx, xc, store, n, now)
 			}
 			hub.BroadcastToAdmins(guardianhub.AdminEvent{Kind: "stats_update"})
 		}
@@ -673,4 +677,52 @@ func randomInstanceID() string {
 		return "instance"
 	}
 	return hex.EncodeToString(raw)
+}
+
+// collectXUIBackedPeerStats pulls per-client wg traffic and online state for the
+// managed peers that vk-turn-proxy nodes forward into node (a 3x-ui node), and
+// stores them under each peer's vk-turn-proxy node id so ClientTrafficMap and the
+// client list surface them. The main collector only polls relays, which cannot
+// see 3x-ui's forwarded peers. Online is applied only to provision-only clients;
+// Guardian owns presence for panel-controlled ones.
+func collectXUIBackedPeerStats(ctx context.Context, xc *xuiclient.Client, store *storage.Store, node dbmodel.ServerNode, nowUnix int64) {
+	peers, err := store.XUIBackedPeersForNode(node.ID)
+	if err != nil || len(peers) == 0 {
+		return
+	}
+	octx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	online, _ := xc.ListOnlineClients(octx, node)
+	cancel()
+	onlineSet := make(map[string]bool, len(online))
+	for _, e := range online {
+		onlineSet[e] = true
+	}
+	rows := make([]dbmodel.PeerTraffic, 0, len(peers))
+	for _, p := range peers {
+		tctx, tcancel := context.WithTimeout(ctx, 5*time.Second)
+		t, tErr := xc.GetClientTraffic(tctx, node, p.ClientID)
+		tcancel()
+		if tErr == nil {
+			rows = append(rows, dbmodel.PeerTraffic{
+				NodeID:      p.VKTurnNodeID,
+				PublicKey:   p.PublicKey,
+				RxBytes:     uint64(max64(t.Down, 0)),
+				TxBytes:     uint64(max64(t.Up, 0)),
+				SampledUnix: nowUnix,
+			})
+		}
+		if !p.RemoteControl {
+			_ = store.UpdateClientPresence(p.ClientID, onlineSet[p.ClientID], nil)
+		}
+	}
+	if len(rows) > 0 {
+		_ = store.UpsertPeerTraffic(rows)
+	}
+}
+
+func max64(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }

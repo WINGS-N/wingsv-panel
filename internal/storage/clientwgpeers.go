@@ -97,6 +97,33 @@ func (s *Store) ProvisionedClientIDs() (map[string]bool, error) {
 	return set, nil
 }
 
+// XUIBackedPeer is a managed WireGuard peer whose provisioning node forwards to a
+// 3x-ui inbound, so its traffic and online state live on the 3x-ui node rather
+// than the relay. VKTurnNodeID is the vk-turn-proxy node the peer is keyed under
+// (matching peer_traffic / ClientTrafficMap); RemoteControl distinguishes
+// panel-controlled clients from provision-only ones.
+type XUIBackedPeer struct {
+	ClientID      string
+	VKTurnNodeID  string
+	PublicKey     string
+	RemoteControl bool
+}
+
+// XUIBackedPeersForNode lists the managed peers whose vk-turn-proxy node uses the
+// given 3x-ui node as its wg backend. The collector polls the 3x-ui node for
+// their traffic/online instead of the (relay-only) main collector.
+func (s *Store) XUIBackedPeersForNode(xuiNodeID string) ([]XUIBackedPeer, error) {
+	var rows []XUIBackedPeer
+	err := s.gdb.Table("client_wg_peers AS p").
+		Joins("JOIN server_nodes AS n ON n.id = p.node_id").
+		Joins("JOIN clients AS c ON c.id = p.client_id").
+		Where("n.wg_backend = ? AND n.xui_node_id = ?", WGBackendXUI, xuiNodeID).
+		Select("p.client_id AS client_id, p.node_id AS vk_turn_node_id, " +
+			"p.public_key AS public_key, c.remote_control AS remote_control").
+		Scan(&rows).Error
+	return rows, err
+}
+
 // DeleteClientWGPeer removes one client-node peer, reporting ErrNotFound when absent.
 func (s *Store) DeleteClientWGPeer(clientID, nodeID string) error {
 	res := s.gdb.Where("client_id = ? AND node_id = ?", clientID, nodeID).Delete(&dbmodel.ClientWGPeer{})
