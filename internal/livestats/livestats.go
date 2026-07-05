@@ -130,6 +130,10 @@ type NodeStats struct {
 	StreamsByProtocol map[string]uint32 `json:"streams_by_protocol,omitempty"`
 }
 
+// flowsEmitInterval throttles node_flows pushes per node: the flow graph does not
+// need per-second updates and the full flow list is the bulk of the WS traffic.
+const flowsEmitInterval = 2 * time.Second
+
 // Streamer maintains one StreamFlowStats subscription per vk-turn-proxy node and
 // writes each push into a Store, optionally emitting it to the admin WS.
 type Streamer struct {
@@ -137,12 +141,15 @@ type Streamer struct {
 	live     *Store
 	newRelay func(dbmodel.ServerNode) Relay
 	emit     func(kind string, payload []byte)
+
+	flowMu       sync.Mutex
+	lastFlowEmit map[string]time.Time
 }
 
 // NewStreamer wires a streamer over a node lister and a per-node relay factory.
 // emit (optional) pushes each per-node snapshot to the admin WS.
 func NewStreamer(store Lister, live *Store, newRelay func(dbmodel.ServerNode) Relay, emit func(kind string, payload []byte)) *Streamer {
-	return &Streamer{store: store, live: live, newRelay: newRelay, emit: emit}
+	return &Streamer{store: store, live: live, newRelay: newRelay, emit: emit, lastFlowEmit: map[string]time.Time{}}
 }
 
 // Run keeps a stream open per node until ctx is cancelled, reconciling the node
@@ -212,11 +219,20 @@ func (s *Streamer) Ingest(nodeID string, st relayclient.FlowStats) {
 	}
 }
 
-// IngestFlows pushes a node's active-flow list to the admin WS as node_flows.
+// IngestFlows pushes a node's active-flow list to the admin WS as node_flows,
+// throttled to flowsEmitInterval per node (the stream + collector both feed it).
 func (s *Streamer) IngestFlows(nodeID string, flows []relayclient.Flow) {
 	if s.emit == nil {
 		return
 	}
+	now := time.Now()
+	s.flowMu.Lock()
+	if last, ok := s.lastFlowEmit[nodeID]; ok && now.Sub(last) < flowsEmitInterval {
+		s.flowMu.Unlock()
+		return
+	}
+	s.lastFlowEmit[nodeID] = now
+	s.flowMu.Unlock()
 	msg := nodeFlowsMsg{NodeID: nodeID, Flows: make([]flowMsg, 0, len(flows))}
 	for _, f := range flows {
 		msg.Flows = append(msg.Flows, flowMsg{

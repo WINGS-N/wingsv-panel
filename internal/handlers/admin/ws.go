@@ -43,7 +43,11 @@ func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
-		CompressionMode:    websocket.CompressionDisabled,
+		// permessage-deflate: the live node_stats/node_flows JSON is highly
+		// repetitive (same keys, similar values each tick), so context-takeover
+		// deflate cuts the socket traffic several-fold. Browsers negotiate it
+		// transparently, so no client change is needed.
+		CompressionMode: websocket.CompressionContextTakeover,
 	})
 	if err != nil {
 		return
