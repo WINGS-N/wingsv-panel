@@ -326,6 +326,9 @@ import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 
 function trafficText(client) {
+  // Traffic is wg-peer accounting; it only means anything for a provisioned VK
+  // TURN client. Non-provisioned clients get a blank instead of a bogus 0.
+  if (!client.provisioned) return '—';
   const total = (Number(client.traffic_rx) || 0) + (Number(client.traffic_tx) || 0);
   return total > 0 ? formatBytes(total) : '—';
 }

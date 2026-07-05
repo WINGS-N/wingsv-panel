@@ -74,6 +74,7 @@ type clientView struct {
 	HasRootAccess           bool   `json:"has_root_access"`
 	VkOAuthAuthorized       bool   `json:"vk_oauth_authorized"`
 	RemoteControl           bool   `json:"remote_control"`
+	Provisioned             bool   `json:"provisioned"`
 	TrafficRx               uint64 `json:"traffic_rx"`
 	TrafficTx               uint64 `json:"traffic_tx"`
 }
@@ -177,10 +178,12 @@ func (h *Handler) handleClients(w http.ResponseWriter, r *http.Request, admin st
 			return
 		}
 		traffic, _ := h.store.ClientTrafficMap()
+		provisioned, _ := h.store.ProvisionedClientIDs()
 		out := make([]clientView, 0, len(clients))
 		for _, c := range clients {
 			view := toClientView(c)
 			h.hydrateBackendType(&view, c.ID)
+			view.Provisioned = provisioned[c.ID]
 			if t, ok := traffic[c.ID]; ok {
 				view.TrafficRx = t[0]
 				view.TrafficTx = t[1]

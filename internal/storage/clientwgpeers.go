@@ -82,6 +82,21 @@ func (s *Store) ListClientWGPeersForOwner(ownerAdminID int64, all bool) ([]Clien
 	return rows, nil
 }
 
+// ProvisionedClientIDs returns the set of client ids that have at least one
+// managed WireGuard peer, i.e. clients whose VK TURN provisioning is active. Used
+// to gate wg-only UI (traffic) on the client list.
+func (s *Store) ProvisionedClientIDs() (map[string]bool, error) {
+	var ids []string
+	if err := s.gdb.Table("client_wg_peers").Distinct("client_id").Pluck("client_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	set := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		set[id] = true
+	}
+	return set, nil
+}
+
 // DeleteClientWGPeer removes one client-node peer, reporting ErrNotFound when absent.
 func (s *Store) DeleteClientWGPeer(clientID, nodeID string) error {
 	res := s.gdb.Where("client_id = ? AND node_id = ?", clientID, nodeID).Delete(&dbmodel.ClientWGPeer{})
