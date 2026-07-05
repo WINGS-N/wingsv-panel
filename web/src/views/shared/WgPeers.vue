@@ -40,6 +40,8 @@ import { confirm } from '@/stores/confirm.js';
 
 const props = defineProps({
   apiBase: { type: String, default: '/api/admin' },
+  // When set, only this node's peers are shown (node detail view).
+  nodeId: { type: String, default: '' },
 });
 
 const peers = ref([]);
@@ -50,8 +52,9 @@ const formatTs = formatUnix;
 
 const filtered = computed(() => {
   const q = query.value.toLowerCase();
-  if (!q) return peers.value;
-  return peers.value.filter((p) =>
+  const scoped = props.nodeId ? peers.value.filter((p) => p.node_id === props.nodeId) : peers.value;
+  if (!q) return scoped;
+  return scoped.filter((p) =>
     [p.client_name, p.client_id, p.node_name, p.node_id, p.allowed_ips, p.public_key]
       .filter(Boolean)
       .some((v) => v.toLowerCase().includes(q)),
