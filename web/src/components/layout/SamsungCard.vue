@@ -10,13 +10,13 @@
           {{ kicker }}
         </div>
         <slot name="title">
-          <h2 v-if="title" class="admin-card-title">
+          <h2 v-if="title" :class="['admin-card-title', collapsible ? 'admin-card-title-collapsible' : '']">
             <ChevronDown
               v-if="collapsible"
               :class="['card-chevron', open ? 'card-chevron-open' : '']"
               aria-hidden="true"
             />
-            {{ title }}
+            <span>{{ title }}</span>
           </h2>
         </slot>
         <p v-if="subtitle && (!collapsible || open)" class="body-copy">{{ subtitle }}</p>
@@ -51,10 +51,15 @@ const open = ref(!props.defaultCollapsed);
   cursor: pointer;
   user-select: none;
 }
+.admin-card-title-collapsible {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
 .card-chevron {
   width: 1.1em;
   height: 1.1em;
-  vertical-align: -0.15em;
+  flex-shrink: 0;
   transition: transform 0.2s ease;
   transform: rotate(-90deg);
 }
