@@ -24,6 +24,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
       - run: pnpm build
 
       - uses: actions/upload-artifact@v4
