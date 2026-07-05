@@ -751,6 +751,7 @@ import CopyableLink from '@/components/domain/CopyableLink.vue';
 // CodeMirror — отдельный chunk; грузим только когда юзер реально открыл JSON-таб.
 const JsonEditor = defineAsyncComponent(() => import('@/components/domain/JsonEditor.vue'));
 import { connectAdminSocket } from '@/stores/admin-socket.js';
+import { confirm } from '@/stores/confirm.js';
 
 const props = defineProps({ id: { type: String, required: true }, tab: { type: String, default: '' } });
 const router = useRouter();
@@ -838,9 +839,13 @@ const busyRotate = ref(false);
 async function onRotateToken() {
   if (busyRotate.value) return;
   if (
-    !confirm(
-      'Ротировать токен клиента? Текущая wingsv:// ссылка станет недействительной — устройство потеряет связь с панелью, пока новая ссылка не будет применена.',
-    )
+    !(await confirm({
+      title: 'Ротировать токен',
+      message:
+        'Ротировать токен клиента? Текущая wingsv:// ссылка станет недействительной — устройство потеряет связь с панелью, пока новая ссылка не будет применена.',
+      confirmText: 'Ротировать',
+      danger: true,
+    }))
   ) {
     return;
   }
@@ -1896,7 +1901,16 @@ async function toggleLog(streamId, enabled) {
 }
 
 async function onDelete() {
-  if (!confirm('Удалить клиента и отозвать его токен?')) return;
+  if (
+    !(await confirm({
+      title: 'Удалить клиента',
+      message: 'Удалить клиента и отозвать его токен?',
+      confirmText: 'Удалить',
+      danger: true,
+    }))
+  ) {
+    return;
+  }
   busyDelete.value = true;
   try {
     const res = await fetch(`/api/admin/clients/${id.value}`, {

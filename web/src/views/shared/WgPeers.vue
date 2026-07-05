@@ -36,6 +36,7 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import { formatUnix } from '@/utils/format.js';
+import { confirm } from '@/stores/confirm.js';
 
 const props = defineProps({
   apiBase: { type: String, default: '/api/admin' },
@@ -75,7 +76,14 @@ async function load() {
 }
 
 async function revoke(p) {
-  if (!window.confirm(`Отозвать конфиг клиента ${p.client_name || p.client_id} на ${p.node_name || p.node_id}?`)) {
+  if (
+    !(await confirm({
+      title: 'Отозвать конфиг',
+      message: `Отозвать конфиг клиента ${p.client_name || p.client_id} на ${p.node_name || p.node_id}? Пир будет удалён и с ноды.`,
+      confirmText: 'Отозвать',
+      danger: true,
+    }))
+  ) {
     return;
   }
   revoking.value = p.client_id + p.node_id;
