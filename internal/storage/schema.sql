@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS server_nodes (
     last_seen_at INTEGER NOT NULL DEFAULT 0,
     xray_state TEXT NOT NULL DEFAULT '',
     xray_version TEXT NOT NULL DEFAULT '',
+    relay_version TEXT NOT NULL DEFAULT '',
     wg_backend TEXT NOT NULL DEFAULT '',
     xui_node_id TEXT NOT NULL DEFAULT '',
     xui_inbound_tag TEXT NOT NULL DEFAULT '',

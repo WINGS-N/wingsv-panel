@@ -193,6 +193,9 @@ type ServerNode struct {
 	// can show whether its Xray core is running. Empty for vk-turn-proxy nodes.
 	XrayState   string `gorm:"column:xray_state;not null;default:''"`
 	XrayVersion string `gorm:"column:xray_version;not null;default:''"`
+	// RelayVersion is the vk-turn-proxy relay's build version (git tag), polled
+	// from its management gRPC status for display.
+	RelayVersion string `gorm:"column:relay_version;not null;default:''"`
 	// WGBackend selects how a vk-turn-proxy node provisions a managed client's
 	// WireGuard config: "own" (a peer on the node's own wg interface via the relay
 	// management gRPC) or "xui" (a client on a 3x-ui node's inbound). Empty falls

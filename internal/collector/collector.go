@@ -24,6 +24,7 @@ type Store interface {
 	PruneTrafficBefore(time.Time) error
 	PruneConnectionsBefore(time.Time) error
 	UpdateServerNodeStatus(id, status string, lastSeen int64) error
+	UpdateServerNodeRelayVersion(id, version string) error
 }
 
 // Relay is the subset of the vk-turn-proxy gRPC client the collector calls.
@@ -164,6 +165,7 @@ func (c *Collector) collectNode(ctx context.Context, node dbmodel.ServerNode, pe
 		return err
 	}
 	c.failures[node.ID] = 0
+	_ = c.store.UpdateServerNodeRelayVersion(node.ID, status.Version)
 	// Between persist cycles just keep the status fresh; skip the heavier RPCs and
 	// writes so a fast poll cadence stays cheap.
 	if !persist {

@@ -195,6 +195,7 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE server_nodes ADD COLUMN grpc_token TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN xray_state TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN xray_version TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE server_nodes ADD COLUMN relay_version TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN wg_backend TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN xui_node_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN xui_inbound_tag TEXT NOT NULL DEFAULT ''`,

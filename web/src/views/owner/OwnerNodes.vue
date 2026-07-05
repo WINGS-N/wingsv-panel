@@ -92,6 +92,9 @@
           <SamsungPill v-if="n.kind === 'xui'" :variant="xrayRunning(n) ? 'online' : 'offline'" class="ml-2">
             xray: {{ xrayLabel(n) }}
           </SamsungPill>
+          <SamsungPill v-if="n.kind === 'vk_turn_proxy' && n.relay_version" variant="neutral" class="ml-2">
+            relay: {{ n.relay_version }}
+          </SamsungPill>
           <div class="node-id-row">
             <span class="admin-muted node-id-label">ID ноды:</span>
             <code class="admin-mono node-id" :title="'Скопировать ' + n.id" @click="copyId(n.id)">{{ n.id }}</code>

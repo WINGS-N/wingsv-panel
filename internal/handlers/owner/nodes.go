@@ -47,6 +47,7 @@ type nodeView struct {
 	ActiveSessions uint32 `json:"active_sessions"`
 	XrayState      string `json:"xray_state"`
 	XrayVersion    string `json:"xray_version"`
+	RelayVersion   string `json:"relay_version"`
 	WGBackend      string `json:"wg_backend"`
 	XuiNodeID      string `json:"xui_node_id"`
 	XuiInboundTag  string `json:"xui_inbound_tag"`
@@ -259,6 +260,7 @@ func (h *Handler) respondListNodes(w http.ResponseWriter, r *http.Request) {
 			Local:         n.OwnerAdminID == 0,
 			XrayState:     n.XrayState,
 			XrayVersion:   n.XrayVersion,
+			RelayVersion:  n.RelayVersion,
 			WGBackend:     n.WGBackend,
 			XuiNodeID:     n.XuiNodeID,
 			XuiInboundTag: n.XuiInboundTag,

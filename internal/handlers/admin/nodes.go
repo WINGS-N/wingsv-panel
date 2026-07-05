@@ -28,6 +28,7 @@ type adminNodeView struct {
 	ActiveSessions uint32 `json:"active_sessions"`
 	XrayState      string `json:"xray_state"`
 	XrayVersion    string `json:"xray_version"`
+	RelayVersion   string `json:"relay_version"`
 	WGBackend      string `json:"wg_backend"`
 	XuiNodeID      string `json:"xui_node_id"`
 	XuiInboundTag  string `json:"xui_inbound_tag"`
@@ -45,7 +46,7 @@ func (h *Handler) nodeToView(n dbmodel.ServerNode) adminNodeView {
 		ID: n.ID, Kind: n.Kind, Name: n.Name, GRPCEndpoint: n.GRPCEndpoint,
 		Status: n.Status, XrayState: n.XrayState, XrayVersion: n.XrayVersion,
 		WGBackend: n.WGBackend, XuiNodeID: n.XuiNodeID, XuiInboundTag: n.XuiInboundTag,
-		LastSeen: n.LastSeenAt, CreatedAt: n.CreatedAtUnix,
+		LastSeen: n.LastSeenAt, CreatedAt: n.CreatedAtUnix, RelayVersion: n.RelayVersion,
 	}
 	if latest, err := h.store.LatestTrafficSample(n.ID); err == nil {
 		view.PeerCount = latest.PeerCount

@@ -174,6 +174,17 @@ func (s *Store) UpdateServerNodeStatus(id, status string, lastSeen int64) error 
 
 // UpdateXuiNodeStatus records a 3x-ui node's reachability plus its Xray core
 // state and version, so the UI can show whether Xray is running.
+// UpdateServerNodeRelayVersion records a vk-turn-proxy node's relay build version
+// (git tag) as polled from its management gRPC. No-op on an empty version.
+func (s *Store) UpdateServerNodeRelayVersion(id, version string) error {
+	if version == "" {
+		return nil
+	}
+	return s.gdb.Model(&dbmodel.ServerNode{}).
+		Where("id = ?", id).
+		Update("relay_version", version).Error
+}
+
 func (s *Store) UpdateXuiNodeStatus(id, status, xrayState, xrayVersion string, lastSeen int64) error {
 	res := s.gdb.Model(&dbmodel.ServerNode{}).
 		Where("id = ?", id).
