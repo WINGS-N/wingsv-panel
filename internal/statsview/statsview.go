@@ -153,19 +153,48 @@ func BuildTraffic(store *storage.Store, ownerAdminID int64, rng, sample, nodeFil
 	key := fmt.Sprintf("%d|%v|%s|%s|%s", ownerAdminID, extraOwners, rng, sample, nodeFilter)
 	now := time.Now()
 	trafficCacheMu.Lock()
-	if e, ok := trafficCache[key]; ok && now.Sub(e.at) < trafficCacheTTL {
-		trafficCacheMu.Unlock()
-		return e.val, nil
-	}
+	e, ok := trafficCache[key]
 	trafficCacheMu.Unlock()
 
-	out, err := buildTraffic(store, ownerAdminID, rng, sample, nodeFilter, extraOwners...)
-	if err == nil {
+	var out Traffic
+	if ok && now.Sub(e.at) < trafficCacheTTL {
+		out = e.val
+	} else {
+		var err error
+		out, err = buildTraffic(store, ownerAdminID, rng, sample, nodeFilter, extraOwners...)
+		if err != nil {
+			return Traffic{}, err
+		}
 		trafficCacheMu.Lock()
 		trafficCache[key] = trafficCacheEntry{at: now, val: out}
 		trafficCacheMu.Unlock()
 	}
-	return out, err
+	// Overlay the streamed live speed on top of the (possibly cached) aggregate so
+	// the current-speed tile stays fresh even on a cache hit; the DB-sample estimate
+	// from buildTraffic is the fallback when no stream has reported yet.
+	applyLiveRates(&out)
+	return out, nil
+}
+
+// liveRates, when set via SetLiveRates, returns the summed live rx/tx per-second
+// rate for the given node ids (fed by the StreamFlowStats streamer).
+var liveRates func(nodeIDs []string) (uint64, uint64)
+
+// SetLiveRates registers the live rx/tx rate source used for the dashboard
+// current-speed tile. Passing nil disables the overlay.
+func SetLiveRates(fn func(nodeIDs []string) (uint64, uint64)) { liveRates = fn }
+
+func applyLiveRates(out *Traffic) {
+	if liveRates == nil {
+		return
+	}
+	ids := make([]string, 0, len(out.Nodes))
+	for _, n := range out.Nodes {
+		ids = append(ids, n.ID)
+	}
+	if rx, tx := liveRates(ids); rx > 0 || tx > 0 {
+		out.Totals.CurRxRate, out.Totals.CurTxRate = rx, tx
+	}
 }
 
 func buildTraffic(store *storage.Store, ownerAdminID int64, rng, sample, nodeFilter string, extraOwners ...int64) (Traffic, error) {
