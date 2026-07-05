@@ -34,6 +34,10 @@ type AdminEvent struct {
 	// Kind, when set with a nil Frame, is a non-device event (e.g. "stats_update")
 	// forwarded to the admin WS verbatim instead of being derived from a frame.
 	Kind string
+	// Data is an optional JSON payload delivered to the admin WS alongside Kind, so
+	// a data event (live stats, flows) pushes its values instead of just nudging a
+	// refetch. Only used on frame-less Kind events.
+	Data []byte
 }
 
 type AdminSink interface {
@@ -208,12 +212,13 @@ type busEnvelope struct {
 	AdminID   int64  `json:"a,omitempty"`
 	EventKind string `json:"k,omitempty"`
 	Frame     []byte `json:"f,omitempty"`
+	Data      []byte `json:"d,omitempty"`
 }
 
 func (h *Hub) adminEnvelope(ev AdminEvent, adminID int64, broadcast bool) busEnvelope {
 	env := busEnvelope{
 		Origin: h.instanceID, Broadcast: broadcast, AdminID: adminID,
-		ClientID: ev.ClientID, EventKind: ev.Kind,
+		ClientID: ev.ClientID, EventKind: ev.Kind, Data: ev.Data,
 	}
 	if ev.Frame != nil {
 		if raw, err := proto.Marshal(ev.Frame); err == nil {
@@ -256,7 +261,7 @@ func (h *Hub) onBusAdmin(payload []byte) {
 	if env.Origin == h.instanceID {
 		return
 	}
-	ev := AdminEvent{ClientID: env.ClientID, Kind: env.EventKind}
+	ev := AdminEvent{ClientID: env.ClientID, Kind: env.EventKind, Data: env.Data}
 	if len(env.Frame) > 0 {
 		frame := &guardianpb.Frame{}
 		if proto.Unmarshal(env.Frame, frame) == nil {

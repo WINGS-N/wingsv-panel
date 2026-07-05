@@ -96,7 +96,7 @@ func writeEvent(ctx context.Context, conn *websocket.Conn, ev guardianhub.AdminE
 		if ev.Kind == "" {
 			return nil
 		}
-		bytesJSON, err := json.Marshal(wsEvent{Kind: ev.Kind})
+		bytesJSON, err := json.Marshal(wsEvent{Kind: ev.Kind, Payload: ev.Data})
 		if err != nil {
 			return err
 		}
