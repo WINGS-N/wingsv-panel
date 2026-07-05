@@ -8,17 +8,16 @@
       <div class="stat">
         <span class="stat-kicker">Текущая скорость</span>
         <span class="stat-value">
-          {{ formatBytes((traffic.totals.cur_rx_rate || 0) + (traffic.totals.cur_tx_rate || 0)) }}/s
+          {{ formatBytes((liveTotals.cur_rx_rate || 0) + (liveTotals.cur_tx_rate || 0)) }}/s
         </span>
         <span class="stat-meta">
-          ↓ {{ formatBytes(traffic.totals.cur_rx_rate || 0) }}/s · ↑
-          {{ formatBytes(traffic.totals.cur_tx_rate || 0) }}/s
+          ↓ {{ formatBytes(liveTotals.cur_rx_rate || 0) }}/s · ↑ {{ formatBytes(liveTotals.cur_tx_rate || 0) }}/s
         </span>
       </div>
       <div class="stat">
         <span class="stat-kicker">Активные сессии</span>
-        <span class="stat-value">{{ traffic.totals.active_sessions }}</span>
-        <span class="stat-meta">{{ traffic.totals.active_streams }} потоков</span>
+        <span class="stat-value">{{ liveTotals.active_sessions }}</span>
+        <span class="stat-meta">{{ liveTotals.active_streams }} потоков</span>
       </div>
       <div class="stat">
         <span class="stat-kicker" title="Пир — это WireGuard-подключение клиента, заведённое на ноде"> Пиры </span>
@@ -312,6 +311,29 @@ import { formatBytes, formatUnix } from '@/utils/format.js';
 
 const traffic = ref(null);
 const nodes = ref([]);
+// Live per-node stats pushed over the admin WS (node_stats events). Overlays the
+// speed/session/stream tiles so they update ~1s without a full traffic refetch.
+const liveByNode = ref({});
+const liveTotals = computed(() => {
+  const base = (traffic.value && traffic.value.totals) || {};
+  const now = Date.now();
+  let rx = 0,
+    tx = 0,
+    sessions = 0,
+    streams = 0,
+    any = false;
+  for (const n of nodes.value) {
+    const l = liveByNode.value[n.id];
+    if (!l || now - l.at > 10000) continue;
+    any = true;
+    rx += l.rx_rate || 0;
+    tx += l.tx_rate || 0;
+    sessions += l.active_sessions || 0;
+    streams += l.active_streams || 0;
+  }
+  if (!any) return base;
+  return { ...base, cur_rx_rate: rx, cur_tx_rate: tx, active_sessions: sessions, active_streams: streams };
+});
 const flows = ref([]);
 const clientNames = ref({});
 const flowMode = ref('live');
@@ -721,6 +743,9 @@ onMounted(() => {
   timer = setInterval(loadAll, 3000);
   socketHandle = connectAdminSocket((event) => {
     if (event.kind === 'stats_update') loadAll();
+    else if (event.kind === 'node_stats' && event.payload && event.payload.node_id) {
+      liveByNode.value = { ...liveByNode.value, [event.payload.node_id]: { ...event.payload, at: Date.now() } };
+    }
   });
 });
 
