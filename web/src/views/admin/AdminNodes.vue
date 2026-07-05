@@ -181,7 +181,7 @@
     </template>
   </SamsungModal>
 
-  <template v-if="traffic && nodes.length">
+  <template v-if="statsReady">
     <section class="surface-card mt-6">
       <div class="admin-stats">
         <div class="stat">
@@ -200,13 +200,15 @@
         </div>
         <div class="stat">
           <span class="stat-kicker" title="Пир — это WireGuard-подключение клиента, заведённое на ноде"> Пиры </span>
-          <span class="stat-value">{{ traffic.totals.peer_count }}</span>
-          <span class="stat-meta">WG-конфиги клиентов на {{ traffic.totals.nodes }} нодах</span>
+          <span class="stat-value">{{ traffic?.totals?.peer_count ?? '—' }}</span>
+          <span class="stat-meta">WG-конфиги клиентов на {{ traffic?.totals?.nodes ?? nodes.length }} нодах</span>
         </div>
         <div class="stat">
           <span class="stat-kicker">Ноды онлайн</span>
-          <span class="stat-value">{{ traffic.totals.nodes_online }} / {{ traffic.totals.nodes }}</span>
-          <span class="stat-meta">режим: {{ traffic.mode || '—' }}</span>
+          <span class="stat-value"
+            >{{ traffic?.totals?.nodes_online ?? '—' }} / {{ traffic?.totals?.nodes ?? nodes.length }}</span
+          >
+          <span class="stat-meta">режим: {{ traffic?.mode || '—' }}</span>
         </div>
       </div>
     </section>
@@ -370,6 +372,12 @@ const liveTotals = computed(() => {
   if (!any) return base;
   return { ...base, cur_rx_rate: rx, cur_tx_rate: tx, active_sessions: sessions, active_streams: streams };
 });
+// Show the stats once the node list is known and EITHER the REST snapshot or the
+// first live WS push has arrived, so the loader does not block while the socket
+// already feeds data.
+const statsReady = computed(
+  () => nodes.value.length > 0 && (!!traffic.value || Object.keys(liveByNode.value).length > 0),
+);
 const flows = ref([]);
 const clientNames = ref({});
 const flowMode = ref('live');

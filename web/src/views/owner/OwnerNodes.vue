@@ -3,8 +3,8 @@
     <h2 class="section-title">Серверы и трафик</h2>
     <p class="body-copy">Локальные ноды панели: статус, трафик и активные соединения.</p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
-    <SamsungSectionLoader v-else-if="!traffic" />
-    <div v-if="traffic" class="admin-stats">
+    <SamsungSectionLoader v-else-if="!statsReady" />
+    <div v-if="statsReady" class="admin-stats">
       <div class="stat">
         <span class="stat-kicker">Текущая скорость</span>
         <span class="stat-value">
@@ -21,13 +21,15 @@
       </div>
       <div class="stat">
         <span class="stat-kicker" title="Пир — это WireGuard-подключение клиента, заведённое на ноде"> Пиры </span>
-        <span class="stat-value">{{ traffic.totals.peer_count }}</span>
-        <span class="stat-meta">WG-конфиги клиентов на {{ traffic.totals.nodes }} нодах</span>
+        <span class="stat-value">{{ traffic?.totals?.peer_count ?? '—' }}</span>
+        <span class="stat-meta">WG-конфиги клиентов на {{ traffic?.totals?.nodes ?? nodes.length }} нодах</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">Ноды онлайн</span>
-        <span class="stat-value">{{ traffic.totals.nodes_online }} / {{ traffic.totals.nodes }}</span>
-        <span class="stat-meta">режим: {{ traffic.mode || '—' }}</span>
+        <span class="stat-value"
+          >{{ traffic?.totals?.nodes_online ?? '—' }} / {{ traffic?.totals?.nodes ?? nodes.length }}</span
+        >
+        <span class="stat-meta">режим: {{ traffic?.mode || '—' }}</span>
       </div>
     </div>
   </section>
@@ -334,6 +336,10 @@ const liveTotals = computed(() => {
   if (!any) return base;
   return { ...base, cur_rx_rate: rx, cur_tx_rate: tx, active_sessions: sessions, active_streams: streams };
 });
+// The stats tiles show as soon as EITHER the REST snapshot or the first live WS
+// push arrives, so the loader does not block while the socket is already feeding
+// data. DB-only fields (peer count, nodes) fill in once loadAll returns.
+const statsReady = computed(() => !!traffic.value || Object.keys(liveByNode.value).length > 0);
 // Live flows pushed per node over the WS. Once any arrive, the graph renders from
 // them (fresh ~1s); until then it uses the initial REST-loaded flows.
 const flowsLive = ref({});
