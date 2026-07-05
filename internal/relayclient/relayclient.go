@@ -6,7 +6,6 @@ package relayclient
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 
@@ -17,6 +16,7 @@ import (
 	"v.wingsnet.org/internal/gen/relaypb"
 	"v.wingsnet.org/internal/provisioning"
 	"v.wingsnet.org/internal/storage/dbmodel"
+	"v.wingsnet.org/internal/tokenaead"
 )
 
 // Provisioner creates peers by calling a node's Relay gRPC API. Nodes are few
@@ -41,12 +41,13 @@ func WithContextDialer(d func(context.Context, string) (net.Conn, error)) Option
 	return func(p *Provisioner) { p.dialContext = d }
 }
 
-// New builds a Provisioner. token, when set, is sent as a bearer credential the
-// node's Relay API checks. The transport is TLS by default (chain verification is
-// skipped - the node cert may be self-signed and the bearer token authenticates);
-// pass WithTransportCredentials to pin the panel CA instead.
+// New builds a Provisioner. token keys the transport: the connection is encrypted
+// with AES-256-GCM derived from it (no certificates, no TLS handshake), which both
+// authenticates and sidesteps the cert-chain that overflows a k8s pod MTU. token
+// is still also sent as a bearer credential for defense in depth. Pass
+// WithTransportCredentials to override the transport (e.g. tests).
 func New(token string, opts ...Option) *Provisioner {
-	p := &Provisioner{token: token, creds: credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})}
+	p := &Provisioner{token: token, creds: tokenaead.Client(token)}
 	for _, opt := range opts {
 		opt(p)
 	}
