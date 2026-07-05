@@ -838,10 +838,11 @@ async function onDelete(node) {
 
 onMounted(() => {
   refresh();
-  timer = setInterval(loadStats, 3000);
+  // Slow full refresh for the DB-backed parts; live tiles and the flow graph come
+  // over the WS, so drop the old 3s REST cadence that spammed the API.
+  timer = setInterval(loadStats, 20000);
   socketHandle = connectAdminSocket((event) => {
-    if (event.kind === 'stats_update') loadStats();
-    else if (event.kind === 'node_stats' && event.payload && event.payload.node_id) {
+    if (event.kind === 'node_stats' && event.payload && event.payload.node_id) {
       liveByNode.value = { ...liveByNode.value, [event.payload.node_id]: { ...event.payload, at: Date.now() } };
     } else if (event.kind === 'node_flows' && event.payload && event.payload.node_id) {
       flowsLive.value = {
