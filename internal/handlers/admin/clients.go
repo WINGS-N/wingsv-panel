@@ -655,6 +655,8 @@ func (h *Handler) handleClientByID(w http.ResponseWriter, r *http.Request, admin
 		h.respondClientConfig(w, client.ID)
 	case subpath == "config" && r.Method == http.MethodPut:
 		h.respondPushClientConfig(w, r, admin, client)
+	case subpath == "management" && r.Method == http.MethodPut:
+		h.respondSetManagement(w, r, client)
 	case subpath == "log/control" && r.Method == http.MethodPut:
 		h.respondLogControl(w, r, client)
 	case subpath == "sync" && r.Method == http.MethodPut:
@@ -857,6 +859,28 @@ func (h *Handler) respondDeleteClient(w http.ResponseWriter, client storage.Clie
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+type setManagementRequest struct {
+	RemoteControl bool `json:"remote_control"`
+}
+
+// respondSetManagement persists the client's management type: full remote control
+// versus config-only. It changes the enrollment-link shape (Guardian block present
+// or not) and which sections the UI exposes; the stored config's managed VK-TURN
+// profile is untouched. Keyed by the client's owner so an owner can retype any
+// admin's client.
+func (h *Handler) respondSetManagement(w http.ResponseWriter, r *http.Request, client storage.Client) {
+	var req setManagementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if err := h.store.SetClientRemoteControl(client.ID, client.OwnerAdminID, req.RemoteControl); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"remote_control": req.RemoteControl})
 }
 
 func (h *Handler) respondClientConfig(w http.ResponseWriter, clientID string) {
