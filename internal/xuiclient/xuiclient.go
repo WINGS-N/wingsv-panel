@@ -112,7 +112,7 @@ type WireguardClient struct {
 // CreateWireguardClient adds a wg peer to a node's WireGuard inbound and returns
 // its config. Idempotent on clientID. An empty inboundTag selects the first
 // WireGuard inbound.
-func (c *Client) CreateWireguardClient(ctx context.Context, node dbmodel.ServerNode, inboundTag, clientID string) (WireguardClient, error) {
+func (c *Client) CreateWireguardClient(ctx context.Context, node dbmodel.ServerNode, inboundTag, clientID, clientName string) (WireguardClient, error) {
 	conn, err := c.dial(node)
 	if err != nil {
 		return WireguardClient{}, fmt.Errorf("dial xui node %s: %w", node.GRPCEndpoint, err)
@@ -120,7 +120,7 @@ func (c *Client) CreateWireguardClient(ctx context.Context, node dbmodel.ServerN
 	defer func() { _ = conn.Close() }()
 	resp, err := xuipb.NewPanelClient(conn).CreateWireguardClient(
 		authCtx(ctx, node.GRPCToken),
-		&xuipb.CreateWireguardClientRequest{InboundTag: inboundTag, ClientId: clientID},
+		&xuipb.CreateWireguardClientRequest{InboundTag: inboundTag, ClientId: clientID, ClientName: clientName},
 	)
 	if err != nil {
 		return WireguardClient{}, err

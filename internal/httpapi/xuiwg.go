@@ -17,8 +17,8 @@ type xuiPerNodeProvider struct {
 	xui *xuiclient.Client
 }
 
-func (p *xuiPerNodeProvider) ProvisionXUIClient(ctx context.Context, xuiNode dbmodel.ServerNode, inboundTag, clientID string) (provisioning.Peer, error) {
-	wc, err := p.xui.CreateWireguardClient(ctx, xuiNode, inboundTag, clientID)
+func (p *xuiPerNodeProvider) ProvisionXUIClient(ctx context.Context, xuiNode dbmodel.ServerNode, inboundTag, clientID, clientName string) (provisioning.Peer, error) {
+	wc, err := p.xui.CreateWireguardClient(ctx, xuiNode, inboundTag, clientID, clientName)
 	if err != nil {
 		return provisioning.Peer{}, err
 	}
@@ -40,12 +40,12 @@ type xuiWGProvider struct {
 	inboundTag string
 }
 
-func (p *xuiWGProvider) ProvisionWG(ctx context.Context, clientID string) (provisioning.Peer, error) {
+func (p *xuiWGProvider) ProvisionWG(ctx context.Context, clientID, clientName string) (provisioning.Peer, error) {
 	node, err := p.store.GetServerNode(p.nodeID)
 	if err != nil {
 		return provisioning.Peer{}, err
 	}
-	wc, err := p.xui.CreateWireguardClient(ctx, node, p.inboundTag, clientID)
+	wc, err := p.xui.CreateWireguardClient(ctx, node, p.inboundTag, clientID, clientName)
 	if err != nil {
 		return provisioning.Peer{}, err
 	}

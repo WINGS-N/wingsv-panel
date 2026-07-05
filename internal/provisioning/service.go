@@ -43,7 +43,7 @@ type PeerProvisioner interface {
 // than the relay. When set it is the panel-global default (legacy XUI_WG_* env),
 // used only when the calling node carries no per-node wg backend config.
 type WGProvider interface {
-	ProvisionWG(ctx context.Context, clientID string) (Peer, error)
+	ProvisionWG(ctx context.Context, clientID, clientName string) (Peer, error)
 }
 
 // XUIProvisioner mints a client's WireGuard config on a SPECIFIC 3x-ui node's
@@ -51,7 +51,7 @@ type WGProvider interface {
 // the 3x-ui node + inbound tag it forwards to, so each admin picks their own
 // target in the panel instead of a single global env var.
 type XUIProvisioner interface {
-	ProvisionXUIClient(ctx context.Context, xuiNode dbmodel.ServerNode, inboundTag, clientID string) (Peer, error)
+	ProvisionXUIClient(ctx context.Context, xuiNode dbmodel.ServerNode, inboundTag, clientID, clientName string) (Peer, error)
 }
 
 // Service implements provisioningpb.ProvisioningServer.
@@ -121,7 +121,7 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		return nil, status.Error(codes.Internal, xErr.Error())
 	} else if ok {
 		log.Printf("provisioning: xui provider for client=%s via node=%s inbound=%q", req.GetClientId(), xuiNode.ID, tag)
-		peer, provErr := s.xuiProv.ProvisionXUIClient(ctx, xuiNode, tag, req.GetClientId())
+		peer, provErr := s.xuiProv.ProvisionXUIClient(ctx, xuiNode, tag, req.GetClientId(), client.Name)
 		if provErr != nil {
 			log.Printf("provisioning: xui provider failed for client=%s: %v", req.GetClientId(), provErr)
 			return nil, status.Error(codes.Internal, "provision xui: "+provErr.Error())
@@ -144,7 +144,7 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 	// per-node backend, so an admin's own node can still opt into "own" wg.
 	if node.WGBackend == "" && s.wgProvider != nil {
 		log.Printf("provisioning: global wg provider for client=%s", req.GetClientId())
-		peer, provErr := s.wgProvider.ProvisionWG(ctx, req.GetClientId())
+		peer, provErr := s.wgProvider.ProvisionWG(ctx, req.GetClientId(), client.Name)
 		if provErr != nil {
 			return nil, status.Error(codes.Internal, "provision wg: "+provErr.Error())
 		}
