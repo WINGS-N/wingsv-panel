@@ -97,7 +97,8 @@
         </SamsungButton>
       </header>
 
-      <div class="mt-2">
+      <div class="mt-2 client-filters">
+        <OneuiRadioGroup v-model="managementFilter" :options="managementPillOptions" variant="pill" />
         <OneuiRadioGroup v-model="statusFilter" :options="statusPillOptions" variant="pill" />
       </div>
 
@@ -117,7 +118,11 @@
             </th>
             <th>Устройство</th>
             <th>OS / WINGS V</th>
-            <th>Трафик</th>
+            <th>
+              <button class="th-sort" type="button" @click="setSort('traffic')">
+                Трафик {{ sortIndicator('traffic') }}
+              </button>
+            </th>
             <th>
               <button class="th-sort" type="button" @click="setSort('status')">
                 Статус {{ sortIndicator('status') }}
@@ -230,25 +235,27 @@
           />
         </template>
 
-        <label class="field-label mt-4">Заполнение конфигурации</label>
-        <OneuiRadioGroup v-model="seedMode" :options="seedModeOptions" variant="pill" />
+        <template v-if="managementType === 'full'">
+          <label class="field-label mt-4">Заполнение конфигурации</label>
+          <OneuiRadioGroup v-model="seedMode" :options="seedModeOptions" variant="pill" />
 
-        <template v-if="seedMode === 'clone'">
-          <label class="field-label mt-3">Источник</label>
-          <OneuiSelect
-            :model-value="seedFromClientId"
-            :options="seedClientOptions"
-            @update:model-value="seedFromClientId = $event"
-          />
-        </template>
-        <template v-else-if="seedMode === 'link'">
-          <OneuiTextarea
-            v-model.trim="seedLink"
-            label="Ссылка (wingsv:// или vless://)"
-            rows="3"
-            placeholder="wingsv://... или vless://..."
-            class="mt-3"
-          />
+          <template v-if="seedMode === 'clone'">
+            <label class="field-label mt-3">Источник</label>
+            <OneuiSelect
+              :model-value="seedFromClientId"
+              :options="seedClientOptions"
+              @update:model-value="seedFromClientId = $event"
+            />
+          </template>
+          <template v-else-if="seedMode === 'link'">
+            <OneuiTextarea
+              v-model.trim="seedLink"
+              label="Ссылка (wingsv:// или vless://)"
+              rows="3"
+              placeholder="wingsv://... или vless://..."
+              class="mt-3"
+            />
+          </template>
         </template>
 
         <p v-if="createError" class="admin-error mt-3">{{ createError }}</p>
@@ -308,7 +315,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-vue-next';
 import { authState, myAvatarUrl } from '@/stores/auth.js';
@@ -325,11 +332,16 @@ import SamsungPill from '@/components/layout/SamsungPill.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 
-function trafficText(client) {
+function clientTrafficTotal(client) {
   // Traffic is wg-peer accounting; it only means anything for a provisioned VK
-  // TURN client. Non-provisioned clients get a blank instead of a bogus 0.
+  // TURN client. Non-provisioned clients count as zero for sort purposes.
+  if (!client.provisioned) return 0;
+  return (Number(client.traffic_rx) || 0) + (Number(client.traffic_tx) || 0);
+}
+
+function trafficText(client) {
   if (!client.provisioned) return '—';
-  const total = (Number(client.traffic_rx) || 0) + (Number(client.traffic_tx) || 0);
+  const total = clientTrafficTotal(client);
   return total > 0 ? formatBytes(total) : '—';
 }
 
@@ -339,10 +351,21 @@ const loading = ref(false);
 const loadError = ref('');
 const tableSection = ref(null);
 const statusFilter = ref('all');
+const managementFilter = ref('all');
 const admin = computed(() => authState.value.admin);
 const adminPresenceOnline = computed(() => clients.value.some((c) => c.online));
 const onlineCount = computed(() => clients.value.filter((c) => c.online).length);
 const offlineCount = computed(() => clients.value.length - onlineCount.value);
+const fullControlCount = computed(() => clients.value.filter((c) => c.remote_control).length);
+const configOnlyCount = computed(() => clients.value.length - fullControlCount.value);
+
+// Management-type filter sits above the online/offline pills: it is the coarser
+// grouping (how the panel manages the client), so pick it first.
+const managementPillOptions = computed(() => [
+  { value: 'all', label: 'Все', count: clients.value.length },
+  { value: 'full', label: 'Полный контроль', count: fullControlCount.value },
+  { value: 'config', label: 'Только конфигурация', count: configOnlyCount.value },
+]);
 
 const statusPillOptions = computed(() => [
   { value: 'all', label: 'Все', count: clients.value.length },
@@ -380,10 +403,11 @@ function initialsOf(value) {
 }
 
 const filteredClients = computed(() => {
-  let list;
-  if (statusFilter.value === 'online') list = clients.value.filter((c) => c.online);
-  else if (statusFilter.value === 'offline') list = clients.value.filter((c) => !c.online);
-  else list = [...clients.value];
+  let list = [...clients.value];
+  if (managementFilter.value === 'full') list = list.filter((c) => c.remote_control);
+  else if (managementFilter.value === 'config') list = list.filter((c) => !c.remote_control);
+  if (statusFilter.value === 'online') list = list.filter((c) => c.online);
+  else if (statusFilter.value === 'offline') list = list.filter((c) => !c.online);
   const dir = sortDir.value === 'asc' ? 1 : -1;
   const cmp = (a, b) => {
     switch (sortKey.value) {
@@ -393,6 +417,8 @@ const filteredClients = computed(() => {
         return (a.backend_type || '').localeCompare(b.backend_type || '') * dir;
       case 'status':
         return (Number(a.online) - Number(b.online)) * dir;
+      case 'traffic':
+        return (clientTrafficTotal(a) - clientTrafficTotal(b)) * dir;
       case 'last_seen':
         return ((new Date(a.last_seen_at).valueOf() || 0) - (new Date(b.last_seen_at).valueOf() || 0)) * dir;
       default:
@@ -405,6 +431,10 @@ const filteredClients = computed(() => {
 const paginatedClients = computed(() => {
   const start = page.value * pageSize;
   return filteredClients.value.slice(start, start + pageSize);
+});
+
+watch([managementFilter, statusFilter], () => {
+  page.value = 0;
 });
 
 function scrollToTable() {
@@ -658,6 +688,11 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.client-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .remote-toggle-row {
   display: flex;
   align-items: flex-start;
