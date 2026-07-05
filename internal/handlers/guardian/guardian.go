@@ -53,9 +53,12 @@ func (h *Handler) Register(mux *http.ServeMux) {
 func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		InsecureSkipVerify: true,
-		// permessage-deflate sometimes gets mangled by ingresses (Traefik in
-		// HTTP/2 mode in particular), so we ship raw frames.
-		CompressionMode: websocket.CompressionDisabled,
+		// permessage-deflate cuts the config-push / status frames noticeably. It is
+		// negotiated, so a client that does not offer it (or an ingress that strips
+		// the extension) simply falls back to raw frames - no break. No-context-
+		// takeover keeps each frame independently inflatable, which the app's OkHttp
+		// client handles most reliably.
+		CompressionMode: websocket.CompressionNoContextTakeover,
 	})
 	if err != nil {
 		log.Printf("guardian: ws accept failed: %v", err)
