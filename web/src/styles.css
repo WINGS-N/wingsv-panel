@@ -1214,6 +1214,20 @@
     @apply text-[14px] text-wings-mutedStrong;
   }
 
+  .provision-field-control,
+  .management-toggle-control {
+    @apply inline-flex items-center gap-3;
+  }
+
+  .management-toggle {
+    @apply flex items-center;
+  }
+
+  .provision-loader,
+  .management-toggle-loader {
+    @apply inline-flex flex-shrink-0 items-center;
+  }
+
   .form-input-narrow {
     @apply w-[140px];
   }

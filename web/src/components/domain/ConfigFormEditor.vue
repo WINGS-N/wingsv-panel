@@ -1,8 +1,7 @@
 <template>
   <div class="config-form">
     <!-- App preferences -->
-    <section v-if="show('app')" class="form-section">
-      <h3 class="form-section-title">Приложение</h3>
+    <FormSection v-if="show('app')" title="Приложение" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Тема</label>
         <OneuiSelect
@@ -23,254 +22,268 @@
         <label class="form-label">Автозапуск при загрузке</label>
         <OneuiSwitch :model-value="!!ap.autoStartOnBoot" @change="setAp('autoStartOnBoot', $event)" />
       </div>
-    </section>
+    </FormSection>
 
     <!-- VK TURN -->
-    <section v-if="show('vk_turn')" class="form-section">
-      <h3 class="form-section-title">VK TURN</h3>
+    <FormSection v-if="show('vk_turn')" title="VK TURN" :collapsible="collapsible" :default-collapsed="collapsible">
       <template v-if="provision">
         <div class="form-row">
           <label class="form-label">Разрешить клиенту автоматически создавать wg конфигурацию</label>
-          <OneuiSwitch :model-value="!!provision.enabled" @change="$emit('update:provisionEnabled', $event)" />
+          <span class="provision-field-control">
+            <SamsungLoader v-if="provision.busy" class="provision-loader" />
+            <OneuiSwitch :model-value="!!provision.enabled" @change="$emit('update:provisionEnabled', $event)" />
+          </span>
         </div>
         <div v-if="provision.enabled" class="form-row">
           <label class="form-label">VK TURN сервер</label>
-          <OneuiSelect
-            :model-value="provision.nodeId || ''"
-            :options="provision.nodes || []"
-            @change="$emit('update:provisionNode', $event)"
-          />
+          <span class="provision-field-control">
+            <SamsungLoader v-if="provision.busy" class="provision-loader" />
+            <OneuiSelect
+              :model-value="provision.nodeId || ''"
+              :options="provision.nodes || []"
+              @change="$emit('update:provisionNode', $event)"
+            />
+          </span>
         </div>
       </template>
-      <div class="form-row">
-        <label class="form-label">Под-backend</label>
-        <OneuiSelect
-          :model-value="turn.tunnelMode || 'TUNNEL_MODE_WIREGUARD'"
-          :options="tunnelModeOptions"
-          @change="setTurn('tunnelMode', $event === 'TUNNEL_MODE_WIREGUARD' ? undefined : $event)"
-        />
-      </div>
-      <div class="form-row form-row-stack">
-        <label class="form-label">Endpoint</label>
-        <input
-          class="text-input"
-          :value="turn.endpoint?.host || ''"
-          @input="setTurnHost($event.target.value)"
-          placeholder="host"
-        />
-        <input
-          class="text-input mt-2"
-          :value="turn.endpoint?.port || ''"
-          @input="setTurnPort($event.target.value)"
-          placeholder="port"
-          inputmode="numeric"
-        />
-      </div>
-      <div class="form-row form-row-stack">
-        <label class="form-label">VK link (основная)</label>
-        <textarea class="text-input" rows="2" :value="turn.link || ''" @input="setTurn('link', $event.target.value)" />
-      </div>
-      <div class="form-row form-row-stack">
-        <label class="form-label">Дополнительные VK ссылки</label>
-        <div v-for="(link, idx) in turnLinks" :key="idx" class="vk-link-row">
+      <template v-if="!provisionOnly">
+        <div class="form-row">
+          <label class="form-label">Под-backend</label>
+          <OneuiSelect
+            :model-value="turn.tunnelMode || 'TUNNEL_MODE_WIREGUARD'"
+            :options="tunnelModeOptions"
+            @change="setTurn('tunnelMode', $event === 'TUNNEL_MODE_WIREGUARD' ? undefined : $event)"
+          />
+        </div>
+        <div class="form-row form-row-stack">
+          <label class="form-label">Endpoint</label>
+          <input
+            class="text-input"
+            :value="turn.endpoint?.host || ''"
+            @input="setTurnHost($event.target.value)"
+            placeholder="host"
+          />
+          <input
+            class="text-input mt-2"
+            :value="turn.endpoint?.port || ''"
+            @input="setTurnPort($event.target.value)"
+            placeholder="port"
+            inputmode="numeric"
+          />
+        </div>
+        <div class="form-row form-row-stack">
+          <label class="form-label">VK link (основная)</label>
           <textarea
             class="text-input"
             rows="2"
-            :value="link"
-            @input="updateTurnLink(idx, $event.target.value)"
-            placeholder="https://vk.com/..."
+            :value="turn.link || ''"
+            @input="setTurn('link', $event.target.value)"
           />
-          <button class="icon-button" type="button" @click="removeTurnLink(idx)" title="Удалить">
-            <Trash2 class="button-icon" aria-hidden="true" />
-          </button>
         </div>
-        <div class="actions-row mt-2">
-          <button class="button-secondary" type="button" @click="addTurnLink">
-            <Plus class="button-icon" aria-hidden="true" />
-            <span>Добавить ссылку</span>
-          </button>
-          <button
-            v-if="perClientActions"
-            class="button-secondary"
-            type="button"
-            :disabled="!vkOauthAuthorized || generateVkLinkBusy"
-            :title="vkOauthAuthorized ? '' : 'На устройстве нет активного VK OAuth токена'"
-            @click="$emit('generate-vk-link')"
-          >
-            <Sparkles class="button-icon" aria-hidden="true" />
-            <span>{{ generateVkLinkBusy ? 'Запрос на устройство…' : 'Сгенерировать VK link' }}</span>
-          </button>
+        <div class="form-row form-row-stack">
+          <label class="form-label">Дополнительные VK ссылки</label>
+          <div v-for="(link, idx) in turnLinks" :key="idx" class="vk-link-row">
+            <textarea
+              class="text-input"
+              rows="2"
+              :value="link"
+              @input="updateTurnLink(idx, $event.target.value)"
+              placeholder="https://vk.com/..."
+            />
+            <button class="icon-button" type="button" @click="removeTurnLink(idx)" title="Удалить">
+              <Trash2 class="button-icon" aria-hidden="true" />
+            </button>
+          </div>
+          <div class="actions-row mt-2">
+            <button class="button-secondary" type="button" @click="addTurnLink">
+              <Plus class="button-icon" aria-hidden="true" />
+              <span>Добавить ссылку</span>
+            </button>
+            <button
+              v-if="perClientActions"
+              class="button-secondary"
+              type="button"
+              :disabled="!vkOauthAuthorized || generateVkLinkBusy"
+              :title="vkOauthAuthorized ? '' : 'На устройстве нет активного VK OAuth токена'"
+              @click="$emit('generate-vk-link')"
+            >
+              <Sparkles class="button-icon" aria-hidden="true" />
+              <span>{{ generateVkLinkBusy ? 'Запрос на устройство…' : 'Сгенерировать VK link' }}</span>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="form-row form-row-stack">
-        <label class="form-label">Резервная VK ссылка</label>
-        <textarea
-          class="text-input"
-          rows="2"
-          :value="turn.linkSecondary || ''"
-          @input="setTurn('linkSecondary', $event.target.value)"
-        />
-      </div>
-      <div class="form-row form-row-stack">
-        <label class="form-label">Host / Port override</label>
-        <input
-          class="text-input"
-          :value="turn.host || ''"
-          @input="setTurn('host', $event.target.value || undefined)"
-          placeholder="host (опционально)"
-        />
-        <input
-          class="text-input mt-2"
-          :value="turn.port || ''"
-          @input="setTurn('port', toIntOrUndef($event.target.value))"
-          placeholder="port (опционально)"
-          inputmode="numeric"
-        />
-        <p class="form-hint">Переопределяет host/port из VK link. Пустые поля — без override.</p>
-      </div>
-      <div class="form-row">
-        <label class="form-label">Threads</label>
-        <input
-          class="text-input form-input-narrow"
-          :value="turn.threads || ''"
-          @input="setTurn('threads', toIntOrUndef($event.target.value))"
-          inputmode="numeric"
-        />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Creds group size</label>
-        <input
-          class="text-input form-input-narrow"
-          :value="turn.credsGroupSize || ''"
-          @input="setTurn('credsGroupSize', toIntOrUndef($event.target.value))"
-          inputmode="numeric"
-        />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Session mode</label>
-        <OneuiSelect
-          :model-value="turn.sessionMode || 'TURN_SESSION_MODE_UNSPECIFIED'"
-          :options="sessionModeOptions"
-          @change="setTurn('sessionMode', $event === 'TURN_SESSION_MODE_UNSPECIFIED' ? undefined : $event)"
-        />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Отпечаток браузера</label>
-        <OneuiSelect
-          :model-value="turn.browserFingerprint || 'auto'"
-          :options="browserFingerprintOptions"
-          @change="setTurn('browserFingerprint', $event === 'auto' ? undefined : $event)"
-        />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Runtime mode</label>
-        <OneuiSelect
-          :model-value="turn.runtimeMode || 'PROXY_RUNTIME_MODE_UNSPECIFIED'"
-          :options="runtimeModeOptions"
-          @change="setTurn('runtimeMode', $event === 'PROXY_RUNTIME_MODE_UNSPECIFIED' ? undefined : $event)"
-        />
-      </div>
-      <div class="form-row form-row-stack" v-if="turn.runtimeMode === 'PROXY_RUNTIME_MODE_PROXY'">
-        <label class="form-label">Local endpoint (proxy-mode)</label>
-        <input
-          class="text-input"
-          :value="turn.localEndpoint?.host || ''"
-          @input="setTurnLocalEndpointHost($event.target.value)"
-          placeholder="host"
-        />
-        <input
-          class="text-input mt-2"
-          :value="turn.localEndpoint?.port || ''"
-          @input="setTurnLocalEndpointPort($event.target.value)"
-          placeholder="port"
-          inputmode="numeric"
-        />
-      </div>
-      <div class="form-row">
-        <label class="form-label">UDP</label>
-        <OneuiSwitch :model-value="!!turn.useUdp" @change="setTurn('useUdp', $event)" />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Без обфускации</label>
-        <OneuiSwitch :model-value="!!turn.noObfuscation" @change="setTurn('noObfuscation', $event)" />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Manual captcha</label>
-        <OneuiSwitch :model-value="!!turn.manualCaptcha" @change="setTurn('manualCaptcha', $event)" />
-      </div>
-      <div class="form-row" v-if="!turn.manualCaptcha">
-        <label class="form-label">Captcha auto-solver</label>
-        <OneuiSelect
-          :model-value="turn.captchaAutoSolver || 'v2'"
-          :options="captchaAutoSolverOptions"
-          @change="setTurn('captchaAutoSolver', $event || undefined)"
-        />
-      </div>
-      <div class="form-row">
-        <label class="form-label">Restart on network change</label>
-        <OneuiSwitch :model-value="!!turn.restartOnNetworkChange" @change="setTurn('restartOnNetworkChange', $event)" />
-      </div>
-      <div class="form-row">
-        <label class="form-label">DNS режим</label>
-        <OneuiSelect
-          :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'"
-          :options="dnsOptions"
-          @change="setAp('dnsMode', $event === 'DNS_MODE_UNSPECIFIED' ? undefined : $event)"
-        />
-      </div>
-      <div class="form-row form-row-stack">
-        <label class="form-label">Свои DNS-резолверы</label>
-        <textarea
-          class="text-input"
-          rows="3"
-          :value="turnUserDnsText"
-          @input="setTurnUserDns($event.target.value)"
-          placeholder="https://dns.example/dns-query&#10;udp://77.88.8.8:53&#10;77.88.8.8"
-        />
-        <p class="form-hint">
-          По одной записи на строку. Ставятся ПЕРЕД встроенным списком (Yandex → Google → Cloudflare). DoH
-          (https://...), plain UDP (udp://ip[:port] или просто ip[:port]). DoT пока не поддерживается.
-        </p>
-      </div>
-      <h4 class="form-subsection-title">Обфускация / WRAP</h4>
-      <div class="form-row">
-        <label class="form-label">Режим WRAP</label>
-        <OneuiSelect
-          :model-value="turn.wrapMode || 'WRAP_MODE_UNSPECIFIED'"
-          :options="wrapModeOptions"
-          @change="setTurn('wrapMode', $event === 'WRAP_MODE_UNSPECIFIED' ? undefined : $event)"
-        />
-      </div>
-      <div class="form-row" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
-        <label class="form-label">Шифр</label>
-        <OneuiSelect
-          :model-value="turnPrimaryWrapCipher"
-          :options="wrapCipherOptions"
-          @change="setTurnPrimaryWrapCipher($event)"
-        />
-      </div>
-      <div class="form-row form-row-stack" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
-        <label class="form-label">Ключ (hex, 32 байта)</label>
-        <input
-          class="text-input"
-          :value="turnWrapKeyHex"
-          @input="setTurnWrapKeyHex($event.target.value)"
-          placeholder="64 hex-символа (пусто — клиент сгенерирует сам)"
-        />
-        <button class="button-secondary mt-2" type="button" @click="generateTurnWrapKey">
-          Сгенерировать новый ключ
-        </button>
-        <p class="form-hint">Пустое значение — клиент сгенерирует ключ при первом запуске.</p>
-      </div>
-      <div class="form-row" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
-        <label class="form-label">Передавать ключ in-band</label>
-        <OneuiSwitch :model-value="turnWrapSendKey" @change="setTurnWrapSendKey($event)" />
-      </div>
-    </section>
+        <div class="form-row form-row-stack">
+          <label class="form-label">Резервная VK ссылка</label>
+          <textarea
+            class="text-input"
+            rows="2"
+            :value="turn.linkSecondary || ''"
+            @input="setTurn('linkSecondary', $event.target.value)"
+          />
+        </div>
+        <div class="form-row form-row-stack">
+          <label class="form-label">Host / Port override</label>
+          <input
+            class="text-input"
+            :value="turn.host || ''"
+            @input="setTurn('host', $event.target.value || undefined)"
+            placeholder="host (опционально)"
+          />
+          <input
+            class="text-input mt-2"
+            :value="turn.port || ''"
+            @input="setTurn('port', toIntOrUndef($event.target.value))"
+            placeholder="port (опционально)"
+            inputmode="numeric"
+          />
+          <p class="form-hint">Переопределяет host/port из VK link. Пустые поля — без override.</p>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Threads</label>
+          <input
+            class="text-input form-input-narrow"
+            :value="turn.threads || ''"
+            @input="setTurn('threads', toIntOrUndef($event.target.value))"
+            inputmode="numeric"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Creds group size</label>
+          <input
+            class="text-input form-input-narrow"
+            :value="turn.credsGroupSize || ''"
+            @input="setTurn('credsGroupSize', toIntOrUndef($event.target.value))"
+            inputmode="numeric"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Session mode</label>
+          <OneuiSelect
+            :model-value="turn.sessionMode || 'TURN_SESSION_MODE_UNSPECIFIED'"
+            :options="sessionModeOptions"
+            @change="setTurn('sessionMode', $event === 'TURN_SESSION_MODE_UNSPECIFIED' ? undefined : $event)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Отпечаток браузера</label>
+          <OneuiSelect
+            :model-value="turn.browserFingerprint || 'auto'"
+            :options="browserFingerprintOptions"
+            @change="setTurn('browserFingerprint', $event === 'auto' ? undefined : $event)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Runtime mode</label>
+          <OneuiSelect
+            :model-value="turn.runtimeMode || 'PROXY_RUNTIME_MODE_UNSPECIFIED'"
+            :options="runtimeModeOptions"
+            @change="setTurn('runtimeMode', $event === 'PROXY_RUNTIME_MODE_UNSPECIFIED' ? undefined : $event)"
+          />
+        </div>
+        <div class="form-row form-row-stack" v-if="turn.runtimeMode === 'PROXY_RUNTIME_MODE_PROXY'">
+          <label class="form-label">Local endpoint (proxy-mode)</label>
+          <input
+            class="text-input"
+            :value="turn.localEndpoint?.host || ''"
+            @input="setTurnLocalEndpointHost($event.target.value)"
+            placeholder="host"
+          />
+          <input
+            class="text-input mt-2"
+            :value="turn.localEndpoint?.port || ''"
+            @input="setTurnLocalEndpointPort($event.target.value)"
+            placeholder="port"
+            inputmode="numeric"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">UDP</label>
+          <OneuiSwitch :model-value="!!turn.useUdp" @change="setTurn('useUdp', $event)" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Без обфускации</label>
+          <OneuiSwitch :model-value="!!turn.noObfuscation" @change="setTurn('noObfuscation', $event)" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Manual captcha</label>
+          <OneuiSwitch :model-value="!!turn.manualCaptcha" @change="setTurn('manualCaptcha', $event)" />
+        </div>
+        <div class="form-row" v-if="!turn.manualCaptcha">
+          <label class="form-label">Captcha auto-solver</label>
+          <OneuiSelect
+            :model-value="turn.captchaAutoSolver || 'v2'"
+            :options="captchaAutoSolverOptions"
+            @change="setTurn('captchaAutoSolver', $event || undefined)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Restart on network change</label>
+          <OneuiSwitch
+            :model-value="!!turn.restartOnNetworkChange"
+            @change="setTurn('restartOnNetworkChange', $event)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">DNS режим</label>
+          <OneuiSelect
+            :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'"
+            :options="dnsOptions"
+            @change="setAp('dnsMode', $event === 'DNS_MODE_UNSPECIFIED' ? undefined : $event)"
+          />
+        </div>
+        <div class="form-row form-row-stack">
+          <label class="form-label">Свои DNS-резолверы</label>
+          <textarea
+            class="text-input"
+            rows="3"
+            :value="turnUserDnsText"
+            @input="setTurnUserDns($event.target.value)"
+            placeholder="https://dns.example/dns-query&#10;udp://77.88.8.8:53&#10;77.88.8.8"
+          />
+          <p class="form-hint">
+            По одной записи на строку. Ставятся ПЕРЕД встроенным списком (Yandex → Google → Cloudflare). DoH
+            (https://...), plain UDP (udp://ip[:port] или просто ip[:port]). DoT пока не поддерживается.
+          </p>
+        </div>
+        <h4 class="form-subsection-title">Обфускация / WRAP</h4>
+        <div class="form-row">
+          <label class="form-label">Режим WRAP</label>
+          <OneuiSelect
+            :model-value="turn.wrapMode || 'WRAP_MODE_UNSPECIFIED'"
+            :options="wrapModeOptions"
+            @change="setTurn('wrapMode', $event === 'WRAP_MODE_UNSPECIFIED' ? undefined : $event)"
+          />
+        </div>
+        <div class="form-row" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
+          <label class="form-label">Шифр</label>
+          <OneuiSelect
+            :model-value="turnPrimaryWrapCipher"
+            :options="wrapCipherOptions"
+            @change="setTurnPrimaryWrapCipher($event)"
+          />
+        </div>
+        <div class="form-row form-row-stack" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
+          <label class="form-label">Ключ (hex, 32 байта)</label>
+          <input
+            class="text-input"
+            :value="turnWrapKeyHex"
+            @input="setTurnWrapKeyHex($event.target.value)"
+            placeholder="64 hex-символа (пусто — клиент сгенерирует сам)"
+          />
+          <button class="button-secondary mt-2" type="button" @click="generateTurnWrapKey">
+            Сгенерировать новый ключ
+          </button>
+          <p class="form-hint">Пустое значение — клиент сгенерирует ключ при первом запуске.</p>
+        </div>
+        <div class="form-row" v-if="turn.wrapMode !== 'WRAP_MODE_OFF'">
+          <label class="form-label">Передавать ключ in-band</label>
+          <OneuiSwitch :model-value="turnWrapSendKey" @change="setTurnWrapSendKey($event)" />
+        </div>
+      </template>
+    </FormSection>
 
     <!-- Xray basics -->
-    <section v-if="show('xray')" class="form-section">
-      <h3 class="form-section-title">Xray</h3>
+    <FormSection v-if="show('xray')" title="Xray" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Allow LAN</label>
         <OneuiSwitch :model-value="!!xraySettings.allowLan" @change="setXrayS('allowLan', $event)" />
@@ -311,11 +324,10 @@
           @change="setXrayS('wakeProbeMode', $event === 'WAKE_PROBE_MODE_UNSPECIFIED' ? undefined : $event)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- WB Stream -->
-    <section v-if="show('wb_stream')" class="form-section">
-      <h3 class="form-section-title">WB Stream</h3>
+    <FormSection v-if="show('wb_stream')" title="WB Stream" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Под-backend</label>
         <OneuiSelect
@@ -366,11 +378,10 @@
           @change="setAp('dnsMode', $event === 'DNS_MODE_UNSPECIFIED' ? undefined : $event)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- Backend selector -->
-    <section v-if="show('backend')" class="form-section">
-      <h3 class="form-section-title">Бэкенд</h3>
+    <FormSection v-if="show('backend')" title="Бэкенд" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Активный backend</label>
         <OneuiSelect
@@ -379,11 +390,10 @@
           @change="setRoot('backend', $event === 'BACKEND_TYPE_UNSPECIFIED' ? undefined : $event)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- WireGuard -->
-    <section v-if="show('wireguard')" class="form-section">
-      <h3 class="form-section-title">WireGuard</h3>
+    <FormSection v-if="show('wireguard')" title="WireGuard" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row form-row-stack">
         <label class="form-label">Endpoint host</label>
         <input class="text-input" :value="wg.endpoint?.host || ''" @input="setWgEndpointHost($event.target.value)" />
@@ -448,11 +458,10 @@
           @input="setWgPeerField('presharedKey', $event.target.value)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- AmneziaWG -->
-    <section v-if="show('amneziawg')" class="form-section">
-      <h3 class="form-section-title">AmneziaWG</h3>
+    <FormSection v-if="show('amneziawg')" title="AmneziaWG" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row form-row-stack">
         <label class="form-label">awg-quick конфиг</label>
         <textarea
@@ -463,11 +472,15 @@
           @input="setAwg('awgQuickConfig', $event.target.value)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- App routing -->
-    <section v-if="show('app_routing')" class="form-section">
-      <h3 class="form-section-title">Per-app routing</h3>
+    <FormSection
+      v-if="show('app_routing')"
+      title="Per-app routing"
+      :collapsible="collapsible"
+      :default-collapsed="collapsible"
+    >
       <div class="form-row form-row-stack">
         <label class="form-label">Режим маршрутизации</label>
         <div class="routing-mode-picker" role="radiogroup" aria-label="Routing mode">
@@ -509,11 +522,10 @@
           @input="setAppRoutingArray('whitelistPackages', $event.target.value)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- Xposed -->
-    <section v-if="show('xposed')" class="form-section">
-      <h3 class="form-section-title">Xposed</h3>
+    <FormSection v-if="show('xposed')" title="Xposed" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Enabled</label>
         <OneuiSwitch :model-value="!!xposed.enabled" @change="setXposed('enabled', $event)" />
@@ -556,11 +568,10 @@
           "
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- Root settings -->
-    <section v-if="show('root')" class="form-section">
-      <h3 class="form-section-title">Root</h3>
+    <FormSection v-if="show('root')" title="Root" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Root mode enabled</label>
         <OneuiSwitch :model-value="!!root.enabled" @change="setRootSettings('enabled', $event)" />
@@ -581,11 +592,10 @@
           @input="setRootSettings('wgInterfaceName', $event.target.value)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- Sharing -->
-    <section v-if="show('sharing')" class="form-section">
-      <h3 class="form-section-title">Sharing</h3>
+    <FormSection v-if="show('sharing')" title="Sharing" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Автозапуск раздачи</label>
         <OneuiSwitch :model-value="!!sharing.autoStartOnBoot" @change="setSharing('autoStartOnBoot', $event)" />
@@ -614,12 +624,10 @@
           @input="setSharing('fallbackUpstreamInterface', $event.target.value)"
         />
       </div>
-    </section>
+    </FormSection>
 
     <!-- ByeDPI -->
-    <section v-if="show('byedpi')" class="form-section">
-      <h3 class="form-section-title">ByeDPI</h3>
-
+    <FormSection v-if="show('byedpi')" title="ByeDPI" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
         <label class="form-label">Enabled</label>
         <OneuiSwitch :model-value="!!byeDpi.enabled" @change="setByeDpi('enabled', $event)" />
@@ -906,7 +914,7 @@
           @change="setByeDpi('proxytestUseCustomStrategies', $event)"
         />
       </div>
-    </section>
+    </FormSection>
   </div>
 </template>
 
@@ -915,6 +923,8 @@ import { computed } from 'vue';
 import { Plus, PowerOff, ShieldCheck, ShieldHalf, Shuffle, Sparkles, Split, Trash2 } from 'lucide-vue-next';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
+import FormSection from '@/components/domain/FormSection.vue';
+import SamsungLoader from '@/components/layout/SamsungLoader.vue';
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -939,6 +949,14 @@ const props = defineProps({
   // section: { enabled: Boolean, nodeId: String, nodes: [{value,label}] }. The
   // client token and endpoint are filled server-side, never here.
   provision: { type: Object, default: null },
+  // When true each section renders as a collapsible card (like the nodes page),
+  // collapsed by default. Used on the client "Конфигурация" tab where every
+  // section is shown at once; the per-backend tabs leave it false.
+  collapsible: { type: Boolean, default: false },
+  // When true the VK TURN section shows ONLY the panel-managed provisioning
+  // controls (allow-auto-wg toggle + node selector) and hides every other field.
+  // Config-only clients use this: there is nothing else for the panel to manage.
+  provisionOnly: { type: Boolean, default: false },
 });
 const emit = defineEmits(['update:modelValue', 'generate-vk-link', 'update:provisionEnabled', 'update:provisionNode']);
 

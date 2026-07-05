@@ -26,11 +26,11 @@
             </div>
           </div>
         </div>
-        <div class="admin-detail-actions">
-          <SamsungButton variant="secondary" :busy="busyLink" @click="showLink">
-            <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-            Показать ссылку
-          </SamsungButton>
+        <div v-if="detail" class="admin-detail-actions management-toggle">
+          <div class="management-toggle-control">
+            <OneuiRadioGroup v-model="managementPillValue" :options="managementTypeOptions" variant="pill" />
+            <SamsungLoader v-if="busyManagement" class="management-toggle-loader" />
+          </div>
         </div>
       </header>
 
@@ -78,7 +78,7 @@
 
       <div class="admin-tabs">
         <button
-          v-for="tab in tabs"
+          v-for="tab in visibleTabs"
           :key="tab.id"
           :class="['admin-tab', activeTab === tab.id ? 'is-active' : '']"
           @click="setActiveTab(tab.id)"
@@ -134,7 +134,7 @@
         </div>
       </section>
 
-      <section v-if="activeTab === 'config'" class="surface-card">
+      <section v-if="activeTab === 'config' && !isConfigOnly" class="surface-card">
         <div class="config-mode-tabs">
           <button :class="['admin-tab', configMode === 'form' ? 'is-active' : '']" @click="setConfigMode('form')">
             Форма
@@ -182,6 +182,7 @@
         <ConfigFormEditor
           v-if="configMode === 'form'"
           :model-value="formValue"
+          :collapsible="true"
           :has-root-access="!!detail.client?.has_root_access"
           :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
           :per-client-actions="true"
@@ -464,8 +465,13 @@
         class="surface-card admin-tab-pane"
       >
         <div class="admin-sticky-bar">
-          <p class="admin-muted">Настройки только для {{ backendTabLabel(backend) }}.</p>
-          <SamsungButton :busy="busyPush" @click="pushConfig">
+          <p class="admin-muted">
+            <template v-if="backend === 'vk_turn' && isConfigOnly">
+              Только выдача конфигурации: панель отдаёт wg-конфиг по токену. Изменения сохраняются автоматически.
+            </template>
+            <template v-else>Настройки только для {{ backendTabLabel(backend) }}.</template>
+          </p>
+          <SamsungButton v-if="!(backend === 'vk_turn' && isConfigOnly)" :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
             {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
           </SamsungButton>
@@ -473,6 +479,7 @@
         <ConfigFormEditor
           :model-value="formValue"
           :sections="backendTabSections[backend]"
+          :provision-only="backend === 'vk_turn' && isConfigOnly"
           :has-root-access="!!detail.client?.has_root_access"
           :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
           :per-client-actions="true"
@@ -785,7 +792,12 @@ const logStreams = [
 ];
 
 const validTabIds = tabs.map((t) => t.id);
-const activeTab = computed(() => (validTabIds.includes(props.tab) ? props.tab : 'config'));
+const activeTab = computed(() => {
+  const want = validTabIds.includes(props.tab) ? props.tab : 'config';
+  // In config-only mode a stale deep link to a hidden tab lands on Конфигурация.
+  if (isConfigOnly.value && want !== 'config' && want !== 'vk_turn') return 'config';
+  return want;
+});
 function setActiveTab(tabId) {
   if (!validTabIds.includes(tabId)) tabId = 'config';
   router.replace({ name: 'admin-client-detail', params: { id: props.id, tab: tabId } });
@@ -817,6 +829,7 @@ const vkTurnNodes = ref([]);
 const provisionEnabled = ref(false);
 const provisionNodeId = ref('');
 const provisionSeeded = ref(false);
+const busyProvisionSave = ref(false);
 const vkTurnNodeOptions = computed(() => [
   { value: '', label: 'Не выбран' },
   ...vkTurnNodes.value.map((n) => ({ value: n.id, label: n.name || n.id })),
@@ -825,7 +838,29 @@ const provisionState = computed(() => ({
   enabled: provisionEnabled.value,
   nodeId: provisionNodeId.value,
   nodes: vkTurnNodeOptions.value,
+  busy: busyProvisionSave.value,
 }));
+
+// Management type (full remote control vs config-only). Seeded once from the
+// loaded client; the header pill flips it and auto-saves. Config-only hides every
+// section except VK TURN and drops the Push button - there is nothing to push.
+const remoteControl = ref(true);
+const remoteControlSeeded = ref(false);
+const busyManagement = ref(false);
+const isConfigOnly = computed(() => !!detail.value && !remoteControl.value);
+const managementTypeOptions = [
+  { value: 'full', label: 'Полный контроль' },
+  { value: 'config', label: 'Только конфигурация' },
+];
+const managementPillValue = computed({
+  get: () => (remoteControl.value ? 'full' : 'config'),
+  set: (v) => saveManagement(v === 'full'),
+});
+// Config-only clients keep just the Конфигурация (QR + token rotation) and VK TURN
+// (provisioning) tabs; the panel manages nothing else on them.
+const visibleTabs = computed(() =>
+  isConfigOnly.value ? tabs.filter((t) => t.id === 'config' || t.id === 'vk_turn') : tabs,
+);
 const queueVkLinkCount = ref(1);
 const busyCmd = ref(false);
 const busyDelete = ref(false);
@@ -957,9 +992,12 @@ const connectionFacts = computed(() => {
     if (wb.roomId) rows.push({ label: 'Room', value: wb.roomId, mono: true });
     if (wb.displayName) rows.push({ label: 'Имя', value: wb.displayName });
   }
-  rows.push({ label: 'Sync', value: syncModeLabel(client.sync_mode) });
-  if (client.sync_mode === 'periodic')
-    rows.push({ label: 'Интервал', value: `${client.periodic_interval_minutes} мин` });
+  // Config-only clients never sync over Guardian - there is no sync to report.
+  if (!isConfigOnly.value) {
+    rows.push({ label: 'Sync', value: syncModeLabel(client.sync_mode) });
+    if (client.sync_mode === 'periodic')
+      rows.push({ label: 'Интервал', value: `${client.periodic_interval_minutes} мин` });
+  }
   rows.push({ label: 'Создан', value: formatDate(client.created_at) });
   rows.push({ label: 'ID', value: client.id, mono: true });
   return rows;
@@ -1030,6 +1068,10 @@ async function loadDetail() {
       matchProvisionNodeFromConfig();
       provisionSeeded.value = true;
     }
+    if (!remoteControlSeeded.value) {
+      remoteControl.value = detail.value.client?.remote_control !== false;
+      remoteControlSeeded.value = true;
+    }
     // Lazy-load the wingsv:// link so the QR card on Конфигурация has data
     // without requiring the admin to click "Показать ссылку" first.
     if (!wingsvLink.value) {
@@ -1042,9 +1084,74 @@ async function loadDetail() {
 
 function onProvisionEnabled(v) {
   provisionEnabled.value = !!v;
+  // Config-only clients have no Push button: persist the toggle immediately.
+  if (isConfigOnly.value) autoSaveProvision();
 }
 function onProvisionNode(v) {
   provisionNodeId.value = v || '';
+  if (isConfigOnly.value) autoSaveProvision();
+}
+
+// saveManagement flips the client's management type and persists it. It only
+// changes the enrollment-link shape and which sections the UI shows.
+async function saveManagement(remote) {
+  if (busyManagement.value || remote === remoteControl.value) return;
+  busyManagement.value = true;
+  try {
+    const res = await fetch(`/api/admin/clients/${id.value}/management`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ remote_control: remote }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Не удалось сохранить тип управления');
+    }
+    remoteControl.value = remote;
+    wingsvLink.value = '';
+    wingsvLinkQR.value = '';
+    ensureLink().catch(() => {});
+  } catch (err) {
+    loadError.value = err.message || 'Не удалось сохранить тип управления';
+  } finally {
+    busyManagement.value = false;
+  }
+}
+
+// autoSaveProvision persists the provisioning toggle + node without the Push
+// button, reusing the config endpoint (which injects/refreshes the managed VK-TURN
+// profile server-side). Used by config-only clients.
+async function autoSaveProvision() {
+  if (busyProvisionSave.value) return;
+  busyProvisionSave.value = true;
+  try {
+    let parsed = {};
+    try {
+      parsed = JSON.parse(configDraft.value || '{}');
+    } catch {
+      parsed = {};
+    }
+    const res = await fetch(`/api/admin/clients/${id.value}/config`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        config: parsed,
+        provision: provisionEnabled.value,
+        vk_turn_node_id: provisionNodeId.value,
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Не удалось сохранить');
+    }
+    await loadDetail();
+  } catch (err) {
+    configError.value = err.message || 'Не удалось сохранить';
+  } finally {
+    busyProvisionSave.value = false;
+  }
 }
 function hostOf(endpoint) {
   return String(endpoint || '')
