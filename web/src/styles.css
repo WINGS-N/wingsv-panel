@@ -1431,6 +1431,11 @@
     gap: 24px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    /* Bound the scroll box to the column width so its items overflow INSIDE the
+       nav (which scrolls) instead of widening the clipped shell (no scroll). */
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
   }
   .admin-nav::-webkit-scrollbar {
     display: none;
