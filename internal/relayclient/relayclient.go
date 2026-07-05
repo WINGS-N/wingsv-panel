@@ -190,6 +190,38 @@ func (p *Provisioner) FlowStats(ctx context.Context, node dbmodel.ServerNode) (F
 	}, nil
 }
 
+// StreamFlowStats opens a live FlowStats stream to the node and invokes onStats
+// for every snapshot the relay pushes, until ctx is cancelled or the stream ends.
+// The caller owns the lifecycle (one goroutine per node) and re-dials after a
+// backoff when this returns an error. Blocks until the stream closes.
+func (p *Provisioner) StreamFlowStats(ctx context.Context, node dbmodel.ServerNode, onStats func(FlowStats)) error {
+	conn, err := p.dial(node)
+	if err != nil {
+		return fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	stream, err := relaypb.NewRelayClient(conn).StreamFlowStats(p.authCtx(ctx), &relaypb.GetFlowStatsRequest{})
+	if err != nil {
+		return err
+	}
+	for {
+		st, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		onStats(FlowStats{
+			ActiveStreams:             st.GetActiveStreams(),
+			ActiveSessions:            st.GetActiveSessions(),
+			TotalSessions:             st.GetTotalSessions(),
+			AvgSessionLifetimeSeconds: st.GetAvgSessionLifetimeSeconds(),
+			ServerRxBytes:             st.GetServerRxBytes(),
+			ServerTxBytes:             st.GetServerTxBytes(),
+			StreamsByProtocol:         st.GetStreamsByProtocol(),
+		})
+	}
+}
+
 // NodeStatus queries a node's Relay API for its status and aggregate peer
 // traffic.
 // Peer is one wg peer's live counters, used to attribute per-client traffic.
