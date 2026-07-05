@@ -222,6 +222,45 @@ func (p *Provisioner) StreamFlowStats(ctx context.Context, node dbmodel.ServerNo
 	}
 }
 
+// StreamFlows opens a live active-flow stream to the node and invokes onFlows for
+// every snapshot the relay pushes, until ctx is cancelled or the stream ends. The
+// caller owns the lifecycle and re-dials after a backoff on error.
+func (p *Provisioner) StreamFlows(ctx context.Context, node dbmodel.ServerNode, onFlows func([]Flow)) error {
+	conn, err := p.dial(node)
+	if err != nil {
+		return fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	stream, err := relaypb.NewRelayClient(conn).StreamFlows(p.authCtx(ctx), &relaypb.ListFlowsRequest{})
+	if err != nil {
+		return err
+	}
+	for {
+		resp, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		out := make([]Flow, 0, len(resp.GetFlows()))
+		for _, f := range resp.GetFlows() {
+			out = append(out, Flow{
+				SessionID:   f.GetSessionId(),
+				StreamID:    f.GetStreamId(),
+				ClientIP:    f.GetClientIp(),
+				Remote:      f.GetRemote(),
+				Protocol:    f.GetProtocol(),
+				Version:     f.GetVersion(),
+				RxBytes:     f.GetRxBytes(),
+				TxBytes:     f.GetTxBytes(),
+				RxRate:      f.GetRxRate(),
+				TxRate:      f.GetTxRate(),
+				StartedUnix: f.GetStartedUnix(),
+			})
+		}
+		onFlows(out)
+	}
+}
+
 // NodeStatus queries a node's Relay API for its status and aggregate peer
 // traffic.
 // Peer is one wg peer's live counters, used to attribute per-client traffic.

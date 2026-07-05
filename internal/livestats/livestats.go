@@ -85,6 +85,30 @@ func (s *Store) RatesFor(ids []string) (uint64, uint64) {
 // Relay is the slice of the relay client the streamer needs.
 type Relay interface {
 	StreamFlowStats(ctx context.Context, node dbmodel.ServerNode, onStats func(relayclient.FlowStats)) error
+	StreamFlows(ctx context.Context, node dbmodel.ServerNode, onFlows func([]relayclient.Flow)) error
+}
+
+// flowMsg mirrors statsview.Flow's JSON so the pushed flows match the shape the
+// dashboard already renders from the REST flows endpoint.
+type flowMsg struct {
+	NodeID    string `json:"node_id"`
+	SessionID string `json:"session_id"`
+	StreamID  uint32 `json:"stream_id"`
+	ClientIP  string `json:"client_ip"`
+	Remote    string `json:"remote"`
+	Protocol  string `json:"protocol"`
+	Version   uint32 `json:"version"`
+	RxBytes   uint64 `json:"rx_bytes"`
+	TxBytes   uint64 `json:"tx_bytes"`
+	RxRate    uint64 `json:"rx_rate"`
+	TxRate    uint64 `json:"tx_rate"`
+	Started   int64  `json:"started_unix"`
+}
+
+// nodeFlowsMsg is the node_flows WS payload: one node's current active flows.
+type nodeFlowsMsg struct {
+	NodeID string    `json:"node_id"`
+	Flows  []flowMsg `json:"flows"`
 }
 
 // Lister lists the vk-turn-proxy nodes to keep streams open for.
@@ -157,6 +181,7 @@ func (s *Streamer) reconcile(ctx context.Context, active map[string]context.Canc
 		nodeCtx, cancel := context.WithCancel(ctx)
 		active[node.ID] = cancel
 		go s.streamNode(nodeCtx, node)
+		go s.streamFlows(nodeCtx, node)
 	}
 	for id, cancel := range active {
 		if !seen[id] {
@@ -189,6 +214,40 @@ func (s *Streamer) streamNode(ctx context.Context, node dbmodel.ServerNode) {
 		}
 		if err != nil {
 			log.Printf("livestats: node %s flow-stats stream ended: %v", node.ID, err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
+// streamFlows holds a StreamFlows subscription and pushes each node's active-flow
+// snapshot to the admin WS as a node_flows event, driving the live flow graph.
+func (s *Streamer) streamFlows(ctx context.Context, node dbmodel.ServerNode) {
+	if s.emit == nil {
+		return
+	}
+	for ctx.Err() == nil {
+		err := s.newRelay(node).StreamFlows(ctx, node, func(flows []relayclient.Flow) {
+			msg := nodeFlowsMsg{NodeID: node.ID, Flows: make([]flowMsg, 0, len(flows))}
+			for _, f := range flows {
+				msg.Flows = append(msg.Flows, flowMsg{
+					NodeID: node.ID, SessionID: f.SessionID, StreamID: f.StreamID,
+					ClientIP: f.ClientIP, Remote: f.Remote, Protocol: f.Protocol, Version: f.Version,
+					RxBytes: f.RxBytes, TxBytes: f.TxBytes, RxRate: f.RxRate, TxRate: f.TxRate, Started: f.StartedUnix,
+				})
+			}
+			if payload, mErr := json.Marshal(msg); mErr == nil {
+				s.emit("node_flows", payload)
+			}
+		})
+		if ctx.Err() != nil {
+			return
+		}
+		if err != nil {
+			log.Printf("livestats: node %s flows stream ended: %v", node.ID, err)
 		}
 		select {
 		case <-ctx.Done():
