@@ -46,6 +46,24 @@ go run ./cmd/server
 
 Сервис будет доступен на `http://localhost:8080`. Учётная запись по умолчанию — `admin` / `admin`; её рекомендуется заменить переменными окружения `BOOTSTRAP_ADMIN_USERNAME` и `BOOTSTRAP_ADMIN_PASSWORD` до первого запуска.
 
+## Установка одной командой (install.sh)
+
+Готовый инсталлятор для отдельного сервера. По умолчанию ставит панель бинарём
+(флаг `--docker` — контейнером), спрашивает про порт, сертификат (Let's Encrypt
+через acme.sh / готовый cert / self-signed без домена), бутстрап-админа, а также
+предлагает поднять локальную ноду vk-turn-proxy и (если найден) подключить
+локальный 3x-ui для создания профилей.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/WINGS-N/wingsv-panel/main/install.sh | sudo bash
+# опции: --docker  --yes  --uninstall
+```
+
+Панель отдаёт HTTPS сама (env `TLS_CERT`/`TLS_KEY`, либо `TLS_SELF_SIGNED=true` —
+leaf из встроенного CA; SPKI-пин попадает в enrollment-ссылки приложения).
+Скрипт кладёт конфиги в `/etc/wings/`, данные в `/var/lib/wings/panel`, ставит
+systemd-юниты `wingsv-panel` и `wings-vktp`.
+
 ## Запуск через Docker
 
 ```bash
