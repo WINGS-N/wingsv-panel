@@ -189,7 +189,7 @@ configure_cert() {
   echo "Certificate:"
   echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - needs a domain and free :80"
   echo "  2) Existing certificate (provide cert + key paths)"
-  echo "  3) Self-signed (no domain) - built-in CA + SPKI pin for the app"
+  echo "  3) Self-signed (own CA + SPKI pin) - domain or bare IP, no external CA needed"
   local choice; choice=$(ask "choose 1/2/3" 3)
   case "$choice" in
     1)
@@ -209,7 +209,7 @@ configure_cert() {
       ;;
     *)
       TLS_SELF_SIGNED=true
-      local host; host=$(ask "public IP or hostname of this server")
+      local host; host=$(ask "public domain, hostname or IP of this server")
       [ -n "$host" ] || die "host required"
       PUBLIC_BASE_URL="https://$host$(port_suffix)"
       ;;
