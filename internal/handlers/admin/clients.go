@@ -311,7 +311,9 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 	if managed := h.managedTurn(clientID, name, tokenBytes, vkTurnEndpoint); managed != nil {
 		seedConfig.Turn = managed
 		markVkTurnBackend(seedConfig)
-		h.applyAdminVKLinks(seedConfig.Turn, admin.ID)
+		// Stored config is the WS source of truth: keep the full VK-links pool so
+		// config-on-connect pushes the rest to the device.
+		h.applyAdminVKLinks(seedConfig.Turn, admin.ID, 0)
 	}
 	configBytes, err := proto.Marshal(seedConfig)
 	if err != nil {
@@ -395,7 +397,9 @@ func (h *Handler) buildClientLink(
 	cfg := &wingsvpb.Config{Ver: 1}
 	cfg.Turn = h.managedTurn(clientID, name, token, vkTurnEndpoint)
 	markVkTurnBackend(cfg)
-	h.applyAdminVKLinks(cfg.Turn, admin.ID)
+	// Enrollment link / QR: only a couple of links to bootstrap; the rest arrive
+	// over the Guardian WS from the stored config.
+	h.applyAdminVKLinks(cfg.Turn, admin.ID, maxEnrollmentVKLinks)
 	if remoteControl {
 		cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN
 		cfg.Guardian = &wingsvpb.Guardian{
@@ -419,19 +423,45 @@ func (h *Handler) buildClientLink(
 	return preview.BuildWingsLink(cfg)
 }
 
+// maxEnrollmentVKLinks caps how many VK links the enrollment link / QR carries.
+// The QR only needs a couple to bootstrap the relay; the rest of the admin's pool
+// reaches a remote-controlled client over the Guardian WS (config-on-connect
+// pushes the full stored config). Keeping the QR small keeps it scannable.
+const maxEnrollmentVKLinks = 2
+
 // applyAdminVKLinks embeds the admin's shared VK Links pool into turn. The app
 // imports these append-only into its own shared settings.vkLinks (any profile
-// import only adds links, never wipes), so no merge flag is needed. No-op when
-// the admin has no links or there is no VK-TURN turn to attach them to.
-func (h *Handler) applyAdminVKLinks(turn *wingsvpb.Turn, adminID int64) {
-	if turn == nil || h.store == nil {
+// import only adds links, never wipes), so no merge flag is needed. Only a
+// VK-TURN turn (a managed self-provisioning profile) carries links; max <= 0
+// embeds the whole pool (the stored config, the WS source of truth), max > 0
+// caps it (the enrollment link / QR). No-op when the admin has no links.
+func (h *Handler) applyAdminVKLinks(turn *wingsvpb.Turn, adminID int64, max int) {
+	if turn == nil || h.store == nil || !hasManagedTurnProfile(turn) {
 		return
 	}
 	links, err := h.store.GetAdminVKLinks(adminID)
 	if err != nil || len(links) == 0 {
 		return
 	}
-	turn.Links = mergeVKLinks(turn.Links, links)
+	merged := mergeVKLinks(turn.Links, links)
+	if max > 0 && len(merged) > max {
+		merged = merged[:max]
+	}
+	turn.Links = merged
+}
+
+// hasManagedTurnProfile reports whether turn explicitly carries a panel-managed
+// VK-TURN (self-provisioning) profile - the only case where VK links belong.
+func hasManagedTurnProfile(turn *wingsvpb.Turn) bool {
+	if turn == nil {
+		return false
+	}
+	for _, p := range turn.Profiles {
+		if isManagedProfile(p) {
+			return true
+		}
+	}
+	return false
 }
 
 // mergeVKLinks unions existing and added links, trimming blanks and keeping
@@ -532,6 +562,11 @@ func stripManagedTurnProfiles(turn *wingsvpb.Turn) *wingsvpb.Turn {
 		}
 	}
 	turn.Profiles = kept
+	if len(kept) == 0 {
+		// No VK-TURN profile remains: the shared VK links are orphaned, so a
+		// non-provision config must not keep carrying them.
+		turn.Links = nil
+	}
 	if turn.ActiveProfileId != "" && !hasProfile(kept, turn.ActiveProfileId) {
 		if len(kept) > 0 {
 			turn.ActiveProfileId = kept[0].Id
