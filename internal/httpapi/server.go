@@ -674,11 +674,58 @@ func Run(ctx context.Context, cfg config.Config) error {
 		_ = server.Shutdown(shutdownContext)
 	}()
 
-	if listenErr := server.ListenAndServe(); !errors.Is(listenErr, http.ErrServerClosed) {
+	if listenErr := serveHTTP(cfg, server); !errors.Is(listenErr, http.ErrServerClosed) {
 		return listenErr
 	}
 	<-shutdownDone
 	return nil
+}
+
+// serveHTTP starts the web listener in the configured TLS mode:
+//   - TLS_CERT + TLS_KEY: serve that PEM cert/key directly (Let's Encrypt via
+//     acme.sh, or bring-your-own).
+//   - TLS_SELF_SIGNED: serve a leaf issued by the deployment CA (CA_DIR) for the
+//     PublicBaseURL host, so a no-domain install still gets HTTPS whose CA SPKI
+//     matches the pin embedded in enrollment links.
+//   - neither: plain HTTP, expecting a reverse proxy to terminate TLS.
+func serveHTTP(cfg config.Config, server *http.Server) error {
+	switch {
+	case cfg.TLSCert != "" && cfg.TLSKey != "":
+		log.Printf("serving HTTPS on %s (cert=%s)", cfg.ListenAddr, cfg.TLSCert)
+		return server.ListenAndServeTLS(cfg.TLSCert, cfg.TLSKey)
+	case cfg.TLSSelfSigned:
+		ca, _, caErr := pki.LoadOrCreateCA(cfg.CADir)
+		if caErr != nil {
+			return caErr
+		}
+		host := hostFromBaseURL(cfg.PublicBaseURL)
+		cert, certErr := ca.ServerTLSCertificate([]string{host, "localhost"}, pki.DefaultLeafValidity)
+		if certErr != nil {
+			return certErr
+		}
+		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+		log.Printf("serving HTTPS on %s (self-signed leaf under %s for host %q)", cfg.ListenAddr, cfg.CADir, host)
+		return server.ListenAndServeTLS("", "")
+	default:
+		log.Printf("serving HTTP on %s (no TLS; expecting a reverse proxy)", cfg.ListenAddr)
+		return server.ListenAndServe()
+	}
+}
+
+// hostFromBaseURL extracts the bare host (no scheme, path or port) from a base
+// URL, for the self-signed leaf SAN. Falls back to "localhost".
+func hostFromBaseURL(base string) string {
+	h := strings.TrimPrefix(strings.TrimPrefix(base, "https://"), "http://")
+	if i := strings.IndexByte(h, '/'); i >= 0 {
+		h = h[:i]
+	}
+	if host, _, err := net.SplitHostPort(h); err == nil {
+		h = host
+	}
+	if strings.TrimSpace(h) == "" {
+		return "localhost"
+	}
+	return h
 }
 
 // isPostgresKind reports whether the configured DB is Postgres, the only backend

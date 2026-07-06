@@ -17,6 +17,14 @@ type Config struct {
 	DBKind             string
 	DBDSN              string
 	CADir              string
+	// TLSCert / TLSKey point at a PEM certificate + key so the panel serves HTTPS
+	// itself (Let's Encrypt via acme.sh, or bring-your-own). Empty = no direct TLS.
+	TLSCert string
+	TLSKey  string
+	// TLSSelfSigned makes the panel serve a leaf issued by the deployment CA
+	// (CA_DIR) for the PublicBaseURL host, so a no-domain install gets HTTPS whose
+	// SPKI pin the app already embeds in enrollment links.
+	TLSSelfSigned      bool
 	ProvisioningListen string
 	RelayToken         string
 	// VkTurnEndpoint is the VK TURN relay address the app dials to reach the
@@ -49,6 +57,9 @@ func Load() Config {
 		DBKind:                 getEnv("DB_KIND", "sqlite"),
 		DBDSN:                  getEnv("DB_DSN", ""),
 		CADir:                  getEnv("CA_DIR", "./certs"),
+		TLSCert:                getEnv("TLS_CERT", ""),
+		TLSKey:                 getEnv("TLS_KEY", ""),
+		TLSSelfSigned:          parseBoolEnv("TLS_SELF_SIGNED", false),
 		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
 		RelayToken:             getEnv("RELAY_TOKEN", ""),
 		VkTurnEndpoint:         getEnv("VK_TURN_ENDPOINT", ""),
