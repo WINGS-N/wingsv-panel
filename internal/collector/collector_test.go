@@ -18,6 +18,12 @@ type fakeStore struct {
 	peers    []dbmodel.PeerTraffic
 	statuses map[string]string
 	pruned   bool
+	// Traffic-limit enforcement.
+	accumulateCalls int
+	dueResets       []string
+	blocked         []string
+	wgPeers         map[string][]dbmodel.ClientWGPeer
+	deletedRecords  []string
 }
 
 func newFakeStore(nodes ...dbmodel.ServerNode) *fakeStore {
@@ -53,12 +59,34 @@ func (f *fakeStore) UpdateServerNodeStatus(id, status string, _ int64) error {
 
 func (f *fakeStore) UpdateServerNodeRelayVersion(_, _ string) error { return nil }
 
+func (f *fakeStore) AccumulateClientTraffic() error { f.accumulateCalls++; return nil }
+func (f *fakeStore) RunDueTrafficResets(int64) ([]string, error) {
+	return f.dueResets, nil
+}
+func (f *fakeStore) BlockedProvisionedClientIDs() ([]string, error) { return f.blocked, nil }
+func (f *fakeStore) ListClientWGPeers(clientID string) ([]dbmodel.ClientWGPeer, error) {
+	return f.wgPeers[clientID], nil
+}
+func (f *fakeStore) GetServerNode(id string) (dbmodel.ServerNode, error) {
+	for _, n := range f.nodes {
+		if n.ID == id {
+			return n, nil
+		}
+	}
+	return dbmodel.ServerNode{}, errors.New("not found")
+}
+func (f *fakeStore) DeleteClientWGPeer(clientID, nodeID string) error {
+	f.deletedRecords = append(f.deletedRecords, clientID+"/"+nodeID)
+	return nil
+}
+
 type fakeRelay struct {
-	status    relayclient.RelayStatus
-	stats     relayclient.FlowStats
-	flows     []relayclient.Flow
-	peers     []relayclient.Peer
-	statusErr error
+	status      relayclient.RelayStatus
+	stats       relayclient.FlowStats
+	flows       []relayclient.Flow
+	peers       []relayclient.Peer
+	statusErr   error
+	deletedKeys []string
 }
 
 func (r *fakeRelay) NodeStatus(context.Context, dbmodel.ServerNode) (relayclient.RelayStatus, error) {
@@ -72,6 +100,10 @@ func (r *fakeRelay) ListFlows(context.Context, dbmodel.ServerNode) ([]relayclien
 }
 func (r *fakeRelay) ListPeers(context.Context, dbmodel.ServerNode) ([]relayclient.Peer, error) {
 	return r.peers, nil
+}
+func (r *fakeRelay) DeletePeer(_ context.Context, _ dbmodel.ServerNode, publicKey string) error {
+	r.deletedKeys = append(r.deletedKeys, publicKey)
+	return nil
 }
 
 func TestCollectOncePersistsAndNotifies(t *testing.T) {
@@ -116,6 +148,36 @@ func TestCollectOncePersistsAndNotifies(t *testing.T) {
 	}
 	if len(notified) != 1 || notified[0] != "n1" {
 		t.Fatalf("OnCollected not fired for n1: %v", notified)
+	}
+}
+
+func TestCollectOnceDeprovisionsBlockedClients(t *testing.T) {
+	ownNode := dbmodel.ServerNode{ID: "n1", Kind: "vk_turn_proxy", GRPCEndpoint: "x:1"}
+	xuiNode := dbmodel.ServerNode{ID: "n2", Kind: "vk_turn_proxy", GRPCEndpoint: "x:2", WGBackend: "xui"}
+	store := newFakeStore(ownNode, xuiNode)
+	store.blocked = []string{"c1"}
+	store.wgPeers = map[string][]dbmodel.ClientWGPeer{
+		"c1": {
+			{ClientID: "c1", NodeID: "n1", PublicKey: "pubOwn"},
+			{ClientID: "c1", NodeID: "n2", PublicKey: "pubXui"},
+		},
+	}
+	relay := &fakeRelay{status: relayclient.RelayStatus{PeerCount: 1}}
+	c := New(store, func(dbmodel.ServerNode) Relay { return relay }, Options{
+		Now: func() time.Time { return time.Unix(2000, 0) },
+	})
+	c.CollectOnce(context.Background())
+
+	if store.accumulateCalls != 1 {
+		t.Fatalf("AccumulateClientTraffic calls = %d, want 1", store.accumulateCalls)
+	}
+	// The relay peer is torn down; the xui-backed one is not (relay cannot reach it).
+	if len(relay.deletedKeys) != 1 || relay.deletedKeys[0] != "pubOwn" {
+		t.Fatalf("relay DeletePeer keys = %v, want [pubOwn]", relay.deletedKeys)
+	}
+	// Both stored peer records are cleared regardless of backend.
+	if len(store.deletedRecords) != 2 {
+		t.Fatalf("cleared records = %v, want 2", store.deletedRecords)
 	}
 }
 

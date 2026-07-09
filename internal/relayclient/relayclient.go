@@ -96,6 +96,22 @@ func (p *Provisioner) CreatePeer(ctx context.Context, node dbmodel.ServerNode, p
 	}, nil
 }
 
+// DeletePeer removes a wg peer from the node's relay, cutting off a deprovisioned
+// (disabled or over-limit) managed client so its tunnel drops.
+func (p *Provisioner) DeletePeer(ctx context.Context, node dbmodel.ServerNode, publicKey string) error {
+	conn, err := p.dial(node)
+	if err != nil {
+		return fmt.Errorf("dial node %s: %w", node.GRPCEndpoint, err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	_, err = relaypb.NewRelayClient(conn).DeletePeer(
+		p.authCtx(ctx),
+		&relaypb.DeletePeerRequest{PublicKey: publicKey},
+	)
+	return err
+}
+
 // RelayStatus is a node's live status, used by the metrics collector.
 type RelayStatus struct {
 	PeerCount      uint32

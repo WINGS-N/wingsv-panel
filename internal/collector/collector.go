@@ -25,6 +25,13 @@ type Store interface {
 	PruneConnectionsBefore(time.Time) error
 	UpdateServerNodeStatus(id, status string, lastSeen int64) error
 	UpdateServerNodeRelayVersion(id, version string) error
+	// Managed-client traffic-limit accounting and enforcement.
+	AccumulateClientTraffic() error
+	RunDueTrafficResets(nowUnix int64) ([]string, error)
+	BlockedProvisionedClientIDs() ([]string, error)
+	ListClientWGPeers(clientID string) ([]dbmodel.ClientWGPeer, error)
+	GetServerNode(id string) (dbmodel.ServerNode, error)
+	DeleteClientWGPeer(clientID, nodeID string) error
 }
 
 // Relay is the subset of the vk-turn-proxy gRPC client the collector calls.
@@ -33,6 +40,7 @@ type Relay interface {
 	FlowStats(ctx context.Context, node dbmodel.ServerNode) (relayclient.FlowStats, error)
 	ListFlows(ctx context.Context, node dbmodel.ServerNode) ([]relayclient.Flow, error)
 	ListPeers(ctx context.Context, node dbmodel.ServerNode) ([]relayclient.Peer, error)
+	DeletePeer(ctx context.Context, node dbmodel.ServerNode, publicKey string) error
 }
 
 // Options tune the poll cadence and retention. Zero values fall back to defaults.
@@ -142,15 +150,64 @@ func (c *Collector) CollectOnce(ctx context.Context) {
 			log.Printf("collector: node %s (%s): %v", node.ID, node.GRPCEndpoint, err)
 		}
 	}
-	// Pruning only needs to run on the persist cycle - nothing new accumulates
-	// between persists, and a DELETE scan every poll is wasteful on sqlite.
+	// Pruning and traffic-limit enforcement only need the persist cycle - the
+	// per-peer counters they read are refreshed there, not every poll.
 	if persist {
+		c.enforceTrafficLimits(ctx, now)
 		if err := c.store.PruneTrafficBefore(now.Add(-c.opts.TrafficRetention)); err != nil {
 			log.Printf("collector: prune traffic: %v", err)
 		}
 		if err := c.store.PruneConnectionsBefore(now.Add(-c.opts.ConnRetention)); err != nil {
 			log.Printf("collector: prune connections: %v", err)
 		}
+	}
+}
+
+// enforceTrafficLimits folds the latest per-peer counters into each managed
+// client's durable usage, runs any due periodic resets, then deprovisions every
+// client that is now cut off (disabled or over its limit) so its tunnel drops.
+func (c *Collector) enforceTrafficLimits(ctx context.Context, now time.Time) {
+	if err := c.store.AccumulateClientTraffic(); err != nil {
+		log.Printf("collector: accumulate client traffic: %v", err)
+		return
+	}
+	if reset, err := c.store.RunDueTrafficResets(now.Unix()); err != nil {
+		log.Printf("collector: run due traffic resets: %v", err)
+	} else if len(reset) > 0 {
+		log.Printf("collector: periodic traffic reset for %d client(s)", len(reset))
+	}
+	blocked, err := c.store.BlockedProvisionedClientIDs()
+	if err != nil {
+		log.Printf("collector: list blocked clients: %v", err)
+		return
+	}
+	for _, clientID := range blocked {
+		c.deprovisionClient(ctx, clientID)
+	}
+}
+
+// deprovisionClient removes a cut-off client's wg peers from their relay nodes
+// and clears the stored peer records. An xui-backed peer lives on a 3x-ui inbound
+// the relay DeletePeer cannot reach, so there we only drop the record; the
+// provisioning gate still refuses to re-issue its config.
+func (c *Collector) deprovisionClient(ctx context.Context, clientID string) {
+	peers, err := c.store.ListClientWGPeers(clientID)
+	if err != nil {
+		log.Printf("collector: list peers for %s: %v", clientID, err)
+		return
+	}
+	for _, pr := range peers {
+		if node, nErr := c.store.GetServerNode(pr.NodeID); nErr == nil && node.WGBackend != storage.WGBackendXUI {
+			if derr := c.newRelay(node).DeletePeer(ctx, node, pr.PublicKey); derr != nil {
+				log.Printf("collector: delete peer for %s on node %s: %v", clientID, pr.NodeID, derr)
+			}
+		}
+		if derr := c.store.DeleteClientWGPeer(clientID, pr.NodeID); derr != nil {
+			log.Printf("collector: clear peer record %s/%s: %v", clientID, pr.NodeID, derr)
+		}
+	}
+	if len(peers) > 0 {
+		log.Printf("collector: deprovisioned cut-off client %s (%d peer(s))", clientID, len(peers))
 	}
 }
 

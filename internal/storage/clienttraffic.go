@@ -282,6 +282,21 @@ func (s *Store) scanClientControls(q *gorm.DB) ([]clientControlRow, error) {
 	return rows, err
 }
 
+// BlockedProvisionedClientIDs returns the ids of clients that still hold wg peers
+// but must be cut off - manually disabled or over their traffic limit - so the
+// collector can deprovision them.
+func (s *Store) BlockedProvisionedClientIDs() ([]string, error) {
+	var ids []string
+	err := s.gdb.
+		Table("clients AS c").
+		Joins("JOIN client_wg_peers AS cwp ON cwp.client_id = c.id").
+		Joins("LEFT JOIN client_traffic AS ct ON ct.client_id = c.id").
+		Where("c.disabled <> 0 OR (c.traffic_limit_bytes > 0 AND COALESCE(ct.used_bytes,0) >= c.traffic_limit_bytes)").
+		Distinct().
+		Pluck("c.id", &ids).Error
+	return ids, err
+}
+
 // sumClientPeerTraffic returns the client's current summed cumulative peer rx/tx
 // across all its nodes. Zero when it holds no peers.
 func (s *Store) sumClientPeerTraffic(clientID string) (uint64, uint64, error) {
