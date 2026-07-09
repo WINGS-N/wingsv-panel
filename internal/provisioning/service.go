@@ -96,6 +96,14 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		return nil, status.Error(codes.Unauthenticated, "invalid client token")
 	}
 
+	// Refuse service to a cut-off client (manually disabled or over its traffic
+	// limit) before returning any peer, including an already-provisioned one, so
+	// re-resolving cannot revive a blocked tunnel. The collector removes the live
+	// peer separately.
+	if ctrl, cErr := s.store.GetClientControl(req.GetClientId()); cErr == nil && ctrl.Blocked() {
+		return nil, status.Error(codes.ResourceExhausted, "client disabled or over traffic limit")
+	}
+
 	node, err := s.store.GetServerNode(req.GetNodeId())
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Error(codes.NotFound, "unknown node")

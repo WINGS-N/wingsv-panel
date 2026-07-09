@@ -50,6 +50,42 @@ func setup(t *testing.T) (*storage.Store, string, []byte) {
 	return st, "c1", tokenBytes
 }
 
+func TestResolveRefusesBlockedClient(t *testing.T) {
+	st, err := storage.Open(storage.Options{Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "t.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	admin, err := st.CreateAdmin("owner", "hash", false, "owner")
+	if err != nil {
+		t.Fatalf("admin: %v", err)
+	}
+	token, tokenHash, err := auth.GenerateClientToken()
+	if err != nil {
+		t.Fatalf("token: %v", err)
+	}
+	if _, err := st.CreateClient("c1", admin.ID, "dev", tokenHash, token); err != nil {
+		t.Fatalf("client: %v", err)
+	}
+	if _, err := st.CreateServerNode(dbmodel.ServerNode{ID: "n1", Kind: storage.ServerNodeVKTurnProxy, Name: "relay"}); err != nil {
+		t.Fatalf("node: %v", err)
+	}
+	if err := st.SetClientDisabled("c1", admin.ID, true); err != nil {
+		t.Fatalf("disable: %v", err)
+	}
+
+	fake := &fakeProvisioner{peer: Peer{PublicKey: "pub"}}
+	svc := NewService(st, fake)
+	_, err = svc.ResolveClientConfig(context.Background(),
+		&provisioningpb.ResolveClientConfigRequest{ClientId: "c1", Token: token, NodeId: "n1"})
+	if status.Code(err) != codes.ResourceExhausted {
+		t.Fatalf("blocked client resolve = %v, want ResourceExhausted", err)
+	}
+	if fake.calls != 0 {
+		t.Fatalf("provisioner should not run for a blocked client, calls=%d", fake.calls)
+	}
+}
+
 func TestResolveCreatesThenReturnsExisting(t *testing.T) {
 	st, clientID, token := setup(t)
 	fake := &fakeProvisioner{peer: Peer{PublicKey: "pub", PrivateKey: "priv", AllowedIPs: "10.66.66.2/32", ServerPublicKey: "spub"}}
