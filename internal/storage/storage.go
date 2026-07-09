@@ -190,6 +190,8 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE clients ADD COLUMN has_root_access INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE clients ADD COLUMN vk_oauth_authorized INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE clients ADD COLUMN remote_control INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE clients ADD COLUMN disabled INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE clients ADD COLUMN traffic_limit_bytes INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE admins ADD COLUMN vk_links TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE server_nodes ADD COLUMN grpc_token TEXT NOT NULL DEFAULT ''`,

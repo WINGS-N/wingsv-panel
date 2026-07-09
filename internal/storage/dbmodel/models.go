@@ -55,9 +55,33 @@ type Client struct {
 	HasRootAccess           int64  `gorm:"column:has_root_access;not null;default:0"`
 	VKOAuthAuthorized       int64  `gorm:"column:vk_oauth_authorized;not null;default:0"`
 	RemoteControl           int64  `gorm:"column:remote_control;not null;default:1"`
+	// Disabled cuts a managed client off: the panel deprovisions its wg peers and
+	// ResolveClientConfig refuses to re-provision while it is 1.
+	Disabled int64 `gorm:"column:disabled;not null;default:0"`
+	// TrafficLimitBytes is the managed client's traffic cap; 0 means unlimited.
+	// Usage is accumulated durably in client_traffic; on reaching the cap the
+	// panel deprovisions the peers, same as a manual disable.
+	TrafficLimitBytes uint64 `gorm:"column:traffic_limit_bytes;not null;default:0"`
 }
 
 func (Client) TableName() string { return "clients" }
+
+// ClientTraffic is a managed client's durable traffic accumulator, independent
+// of the per-peer counters (which reset when a relay restarts or a peer is
+// recreated). The collector adds the non-negative delta of the client's summed
+// peer rx/tx each poll; a manual or periodic reset zeroes used_bytes and
+// re-baselines last_rx/last_tx. reset_period_days > 0 schedules the next auto
+// reset at next_reset_unix.
+type ClientTraffic struct {
+	ClientID        string `gorm:"column:client_id;primaryKey"`
+	UsedBytes       uint64 `gorm:"column:used_bytes;not null;default:0"`
+	LastRx          uint64 `gorm:"column:last_rx;not null;default:0"`
+	LastTx          uint64 `gorm:"column:last_tx;not null;default:0"`
+	ResetPeriodDays int64  `gorm:"column:reset_period_days;not null;default:0"`
+	NextResetUnix   int64  `gorm:"column:next_reset_unix;not null;default:0"`
+}
+
+func (ClientTraffic) TableName() string { return "client_traffic" }
 
 type ClientConfig struct {
 	ClientID      string `gorm:"column:client_id;primaryKey"`
@@ -336,6 +360,7 @@ func All() []any {
 		&ConnectionLog{},
 		&PeerTraffic{},
 		&NodeTrafficTotal{},
+		&ClientTraffic{},
 	}
 }
 

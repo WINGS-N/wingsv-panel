@@ -42,7 +42,18 @@ CREATE TABLE IF NOT EXISTS clients (
     log_xray_enabled INTEGER NOT NULL DEFAULT 0,
     sync_mode TEXT NOT NULL DEFAULT 'always',
     periodic_interval_minutes INTEGER NOT NULL DEFAULT 30,
-    remote_control INTEGER NOT NULL DEFAULT 1
+    remote_control INTEGER NOT NULL DEFAULT 1,
+    disabled INTEGER NOT NULL DEFAULT 0,
+    traffic_limit_bytes INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS client_traffic (
+    client_id TEXT PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+    used_bytes INTEGER NOT NULL DEFAULT 0,
+    last_rx INTEGER NOT NULL DEFAULT 0,
+    last_tx INTEGER NOT NULL DEFAULT 0,
+    reset_period_days INTEGER NOT NULL DEFAULT 0,
+    next_reset_unix INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_clients_owner ON clients(owner_admin_id);
