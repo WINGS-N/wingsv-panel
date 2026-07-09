@@ -75,8 +75,15 @@ type clientView struct {
 	VkOAuthAuthorized       bool   `json:"vk_oauth_authorized"`
 	RemoteControl           bool   `json:"remote_control"`
 	Provisioned             bool   `json:"provisioned"`
+	Managed                 bool   `json:"managed"`
 	TrafficRx               uint64 `json:"traffic_rx"`
 	TrafficTx               uint64 `json:"traffic_tx"`
+	// Managed-client traffic limit / enable-disable state (0 limit = unlimited).
+	Disabled          bool   `json:"disabled"`
+	TrafficLimitBytes uint64 `json:"traffic_limit_bytes"`
+	TrafficUsedBytes  uint64 `json:"traffic_used_bytes"`
+	ResetPeriodDays   int64  `json:"reset_period_days"`
+	NextResetUnix     int64  `json:"next_reset_unix"`
 }
 
 func toClientView(c storage.Client) clientView {
@@ -146,6 +153,10 @@ func (h *Handler) hydrateBackendType(view *clientView, clientID string) {
 		return
 	}
 	view.BackendType = backendTypeLabelForConfig(parsed)
+	// Managed reflects the config carrying a panel-managed VK-TURN profile, so the
+	// UI can offer the traffic-limit / disable controls even while the client is
+	// disabled and has no live peer (thus provisioned=false).
+	view.Managed = hasManagedTurnProfile(parsed.Turn)
 }
 
 func normalizeSyncMode(value string) string {
@@ -179,6 +190,7 @@ func (h *Handler) handleClients(w http.ResponseWriter, r *http.Request, admin st
 		}
 		traffic, _ := h.store.ClientTrafficMap()
 		provisioned, _ := h.store.ProvisionedClientIDs()
+		control, _ := h.store.ClientControlMap(admin.ID)
 		out := make([]clientView, 0, len(clients))
 		for _, c := range clients {
 			view := toClientView(c)
@@ -187,6 +199,13 @@ func (h *Handler) handleClients(w http.ResponseWriter, r *http.Request, admin st
 			if t, ok := traffic[c.ID]; ok {
 				view.TrafficRx = t[0]
 				view.TrafficTx = t[1]
+			}
+			if ctrl, ok := control[c.ID]; ok {
+				view.Disabled = ctrl.Disabled
+				view.TrafficLimitBytes = ctrl.LimitBytes
+				view.TrafficUsedBytes = ctrl.UsedBytes
+				view.ResetPeriodDays = ctrl.ResetPeriodDays
+				view.NextResetUnix = ctrl.NextResetUnix
 			}
 			out = append(out, view)
 		}
@@ -212,6 +231,10 @@ type createClientRequest struct {
 	// at; the endpoint is derived from that node's host. Empty falls back to the
 	// configured VK_TURN_ENDPOINT.
 	VkTurnNodeID string `json:"vk_turn_node_id"`
+	// TrafficLimitGB caps the managed client's traffic (GiB; 0 = unlimited);
+	// ResetPeriodDays > 0 arms a periodic reset. Applied only to a managed client.
+	TrafficLimitGB  float64 `json:"traffic_limit_gb"`
+	ResetPeriodDays int64   `json:"reset_period_days"`
 }
 
 // vkTurnDefaultDTLSPort is the port a vk-turn relay listens on for the app's DTLS
@@ -323,6 +346,20 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, adm
 	if _, err := h.store.UpsertClientConfig(clientID, configBytes, "1"); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// A traffic cap only means anything for a managed VK-TURN client (one with a
+	// panel-issued self-provisioning profile, i.e. a resolved endpoint).
+	if strings.TrimSpace(vkTurnEndpoint) != "" && (req.TrafficLimitGB > 0 || req.ResetPeriodDays > 0) {
+		limitBytes := uint64(req.TrafficLimitGB * bytesPerGB)
+		period := req.ResetPeriodDays
+		if period < 0 {
+			period = 0
+		}
+		if err := h.store.SetClientTrafficLimit(clientID, admin.ID, limitBytes, period, time.Now().Unix()); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	remoteControl := req.RemoteControl == nil || *req.RemoteControl
@@ -692,6 +729,12 @@ func (h *Handler) handleClientByID(w http.ResponseWriter, r *http.Request, admin
 		h.respondPushClientConfig(w, r, admin, client)
 	case subpath == "management" && r.Method == http.MethodPut:
 		h.respondSetManagement(w, r, client)
+	case subpath == "traffic-limit" && r.Method == http.MethodPut:
+		h.respondSetTrafficLimit(w, r, client)
+	case subpath == "disabled" && r.Method == http.MethodPut:
+		h.respondSetDisabled(w, r, client)
+	case subpath == "traffic-reset" && r.Method == http.MethodPost:
+		h.respondResetTraffic(w, client)
 	case subpath == "log/control" && r.Method == http.MethodPut:
 		h.respondLogControl(w, r, client)
 	case subpath == "sync" && r.Method == http.MethodPut:
@@ -916,6 +959,68 @@ func (h *Handler) respondSetManagement(w http.ResponseWriter, r *http.Request, c
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"remote_control": req.RemoteControl})
+}
+
+const bytesPerGB = 1024 * 1024 * 1024
+
+type setTrafficLimitRequest struct {
+	// LimitGB is the cap in gibibytes (base 1024, matching the UI's byte
+	// formatting); 0 clears the cap. ResetPeriodDays > 0 arms a periodic reset.
+	LimitGB         float64 `json:"limit_gb"`
+	ResetPeriodDays int64   `json:"reset_period_days"`
+}
+
+// respondSetTrafficLimit sets a managed client's traffic cap and optional
+// periodic-reset window. Enforced by the collector and the provisioning gate.
+func (h *Handler) respondSetTrafficLimit(w http.ResponseWriter, r *http.Request, client storage.Client) {
+	var req setTrafficLimitRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if req.LimitGB < 0 || req.ResetPeriodDays < 0 {
+		writeError(w, http.StatusBadRequest, "negative value")
+		return
+	}
+	limitBytes := uint64(req.LimitGB * bytesPerGB)
+	if err := h.store.SetClientTrafficLimit(client.ID, client.OwnerAdminID, limitBytes, req.ResetPeriodDays, time.Now().Unix()); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"traffic_limit_bytes": limitBytes,
+		"reset_period_days":   req.ResetPeriodDays,
+	})
+}
+
+type setDisabledRequest struct {
+	Disabled bool `json:"disabled"`
+}
+
+// respondSetDisabled flips a managed client's manual cutoff. The collector tears
+// down its live peer on the next poll; the provisioning gate refuses re-enroll
+// immediately.
+func (h *Handler) respondSetDisabled(w http.ResponseWriter, r *http.Request, client storage.Client) {
+	var req setDisabledRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	if err := h.store.SetClientDisabled(client.ID, client.OwnerAdminID, req.Disabled); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"disabled": req.Disabled})
+}
+
+// respondResetTraffic clears a managed client's accumulated usage now, restoring
+// service if it was cut off by the cap.
+func (h *Handler) respondResetTraffic(w http.ResponseWriter, client storage.Client) {
+	if err := h.store.ResetClientTraffic(client.ID, client.OwnerAdminID, time.Now().Unix()); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (h *Handler) respondClientConfig(w http.ResponseWriter, clientID string) {
