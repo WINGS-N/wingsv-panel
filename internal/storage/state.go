@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"database/sql"
 	"errors"
 	"time"
 
@@ -45,18 +44,21 @@ func (s *Store) UpsertClientConfig(clientID string, configProto []byte, revision
 }
 
 func (s *Store) GetClientConfig(clientID string) (ClientConfig, error) {
-	row := s.queryRow(`SELECT client_id, config_proto, revision, updated_at, config_version FROM client_configs WHERE client_id = ?`, clientID)
-	var c ClientConfig
-	var updatedAt int64
-	err := row.Scan(&c.ClientID, &c.ConfigProto, &c.Revision, &updatedAt, &c.ConfigVersion)
-	if errors.Is(err, sql.ErrNoRows) {
+	var m dbmodel.ClientConfig
+	err := s.gdb.Where("client_id = ?", clientID).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ClientConfig{}, ErrNotFound
 	}
 	if err != nil {
 		return ClientConfig{}, err
 	}
-	c.UpdatedAt = time.UnixMilli(updatedAt).UTC()
-	return c, nil
+	return ClientConfig{
+		ClientID:      m.ClientID,
+		ConfigProto:   m.ConfigProto,
+		Revision:      m.Revision,
+		UpdatedAt:     time.UnixMilli(m.UpdatedAtUnix).UTC(),
+		ConfigVersion: uint64(m.ConfigVersion),
+	}, nil
 }
 
 func (s *Store) UpsertClientReportedConfig(clientID string, configProto []byte) error {
@@ -78,17 +80,15 @@ func (s *Store) UpsertClientRuntime(clientID string, runtimeProto []byte) error 
 }
 
 func (s *Store) GetClientRuntime(clientID string) ([]byte, time.Time, error) {
-	row := s.queryRow(`SELECT runtime_proto, updated_at FROM client_runtime WHERE client_id = ?`, clientID)
-	var b []byte
-	var updatedAt int64
-	err := row.Scan(&b, &updatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
+	var m dbmodel.ClientRuntime
+	err := s.gdb.Where("client_id = ?", clientID).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, time.Time{}, ErrNotFound
 	}
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return b, time.UnixMilli(updatedAt).UTC(), nil
+	return m.RuntimeProto, time.UnixMilli(m.UpdatedAtUnix).UTC(), nil
 }
 
 type PackageMetadata struct {
@@ -107,17 +107,15 @@ func (s *Store) UpsertClientInstalledApps(clientID string, appsProto []byte) err
 }
 
 func (s *Store) GetClientInstalledApps(clientID string) ([]byte, time.Time, error) {
-	row := s.queryRow(`SELECT apps_proto, updated_at FROM client_installed_apps WHERE client_id = ?`, clientID)
-	var b []byte
-	var updatedAt int64
-	err := row.Scan(&b, &updatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
+	var m dbmodel.ClientInstalledApps
+	err := s.gdb.Where("client_id = ?", clientID).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, time.Time{}, ErrNotFound
 	}
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return b, time.UnixMilli(updatedAt).UTC(), nil
+	return m.AppsProto, time.UnixMilli(m.UpdatedAtUnix).UTC(), nil
 }
 
 func (s *Store) UpsertPackageMetadata(items []PackageMetadata) error {
@@ -168,41 +166,26 @@ func (s *Store) GetPackageMetadataMap(packages []string) (map[string]PackageMeta
 	if len(packages) == 0 {
 		return map[string]PackageMetadata{}, nil
 	}
-	placeholders := make([]byte, 0, 2*len(packages)-1)
-	args := make([]any, 0, len(packages))
-	for i, p := range packages {
-		if i > 0 {
-			placeholders = append(placeholders, ',')
-		}
-		placeholders = append(placeholders, '?')
-		args = append(args, p)
-	}
-	rows, err := s.query(`SELECT package, label, icon_png FROM package_metadata WHERE package IN (`+string(placeholders)+`)`, args...)
-	if err != nil {
+	var rows []dbmodel.PackageMetadata
+	if err := s.gdb.Select("package", "label", "icon_png").
+		Where("package IN ?", packages).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := map[string]PackageMetadata{}
-	for rows.Next() {
-		var m PackageMetadata
-		if err := rows.Scan(&m.Package, &m.Label, &m.IconPNG); err != nil {
-			return nil, err
-		}
-		out[m.Package] = m
+	out := make(map[string]PackageMetadata, len(rows))
+	for _, r := range rows {
+		out[r.Package] = PackageMetadata{Package: r.Package, Label: r.Label, IconPNG: r.IconPNG}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (s *Store) GetClientReportedConfig(clientID string) ([]byte, time.Time, error) {
-	row := s.queryRow(`SELECT config_proto, updated_at FROM client_reported_configs WHERE client_id = ?`, clientID)
-	var b []byte
-	var updatedAt int64
-	err := row.Scan(&b, &updatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
+	var m dbmodel.ClientReportedConfig
+	err := s.gdb.Where("client_id = ?", clientID).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, time.Time{}, ErrNotFound
 	}
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	return b, time.UnixMilli(updatedAt).UTC(), nil
+	return m.ConfigProto, time.UnixMilli(m.UpdatedAtUnix).UTC(), nil
 }

@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"database/sql"
 	"errors"
 	"strings"
 	"time"
@@ -43,20 +42,34 @@ func (s *Store) AppendAudit(entry AuditEntry) error {
 	if entry.Action == "" {
 		return errors.New("storage: audit action required")
 	}
-	now := time.Now().UTC().UnixMilli()
+	ts := time.Now().UTC().UnixMilli()
 	if !entry.TS.IsZero() {
-		now = entry.TS.UTC().UnixMilli()
+		ts = entry.TS.UTC().UnixMilli()
 	}
-	var actor sql.NullInt64
+	var actor *int64
 	if entry.ActorAdminID > 0 {
-		actor = sql.NullInt64{Int64: entry.ActorAdminID, Valid: true}
+		a := entry.ActorAdminID
+		actor = &a
 	}
-	_, err := s.exec(
-		`INSERT INTO audit_log (ts, actor_admin_id, actor_username, action, target_type, target_id, message, ip)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		now, actor, entry.ActorUsername, entry.Action, entry.TargetType, entry.TargetID, entry.Message, entry.IP,
-	)
-	return err
+	return s.gdb.Create(&dbmodel.AuditLog{
+		Ts:            ts,
+		ActorAdminID:  actor,
+		ActorUsername: entry.ActorUsername,
+		Action:        entry.Action,
+		TargetType:    entry.TargetType,
+		TargetID:      entry.TargetID,
+		Message:       entry.Message,
+		IP:            entry.IP,
+	}).Error
+}
+
+// derefInt64 returns the pointed-to value, or 0 for a nil pointer - the gorm
+// equivalent of the COALESCE(col, 0) the raw reads used for nullable id columns.
+func derefInt64(p *int64) int64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
@@ -64,50 +77,43 @@ func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	q := `SELECT id, ts, COALESCE(actor_admin_id, 0), actor_username, action, target_type, target_id, message, ip
-	      FROM audit_log WHERE 1=1`
-	var args []any
+	q := s.gdb.Model(&dbmodel.AuditLog{})
 	if filter.ActorAdminID > 0 {
-		q += ` AND actor_admin_id = ?`
-		args = append(args, filter.ActorAdminID)
+		q = q.Where("actor_admin_id = ?", filter.ActorAdminID)
 	}
 	if filter.Action != "" {
-		q += ` AND action = ?`
-		args = append(args, filter.Action)
+		q = q.Where("action = ?", filter.Action)
 	}
 	if !filter.Since.IsZero() {
-		q += ` AND ts >= ?`
-		args = append(args, filter.Since.UTC().UnixMilli())
+		q = q.Where("ts >= ?", filter.Since.UTC().UnixMilli())
 	}
 	if !filter.Until.IsZero() {
-		q += ` AND ts <= ?`
-		args = append(args, filter.Until.UTC().UnixMilli())
+		q = q.Where("ts <= ?", filter.Until.UTC().UnixMilli())
 	}
-	q += ` ORDER BY ts DESC LIMIT ?`
-	args = append(args, limit)
-	rows, err := s.query(q, args...)
-	if err != nil {
+	var rows []dbmodel.AuditLog
+	if err := q.Order("ts DESC").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []AuditEntry
-	for rows.Next() {
-		var e AuditEntry
-		var ts int64
-		if err := rows.Scan(&e.ID, &ts, &e.ActorAdminID, &e.ActorUsername, &e.Action,
-			&e.TargetType, &e.TargetID, &e.Message, &e.IP); err != nil {
-			return nil, err
-		}
-		e.TS = time.UnixMilli(ts).UTC()
-		out = append(out, e)
+	for _, r := range rows {
+		out = append(out, AuditEntry{
+			ID:            r.ID,
+			TS:            time.UnixMilli(r.Ts).UTC(),
+			ActorAdminID:  derefInt64(r.ActorAdminID),
+			ActorUsername: r.ActorUsername,
+			Action:        r.Action,
+			TargetType:    r.TargetType,
+			TargetID:      r.TargetID,
+			Message:       r.Message,
+			IP:            r.IP,
+		})
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // PruneAuditOlderThan deletes entries older than `cutoff`. Caller decides cadence.
 func (s *Store) PruneAuditOlderThan(cutoff time.Time) error {
-	_, err := s.exec(`DELETE FROM audit_log WHERE ts < ?`, cutoff.UTC().UnixMilli())
-	return err
+	return s.gdb.Where("ts < ?", cutoff.UTC().UnixMilli()).Delete(&dbmodel.AuditLog{}).Error
 }
 
 // ===== platform_settings =====
@@ -148,11 +154,13 @@ func (s *Store) CreateInvite(token string, expiresAt time.Time, createdByAdminID
 	if !expiresAt.IsZero() {
 		exp = expiresAt.UTC().UnixMilli()
 	}
-	_, err := s.exec(
-		`INSERT INTO invite_tokens (token, created_at, expires_at, created_by_admin_id) VALUES (?, ?, ?, ?)`,
-		token, now, exp, createdByAdminID,
-	)
-	if err != nil {
+	createdBy := createdByAdminID
+	if err := s.gdb.Create(&dbmodel.InviteToken{
+		Token:            token,
+		CreatedAtUnix:    now,
+		ExpiresAt:        exp,
+		CreatedByAdminID: &createdBy,
+	}).Error; err != nil {
 		return InviteToken{}, err
 	}
 	return InviteToken{
@@ -164,36 +172,30 @@ func (s *Store) CreateInvite(token string, expiresAt time.Time, createdByAdminID
 }
 
 func (s *Store) ListInvites(includeUsed bool) ([]InviteToken, error) {
-	q := `SELECT token, created_at, COALESCE(expires_at, 0), COALESCE(used_at, 0),
-	             COALESCE(used_by_admin_id, 0), COALESCE(created_by_admin_id, 0)
-	      FROM invite_tokens`
+	q := s.gdb.Model(&dbmodel.InviteToken{})
 	if !includeUsed {
-		q += ` WHERE used_at = 0`
+		q = q.Where("used_at = ?", 0)
 	}
-	q += ` ORDER BY created_at DESC LIMIT 200`
-	rows, err := s.query(q)
-	if err != nil {
+	var rows []dbmodel.InviteToken
+	if err := q.Order("created_at DESC").Limit(200).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []InviteToken
-	for rows.Next() {
-		var it InviteToken
-		var c, exp, used int64
-		if err := rows.Scan(&it.Token, &c, &exp, &used, &it.UsedByAdminID, &it.CreatedByAdminID); err != nil {
-			return nil, err
-		}
-		it.CreatedAt = time.UnixMilli(c).UTC()
-		it.ExpiresAt = time.UnixMilli(exp).UTC()
-		it.UsedAt = time.UnixMilli(used).UTC()
-		out = append(out, it)
+	for _, r := range rows {
+		out = append(out, InviteToken{
+			Token:            r.Token,
+			CreatedAt:        time.UnixMilli(r.CreatedAtUnix).UTC(),
+			ExpiresAt:        time.UnixMilli(r.ExpiresAt).UTC(),
+			UsedAt:           time.UnixMilli(r.UsedAt).UTC(),
+			UsedByAdminID:    derefInt64(r.UsedByAdminID),
+			CreatedByAdminID: derefInt64(r.CreatedByAdminID),
+		})
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (s *Store) DeleteInvite(token string) error {
-	_, err := s.exec(`DELETE FROM invite_tokens WHERE token = ?`, token)
-	return err
+	return s.gdb.Where("token = ?", token).Delete(&dbmodel.InviteToken{}).Error
 }
 
 // RedeemInvite marks the token as used by the given admin. Returns ErrNotFound
@@ -204,20 +206,13 @@ func (s *Store) RedeemInvite(token string, adminID int64) error {
 		return ErrNotFound
 	}
 	now := time.Now().UTC().UnixMilli()
-	res, err := s.exec(
-		`UPDATE invite_tokens SET used_at = ?, used_by_admin_id = ?
-		 WHERE token = ? AND used_at = 0
-		 AND (expires_at = 0 OR expires_at > ?)`,
-		now, adminID, token, now,
-	)
-	if err != nil {
-		return err
+	res := s.gdb.Model(&dbmodel.InviteToken{}).
+		Where("token = ? AND used_at = 0 AND (expires_at = 0 OR expires_at > ?)", token, now).
+		Updates(map[string]any{"used_at": now, "used_by_admin_id": adminID})
+	if res.Error != nil {
+		return res.Error
 	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if res.RowsAffected == 0 {
 		return ErrNotFound
 	}
 	return nil

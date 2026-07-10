@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -64,40 +63,6 @@ func (s *Store) Driver() Driver { return s.driver }
 
 // IsSQLite reports whether the store is backed by the single-writer sqlite file.
 func (s *Store) IsSQLite() bool { return s.driver == DriverSQLite }
-
-// rebind rewrites `?` placeholders to `$1, $2, ...` for PostgreSQL; sqlite and
-// mariadb use `?` natively so the query is returned unchanged. The raw queries
-// never contain a literal `?`, so a positional counter is sufficient.
-func (s *Store) rebind(query string) string {
-	if s.driver != DriverPostgres {
-		return query
-	}
-	var b strings.Builder
-	b.Grow(len(query) + 8)
-	n := 0
-	for i := 0; i < len(query); i++ {
-		if query[i] == '?' {
-			n++
-			b.WriteByte('$')
-			b.WriteString(strconv.Itoa(n))
-			continue
-		}
-		b.WriteByte(query[i])
-	}
-	return b.String()
-}
-
-func (s *Store) query(q string, args ...any) (*sql.Rows, error) {
-	return s.db.Query(s.rebind(q), args...)
-}
-
-func (s *Store) queryRow(q string, args ...any) *sql.Row {
-	return s.db.QueryRow(s.rebind(q), args...)
-}
-
-func (s *Store) exec(q string, args ...any) (sql.Result, error) {
-	return s.db.Exec(s.rebind(q), args...)
-}
 
 // Open connects to the configured backend, applies the schema, and runs the
 // idempotent data migrations. The pure-Go drivers (glebarez/sqlite, pgx,

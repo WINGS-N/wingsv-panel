@@ -51,12 +51,14 @@ func (s *Store) EnqueuePendingCommandWithTTL(clientID string, commandType int32,
 // (id, true) on insert, (0, false) when an existing row covered the request.
 func (s *Store) EnqueuePendingCommandDedup(clientID string, commandType int32, subscriptionID string) (int64, bool, error) {
 	now := time.Now().UTC().UnixMilli()
-	row := s.queryRow(
-		`SELECT id FROM pending_commands WHERE client_id = ? AND command_type = ? AND subscription_id = ? AND expires_at > ? LIMIT 1`,
-		clientID, commandType, subscriptionID, now,
-	)
-	var existing int64
-	if err := row.Scan(&existing); err == nil {
+	var count int64
+	if err := s.gdb.Model(&dbmodel.PendingCommand{}).
+		Where("client_id = ? AND command_type = ? AND subscription_id = ? AND expires_at > ?",
+			clientID, commandType, subscriptionID, now).
+		Count(&count).Error; err != nil {
+		return 0, false, err
+	}
+	if count > 0 {
 		return 0, false, nil
 	}
 	id, err := s.EnqueuePendingCommand(clientID, commandType, subscriptionID)
@@ -71,35 +73,26 @@ func (s *Store) EnqueuePendingCommandDedup(clientID string, commandType int32, s
 // side effect.
 func (s *Store) DrainPendingCommands(clientID string) ([]PendingCommand, error) {
 	now := time.Now().UTC().UnixMilli()
-	_, err := s.exec(`DELETE FROM pending_commands WHERE expires_at <= ?`, now)
-	if err != nil {
+	if err := s.gdb.Where("expires_at <= ?", now).Delete(&dbmodel.PendingCommand{}).Error; err != nil {
 		return nil, err
 	}
-	rows, err := s.query(
-		`SELECT id, client_id, command_type, subscription_id, queued_at, expires_at FROM pending_commands WHERE client_id = ? ORDER BY queued_at ASC`,
-		clientID,
-	)
-	if err != nil {
+	var rows []dbmodel.PendingCommand
+	if err := s.gdb.Where("client_id = ?", clientID).Order("queued_at ASC").Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []PendingCommand
-	for rows.Next() {
-		var pc PendingCommand
-		var queuedAt, expiresAt int64
-		if err := rows.Scan(&pc.ID, &pc.ClientID, &pc.CommandType, &pc.SubscriptionID, &queuedAt, &expiresAt); err != nil {
-			return nil, err
-		}
-		pc.QueuedAt = time.UnixMilli(queuedAt).UTC()
-		pc.ExpiresAt = time.UnixMilli(expiresAt).UTC()
-		out = append(out, pc)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
+	for _, r := range rows {
+		out = append(out, PendingCommand{
+			ID:             r.ID,
+			ClientID:       r.ClientID,
+			CommandType:    int32(r.CommandType),
+			SubscriptionID: r.SubscriptionID,
+			QueuedAt:       time.UnixMilli(r.QueuedAt).UTC(),
+			ExpiresAt:      time.UnixMilli(r.ExpiresAt).UTC(),
+		})
 	}
 	if len(out) > 0 {
-		_, err := s.exec(`DELETE FROM pending_commands WHERE client_id = ?`, clientID)
-		if err != nil {
+		if err := s.gdb.Where("client_id = ?", clientID).Delete(&dbmodel.PendingCommand{}).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -111,13 +104,11 @@ func (s *Store) DrainPendingCommands(clientID string) ([]PendingCommand, error) 
 // queue length back to the panel UI.
 func (s *Store) CountPendingCommands(clientID string, commandType int32) (int, error) {
 	now := time.Now().UTC().UnixMilli()
-	row := s.queryRow(
-		`SELECT COUNT(*) FROM pending_commands WHERE client_id = ? AND command_type = ? AND expires_at > ?`,
-		clientID, commandType, now,
-	)
-	var n int
-	if err := row.Scan(&n); err != nil {
+	var count int64
+	if err := s.gdb.Model(&dbmodel.PendingCommand{}).
+		Where("client_id = ? AND command_type = ? AND expires_at > ?", clientID, commandType, now).
+		Count(&count).Error; err != nil {
 		return 0, err
 	}
-	return n, nil
+	return int(count), nil
 }
