@@ -735,12 +735,14 @@
   }
 
   .admin-row-actions-col {
-    width: 56px;
+    width: 1%;
+    white-space: nowrap;
   }
 
   .admin-row-actions {
     @apply text-right align-middle;
-    width: 56px;
+    width: 1%;
+    white-space: nowrap;
   }
 
   .admin-row-action-btn {

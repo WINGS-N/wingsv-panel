@@ -150,7 +150,25 @@
             <td data-label="Бэкенд">{{ client.backend_type || '—' }}</td>
             <td data-label="Устройство">{{ client.device_model || '—' }}</td>
             <td data-label="OS / WINGS V">{{ client.os_version || '—' }} · {{ client.app_version || '—' }}</td>
-            <td data-label="Трафик">{{ trafficText(client) }}</td>
+            <td data-label="Трафик">
+              <div v-if="trafficHasLimit(client)" class="traffic-cell">
+                <div class="traffic-usage">
+                  <span :class="{ 'traffic-over': trafficPercent(client) >= 100 }">{{
+                    formatBytes(trafficUsedBytes(client))
+                  }}</span>
+                  <span class="traffic-sep">/</span>
+                  <span class="traffic-limit">{{ formatBytes(trafficLimitBytes(client)) }}</span>
+                </div>
+                <div class="traffic-bar">
+                  <div
+                    class="traffic-bar-fill"
+                    :class="{ 'is-full': trafficPercent(client) >= 100 }"
+                    :style="{ width: trafficPercent(client) + '%' }"
+                  ></div>
+                </div>
+              </div>
+              <template v-else>{{ trafficText(client) }}</template>
+            </td>
             <td data-label="Статус">
               <SamsungPill :variant="client.online ? 'online' : 'offline'">
                 {{ client.online ? 'Онлайн' : 'Оффлайн' }}
@@ -158,14 +176,32 @@
             </td>
             <td data-label="Контакт">{{ formatTs(client.last_seen_at) }}</td>
             <td class="admin-row-actions" @click.stop>
-              <SamsungIconButton
-                variant="danger"
-                :busy="deletingId === client.id"
-                :aria-label="`Удалить ${client.name}`"
-                @click.stop="askDelete(client)"
-              >
-                <Trash2 class="h-4 w-4" aria-hidden="true" />
-              </SamsungIconButton>
+              <div class="admin-row-actions-inner">
+                <OneuiSwitch
+                  v-if="client.managed"
+                  :model-value="!client.disabled"
+                  :disabled="togglingId === client.id"
+                  :aria-label="client.disabled ? `Включить ${client.name}` : `Выключить ${client.name}`"
+                  @change="toggleDisabled(client, $event)"
+                />
+                <SamsungIconButton
+                  v-if="trafficHasLimit(client)"
+                  variant="secondary"
+                  :busy="resettingId === client.id"
+                  :aria-label="`Сбросить трафик ${client.name}`"
+                  @click.stop="resetTraffic(client)"
+                >
+                  <RotateCcw class="h-4 w-4" aria-hidden="true" />
+                </SamsungIconButton>
+                <SamsungIconButton
+                  variant="danger"
+                  :busy="deletingId === client.id"
+                  :aria-label="`Удалить ${client.name}`"
+                  @click.stop="askDelete(client)"
+                >
+                  <Trash2 class="h-4 w-4" aria-hidden="true" />
+                </SamsungIconButton>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -233,6 +269,24 @@
             :options="vkTurnNodeOptions"
             @update:model-value="vkTurnNodeId = $event"
           />
+          <template v-if="vkTurnNodeId">
+            <div class="form-row form-row-stack mt-3">
+              <OneuiInput
+                v-model.number="trafficLimitGb"
+                label="Лимит трафика (ГБ, 0 — без лимита)"
+                type="number"
+                :min="0"
+              />
+            </div>
+            <div class="form-row form-row-stack mt-2">
+              <OneuiInput
+                v-model.number="resetPeriodDays"
+                label="Сброс каждые N дней (0 — только вручную)"
+                type="number"
+                :min="0"
+              />
+            </div>
+          </template>
         </template>
 
         <template v-if="managementType === 'full'">
@@ -317,13 +371,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-vue-next';
+import { Camera, ChevronLeft, ChevronRight, Plus, RotateCcw, Trash2, X } from 'lucide-vue-next';
 import { authState, myAvatarUrl } from '@/stores/auth.js';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { formatBytes } from '@/utils/format.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
+import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiTextarea from '@/components/controls/OneuiTextarea.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungIconButton from '@/components/layout/SamsungIconButton.vue';
@@ -343,6 +398,25 @@ function trafficText(client) {
   if (!client.provisioned) return '—';
   const total = clientTrafficTotal(client);
   return total > 0 ? formatBytes(total) : '—';
+}
+
+function trafficLimitBytes(client) {
+  return client.managed ? Number(client.traffic_limit_bytes) || 0 : 0;
+}
+
+function trafficHasLimit(client) {
+  return trafficLimitBytes(client) > 0;
+}
+
+function trafficUsedBytes(client) {
+  return Number(client.traffic_used_bytes) || 0;
+}
+
+// trafficPercent is the share of the cap consumed, capped at 100 for the bar.
+function trafficPercent(client) {
+  const limit = trafficLimitBytes(client);
+  if (limit <= 0) return 0;
+  return Math.min(100, Math.round((trafficUsedBytes(client) / limit) * 100));
 }
 
 const router = useRouter();
@@ -450,6 +524,8 @@ const managementTypeOptions = [
 ];
 const vkTurnNodes = ref([]);
 const vkTurnNodeId = ref('');
+const trafficLimitGb = ref('');
+const resetPeriodDays = ref('');
 const vkTurnNodeOptions = computed(() => [
   { value: '', label: 'Не выбран' },
   ...vkTurnNodes.value.map((n) => ({ value: n.id, label: n.name || n.id })),
@@ -466,6 +542,8 @@ const syncIntervalMinutes = ref(15);
 const confirmDelete = ref(null);
 const deletingId = ref('');
 const deleteError = ref('');
+const togglingId = ref('');
+const resettingId = ref('');
 
 const canCreate = computed(() => {
   if (!newName.value) return false;
@@ -596,6 +674,10 @@ async function createClient() {
     };
     if (vkTurnNodeId.value) {
       reqBody.vk_turn_node_id = vkTurnNodeId.value;
+      const gb = Number(trafficLimitGb.value) || 0;
+      const days = Number(resetPeriodDays.value) || 0;
+      if (gb > 0) reqBody.traffic_limit_gb = gb;
+      if (days > 0) reqBody.reset_period_days = days;
     }
     if (seedMode.value === 'clone' && seedFromClientId.value) {
       reqBody.seed_from_client_id = seedFromClientId.value;
@@ -662,6 +744,44 @@ async function performDelete() {
   }
 }
 
+// toggleDisabled flips a managed client's cutoff. The switch shows enabled state,
+// so a checked switch means disabled=false. On failure we resync from the server.
+async function toggleDisabled(client, enabled) {
+  if (togglingId.value) return;
+  togglingId.value = client.id;
+  try {
+    const res = await fetch(`/api/admin/clients/${encodeURIComponent(client.id)}/disabled`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ disabled: !enabled }),
+    });
+    if (!res.ok) throw new Error('toggle failed');
+    client.disabled = !enabled;
+  } catch {
+    await loadClients();
+  } finally {
+    togglingId.value = '';
+  }
+}
+
+async function resetTraffic(client) {
+  if (resettingId.value) return;
+  resettingId.value = client.id;
+  try {
+    const res = await fetch(`/api/admin/clients/${encodeURIComponent(client.id)}/traffic-reset`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('reset failed');
+    await loadClients();
+  } catch {
+    // A failed reset leaves usage as-is; nothing to roll back.
+  } finally {
+    resettingId.value = '';
+  }
+}
+
 function formatTs(iso) {
   if (!iso || iso.startsWith('1970')) return '—';
   try {
@@ -709,5 +829,48 @@ onBeforeUnmount(() => {
 }
 .created-qr img {
   border-radius: 12px;
+}
+.traffic-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 92px;
+}
+.traffic-usage {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.traffic-sep {
+  opacity: 0.45;
+  margin: 0 3px;
+}
+.traffic-limit {
+  opacity: 0.7;
+}
+.traffic-over {
+  color: #e5484d;
+  font-weight: 600;
+}
+.traffic-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.22);
+  overflow: hidden;
+}
+.traffic-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #4b8bf5;
+  transition: width 0.3s ease;
+}
+.traffic-bar-fill.is-full {
+  background: #e5484d;
+}
+.admin-row-actions-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>
