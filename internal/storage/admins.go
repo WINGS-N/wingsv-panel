@@ -162,6 +162,10 @@ func scanAdmin(row *sql.Row) (Admin, error) {
 	return a, err
 }
 
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
 func scanAdminRow(rows *sql.Rows) (Admin, error) {
 	return scanAdminFromScanner(rows)
 }
