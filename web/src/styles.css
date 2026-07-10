@@ -1248,6 +1248,14 @@
   .admin-modal {
     @apply w-[min(560px,calc(100vw-32px))];
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    /* Cap the modal to the viewport and scroll its own content, so a tall form
+       (e.g. a managed client with traffic-limit fields) stays fully reachable on
+       short/narrow screens instead of clipping its title and action buttons.
+       dvh tracks the mobile browser chrome; vh is the fallback. */
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .seed-mode-row {
