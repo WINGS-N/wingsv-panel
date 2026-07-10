@@ -1,9 +1,10 @@
 package storage
 
 import (
-	"database/sql"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
@@ -27,6 +28,25 @@ type Admin struct {
 
 var ErrNotFound = errors.New("storage: not found")
 
+// toStorageAdmin maps the gorm row model to the app-facing Admin.
+func toStorageAdmin(m dbmodel.Admin) Admin {
+	a := Admin{
+		ID:                 m.ID,
+		Username:           m.Username,
+		PasswordHash:       m.PasswordHash,
+		MustChangePassword: m.MustChangePassword != 0,
+		Role:               m.Role,
+		LastLoginAt:        time.UnixMilli(m.LastLoginAt).UTC(),
+		AvatarVersion:      m.AvatarVersion,
+		CreatedAt:          time.UnixMilli(m.CreatedAtUnix).UTC(),
+		UpdatedAt:          time.UnixMilli(m.UpdatedAtUnix).UTC(),
+	}
+	if a.Role == "" {
+		a.Role = RoleAdmin
+	}
+	return a
+}
+
 func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role string) (Admin, error) {
 	if role == "" {
 		role = RoleAdmin
@@ -43,102 +63,96 @@ func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role
 	if err := s.gdb.Create(&row).Error; err != nil {
 		return Admin{}, err
 	}
-	return Admin{
-		ID:                 row.ID,
-		Username:           username,
-		PasswordHash:       passwordHash,
-		MustChangePassword: mustChange,
-		Role:               role,
-		CreatedAt:          time.UnixMilli(now).UTC(),
-		UpdatedAt:          time.UnixMilli(now).UTC(),
-	}, nil
+	return toStorageAdmin(row), nil
 }
 
-const adminColumns = `id, username, password_hash, must_change_password, role, last_login_at, avatar_version, created_at, updated_at`
-
 func (s *Store) FindAdminByUsername(username string) (Admin, error) {
-	row := s.queryRow(`SELECT `+adminColumns+` FROM admins WHERE username = ?`, username)
-	return scanAdmin(row)
+	return s.findAdmin("username = ?", username)
 }
 
 func (s *Store) FindAdminByID(id int64) (Admin, error) {
-	row := s.queryRow(`SELECT `+adminColumns+` FROM admins WHERE id = ?`, id)
-	return scanAdmin(row)
+	return s.findAdmin("id = ?", id)
+}
+
+func (s *Store) findAdmin(query string, arg any) (Admin, error) {
+	var m dbmodel.Admin
+	err := s.gdb.Where(query, arg).First(&m).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return Admin{}, ErrNotFound
+	}
+	if err != nil {
+		return Admin{}, err
+	}
+	return toStorageAdmin(m), nil
 }
 
 func (s *Store) ListAdmins() ([]Admin, error) {
-	rows, err := s.query(`SELECT ` + adminColumns + ` FROM admins ORDER BY created_at ASC`)
-	if err != nil {
+	var ms []dbmodel.Admin
+	if err := s.gdb.Order("created_at ASC").Find(&ms).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []Admin
-	for rows.Next() {
-		a, err := scanAdminRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, a)
+	out := make([]Admin, 0, len(ms))
+	for _, m := range ms {
+		out = append(out, toStorageAdmin(m))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func (s *Store) UpdateAdminPassword(id int64, passwordHash string, requireChange bool) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.exec(
-		`UPDATE admins SET password_hash = ?, must_change_password = ?, updated_at = ? WHERE id = ?`,
-		passwordHash, boolToInt(requireChange), now, id,
-	)
-	return err
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
+		"password_hash":        passwordHash,
+		"must_change_password": boolToInt(requireChange),
+		"updated_at":           time.Now().UTC().UnixMilli(),
+	}).Error
 }
 
 func (s *Store) UpdateAdminRole(id int64, role string) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.exec(`UPDATE admins SET role = ?, updated_at = ? WHERE id = ?`, role, now, id)
-	return err
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
+		"role":       role,
+		"updated_at": time.Now().UTC().UnixMilli(),
+	}).Error
 }
 
 func (s *Store) MarkAdminLogin(id int64) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.exec(`UPDATE admins SET last_login_at = ? WHERE id = ?`, now, id)
-	return err
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).
+		Update("last_login_at", time.Now().UTC().UnixMilli()).Error
 }
 
 func (s *Store) DeleteAdmin(id int64) error {
-	res, err := s.exec(`DELETE FROM admins WHERE id = ?`, id)
-	if err != nil {
-		return err
+	res := s.gdb.Where("id = ?", id).Delete(&dbmodel.Admin{})
+	if res.Error != nil {
+		return res.Error
 	}
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
+	if res.RowsAffected == 0 {
 		return ErrNotFound
 	}
 	return nil
 }
 
 func (s *Store) CountAdmins() (int, error) {
-	var count int
-	err := s.queryRow(`SELECT COUNT(1) FROM admins`).Scan(&count)
-	return count, err
+	var count int64
+	if err := s.gdb.Model(&dbmodel.Admin{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 func (s *Store) FirstAdminID() (int64, error) {
 	var id int64
-	err := s.queryRow(`SELECT MIN(id) FROM admins`).Scan(&id)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err := s.gdb.Model(&dbmodel.Admin{}).Select("COALESCE(MIN(id),0)").Scan(&id).Error; err != nil {
+		return 0, err
+	}
+	if id == 0 {
 		return 0, ErrNotFound
 	}
-	return id, err
+	return id, nil
 }
 
 // EnsureAtLeastOneOwner promotes the lowest-id admin to "owner" if no owner
 // currently exists. Used on startup to migrate pre-role databases.
 func (s *Store) EnsureAtLeastOneOwner() error {
-	var count int
-	if err := s.queryRow(`SELECT COUNT(1) FROM admins WHERE role = ?`, RoleOwner).Scan(&count); err != nil {
+	var count int64
+	if err := s.gdb.Model(&dbmodel.Admin{}).Where("role = ?", RoleOwner).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
@@ -154,80 +168,44 @@ func (s *Store) EnsureAtLeastOneOwner() error {
 	return s.UpdateAdminRole(id, RoleOwner)
 }
 
-func scanAdmin(row *sql.Row) (Admin, error) {
-	a, err := scanAdminFromScanner(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Admin{}, ErrNotFound
-	}
-	return a, err
-}
-
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanAdminRow(rows *sql.Rows) (Admin, error) {
-	return scanAdminFromScanner(rows)
-}
-
-func scanAdminFromScanner(scanner rowScanner) (Admin, error) {
-	var a Admin
-	var must int
-	var lastLogin, createdAt, updatedAt int64
-	err := scanner.Scan(&a.ID, &a.Username, &a.PasswordHash, &must, &a.Role, &lastLogin, &a.AvatarVersion, &createdAt, &updatedAt)
-	if err != nil {
-		return Admin{}, err
-	}
-	a.MustChangePassword = must != 0
-	a.LastLoginAt = time.UnixMilli(lastLogin).UTC()
-	a.CreatedAt = time.UnixMilli(createdAt).UTC()
-	a.UpdatedAt = time.UnixMilli(updatedAt).UTC()
-	if a.Role == "" {
-		a.Role = RoleAdmin
-	}
-	return a, nil
-}
-
 // SetAdminAvatar stores the avatar bytes + mime, bumping the version so cached
 // URLs invalidate.
 func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, error) {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.exec(
-		`UPDATE admins
-		 SET avatar_mime = ?, avatar_png = ?, avatar_version = avatar_version + 1, updated_at = ?
-		 WHERE id = ?`,
-		mime, bytes, now, id,
-	)
-	if err != nil {
+	if err := s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
+		"avatar_mime":    mime,
+		"avatar_png":     bytes,
+		"avatar_version": gorm.Expr("avatar_version + 1"),
+		"updated_at":     time.Now().UTC().UnixMilli(),
+	}).Error; err != nil {
 		return 0, err
 	}
-	var version int64
-	if err := s.queryRow(`SELECT avatar_version FROM admins WHERE id = ?`, id).Scan(&version); err != nil {
+	var m dbmodel.Admin
+	if err := s.gdb.Select("avatar_version").Where("id = ?", id).First(&m).Error; err != nil {
 		return 0, err
 	}
-	return version, nil
+	return m.AvatarVersion, nil
 }
 
 // GetAdminAvatar returns the stored avatar bytes and mime. Empty bytes mean
 // no custom avatar was uploaded (frontend falls back to default).
 func (s *Store) GetAdminAvatar(id int64) (mime string, data []byte, version int64, err error) {
-	row := s.queryRow(`SELECT COALESCE(avatar_mime, ''), avatar_png, avatar_version FROM admins WHERE id = ?`, id)
-	if err = row.Scan(&mime, &data, &version); err != nil {
+	var m dbmodel.Admin
+	if err = s.gdb.Select("avatar_mime", "avatar_png", "avatar_version").
+		Where("id = ?", id).First(&m).Error; err != nil {
 		return "", nil, 0, err
 	}
-	return mime, data, version, nil
+	return m.AvatarMime, m.AvatarPNG, m.AvatarVersion, nil
 }
 
 // ClearAdminAvatar wipes the avatar. Version still bumps so caches refresh
 // to the default image.
 func (s *Store) ClearAdminAvatar(id int64) error {
-	now := time.Now().UTC().UnixMilli()
-	_, err := s.exec(
-		`UPDATE admins SET avatar_mime = '', avatar_png = NULL,
-		 avatar_version = avatar_version + 1, updated_at = ? WHERE id = ?`,
-		now, id,
-	)
-	return err
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
+		"avatar_mime":    "",
+		"avatar_png":     gorm.Expr("NULL"),
+		"avatar_version": gorm.Expr("avatar_version + 1"),
+		"updated_at":     time.Now().UTC().UnixMilli(),
+	}).Error
 }
 
 func boolToInt(b bool) int {
