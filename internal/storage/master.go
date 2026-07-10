@@ -1,10 +1,10 @@
 package storage
 
 import (
-	"database/sql"
 	"errors"
 	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"v.wingsnet.org/internal/storage/dbmodel"
@@ -25,22 +25,22 @@ type MasterConfig struct {
 }
 
 func (s *Store) GetMasterConfig(adminID int64) (MasterConfig, error) {
-	row := s.queryRow(
-		`SELECT admin_id, config_proto, sync_mode, periodic_interval_minutes, scope_flags, updated_at
-		 FROM admin_master_config WHERE admin_id = ?`,
-		adminID,
-	)
-	var m MasterConfig
-	var ts int64
-	err := row.Scan(&m.AdminID, &m.ConfigProto, &m.SyncMode, &m.PeriodicIntervalMinutes, &m.ScopeFlags, &ts)
-	if errors.Is(err, sql.ErrNoRows) {
+	var row dbmodel.AdminMasterConfig
+	err := s.gdb.Where("admin_id = ?", adminID).First(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return MasterConfig{AdminID: adminID}, nil
 	}
 	if err != nil {
 		return MasterConfig{}, err
 	}
-	m.UpdatedAt = time.UnixMilli(ts).UTC()
-	return m, nil
+	return MasterConfig{
+		AdminID:                 row.AdminID,
+		ConfigProto:             row.ConfigProto,
+		SyncMode:                row.SyncMode,
+		PeriodicIntervalMinutes: int(row.PeriodicIntervalMinutes),
+		ScopeFlags:              row.ScopeFlags,
+		UpdatedAt:               time.UnixMilli(row.UpdatedAtUnix).UTC(),
+	}, nil
 }
 
 func (s *Store) SaveMasterConfig(m MasterConfig) error {

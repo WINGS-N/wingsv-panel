@@ -53,24 +53,15 @@ func (s *Store) ReadClientLogs(clientID string, stream int32, sinceSeq int64, li
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
-	rows, err := s.query(`
-		SELECT seq, ts, text FROM client_logs
-		WHERE client_id = ? AND stream = ? AND seq > ?
-		ORDER BY seq ASC LIMIT ?`,
-		clientID, stream, sinceSeq, limit)
-	if err != nil {
+	var rows []dbmodel.ClientLog
+	if err := s.gdb.
+		Where("client_id = ? AND stream = ? AND seq > ?", clientID, stream, sinceSeq).
+		Order("seq ASC").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var out []LogLine
-	for rows.Next() {
-		var ln LogLine
-		var ts int64
-		if err := rows.Scan(&ln.Seq, &ts, &ln.Text); err != nil {
-			return nil, err
-		}
-		ln.TS = time.UnixMilli(ts).UTC()
-		out = append(out, ln)
+	for _, r := range rows {
+		out = append(out, LogLine{Seq: r.Seq, TS: time.UnixMilli(r.Ts).UTC(), Text: r.Text})
 	}
-	return out, rows.Err()
+	return out, nil
 }

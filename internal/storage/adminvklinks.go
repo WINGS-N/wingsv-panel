@@ -1,6 +1,10 @@
 package storage
 
-import "strings"
+import (
+	"strings"
+
+	"v.wingsnet.org/internal/storage/dbmodel"
+)
 
 // VK Links are the admin's shared pool of VK/OK OAuth links the relay uses to mint
 // TURN credentials. They live per-admin (shared across all of that admin's nodes),
@@ -9,22 +13,19 @@ import "strings"
 
 // GetAdminVKLinks returns the admin's VK Links in order, dropping blanks.
 func (s *Store) GetAdminVKLinks(adminID int64) ([]string, error) {
-	row := s.queryRow(`SELECT vk_links FROM admins WHERE id = ?`, adminID)
-	var joined string
-	if err := row.Scan(&joined); err != nil {
+	var m dbmodel.Admin
+	if err := s.gdb.Select("vk_links").Where("id = ?", adminID).First(&m).Error; err != nil {
 		return nil, err
 	}
-	return splitVKLinks(joined), nil
+	return splitVKLinks(m.VKLinks), nil
 }
 
 // SetAdminVKLinks replaces the admin's VK Links with the given list, trimming
 // blanks and de-duplicating while preserving first-seen order.
 func (s *Store) SetAdminVKLinks(adminID int64, links []string) error {
-	_, err := s.exec(
-		`UPDATE admins SET vk_links = ?, updated_at = updated_at WHERE id = ?`,
-		strings.Join(dedupVKLinks(links), "\n"), adminID,
-	)
-	return err
+	// Only vk_links changes; updated_at is intentionally left untouched.
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", adminID).
+		Update("vk_links", strings.Join(dedupVKLinks(links), "\n")).Error
 }
 
 func splitVKLinks(joined string) []string {
