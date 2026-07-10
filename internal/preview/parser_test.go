@@ -104,3 +104,67 @@ func TestParseWingsRoundTrip(t *testing.T) {
 		t.Errorf("Backend = %q, want %q", got.Backend, "VK TURN + AmneziaWG")
 	}
 }
+
+func TestParseConfigTypeTitles(t *testing.T) {
+	tests := []struct {
+		name         string
+		cfg          *wingsvpb.Config
+		wantTitle    string
+		wantSubtitle string
+	}{
+		{
+			name: "vk turn profile",
+			cfg: &wingsvpb.Config{
+				Ver:  1,
+				Type: wingsvpb.ConfigType_CONFIG_TYPE_VK_TURN_PROFILE,
+				Turn: &wingsvpb.Turn{Endpoint: &wingsvpb.Endpoint{Host: "relay.example", Port: 56000}},
+			},
+			wantTitle:    "Профиль VK TURN",
+			wantSubtitle: "relay.example:56000",
+		},
+		{
+			name: "amneziawg",
+			cfg: &wingsvpb.Config{
+				Ver:  1,
+				Type: wingsvpb.ConfigType_CONFIG_TYPE_AMNEZIAWG,
+				Awg:  &wingsvpb.AmneziaWG{Title: "My AWG"},
+			},
+			wantTitle:    "AmneziaWG",
+			wantSubtitle: "My AWG",
+		},
+		{
+			name: "wb stream",
+			cfg: &wingsvpb.Config{
+				Ver:      1,
+				Type:     wingsvpb.ConfigType_CONFIG_TYPE_WB_STREAM,
+				WbStream: &wingsvpb.WbStream{RoomId: "room42"},
+			},
+			wantTitle:    "WB Stream",
+			wantSubtitle: "Room room42",
+		},
+		{
+			name: "xposed",
+			cfg: &wingsvpb.Config{
+				Ver:    1,
+				Type:   wingsvpb.ConfigType_CONFIG_TYPE_XPOSED,
+				Xposed: &wingsvpb.Xposed{TargetPackages: []string{"a.b", "c.d"}},
+			},
+			wantTitle:    "Xposed модуль",
+			wantSubtitle: "2 целевых приложений",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(encodeWingsLink(t, tc.cfg))
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if got.Title != tc.wantTitle {
+				t.Errorf("Title = %q, want %q", got.Title, tc.wantTitle)
+			}
+			if got.Subtitle != tc.wantSubtitle {
+				t.Errorf("Subtitle = %q, want %q", got.Subtitle, tc.wantSubtitle)
+			}
+		})
+	}
+}

@@ -300,6 +300,40 @@ func buildPreview(raw string, config *wingsvpb.Config) *Preview {
 		}
 		preview.Subtitle = host
 		titleSetByConfigType = true
+	case wingsvpb.ConfigType_CONFIG_TYPE_VK:
+		preview.Title = "VK TURN"
+		if ep := endpointLabel(config.GetTurn().GetEndpoint()); ep != "" {
+			preview.Subtitle = ep
+		}
+		titleSetByConfigType = true
+	case wingsvpb.ConfigType_CONFIG_TYPE_VK_TURN_PROFILE:
+		preview.Title = "Профиль VK TURN"
+		if ep := endpointLabel(config.GetTurn().GetEndpoint()); ep != "" {
+			preview.Subtitle = ep
+		}
+		titleSetByConfigType = true
+	case wingsvpb.ConfigType_CONFIG_TYPE_AMNEZIAWG:
+		preview.Title = "AmneziaWG"
+		if t := strings.TrimSpace(config.GetAwg().GetTitle()); t != "" {
+			preview.Subtitle = t
+		} else if n := len(config.GetAwg().GetProfiles()); n > 0 {
+			preview.Subtitle = fmt.Sprintf("%d профилей", n)
+		}
+		titleSetByConfigType = true
+	case wingsvpb.ConfigType_CONFIG_TYPE_WB_STREAM:
+		preview.Title = "WB Stream"
+		if room := strings.TrimSpace(config.GetWbStream().GetRoomId()); room != "" {
+			preview.Subtitle = "Room " + room
+		}
+		titleSetByConfigType = true
+	case wingsvpb.ConfigType_CONFIG_TYPE_XPOSED:
+		preview.Title = "Xposed модуль"
+		if n := len(config.GetXposed().GetTargetPackages()); n > 0 {
+			preview.Subtitle = fmt.Sprintf("%d целевых приложений", n)
+		} else {
+			preview.Subtitle = "Маскировка и хуки"
+		}
+		titleSetByConfigType = true
 	}
 
 	profiles := config.GetXray().GetProfiles()
