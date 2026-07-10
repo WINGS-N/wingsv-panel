@@ -185,6 +185,14 @@
                   @change="toggleDisabled(client, $event)"
                 />
                 <SamsungIconButton
+                  v-if="client.managed"
+                  variant="secondary"
+                  :aria-label="`Изменить лимит ${client.name}`"
+                  @click.stop="openEditLimit(client)"
+                >
+                  <Gauge class="h-4 w-4" aria-hidden="true" />
+                </SamsungIconButton>
+                <SamsungIconButton
                   v-if="trafficHasLimit(client)"
                   variant="secondary"
                   :busy="resettingId === client.id"
@@ -348,6 +356,40 @@
         </template>
       </SamsungModal>
 
+      <SamsungModal
+        :model-value="!!editLimitClient"
+        :busy="savingLimit"
+        title="Лимит трафика"
+        @update:model-value="closeEditLimit"
+      >
+        <p v-if="editLimitClient" class="body-copy">
+          Клиент <strong>{{ editLimitClient.name }}</strong
+          >. Лимит считает суммарный трафик клиента; при исчерпании доступ отрезается до сброса.
+        </p>
+        <div class="form-row form-row-stack mt-3">
+          <OneuiInput v-model.number="editLimitGb" label="Лимит трафика (ГБ, 0 — без лимита)" type="number" :min="0" />
+        </div>
+        <div class="form-row form-row-stack mt-2">
+          <OneuiInput
+            v-model.number="editLimitPeriodDays"
+            label="Сброс каждые N дней (0 — только вручную)"
+            type="number"
+            :min="0"
+          />
+        </div>
+        <p v-if="editLimitError" class="admin-error mt-3">{{ editLimitError }}</p>
+        <template #actions>
+          <SamsungButton :busy="savingLimit" @click="saveLimit">
+            <template #icon><Check class="button-icon" aria-hidden="true" /></template>
+            {{ savingLimit ? 'Сохраняем…' : 'Сохранить' }}
+          </SamsungButton>
+          <SamsungButton variant="secondary" :disabled="savingLimit" @click="closeEditLimit">
+            <template #icon><X class="button-icon" aria-hidden="true" /></template>
+            Отмена
+          </SamsungButton>
+        </template>
+      </SamsungModal>
+
       <SamsungModal :model-value="!!lastCreatedLink" title="Клиент создан" @update:model-value="dismissLink">
         <p class="body-copy">Откройте ссылку в WINGS V на устройстве клиента:</p>
         <CopyableLink :value="lastCreatedLink" rows="3" />
@@ -371,7 +413,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Camera, ChevronLeft, ChevronRight, Plus, RotateCcw, Trash2, X } from 'lucide-vue-next';
+import { Camera, Check, ChevronLeft, ChevronRight, Gauge, Plus, RotateCcw, Trash2, X } from 'lucide-vue-next';
 import { authState, myAvatarUrl } from '@/stores/auth.js';
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { formatBytes } from '@/utils/format.js';
@@ -544,6 +586,11 @@ const deletingId = ref('');
 const deleteError = ref('');
 const togglingId = ref('');
 const resettingId = ref('');
+const editLimitClient = ref(null);
+const editLimitGb = ref(0);
+const editLimitPeriodDays = ref(0);
+const savingLimit = ref(false);
+const editLimitError = ref('');
 
 const canCreate = computed(() => {
   if (!newName.value) return false;
@@ -762,6 +809,46 @@ async function toggleDisabled(client, enabled) {
     await loadClients();
   } finally {
     togglingId.value = '';
+  }
+}
+
+// openEditLimit prefills the modal from the client's current cap (GiB, base 1024
+// to match formatBytes) and reset period so an admin can set or change the limit
+// on an already-created managed client - the create form is not the only entry.
+function openEditLimit(client) {
+  editLimitClient.value = client;
+  const bytes = Number(client.traffic_limit_bytes) || 0;
+  editLimitGb.value = bytes > 0 ? Number((bytes / (1024 * 1024 * 1024)).toFixed(2)) : 0;
+  editLimitPeriodDays.value = Number(client.reset_period_days) || 0;
+  editLimitError.value = '';
+}
+
+function closeEditLimit() {
+  if (savingLimit.value) return;
+  editLimitClient.value = null;
+}
+
+async function saveLimit() {
+  if (!editLimitClient.value || savingLimit.value) return;
+  savingLimit.value = true;
+  editLimitError.value = '';
+  try {
+    const res = await fetch(`/api/admin/clients/${encodeURIComponent(editLimitClient.value.id)}/traffic-limit`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        limit_gb: Number(editLimitGb.value) || 0,
+        reset_period_days: Number(editLimitPeriodDays.value) || 0,
+      }),
+    });
+    if (!res.ok) throw new Error('save failed');
+    editLimitClient.value = null;
+    await loadClients();
+  } catch {
+    editLimitError.value = 'Не удалось сохранить лимит';
+  } finally {
+    savingLimit.value = false;
   }
 }
 
