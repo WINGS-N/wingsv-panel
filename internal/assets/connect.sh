@@ -104,10 +104,10 @@ write_vktp_config() {
   upsert_key "$target_file" grpc-token "${TOKEN}"
   upsert_key "$target_file" panel-grpc "${PANEL_GRPC}"
   upsert_key "$target_file" node-id "${NODE_ID}"
-  # The one node credential wires the node both ways: grpc-token authenticates
-  # the panel's inbound management calls (AES-GCM transport), panel-token is the
-  # bearer the panel verifies on the node's outbound provisioning calls.
-  upsert_key "$target_file" panel-token "${TOKEN}"
+  # One token wires the node both ways: the relay uses grpc-token to authenticate
+  # the panel's inbound management calls and, when panel-token is unset (as here),
+  # falls back to the same value for its outbound provisioning bearer. No second
+  # copy of the credential.
   log "merged panel wiring into $target_file"
 }
 
