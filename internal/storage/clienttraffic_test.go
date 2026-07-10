@@ -166,6 +166,37 @@ func TestClientTrafficPeriodicReset(t *testing.T) {
 	}
 }
 
+func TestNodeClientUsageForLimits(t *testing.T) {
+	st := openTemp(t)
+	owner := seedManagedClient(t, st)
+	// An uncapped, enabled client is omitted.
+	if rows, err := st.NodeClientUsageForLimits("n1"); err != nil || len(rows) != 0 {
+		t.Fatalf("uncapped node usage = %+v (err %v), want empty", rows, err)
+	}
+	if err := st.SetClientTrafficLimit("c1", owner, 1000, 0, 0); err != nil {
+		t.Fatalf("limit: %v", err)
+	}
+	setPeerTraffic(t, st, 400, 200)
+	if err := st.AccumulateClientTraffic(); err != nil {
+		t.Fatalf("accumulate: %v", err)
+	}
+	rows, err := st.NodeClientUsageForLimits("n1")
+	if err != nil {
+		t.Fatalf("NodeClientUsageForLimits: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows=%+v want 1", rows)
+	}
+	r := rows[0]
+	if r.PublicKey != "pub1" || r.ClientID != "c1" || r.LimitBytes != 1000 || r.UsedBytes != 600 || r.Disabled {
+		t.Fatalf("usage row wrong: %+v", r)
+	}
+	// A different node has no peers for this client.
+	if rows, err := st.NodeClientUsageForLimits("n2"); err != nil || len(rows) != 0 {
+		t.Fatalf("other-node usage = %+v (err %v), want empty", rows, err)
+	}
+}
+
 func TestClientDisabledBlocksAndOwnerGate(t *testing.T) {
 	st := openTemp(t)
 	owner := seedManagedClient(t, st)

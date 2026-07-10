@@ -188,6 +188,32 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 	return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
 }
 
+// GetClientUsage returns the cap usage for the capped or disabled managed clients
+// with a peer on the calling node, so the relay can report used/remaining to the
+// app and optionally enforce a cutoff. Keyed by wg peer public key.
+func (s *Service) GetClientUsage(_ context.Context, req *provisioningpb.GetClientUsageRequest) (*provisioningpb.GetClientUsageResponse, error) {
+	rows, err := s.store.NodeClientUsageForLimits(req.GetNodeId())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	usage := make([]*provisioningpb.ClientUsage, 0, len(rows))
+	for _, r := range rows {
+		remaining := uint64(0)
+		if r.LimitBytes > r.UsedBytes {
+			remaining = r.LimitBytes - r.UsedBytes
+		}
+		usage = append(usage, &provisioningpb.ClientUsage{
+			PublicKey:      r.PublicKey,
+			ClientId:       r.ClientID,
+			LimitBytes:     r.LimitBytes,
+			UsedBytes:      r.UsedBytes,
+			RemainingBytes: remaining,
+			Disabled:       r.Disabled,
+		})
+	}
+	return &provisioningpb.GetClientUsageResponse{Usage: usage}, nil
+}
+
 // resolveXUITarget returns the 3x-ui node + inbound tag a node provisions through
 // when its WGBackend is "xui". ok=false means this node does not use a per-node
 // 3x-ui target (backend "own", or unset for the legacy global path).

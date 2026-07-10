@@ -297,6 +297,51 @@ func (s *Store) BlockedProvisionedClientIDs() ([]string, error) {
 	return ids, err
 }
 
+// NodeClientUsage is one managed client's cap state on a specific node, keyed by
+// the wg peer public key the relay sees for it.
+type NodeClientUsage struct {
+	PublicKey  string
+	ClientID   string
+	LimitBytes uint64
+	UsedBytes  uint64
+	Disabled   bool
+}
+
+// NodeClientUsageForLimits returns per-peer usage for the capped or disabled
+// managed clients holding a peer on the given node, so the relay can surface
+// remaining traffic to the app. Uncapped, enabled clients are omitted.
+func (s *Store) NodeClientUsageForLimits(nodeID string) ([]NodeClientUsage, error) {
+	var rows []struct {
+		PublicKey    string
+		ClientID     string
+		TrafficLimit uint64
+		UsedBytes    uint64
+		Disabled     int64
+	}
+	err := s.gdb.
+		Table("client_wg_peers AS cwp").
+		Joins("JOIN clients AS c ON c.id = cwp.client_id").
+		Joins("LEFT JOIN client_traffic AS ct ON ct.client_id = c.id").
+		Where("cwp.node_id = ? AND (c.traffic_limit_bytes > 0 OR c.disabled <> 0)", nodeID).
+		Select("cwp.public_key AS public_key, c.id AS client_id, c.traffic_limit_bytes AS traffic_limit, " +
+			"COALESCE(ct.used_bytes,0) AS used_bytes, c.disabled AS disabled").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]NodeClientUsage, len(rows))
+	for i, r := range rows {
+		out[i] = NodeClientUsage{
+			PublicKey:  r.PublicKey,
+			ClientID:   r.ClientID,
+			LimitBytes: r.TrafficLimit,
+			UsedBytes:  r.UsedBytes,
+			Disabled:   r.Disabled != 0,
+		}
+	}
+	return out, nil
+}
+
 // sumClientPeerTraffic returns the client's current summed cumulative peer rx/tx
 // across all its nodes. Zero when it holds no peers.
 func (s *Store) sumClientPeerTraffic(clientID string) (uint64, uint64, error) {
