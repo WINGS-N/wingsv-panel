@@ -240,7 +240,10 @@
         <div v-for="p in periods" :key="p.key" class="traffic-period">
           <span class="traffic-period-label">{{ p.label }}</span>
           <span class="traffic-period-value">{{ formatBytes(p.rx + p.tx) }}</span>
-          <span class="traffic-period-meta">↓ {{ formatBytes(p.rx) }} · ↑ {{ formatBytes(p.tx) }}</span>
+          <span class="traffic-period-meta"
+            ><span class="traffic-rx">↓ {{ formatBytes(p.rx) }}</span> ·
+            <span class="traffic-tx">↑ {{ formatBytes(p.tx) }}</span></span
+          >
         </div>
       </div>
       <div class="traffic-chart-wrap mt-4">

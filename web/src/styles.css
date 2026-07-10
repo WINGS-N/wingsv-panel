@@ -2406,3 +2406,11 @@ body.theme-light .oneui-switch-input:checked + .oneui-switch-track {
 body.theme-light .oneui-switch-thumb {
   box-shadow: 0 1px 3px rgba(20, 30, 60, 0.25);
 }
+
+/* Samsung-style Rx/Tx accent, mirrored in the app: receive green, transmit blue. */
+.traffic-rx {
+  color: #15b76f;
+}
+.traffic-tx {
+  color: #0381fe;
+}

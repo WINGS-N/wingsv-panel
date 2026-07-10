@@ -293,10 +293,10 @@ const tipStyle = computed(() => {
   display: inline-block;
 }
 .tc-swatch-rx {
-  background: #4b8dff;
+  background: #15b76f;
 }
 .tc-swatch-tx {
-  background: #b07cff;
+  background: #0381fe;
 }
 .tc-svg {
   width: 100%;
@@ -323,16 +323,16 @@ const tipStyle = computed(() => {
   vector-effect: non-scaling-stroke;
 }
 .tc-line-rx {
-  stroke: #4b8dff;
+  stroke: #15b76f;
 }
 .tc-line-tx {
-  stroke: #b07cff;
+  stroke: #0381fe;
 }
 .tc-area-rx {
-  fill: rgba(75, 141, 255, 0.16);
+  fill: rgba(21, 183, 111, 0.16);
 }
 .tc-area-tx {
-  fill: rgba(176, 124, 255, 0.12);
+  fill: rgba(3, 129, 254, 0.12);
 }
 .tc-cursor {
   stroke: rgba(252, 252, 252, 0.3);
@@ -340,10 +340,10 @@ const tipStyle = computed(() => {
   vector-effect: non-scaling-stroke;
 }
 .tc-dot-rx {
-  fill: #4b8dff;
+  fill: #15b76f;
 }
 .tc-dot-tx {
-  fill: #b07cff;
+  fill: #0381fe;
 }
 .tc-empty {
   fill: rgba(252, 252, 252, 0.4);
