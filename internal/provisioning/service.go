@@ -7,11 +7,14 @@ package provisioning
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"log"
+	"strings"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"v.wingsnet.org/internal/auth"
@@ -19,6 +22,28 @@ import (
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
+
+// verifyNodeBearer authenticates the calling relay: a node that has a management
+// credential (grpc_token) must present it as an "authorization: Bearer <token>"
+// header - its panel-token - on its outbound provisioning calls. This is the
+// relay->panel half of the mutual auth; the panel->relay half is the AES-GCM
+// management transport keyed by the same token. A node with no credential (empty
+// grpc_token, e.g. a panel-local node) is not challenged, so it keeps working.
+func verifyNodeBearer(ctx context.Context, node dbmodel.ServerNode) error {
+	if node.GRPCToken == "" {
+		return nil
+	}
+	md, _ := metadata.FromIncomingContext(ctx)
+	var presented string
+	for _, v := range md.Get("authorization") {
+		presented = strings.TrimSpace(strings.TrimPrefix(v, "Bearer "))
+		break
+	}
+	if subtle.ConstantTimeCompare([]byte(presented), []byte(node.GRPCToken)) != 1 {
+		return status.Error(codes.Unauthenticated, "invalid node token")
+	}
+	return nil
+}
 
 const defaultMTU = 1280
 
@@ -111,6 +136,9 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if err := verifyNodeBearer(ctx, node); err != nil {
+		return nil, err
+	}
 
 	existing, err := s.store.GetClientWGPeer(req.GetClientId(), req.GetNodeId())
 	if err == nil {
@@ -191,7 +219,17 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 // GetClientUsage returns the cap usage for the capped or disabled managed clients
 // with a peer on the calling node, so the relay can report used/remaining to the
 // app and optionally enforce a cutoff. Keyed by wg peer public key.
-func (s *Service) GetClientUsage(_ context.Context, req *provisioningpb.GetClientUsageRequest) (*provisioningpb.GetClientUsageResponse, error) {
+func (s *Service) GetClientUsage(ctx context.Context, req *provisioningpb.GetClientUsageRequest) (*provisioningpb.GetClientUsageResponse, error) {
+	node, err := s.store.GetServerNode(req.GetNodeId())
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, status.Error(codes.NotFound, "unknown node")
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := verifyNodeBearer(ctx, node); err != nil {
+		return nil, err
+	}
 	rows, err := s.store.NodeClientUsageForLimits(req.GetNodeId())
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

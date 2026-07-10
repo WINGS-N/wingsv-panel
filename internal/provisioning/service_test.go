@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"v.wingsnet.org/internal/auth"
@@ -48,6 +49,50 @@ func setup(t *testing.T) (*storage.Store, string, []byte) {
 		t.Fatalf("node: %v", err)
 	}
 	return st, "c1", tokenBytes
+}
+
+func TestResolveVerifiesNodeBearer(t *testing.T) {
+	st, err := storage.Open(storage.Options{Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "t.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	admin, err := st.CreateAdmin("owner", "hash", false, "owner")
+	if err != nil {
+		t.Fatalf("admin: %v", err)
+	}
+	token, tokenHash, err := auth.GenerateClientToken()
+	if err != nil {
+		t.Fatalf("token: %v", err)
+	}
+	if _, err := st.CreateClient("c1", admin.ID, "dev", tokenHash, token); err != nil {
+		t.Fatalf("client: %v", err)
+	}
+	if _, err := st.CreateServerNode(dbmodel.ServerNode{
+		ID: "n1", Kind: storage.ServerNodeVKTurnProxy, Name: "relay", GRPCToken: "nodesecret",
+	}); err != nil {
+		t.Fatalf("node: %v", err)
+	}
+	svc := NewService(st, &fakeProvisioner{peer: Peer{
+		PublicKey: "pub", PrivateKey: "priv", AllowedIPs: "10.66.66.2/32", ServerPublicKey: "spub",
+	}})
+	req := &provisioningpb.ResolveClientConfigRequest{ClientId: "c1", Token: token, NodeId: "n1"}
+
+	if _, err := svc.ResolveClientConfig(context.Background(), req); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("no bearer = %v, want Unauthenticated", err)
+	}
+	wrong := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer nope"))
+	if _, err := svc.ResolveClientConfig(wrong, req); status.Code(err) != codes.Unauthenticated {
+		t.Fatalf("wrong bearer = %v, want Unauthenticated", err)
+	}
+	ok := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer nodesecret"))
+	resp, err := svc.ResolveClientConfig(ok, req)
+	if err != nil {
+		t.Fatalf("right bearer: %v", err)
+	}
+	if resp.GetWg().GetPublicKey() != "pub" {
+		t.Fatalf("wg public key = %q, want pub", resp.GetWg().GetPublicKey())
+	}
 }
 
 func TestResolveRefusesBlockedClient(t *testing.T) {
