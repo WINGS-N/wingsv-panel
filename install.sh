@@ -47,6 +47,7 @@ XUI_GRPC_PORT=25613     # panel -> 3x-ui management gRPC
 MODE=bin
 ASSUME_YES=0
 DO_UNINSTALL=0
+ADVANCED=0              # advanced config: expose ports / DB path / WG CIDR
 LANG_SEL=ru             # ru (default) | en; overridden by the language prompt
 
 # --------------------------------------------------------------------------- #
@@ -62,10 +63,11 @@ usage() {
   cat <<EOF
 wingsv-panel installer
 
-Usage: install.sh [--docker] [--yes] [--uninstall] [--lang ru|en]
+Usage: install.sh [--docker] [--yes] [--advanced] [--uninstall] [--lang ru|en]
 
   --docker      run the panel as a container (default: standalone binary)
   --yes         accept defaults, do not prompt (non-interactive)
+  --advanced    prompt for ports, DB path and WireGuard CIDR (else use defaults)
   --uninstall   stop and remove the panel + local node services
   --lang ru|en  interface language (default: ru; also LANG_SEL env)
 
@@ -80,6 +82,13 @@ t() {
   if [ "$LANG_SEL" = en ]; then
     case "$1" in
       q_port)          echo "panel HTTPS port";;
+      q_advanced)      echo "advanced configuration (ports, DB path, WireGuard CIDR)?";;
+      q_prov_port)     echo "provisioning gRPC port (node -> panel)";;
+      q_db_path)       echo "SQLite database path";;
+      q_vktp_dtls)     echo "vk-turn-proxy data port (UDP)";;
+      q_vktp_grpc)     echo "vk-turn-proxy management gRPC port (loopback)";;
+      q_wg_port)       echo "WireGuard listen port (UDP)";;
+      q_wg_cidr)       echo "WireGuard tunnel CIDR";;
       q_cert_choose)   echo "choose 1/2/3";;
       cert_header)     echo "Certificate:";;
       cert_1)          echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - needs a domain and free :80";;
@@ -106,7 +115,7 @@ t() {
       log_download)    echo "Downloading %s from %s";;
       err_download)    echo "download failed: %s (override with the repo's release asset or build from source)";;
       log_uninstall)   echo "Uninstalling";;
-      ok_uninstalled)  echo "uninstalled";;
+      ok_uninstalled)  echo "Uninstall complete";;
       err_le_domain)   echo "domain required for Let's Encrypt";;
       err_certkey)     echo "cert/key not found";;
       err_host)        echo "host required";;
@@ -141,6 +150,13 @@ t() {
   else
     case "$1" in
       q_port)          echo "порт HTTPS панели";;
+      q_advanced)      echo "расширенная конфигурация (порты, путь к БД, WireGuard CIDR)?";;
+      q_prov_port)     echo "порт provisioning gRPC (нода -> панель)";;
+      q_db_path)       echo "путь к базе SQLite";;
+      q_vktp_dtls)     echo "порт данных vk-turn-proxy (UDP)";;
+      q_vktp_grpc)     echo "порт управления vk-turn-proxy gRPC (loopback)";;
+      q_wg_port)       echo "порт WireGuard (UDP)";;
+      q_wg_cidr)       echo "CIDR туннеля WireGuard";;
       q_cert_choose)   echo "выберите 1/2/3";;
       cert_header)     echo "Сертификат:";;
       cert_1)          echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - нужен домен и свободный :80";;
@@ -167,7 +183,7 @@ t() {
       log_download)    echo "Скачивание %s из %s";;
       err_download)    echo "не удалось скачать: %s (укажите ассет релиза или соберите из исходников)";;
       log_uninstall)   echo "Удаление";;
-      ok_uninstalled)  echo "удалено";;
+      ok_uninstalled)  echo "Удаление завершено";;
       err_le_domain)   echo "для Let's Encrypt нужен домен";;
       err_certkey)     echo "cert/key не найдены";;
       err_host)        echo "нужен хост";;
@@ -235,11 +251,10 @@ ask_secret() { # ask_secret "Question" -> echoes secret (no echo)
   printf '%s' "$ans"
 }
 yesno() { # yesno "Question" "y|n" -> returns 0 for yes
-  local q="$1" def="${2:-y}" ans suffix
+  local q="$1" def="${2:-y}" ans
   if [ "$ASSUME_YES" = 1 ]; then [ "$def" = y ]; return; fi
-  [ "$LANG_SEL" = en ] && suffix="(y/n)" || suffix="(д/н)"
-  ans=$(ask "$q $suffix" "$def")
-  case "${ans,,}" in y|yes|д|да) return 0;; *) return 1;; esac
+  ans=$(ask "$q (y/n)" "$def")
+  case "${ans,,}" in y|yes) return 0;; *) return 1;; esac
 }
 
 # Ask the interface language before anything else is printed. Bilingual prompt so
@@ -411,10 +426,16 @@ install_acme() { # install_acme <domain>
 }
 
 install_panel() {
-  mkdir -p "$PANEL_CFG_DIR" "$PANEL_DATA_DIR" "$CA_DIR"
-
   PANEL_PORT=$(ask "$(t q_port)" "$PANEL_PORT")
   [ "$PANEL_PORT" = 80 ] && die "port 80 is reserved (ACME / redirect); pick another"
+
+  if [ "$ADVANCED" = 1 ]; then
+    PROV_PORT=$(ask "$(t q_prov_port)" "$PROV_PORT")
+    PANEL_DB=$(ask "$(t q_db_path)" "$PANEL_DB")
+    PANEL_DATA_DIR=$(dirname "$PANEL_DB")
+  fi
+
+  mkdir -p "$PANEL_CFG_DIR" "$PANEL_DATA_DIR" "$CA_DIR"
 
   configure_cert
 
@@ -465,6 +486,15 @@ EOF
 }
 
 start_panel_bin() {
+  # StateDirectory makes systemd create the data dir and (re)own it to the
+  # service user on every start - the canonical fix for the SQLite "unable to
+  # open database file" (CANTOPEN) that hits when the wings user cannot traverse
+  # or write /var/lib/wings/panel. Only meaningful when the DB lives under
+  # /var/lib; a custom advanced path relies on the installer's chown instead.
+  local state_dir=""
+  case "$PANEL_DATA_DIR" in
+    /var/lib/*) state_dir="StateDirectory=${PANEL_DATA_DIR#/var/lib/}";;
+  esac
   cat > "/etc/systemd/system/$PANEL_SVC.service" <<EOF
 [Unit]
 Description=WINGS V panel
@@ -476,6 +506,7 @@ After=network.target
 
 [Service]
 User=$SVC_USER
+$state_dir
 Environment=WINGS_PANEL_CONFIG=$PANEL_CFG
 ExecStart=$PANEL_BIN serve
 Restart=always
@@ -532,6 +563,13 @@ VKTP_INSTALLED=0
 install_vktp() {
   yesno "$(t q_install_vktp)" y || { log "$(t log_skip_vktp)"; return; }
   local name; name=$(ask "$(t q_node_name)" "$(hostname)-vktp")
+
+  if [ "$ADVANCED" = 1 ]; then
+    VKTP_DTLS_PORT=$(ask "$(t q_vktp_dtls)" "$VKTP_DTLS_PORT")
+    VKTP_GRPC_PORT=$(ask "$(t q_vktp_grpc)" "$VKTP_GRPC_PORT")
+    VKTP_WG_PORT=$(ask "$(t q_wg_port)" "$VKTP_WG_PORT")
+    VKTP_WG_CIDR=$(ask "$(t q_wg_cidr)" "$VKTP_WG_CIDR")
+  fi
 
   # The vk-turn-proxy node always runs as a host binary (it needs host wg/NAT),
   # even under --docker. Stop a running one first so its busy binary can be
@@ -653,6 +691,7 @@ main() {
     case "$1" in
       --docker) MODE=docker;;
       --yes|-y) ASSUME_YES=1;;
+      --advanced|-a) ADVANCED=1;;
       --uninstall) DO_UNINSTALL=1;;
       --lang) shift; [ "${1:-}" = en ] && LANG_SEL=en || LANG_SEL=ru;;
       -h|--help) usage; exit 0;;
@@ -667,6 +706,9 @@ main() {
   ensure_deps
 
   if [ "$DO_UNINSTALL" = 1 ]; then do_uninstall; exit 0; fi
+
+  # Offer advanced config unless already forced with --advanced.
+  if [ "$ADVANCED" = 0 ]; then yesno "$(t q_advanced)" n && ADVANCED=1 || true; fi
 
   install_panel
   wire_xui
