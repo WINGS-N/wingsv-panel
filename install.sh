@@ -125,7 +125,13 @@ pkg_install() {
 ensure_deps() {
   local need=()
   have curl || need+=(curl); have jq || need+=(jq); have tar || need+=(tar); have openssl || need+=(openssl)
-  [ "${#need[@]}" -gt 0 ] && { log "installing dependencies: ${need[*]}"; pkg_install "${need[@]}"; }
+  # Must be an `if`, not `X && {...}`: as the function's last statement a false
+  # `[ ${#need[@]} -gt 0 ]` would make ensure_deps return 1, and under
+  # `set -e` that silently aborts the whole installer once all deps are present.
+  if [ "${#need[@]}" -gt 0 ]; then
+    log "installing dependencies: ${need[*]}"
+    pkg_install "${need[@]}"
+  fi
 }
 
 arch_tag() {
