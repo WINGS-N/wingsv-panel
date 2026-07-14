@@ -47,6 +47,7 @@ XUI_GRPC_PORT=25613     # panel -> 3x-ui management gRPC
 MODE=bin
 ASSUME_YES=0
 DO_UNINSTALL=0
+LANG_SEL=ru             # ru (default) | en; overridden by the language prompt
 
 # --------------------------------------------------------------------------- #
 # Output helpers
@@ -61,26 +62,161 @@ usage() {
   cat <<EOF
 wingsv-panel installer
 
-Usage: install.sh [--docker] [--yes] [--uninstall]
+Usage: install.sh [--docker] [--yes] [--uninstall] [--lang ru|en]
 
   --docker      run the panel as a container (default: standalone binary)
   --yes         accept defaults, do not prompt (non-interactive)
   --uninstall   stop and remove the panel + local node services
+  --lang ru|en  interface language (default: ru; also LANG_SEL env)
 
-Env overrides: PANEL_REPO, VKTP_REPO, PANEL_IMAGE.
+Env overrides: PANEL_REPO, VKTP_REPO, PANEL_IMAGE, LANG_SEL.
 EOF
 }
+
+# --------------------------------------------------------------------------- #
+# i18n. t <key> -> localized string; tf <key> args... -> printf-formatted.
+# --------------------------------------------------------------------------- #
+t() {
+  if [ "$LANG_SEL" = en ]; then
+    case "$1" in
+      q_port)          echo "panel HTTPS port";;
+      q_cert_choose)   echo "choose 1/2/3";;
+      cert_header)     echo "Certificate:";;
+      cert_1)          echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - needs a domain and free :80";;
+      cert_2)          echo "  2) Existing certificate (provide cert + key paths)";;
+      cert_3)          echo "  3) Self-signed (own CA + SPKI pin) - domain or bare IP, no external CA needed";;
+      q_le_domain)     echo "domain (A record must point here)";;
+      q_cert_path)     echo "path to certificate PEM (fullchain)";;
+      q_key_path)      echo "path to private key PEM";;
+      q_url_host)      echo "public domain/host for the panel URL";;
+      q_host)          echo "enter IP or domain of this server";;
+      q_admin_user)    echo "bootstrap admin username";;
+      q_admin_pass)    echo "bootstrap admin password (blank = admin)";;
+      q_node_name)     echo "node name (optional)";;
+      q_install_vktp)  echo "install a local vk-turn-proxy relay node?";;
+      q_wire_xui)      echo "local 3x-ui detected - wire it to the panel for profile creation?";;
+      q_rm_data)       echo "remove config and data (%s, %s, %s)?";;
+      err_no_tty)      echo "no terminal for prompts; re-run with --yes for defaults, or download install.sh and run it directly";;
+      err_root)        echo "run as root (sudo)";;
+      err_systemd)     echo "systemd is required for the binary install; use --docker or install manually";;
+      warn_pkg)        echo "unknown package manager; ensure these are installed: %s";;
+      log_deps)        echo "Installing dependencies";;
+      err_arch)        echo "unsupported arch %s; set the release asset manually";;
+      log_download)    echo "Downloading %s from %s";;
+      err_download)    echo "download failed: %s (override with the repo's release asset or build from source)";;
+      log_uninstall)   echo "Uninstalling";;
+      ok_uninstalled)  echo "uninstalled";;
+      err_le_domain)   echo "domain required for Let's Encrypt";;
+      err_certkey)     echo "cert/key not found";;
+      err_host)        echo "host required";;
+      log_acme)        echo "Installing acme.sh";;
+      log_le_issue)    echo "Issuing LE certificate for %s (binds :80 briefly)";;
+      err_acme)        echo "acme.sh issue failed (is :80 reachable, DNS correct?)";;
+      warn_gen_pass)   echo "generated admin password: %s";;
+      ok_panel)        echo "panel installed (%s)";;
+      err_docker)      echo "--docker requires docker installed";;
+      log_no_xui)      echo "No local 3x-ui detected; skipping";;
+      err_xui_reg)     echo "failed to register 3x-ui node";;
+      warn_xui_conn)   echo "x-ui grpc-connect failed";;
+      warn_xui_docker) echo "3x-ui runs in docker; run inside it: x-ui grpc-connect %s %s %s 0.0.0.0:%s && restart the container";;
+      ok_xui)          echo "3x-ui wired (node %s)";;
+      log_skip_vktp)   echo "Skipping local vk-turn-proxy node";;
+      err_vktp_reg)    echo "failed to register vk-turn-proxy node";;
+      warn_wg)         echo "cannot create a WireGuard interface here (no NET_ADMIN / module); wg minting will be in-memory only";;
+      log_nat)         echo "Enabling IP forwarding + NAT for %s";;
+      warn_wan)        echo "could not detect WAN interface; add NAT manually";;
+      warn_no_fw)      echo "no nft/iptables; set up MASQUERADE from %s out %s manually";;
+      ok_vktp)         echo "vk-turn-proxy node installed (node %s)";;
+      s_done)          echo "Done.";;
+      s_panel)         echo "  Panel:         %s";;
+      s_admin)         echo "  Admin:         %s / %s";;
+      s_pin)           echo "  CA SPKI pin:   %s  (embedded in app enrollment links)";;
+      s_vktp)          echo "  vk-turn-proxy: local node up (UDP %s)";;
+      s_xui)           echo "  3x-ui:         wired (node %s)";;
+      s_next)          echo "  Next: open the panel, sign in, add clients. Register more nodes with:";;
+      err_flag)        echo "unknown flag %s (see --help)";;
+      *)               echo "$1";;
+    esac
+  else
+    case "$1" in
+      q_port)          echo "порт HTTPS панели";;
+      q_cert_choose)   echo "выберите 1/2/3";;
+      cert_header)     echo "Сертификат:";;
+      cert_1)          echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - нужен домен и свободный :80";;
+      cert_2)          echo "  2) Существующий сертификат (указать пути cert + key)";;
+      cert_3)          echo "  3) Самоподписанный (свой CA + SPKI pin) - домен или голый IP, без внешнего CA";;
+      q_le_domain)     echo "домен (A-запись должна указывать сюда)";;
+      q_cert_path)     echo "путь к сертификату PEM (fullchain)";;
+      q_key_path)      echo "путь к приватному ключу PEM";;
+      q_url_host)      echo "публичный домен/хост для URL панели";;
+      q_host)          echo "введите IP или домен этого сервера";;
+      q_admin_user)    echo "имя администратора";;
+      q_admin_pass)    echo "пароль администратора (пусто = admin)";;
+      q_node_name)     echo "имя ноды (опционально)";;
+      q_install_vktp)  echo "установить локальную vk-turn-proxy relay-ноду?";;
+      q_wire_xui)      echo "обнаружен локальный 3x-ui - подключить его к панели для создания профилей?";;
+      q_rm_data)       echo "удалить конфиги и данные (%s, %s, %s)?";;
+      err_no_tty)      echo "нет терминала для ввода; перезапустите с --yes для дефолтов, либо скачайте install.sh и запустите напрямую";;
+      err_root)        echo "запустите от root (sudo)";;
+      err_systemd)     echo "для установки бинарём нужен systemd; используйте --docker или ставьте вручную";;
+      warn_pkg)        echo "неизвестный пакетный менеджер; установите вручную: %s";;
+      log_deps)        echo "Установка зависимостей";;
+      err_arch)        echo "неподдерживаемая архитектура %s; задайте ассет релиза вручную";;
+      log_download)    echo "Скачивание %s из %s";;
+      err_download)    echo "не удалось скачать: %s (укажите ассет релиза или соберите из исходников)";;
+      log_uninstall)   echo "Удаление";;
+      ok_uninstalled)  echo "удалено";;
+      err_le_domain)   echo "для Let's Encrypt нужен домен";;
+      err_certkey)     echo "cert/key не найдены";;
+      err_host)        echo "нужен хост";;
+      log_acme)        echo "Установка acme.sh";;
+      log_le_issue)    echo "Выпуск LE-сертификата для %s (ненадолго занимает :80)";;
+      err_acme)        echo "acme.sh issue не удался (доступен ли :80, верный ли DNS?)";;
+      warn_gen_pass)   echo "сгенерирован пароль администратора: %s";;
+      ok_panel)        echo "панель установлена (%s)";;
+      err_docker)      echo "--docker требует установленного docker";;
+      log_no_xui)      echo "Локальный 3x-ui не обнаружен; пропуск";;
+      err_xui_reg)     echo "не удалось зарегистрировать ноду 3x-ui";;
+      warn_xui_conn)   echo "x-ui grpc-connect не удался";;
+      warn_xui_docker) echo "3x-ui в docker; выполните внутри: x-ui grpc-connect %s %s %s 0.0.0.0:%s и перезапустите контейнер";;
+      ok_xui)          echo "3x-ui подключён (нода %s)";;
+      log_skip_vktp)   echo "Пропуск локальной vk-turn-proxy ноды";;
+      err_vktp_reg)    echo "не удалось зарегистрировать vk-turn-proxy ноду";;
+      warn_wg)         echo "здесь нельзя создать WireGuard-интерфейс (нет NET_ADMIN / модуля); wg будет только в памяти";;
+      log_nat)         echo "Включение IP forwarding + NAT для %s";;
+      warn_wan)        echo "не удалось определить WAN-интерфейс; добавьте NAT вручную";;
+      warn_no_fw)      echo "нет nft/iptables; настройте MASQUERADE из %s через %s вручную";;
+      ok_vktp)         echo "vk-turn-proxy нода установлена (нода %s)";;
+      s_done)          echo "Готово.";;
+      s_panel)         echo "  Панель:        %s";;
+      s_admin)         echo "  Админ:         %s / %s";;
+      s_pin)           echo "  CA SPKI pin:   %s  (встраивается в enrollment-ссылки приложения)";;
+      s_vktp)          echo "  vk-turn-proxy: локальная нода поднята (UDP %s)";;
+      s_xui)           echo "  3x-ui:         подключён (нода %s)";;
+      s_next)          echo "  Далее: откройте панель, войдите, добавляйте клиентов. Регистрация новых нод:";;
+      err_flag)        echo "неизвестный флаг %s (см. --help)";;
+      *)               echo "$1";;
+    esac
+  fi
+}
+tf() { local k="$1"; shift; printf "$(t "$k")" "$@"; }
 
 # --------------------------------------------------------------------------- #
 # Prompt helpers (respect --yes)
 # --------------------------------------------------------------------------- #
 # When the installer is piped (curl ... | bash) its stdin IS the script, so a
-# plain `read` hits EOF and every prompt silently takes its default (that is how
-# "choose 1/2/3" fell through to self-signed and then died on an empty host).
-# Read prompts from the controlling terminal instead so `curl | bash` stays
-# interactive; only when there is no terminal at all do we require --yes.
+# plain `read` hits EOF and every prompt silently takes its default. Read prompts
+# from the controlling terminal instead so `curl | bash` stays interactive; only
+# when there is no terminal at all do we require --yes.
 if [ -r /dev/tty ]; then TTY_IN=/dev/tty; else TTY_IN=; fi
-no_tty() { die "no terminal for prompts; re-run with --yes for defaults, or download install.sh and run it directly"; }
+no_tty() { die "$(t err_no_tty)"; }
+
+# Some terminals wrap pasted text in bracketed-paste markers (ESC[200~ ... ESC[201~).
+# A bare `read` cannot consume them and shows stray `^` characters, so pasting a
+# password / cert path / IP fails. Turn the mode off on the prompt terminal. The
+# group redirect swallows the "cannot open /dev/tty" message on hosts where the
+# node exists but has no controlling terminal.
+[ -n "$TTY_IN" ] && { printf '\033[?2004l' >"$TTY_IN"; } 2>/dev/null || true
 
 ask() { # ask "Question" "default" -> echoes answer
   local q="$1" def="${2:-}" ans=""
@@ -97,21 +233,42 @@ ask_secret() { # ask_secret "Question" -> echoes secret (no echo)
   printf '%s' "$ans"
 }
 yesno() { # yesno "Question" "y|n" -> returns 0 for yes
-  local q="$1" def="${2:-y}" ans
+  local q="$1" def="${2:-y}" ans suffix
   if [ "$ASSUME_YES" = 1 ]; then [ "$def" = y ]; return; fi
-  ans=$(ask "$q (y/n)" "$def")
-  case "${ans,,}" in y|yes) return 0;; *) return 1;; esac
+  [ "$LANG_SEL" = en ] && suffix="(y/n)" || suffix="(д/н)"
+  ans=$(ask "$q $suffix" "$def")
+  case "${ans,,}" in y|yes|д|да) return 0;; *) return 1;; esac
+}
+
+# Ask the interface language before anything else is printed. Bilingual prompt so
+# it is understandable regardless of the current default.
+choose_lang() {
+  if [ "$ASSUME_YES" = 1 ] || [ -z "$TTY_IN" ]; then return; fi
+  local a=""
+  read -r -p "Язык / Language: 1) Русский  2) English [1]: " a <"$TTY_IN" || true
+  case "${a,,}" in 2|en|english|английский|англ) LANG_SEL=en;; *) LANG_SEL=ru;; esac
 }
 
 gen_token() { head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 gen_pass()  { head -c 18 /dev/urandom | base64 | tr -d '/+=' | cut -c1-24; }
 have()      { command -v "$1" >/dev/null 2>&1; }
 
+# Best-effort detection of this server's reachable IP: public IPv4 first (what a
+# client actually dials), falling back to the primary/route-source local address.
+detect_ip() {
+  local ip=""
+  ip=$(curl -fsS4 --max-time 4 https://api.ipify.org 2>/dev/null || true)
+  [ -n "$ip" ] || ip=$(curl -fsS4 --max-time 4 https://ifconfig.me 2>/dev/null || true)
+  [ -n "$ip" ] || ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+  [ -n "$ip" ] || ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  printf '%s' "$ip"
+}
+
 # --------------------------------------------------------------------------- #
 # Preflight
 # --------------------------------------------------------------------------- #
-require_root() { [ "$(id -u)" = 0 ] || die "run as root (sudo)"; }
-require_systemd() { have systemctl || die "systemd is required for the binary install; use --docker or install manually"; }
+require_root() { [ "$(id -u)" = 0 ] || die "$(t err_root)"; }
+require_systemd() { have systemctl || die "$(t err_systemd)"; }
 
 pkg_install() {
   if   have apt-get; then apt-get update -y >/dev/null && DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" >/dev/null
@@ -119,7 +276,7 @@ pkg_install() {
   elif have yum;     then yum install -y "$@" >/dev/null
   elif have pacman;  then pacman -Sy --noconfirm "$@" >/dev/null
   elif have apk;     then apk add --no-cache "$@" >/dev/null
-  else warn "unknown package manager; ensure these are installed: $*"; fi
+  else warn "$(tf warn_pkg "$*")"; fi
 }
 
 ensure_deps() {
@@ -129,7 +286,7 @@ ensure_deps() {
   # `[ ${#need[@]} -gt 0 ]` would make ensure_deps return 1, and under
   # `set -e` that silently aborts the whole installer once all deps are present.
   if [ "${#need[@]}" -gt 0 ]; then
-    log "installing dependencies: ${need[*]}"
+    log "$(t log_deps): ${need[*]}"
     pkg_install "${need[@]}"
   fi
 }
@@ -140,15 +297,18 @@ arch_tag() {
     aarch64|arm64) echo arm64;;
     armv7l|armv6l|arm) echo arm;;
     riscv64) echo riscv64;;
-    *) die "unsupported arch $(uname -m); set PANEL_REPO asset manually";;
+    *) die "$(tf err_arch "$(uname -m)")";;
   esac
 }
 
 download() { # download <repo> <asset> <out>
   local repo="$1" asset="$2" out="$3"
   local url="https://github.com/$repo/releases/latest/download/$asset"
-  log "downloading $asset from $repo"
-  curl -fsSL "$url" -o "$out" || die "download failed: $url (override with the repo's release asset or build from source)"
+  log "$(tf log_download "$asset" "$repo")"
+  # Visible progress bar (not -s). --http1.1: GitHub's release-assets host serves
+  # over HTTP/2 where curl intermittently hangs after the body completes (100%)
+  # waiting on the stream close; HTTP/1.1 closes cleanly on Content-Length.
+  curl -fL --http1.1 --progress-bar "$url" -o "$out" || die "$(tf err_download "$url")"
   chmod +x "$out"
 }
 
@@ -179,7 +339,7 @@ panel_cli() {
 # Uninstall
 # --------------------------------------------------------------------------- #
 do_uninstall() {
-  log "uninstalling"
+  log "$(t log_uninstall)"
   for svc in "$PANEL_SVC" "$VKTP_SVC"; do
     systemctl disable --now "$svc" 2>/dev/null || true
     rm -f "/etc/systemd/system/$svc.service"
@@ -187,10 +347,10 @@ do_uninstall() {
   systemctl daemon-reload 2>/dev/null || true
   [ "$MODE" = docker ] && { docker rm -f "$PANEL_SVC" 2>/dev/null || true; }
   rm -f "$PANEL_BIN" "$VKTP_BIN"
-  if yesno "remove config and data ($PANEL_CFG_DIR, $VKTP_CFG_DIR, $PANEL_DATA_DIR)?" n; then
+  if yesno "$(tf q_rm_data "$PANEL_CFG_DIR" "$VKTP_CFG_DIR" "$PANEL_DATA_DIR")" n; then
     rm -rf "$PANEL_CFG_DIR" "$VKTP_CFG_DIR" "$PANEL_DATA_DIR"
   fi
-  ok "uninstalled"
+  ok "$(t ok_uninstalled)"
 }
 
 # --------------------------------------------------------------------------- #
@@ -202,31 +362,31 @@ ADMIN_USER=""; ADMIN_PASS=""; CA_PIN=""
 NEED_LE_PORT80=0
 
 configure_cert() {
-  echo "Certificate:"
-  echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - needs a domain and free :80"
-  echo "  2) Existing certificate (provide cert + key paths)"
-  echo "  3) Self-signed (own CA + SPKI pin) - domain or bare IP, no external CA needed"
-  local choice; choice=$(ask "choose 1/2/3" 3)
+  echo "$(t cert_header)"
+  echo "$(t cert_1)"
+  echo "$(t cert_2)"
+  echo "$(t cert_3)"
+  local choice; choice=$(ask "$(t q_cert_choose)" 3)
   case "$choice" in
     1)
-      local domain; domain=$(ask "domain (A record must point here)")
-      [ -n "$domain" ] || die "domain required for Let's Encrypt"
+      local domain; domain=$(ask "$(t q_le_domain)")
+      [ -n "$domain" ] || die "$(t err_le_domain)"
       install_acme "$domain"
       TLS_CERT="$CA_DIR/fullchain.pem"; TLS_KEY="$CA_DIR/key.pem"
       PUBLIC_BASE_URL="https://$domain$(port_suffix)"
       NEED_LE_PORT80=1
       ;;
     2)
-      TLS_CERT=$(ask "path to certificate PEM (fullchain)")
-      TLS_KEY=$(ask "path to private key PEM")
-      [ -f "$TLS_CERT" ] && [ -f "$TLS_KEY" ] || die "cert/key not found"
-      local domain; domain=$(ask "public domain/host for the panel URL")
+      TLS_CERT=$(ask "$(t q_cert_path)")
+      TLS_KEY=$(ask "$(t q_key_path)")
+      [ -f "$TLS_CERT" ] && [ -f "$TLS_KEY" ] || die "$(t err_certkey)"
+      local domain; domain=$(ask "$(t q_url_host)")
       PUBLIC_BASE_URL="https://$domain$(port_suffix)"
       ;;
     *)
       TLS_SELF_SIGNED=true
-      local host; host=$(ask "public domain, hostname or IP of this server")
-      [ -n "$host" ] || die "host required"
+      local host; host=$(ask "$(t q_host)" "$(detect_ip)")
+      [ -n "$host" ] || die "$(t err_host)"
       PUBLIC_BASE_URL="https://$host$(port_suffix)"
       ;;
   esac
@@ -236,12 +396,12 @@ port_suffix() { [ "$PANEL_PORT" = 443 ] && printf '' || printf ':%s' "$PANEL_POR
 
 install_acme() { # install_acme <domain>
   local domain="$1"
-  have "$HOME/.acme.sh/acme.sh" || { log "installing acme.sh"; curl -fsSL https://get.acme.sh | sh -s email="admin@$domain" >/dev/null; }
+  have "$HOME/.acme.sh/acme.sh" || { log "$(t log_acme)"; curl -fsSL https://get.acme.sh | sh -s email="admin@$domain" >/dev/null; }
   local acme="$HOME/.acme.sh/acme.sh"
   "$acme" --set-default-ca --server letsencrypt >/dev/null 2>&1 || true
   open_ports "80/tcp"
-  log "issuing LE certificate for $domain (binds :80 briefly)"
-  "$acme" --issue --standalone -d "$domain" >/dev/null || die "acme.sh issue failed (is :80 reachable, DNS correct?)"
+  log "$(tf log_le_issue "$domain")"
+  "$acme" --issue --standalone -d "$domain" >/dev/null || die "$(t err_acme)"
   mkdir -p "$CA_DIR"
   "$acme" --install-cert -d "$domain" \
     --key-file "$CA_DIR/key.pem" --fullchain-file "$CA_DIR/fullchain.pem" \
@@ -251,14 +411,14 @@ install_acme() { # install_acme <domain>
 install_panel() {
   mkdir -p "$PANEL_CFG_DIR" "$PANEL_DATA_DIR" "$CA_DIR"
 
-  PANEL_PORT=$(ask "panel HTTPS port" "$PANEL_PORT")
+  PANEL_PORT=$(ask "$(t q_port)" "$PANEL_PORT")
   [ "$PANEL_PORT" = 80 ] && die "port 80 is reserved (ACME / redirect); pick another"
 
   configure_cert
 
-  ADMIN_USER=$(ask "bootstrap admin username" admin)
-  ADMIN_PASS=$(ask_secret "bootstrap admin password (blank = generate)")
-  [ -n "$ADMIN_PASS" ] || { ADMIN_PASS=$(gen_pass); warn "generated admin password: $ADMIN_PASS"; }
+  ADMIN_USER=$(ask "$(t q_admin_user)" admin)
+  ADMIN_PASS=$(ask_secret "$(t q_admin_pass)")
+  [ -n "$ADMIN_PASS" ] || ADMIN_PASS=admin
 
   if [ "$MODE" = bin ]; then download "$PANEL_REPO" "wingsv-panel-linux-$(arch_tag)" "$PANEL_BIN"; fi
 
@@ -275,7 +435,7 @@ install_panel() {
     CA_PIN=$(panel_cli ca show-pin 2>/dev/null || true)
   fi
   open_ports "$PANEL_PORT/tcp"
-  ok "panel installed ($PUBLIC_BASE_URL)"
+  ok "$(tf ok_panel "$PUBLIC_BASE_URL")"
 }
 
 write_panel_config() {
@@ -320,7 +480,7 @@ EOF
 }
 
 start_panel_docker() {
-  have docker || die "--docker requires docker installed"
+  have docker || die "$(t err_docker)"
   docker rm -f "$PANEL_SVC" >/dev/null 2>&1 || true
   docker run -d --name "$PANEL_SVC" --restart always \
     -p "$PANEL_PORT:$PANEL_PORT" -p "$PROV_PORT:$PROV_PORT" \
@@ -338,21 +498,21 @@ XUI_WIRED=0; XUI_NODE_ID=""
 detect_xui() { systemctl status x-ui >/dev/null 2>&1 || [ -f /etc/x-ui/x-ui.db ] || have x-ui || docker ps --format '{{.Names}}' 2>/dev/null | grep -qiE '3x-ui|x-ui'; }
 
 wire_xui() {
-  detect_xui || { log "no local 3x-ui detected; skipping"; return; }
-  yesno "local 3x-ui detected - wire it to the panel for profile creation?" y || return
+  detect_xui || { log "$(t log_no_xui)"; return; }
+  yesno "$(t q_wire_xui)" y || return
   local token; token=$(gen_token)
   XUI_NODE_ID=$(panel_cli node add --kind xui --name "local-3x-ui" --grpc-endpoint "127.0.0.1:$XUI_GRPC_PORT" --grpc-token "$token" | jq -r .node_id)
-  [ -n "$XUI_NODE_ID" ] && [ "$XUI_NODE_ID" != null ] || die "failed to register 3x-ui node"
+  [ -n "$XUI_NODE_ID" ] && [ "$XUI_NODE_ID" != null ] || die "$(t err_xui_reg)"
   # enable the 3x-ui management gRPC + register the token, then restart it
   local panel_grpc; panel_grpc="127.0.0.1:$PROV_PORT"
   if have x-ui; then
-    x-ui grpc-connect "$panel_grpc" "$token" "$XUI_NODE_ID" "0.0.0.0:$XUI_GRPC_PORT" >/dev/null || warn "x-ui grpc-connect failed"
+    x-ui grpc-connect "$panel_grpc" "$token" "$XUI_NODE_ID" "0.0.0.0:$XUI_GRPC_PORT" >/dev/null || warn "$(t warn_xui_conn)"
     systemctl restart x-ui 2>/dev/null || true
   else
-    warn "3x-ui runs in docker; run inside it: x-ui grpc-connect $panel_grpc $token $XUI_NODE_ID 0.0.0.0:$XUI_GRPC_PORT && restart the container"
+    warn "$(tf warn_xui_docker "$panel_grpc" "$token" "$XUI_NODE_ID" "$XUI_GRPC_PORT")"
   fi
   XUI_WIRED=1
-  ok "3x-ui wired (node $XUI_NODE_ID)"
+  ok "$(tf ok_xui "$XUI_NODE_ID")"
 }
 
 # --------------------------------------------------------------------------- #
@@ -360,8 +520,8 @@ wire_xui() {
 # --------------------------------------------------------------------------- #
 VKTP_INSTALLED=0
 install_vktp() {
-  yesno "install a local vk-turn-proxy relay node?" y || { log "skipping local vk-turn-proxy node"; return; }
-  local name; name=$(ask "node name (optional)" "$(hostname)-vktp")
+  yesno "$(t q_install_vktp)" y || { log "$(t log_skip_vktp)"; return; }
+  local name; name=$(ask "$(t q_node_name)" "$(hostname)-vktp")
 
   # The vk-turn-proxy node always runs as a host binary (it needs host wg/NAT),
   # even under --docker.
@@ -374,12 +534,12 @@ install_vktp() {
   local out node_id grpc_token panel_token
   out=$(panel_cli node add --kind vktp --name "$name" --grpc-endpoint "127.0.0.1:$VKTP_GRPC_PORT" --wg-backend "$wg_backend" "${xui_args[@]}")
   node_id=$(echo "$out" | jq -r .node_id); grpc_token=$(echo "$out" | jq -r .grpc_token); panel_token=$(gen_token)
-  [ -n "$node_id" ] && [ "$node_id" != null ] || die "failed to register vk-turn-proxy node"
+  [ -n "$node_id" ] && [ "$node_id" != null ] || die "$(t err_vktp_reg)"
 
   # wg capability probe (netlink interface create needs CAP_NET_ADMIN + module)
   local wg_apply=true
   modprobe wireguard 2>/dev/null || true
-  if ! ip link add wgprobe0 type wireguard 2>/dev/null; then wg_apply=false; warn "cannot create a WireGuard interface here (no NET_ADMIN / module); wg minting will be in-memory only"; else ip link del wgprobe0 2>/dev/null || true; fi
+  if ! ip link add wgprobe0 type wireguard 2>/dev/null; then wg_apply=false; warn "$(t warn_wg)"; else ip link del wgprobe0 2>/dev/null || true; fi
 
   local panel_tls="panel-insecure = true"
   [ -n "$CA_PIN" ] && panel_tls="panel-ca-pin = \"$CA_PIN\""
@@ -410,18 +570,18 @@ EOF
   start_vktp_bin
   open_ports "$VKTP_DTLS_PORT/udp" "$VKTP_WG_PORT/udp"
   VKTP_INSTALLED=1
-  ok "vk-turn-proxy node installed (node $node_id)"
+  ok "$(tf ok_vktp "$node_id")"
 }
 
 setup_host_networking() {
-  log "enabling IP forwarding + NAT for $VKTP_WG_CIDR"
+  log "$(tf log_nat "$VKTP_WG_CIDR")"
   cat > /etc/sysctl.d/99-wings-vktp.conf <<EOF
 net.ipv4.ip_forward = 1
 net.ipv6.conf.all.forwarding = 1
 EOF
   sysctl --system >/dev/null 2>&1 || true
   local wan; wan=$(wan_iface)
-  [ -n "$wan" ] || { warn "could not detect WAN interface; add NAT manually"; return; }
+  [ -n "$wan" ] || { warn "$(t warn_wan)"; return; }
   if have nft; then
     nft list table inet wings >/dev/null 2>&1 || nft add table inet wings
     nft 'add chain inet wings postrouting { type nat hook postrouting priority 100 ; }' 2>/dev/null || true
@@ -432,7 +592,7 @@ EOF
       iptables -t nat -A POSTROUTING -s "$VKTP_WG_CIDR" -o "$wan" -j MASQUERADE
     have netfilter-persistent && netfilter-persistent save >/dev/null 2>&1 || true
   else
-    warn "no nft/iptables; set up MASQUERADE from $VKTP_WG_CIDR out $wan manually"
+    warn "$(tf warn_no_fw "$VKTP_WG_CIDR" "$wan")"
   fi
 }
 
@@ -464,14 +624,14 @@ EOF
 # --------------------------------------------------------------------------- #
 summary() {
   echo
-  log "Done."
-  echo "  Panel:        $PUBLIC_BASE_URL"
-  echo "  Admin:        $ADMIN_USER / $ADMIN_PASS"
-  [ -n "$CA_PIN" ]     && echo "  CA SPKI pin:  $CA_PIN  (embedded in app enrollment links)"
-  [ "$VKTP_INSTALLED" = 1 ] && echo "  vk-turn-proxy: local node up (UDP $VKTP_DTLS_PORT)"
-  [ "$XUI_WIRED" = 1 ]      && echo "  3x-ui:        wired (node $XUI_NODE_ID)"
+  log "$(t s_done)"
+  printf '%s\n' "$(tf s_panel "$PUBLIC_BASE_URL")"
+  printf '%s\n' "$(tf s_admin "$ADMIN_USER" "$ADMIN_PASS")"
+  [ -n "$CA_PIN" ]          && printf '%s\n' "$(tf s_pin "$CA_PIN")"
+  [ "$VKTP_INSTALLED" = 1 ] && printf '%s\n' "$(tf s_vktp "$VKTP_DTLS_PORT")"
+  [ "$XUI_WIRED" = 1 ]      && printf '%s\n' "$(tf s_xui "$XUI_NODE_ID")"
   echo
-  echo "  Next: open the panel, sign in, add clients. Register more nodes with:"
+  printf '%s\n' "$(t s_next)"
   echo "        $PANEL_BIN connect <node-id>"
 }
 
@@ -482,10 +642,13 @@ main() {
       --docker) MODE=docker;;
       --yes|-y) ASSUME_YES=1;;
       --uninstall) DO_UNINSTALL=1;;
+      --lang) shift; [ "${1:-}" = en ] && LANG_SEL=en || LANG_SEL=ru;;
       -h|--help) usage; exit 0;;
-      *) die "unknown flag $1 (see --help)";;
+      *) die "$(tf err_flag "$1")";;
     esac; shift
   done
+
+  choose_lang
 
   require_root
   [ "$MODE" = bin ] && require_systemd
