@@ -74,16 +74,26 @@ EOF
 # --------------------------------------------------------------------------- #
 # Prompt helpers (respect --yes)
 # --------------------------------------------------------------------------- #
+# When the installer is piped (curl ... | bash) its stdin IS the script, so a
+# plain `read` hits EOF and every prompt silently takes its default (that is how
+# "choose 1/2/3" fell through to self-signed and then died on an empty host).
+# Read prompts from the controlling terminal instead so `curl | bash` stays
+# interactive; only when there is no terminal at all do we require --yes.
+if [ -r /dev/tty ]; then TTY_IN=/dev/tty; else TTY_IN=; fi
+no_tty() { die "no terminal for prompts; re-run with --yes for defaults, or download install.sh and run it directly"; }
+
 ask() { # ask "Question" "default" -> echoes answer
   local q="$1" def="${2:-}" ans=""
   if [ "$ASSUME_YES" = 1 ]; then printf '%s' "$def"; return; fi
-  if [ -n "$def" ]; then read -r -p "$q [$def]: " ans || true; else read -r -p "$q: " ans || true; fi
+  [ -n "$TTY_IN" ] || no_tty
+  if [ -n "$def" ]; then read -r -p "$q [$def]: " ans <"$TTY_IN" || true; else read -r -p "$q: " ans <"$TTY_IN" || true; fi
   printf '%s' "${ans:-$def}"
 }
 ask_secret() { # ask_secret "Question" -> echoes secret (no echo)
   local q="$1" ans=""
   if [ "$ASSUME_YES" = 1 ]; then printf ''; return; fi
-  read -r -s -p "$q: " ans || true; echo >&2
+  [ -n "$TTY_IN" ] || no_tty
+  read -r -s -p "$q: " ans <"$TTY_IN" || true; echo >&2
   printf '%s' "$ans"
 }
 yesno() { # yesno "Question" "y|n" -> returns 0 for yes
