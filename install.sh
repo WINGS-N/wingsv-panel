@@ -113,6 +113,7 @@ t() {
       err_systemd)     echo "systemd is required for the binary install; use --docker or install manually";;
       warn_pkg)        echo "unknown package manager; ensure these are installed: %s";;
       log_deps)        echo "Installing dependencies";;
+      log_wg_module)   echo "Installing the wireguard kernel module";;
       log_reinstall)   echo "Existing install found, stopping the service to update";;
       err_arch)        echo "unsupported arch %s; set the release asset manually";;
       log_download)    echo "Downloading %s from %s";;
@@ -184,6 +185,7 @@ t() {
       err_systemd)     echo "для установки бинарём нужен systemd; используйте --docker или ставьте вручную";;
       warn_pkg)        echo "неизвестный пакетный менеджер; установите вручную: %s";;
       log_deps)        echo "Установка зависимостей";;
+      log_wg_module)   echo "Установка модуля ядра wireguard";;
       log_reinstall)   echo "Найдена прежняя установка, остановка сервиса для обновления";;
       err_arch)        echo "неподдерживаемая архитектура %s; задайте ассет релиза вручную";;
       log_download)    echo "Скачивание %s из %s";;
@@ -652,9 +654,16 @@ install_vktp() {
   node_id=$(echo "$out" | jq -r .node_id); grpc_token=$(echo "$out" | jq -r .grpc_token); panel_token=$(gen_token)
   [ -n "$node_id" ] && [ "$node_id" != null ] || die "$(t err_vktp_reg)"
 
-  # wg capability probe (netlink interface create needs CAP_NET_ADMIN + module)
+  # wg capability probe (netlink interface create needs CAP_NET_ADMIN + module).
+  # Ensure the wireguard kernel module is available first: it is built into
+  # modern kernels, but on older ones the wireguard package supplies the DKMS
+  # build - without it wg-apply falls back to in-memory-only minting.
+  if ! modprobe wireguard 2>/dev/null && ! lsmod 2>/dev/null | grep -q '^wireguard'; then
+    log "$(t log_wg_module)"
+    pkg_install wireguard
+    modprobe wireguard 2>/dev/null || true
+  fi
   local wg_apply=true
-  modprobe wireguard 2>/dev/null || true
   if ! ip link add wgprobe0 type wireguard 2>/dev/null; then wg_apply=false; warn "$(t warn_wg)"; else ip link del wgprobe0 2>/dev/null || true; fi
 
   local panel_tls="panel-insecure = true"
