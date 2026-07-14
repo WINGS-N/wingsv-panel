@@ -528,25 +528,6 @@ SESSION_SECURE = "true"
 EOF
 }
 
-# set_panel_config_kv <KEY> <value>: upsert a `KEY = "value"` line in the panel
-# config.toml, keeping it owned/permissioned for the service user.
-set_panel_config_kv() {
-  local key="$1" val="$2"
-  if grep -qE "^$key[[:space:]]*=" "$PANEL_CFG" 2>/dev/null; then
-    sed -i "s#^$key[[:space:]]*=.*#$key = \"$val\"#" "$PANEL_CFG"
-  else
-    printf '%s = "%s"\n' "$key" "$val" >> "$PANEL_CFG"
-  fi
-  chown "$SVC_USER":"$SVC_USER" "$PANEL_CFG" 2>/dev/null || true
-  chmod 600 "$PANEL_CFG" 2>/dev/null || true
-}
-
-# restart_panel restarts the running panel (systemd bin or docker container).
-restart_panel() {
-  if [ "$MODE" = docker ]; then docker restart "$PANEL_SVC" >/dev/null 2>&1 || true
-  else systemctl restart "$PANEL_SVC" 2>/dev/null || true; fi
-}
-
 start_panel_bin() {
   # StateDirectory makes systemd create the data dir and (re)own it to the
   # service user on every start - the canonical fix for the SQLite "unable to
@@ -704,18 +685,9 @@ EOF
   [ "$wg_apply" = true ] && setup_host_networking
   start_vktp_bin
   open_ports "$VKTP_DTLS_PORT/udp" "$VKTP_WG_PORT/udp"
-
-  # Point the panel at this relay's public DTLS endpoint so config-only (no
-  # remote control) profile links carry a working VK TURN endpoint - otherwise
-  # the panel 400s with "set VK_TURN_ENDPOINT". Host = the panel's public host
-  # (from PUBLIC_BASE_URL), fallback to the detected IP.
-  local ep_host; ep_host=$(printf '%s' "$PUBLIC_BASE_URL" | sed -E 's#^https?://##; s#[:/].*##')
-  [ -n "$ep_host" ] || ep_host=$(detect_ip)
-  if [ -n "$ep_host" ]; then
-    set_panel_config_kv VK_TURN_ENDPOINT "$ep_host:$VKTP_DTLS_PORT"
-    restart_panel
-  fi
-
+  # The node is registered on 127.0.0.1 (loopback management); the panel derives
+  # the client-facing DTLS endpoint from its own PUBLIC_BASE_URL host when the
+  # relay endpoint is loopback, so no VK_TURN_ENDPOINT is needed here.
   VKTP_INSTALLED=1
   ok "$(tf ok_vktp "$node_id")"
 }
