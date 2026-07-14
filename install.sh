@@ -82,6 +82,9 @@ t() {
   if [ "$LANG_SEL" = en ]; then
     case "$1" in
       q_port)          echo "panel HTTPS port";;
+      lbl_current)     echo "Existing install found. Current configuration:";;
+      q_update_panel)  echo "Update the panel with this config (re-download binary, restart)?";;
+      q_update_vktp)   echo "Update the vk-turn-proxy node with this config (re-download binary, restart)?";;
       q_advanced)      echo "advanced configuration (ports, DB path, WireGuard CIDR)?";;
       q_prov_port)     echo "provisioning gRPC port (node -> panel)";;
       q_db_path)       echo "SQLite database path";;
@@ -150,6 +153,9 @@ t() {
   else
     case "$1" in
       q_port)          echo "порт HTTPS панели";;
+      lbl_current)     echo "Найдена установка. Текущая конфигурация:";;
+      q_update_panel)  echo "Обновить панель с этой конфигурацией (перекачать бинарь, перезапуск)?";;
+      q_update_vktp)   echo "Обновить vk-turn-proxy ноду с этой конфигурацией (перекачать бинарь, перезапуск)?";;
       q_advanced)      echo "расширенная конфигурация (порты, путь к БД, WireGuard CIDR)?";;
       q_prov_port)     echo "порт provisioning gRPC (нода -> панель)";;
       q_db_path)       echo "путь к базе SQLite";;
@@ -269,6 +275,8 @@ choose_lang() {
 gen_token() { head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'; }
 gen_pass()  { head -c 18 /dev/urandom | base64 | tr -d '/+=' | cut -c1-24; }
 have()      { command -v "$1" >/dev/null 2>&1; }
+# cfg_get <key> <file> -> value of a `key = "value"` or `key = value` TOML line.
+cfg_get()   { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\{0,1\}\([^\"]*\)\"\{0,1\}.*/\1/p" "$2" 2>/dev/null | head -1; }
 
 # Best-effort detection of this server's reachable IP: public IPv4 first (what a
 # client actually dials), falling back to the primary/route-source local address.
@@ -425,7 +433,32 @@ install_acme() { # install_acme <domain>
     --reloadcmd "systemctl restart $PANEL_SVC" >/dev/null
 }
 
+update_panel() {
+  PUBLIC_BASE_URL=$(cfg_get PUBLIC_BASE_URL "$PANEL_CFG")
+  PANEL_PORT=$(cfg_get LISTEN_ADDR "$PANEL_CFG" | tr -d ':')
+  PANEL_DB=$(cfg_get DB_PATH "$PANEL_CFG"); [ -n "$PANEL_DB" ] && PANEL_DATA_DIR=$(dirname "$PANEL_DB")
+  grep -q '^TLS_SELF_SIGNED' "$PANEL_CFG" 2>/dev/null && TLS_SELF_SIGNED=true
+  systemctl stop "$PANEL_SVC" 2>/dev/null || true
+  if [ "$MODE" = bin ]; then download "$PANEL_REPO" "wingsv-panel-linux-$(arch_tag)" "$PANEL_BIN"; fi
+  ensure_user
+  chown -R "$SVC_USER":"$SVC_USER" "$PANEL_CFG_DIR" "$PANEL_DATA_DIR" 2>/dev/null || true
+  if [ "$MODE" = docker ]; then start_panel_docker; else start_panel_bin; fi
+  [ "$TLS_SELF_SIGNED" = true ] && CA_PIN=$(panel_cli ca show-pin 2>/dev/null || true)
+  open_ports "$PANEL_PORT/tcp"
+  ok "$(tf ok_panel "$PUBLIC_BASE_URL")"
+}
+
 install_panel() {
+  # Existing install: show the current config and offer a quick update (just
+  # re-download the binary and restart) instead of re-asking everything.
+  if [ -f "$PANEL_CFG" ] && [ "$ADVANCED" = 0 ]; then
+    echo "$(t lbl_current)"
+    echo "  URL:  $(cfg_get PUBLIC_BASE_URL "$PANEL_CFG")"
+    echo "  Port: $(cfg_get LISTEN_ADDR "$PANEL_CFG")"
+    echo "  DB:   $(cfg_get DB_PATH "$PANEL_CFG")"
+    if yesno "$(t q_update_panel)" y; then update_panel; return; fi
+  fi
+
   PANEL_PORT=$(ask "$(t q_port)" "$PANEL_PORT")
   [ "$PANEL_PORT" = 80 ] && die "port 80 is reserved (ACME / redirect); pick another"
 
@@ -493,6 +526,25 @@ BOOTSTRAP_ADMIN_USERNAME = "$ADMIN_USER"
 BOOTSTRAP_ADMIN_PASSWORD = "$ADMIN_PASS"
 SESSION_SECURE = "true"
 EOF
+}
+
+# set_panel_config_kv <KEY> <value>: upsert a `KEY = "value"` line in the panel
+# config.toml, keeping it owned/permissioned for the service user.
+set_panel_config_kv() {
+  local key="$1" val="$2"
+  if grep -qE "^$key[[:space:]]*=" "$PANEL_CFG" 2>/dev/null; then
+    sed -i "s#^$key[[:space:]]*=.*#$key = \"$val\"#" "$PANEL_CFG"
+  else
+    printf '%s = "%s"\n' "$key" "$val" >> "$PANEL_CFG"
+  fi
+  chown "$SVC_USER":"$SVC_USER" "$PANEL_CFG" 2>/dev/null || true
+  chmod 600 "$PANEL_CFG" 2>/dev/null || true
+}
+
+# restart_panel restarts the running panel (systemd bin or docker container).
+restart_panel() {
+  if [ "$MODE" = docker ]; then docker restart "$PANEL_SVC" >/dev/null 2>&1 || true
+  else systemctl restart "$PANEL_SVC" 2>/dev/null || true; fi
 }
 
 start_panel_bin() {
@@ -570,7 +622,30 @@ wire_xui() {
 # Local vk-turn-proxy node
 # --------------------------------------------------------------------------- #
 VKTP_INSTALLED=0
+update_vktp() {
+  systemctl stop "$VKTP_SVC" 2>/dev/null || true
+  download "$VKTP_REPO" "server-linux-$(arch_tag)" "$VKTP_BIN"
+  ensure_user
+  chown -R "$SVC_USER":"$SVC_USER" "$VKTP_CFG_DIR" 2>/dev/null || true
+  if [ "$(cfg_get wg-apply "$VKTP_CFG")" = true ]; then
+    VKTP_WG_CIDR=$(cfg_get wg-tunnel-cidr "$VKTP_CFG"); setup_host_networking
+  fi
+  start_vktp_bin
+  open_ports "$(cfg_get listen "$VKTP_CFG" | sed 's/.*://')/udp" "$(cfg_get wg-listen-port "$VKTP_CFG")/udp"
+  VKTP_INSTALLED=1
+  ok "$(tf ok_vktp "$(cfg_get node-id "$VKTP_CFG")")"
+}
+
 install_vktp() {
+  # Existing node: show its config and offer a quick binary update + restart.
+  if [ -f "$VKTP_CFG" ] && [ "$ADVANCED" = 0 ]; then
+    echo "$(t lbl_current)"
+    echo "  node:   $(cfg_get node-id "$VKTP_CFG")"
+    echo "  listen: $(cfg_get listen "$VKTP_CFG")"
+    echo "  wg:     $(cfg_get wg-tunnel-cidr "$VKTP_CFG")"
+    if yesno "$(t q_update_vktp)" y; then update_vktp; return; fi
+  fi
+
   yesno "$(t q_install_vktp)" y || { log "$(t log_skip_vktp)"; return; }
   local name; name=$(ask "$(t q_node_name)" "$(hostname)-vktp")
 
@@ -629,6 +704,18 @@ EOF
   [ "$wg_apply" = true ] && setup_host_networking
   start_vktp_bin
   open_ports "$VKTP_DTLS_PORT/udp" "$VKTP_WG_PORT/udp"
+
+  # Point the panel at this relay's public DTLS endpoint so config-only (no
+  # remote control) profile links carry a working VK TURN endpoint - otherwise
+  # the panel 400s with "set VK_TURN_ENDPOINT". Host = the panel's public host
+  # (from PUBLIC_BASE_URL), fallback to the detected IP.
+  local ep_host; ep_host=$(printf '%s' "$PUBLIC_BASE_URL" | sed -E 's#^https?://##; s#[:/].*##')
+  [ -n "$ep_host" ] || ep_host=$(detect_ip)
+  if [ -n "$ep_host" ]; then
+    set_panel_config_kv VK_TURN_ENDPOINT "$ep_host:$VKTP_DTLS_PORT"
+    restart_panel
+  fi
+
   VKTP_INSTALLED=1
   ok "$(tf ok_vktp "$node_id")"
 }
@@ -660,8 +747,11 @@ start_vktp_bin() {
   cat > "/etc/systemd/system/$VKTP_SVC.service" <<EOF
 [Unit]
 Description=WINGS V vk-turn-proxy node
-# See the panel unit: network.target avoids the network-online wait-online hang.
-After=network.target $PANEL_SVC.service
+# network.target only (see the panel unit re: network-online). Deliberately NOT
+# ordered After the panel service: the node reaches the panel over the network
+# with retries, and ordering after a crash-looping panel made systemctl start
+# block here. Decoupling keeps the node start independent.
+After=network.target
 
 [Service]
 User=$SVC_USER
@@ -686,7 +776,7 @@ summary() {
   echo
   log "$(t s_done)"
   printf '%s\n' "$(tf s_panel "$PUBLIC_BASE_URL")"
-  printf '%s\n' "$(tf s_admin "$ADMIN_USER" "$ADMIN_PASS")"
+  [ -n "$ADMIN_PASS" ]      && printf '%s\n' "$(tf s_admin "$ADMIN_USER" "$ADMIN_PASS")"
   [ -n "$CA_PIN" ]          && printf '%s\n' "$(tf s_pin "$CA_PIN")"
   [ "$VKTP_INSTALLED" = 1 ] && printf '%s\n' "$(tf s_vktp "$VKTP_DTLS_PORT")"
   [ "$XUI_WIRED" = 1 ]      && printf '%s\n' "$(tf s_xui "$XUI_NODE_ID")"
