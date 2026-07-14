@@ -279,6 +279,18 @@ gen_pass()  { head -c 18 /dev/urandom | base64 | tr -d '/+=' | cut -c1-24; }
 have()      { command -v "$1" >/dev/null 2>&1; }
 # cfg_get <key> <file> -> value of a `key = "value"` or `key = value` TOML line.
 cfg_get()   { sed -n "s/^$1[[:space:]]*=[[:space:]]*\"\{0,1\}\([^\"]*\)\"\{0,1\}.*/\1/p" "$2" 2>/dev/null | head -1; }
+# free_port <fallback> -> a random unused ephemeral TCP/UDP port (49152-65535),
+# so loopback-only management ports do not clash with whatever else runs here.
+free_port() {
+  local p
+  for _ in $(seq 1 64); do
+    p=$(( (RANDOM % 16384) + 49152 ))
+    if [ -z "$(ss -Hltn "sport = :$p" 2>/dev/null)" ] && [ -z "$(ss -Hlun "sport = :$p" 2>/dev/null)" ]; then
+      printf '%s' "$p"; return
+    fi
+  done
+  printf '%s' "$1"
+}
 
 # Best-effort detection of this server's reachable IP: public IPv4 first (what a
 # client actually dials), falling back to the primary/route-source local address.
@@ -631,6 +643,10 @@ install_vktp() {
 
   yesno "$(t q_install_vktp)" y || { log "$(t log_skip_vktp)"; return; }
   local name; name=$(ask "$(t q_node_name)" "$(hostname)-vktp")
+
+  # Management gRPC is loopback-only (panel <-> relay on this host); pick a free
+  # ephemeral port so a busy default does not clash and break provisioning.
+  VKTP_GRPC_PORT=$(free_port "$VKTP_GRPC_PORT")
 
   if [ "$ADVANCED" = 1 ]; then
     VKTP_DTLS_PORT=$(ask "$(t q_vktp_dtls)" "$VKTP_DTLS_PORT")
