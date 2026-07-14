@@ -249,7 +249,17 @@ const vkTurnDefaultDTLSPort = "56000"
 func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (string, error) {
 	nodeID = strings.TrimSpace(nodeID)
 	if nodeID == "" {
-		return strings.TrimSpace(h.cfg.VkTurnEndpoint), nil
+		if ep := strings.TrimSpace(h.cfg.VkTurnEndpoint); ep != "" {
+			return ep, nil
+		}
+		// No explicit node and no configured VK_TURN_ENDPOINT: fall back to a
+		// vk-turn relay the panel manages (the installer registers one on
+		// 127.0.0.1), so a single-host install can issue profile links - the
+		// link/show path passes no node - without a manual VK_TURN_ENDPOINT.
+		nodeID = h.defaultVkTurnNodeID(admin)
+		if nodeID == "" {
+			return "", nil
+		}
 	}
 	node, err := h.store.GetServerNode(nodeID)
 	if err != nil {
@@ -298,6 +308,24 @@ func isLoopbackHost(host string) bool {
 		return ip.IsLoopback()
 	}
 	return false
+}
+
+// defaultVkTurnNodeID picks a vk-turn relay to use when the caller did not name
+// one and no VK_TURN_ENDPOINT is configured. It prefers a panel-local node
+// (owner_admin_id 0, usable by the owner) and then the admin's own node, so the
+// common single-host install "just works". Empty if none is available.
+func (h *Handler) defaultVkTurnNodeID(admin storage.Admin) string {
+	owners := []int64{admin.ID}
+	if auth.IsOwner(admin) {
+		owners = []int64{0, admin.ID}
+	}
+	for _, owner := range owners {
+		nodes, err := h.store.ListServerNodesByOwner(storage.ServerNodeVKTurnProxy, owner)
+		if err == nil && len(nodes) > 0 {
+			return nodes[0].ID
+		}
+	}
+	return ""
 }
 
 // publicHostFromBaseURL extracts the bare host (no scheme, no port) from a
