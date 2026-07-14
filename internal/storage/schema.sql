@@ -260,3 +260,14 @@ CREATE TABLE IF NOT EXISTS peer_traffic (
     sampled_unix INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (node_id, public_key)
 );
+
+-- Per-node all-time transferred bytes accumulator (dbmodel.NodeTrafficTotal).
+-- sqlite is schema.sql-owned (AutoMigrate runs only for pgsql/mariadb), so this
+-- table must be declared here or the collector fails with "no such table".
+CREATE TABLE IF NOT EXISTS node_traffic_total (
+    node_id TEXT NOT NULL PRIMARY KEY,
+    rx_total INTEGER NOT NULL DEFAULT 0,
+    tx_total INTEGER NOT NULL DEFAULT 0,
+    last_rx INTEGER NOT NULL DEFAULT 0,
+    last_tx INTEGER NOT NULL DEFAULT 0
+);
