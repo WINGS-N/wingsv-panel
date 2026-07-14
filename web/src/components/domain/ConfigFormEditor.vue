@@ -211,7 +211,7 @@
         <div class="form-row" v-if="!turn.manualCaptcha">
           <label class="form-label">Captcha auto-solver</label>
           <OneuiSelect
-            :model-value="turn.captchaAutoSolver || 'v2'"
+            :model-value="turn.captchaAutoSolver || 'bypass'"
             :options="captchaAutoSolverOptions"
             @change="setTurn('captchaAutoSolver', $event || undefined)"
           />
@@ -1042,7 +1042,8 @@ const runtimeModeOptions = [
 ];
 
 const captchaAutoSolverOptions = [
-  { value: 'v2', label: 'v2 (рекомендуется)' },
+  { value: 'bypass', label: 'bypass via vk.me (рекомендуется)' },
+  { value: 'v2', label: 'v2' },
   { value: 'v1', label: 'v1 (legacy)' },
 ];
 
