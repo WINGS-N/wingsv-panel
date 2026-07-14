@@ -730,14 +730,32 @@ EOF
     nft list table inet wings >/dev/null 2>&1 || nft add table inet wings
     nft 'add chain inet wings postrouting { type nat hook postrouting priority 100 ; }' 2>/dev/null || true
     nft add rule inet wings postrouting ip saddr "$VKTP_WG_CIDR" oifname "$wan" masquerade 2>/dev/null || true
-    have nft && nft list ruleset > /etc/nftables.conf 2>/dev/null || true
   elif have iptables; then
     iptables -t nat -C POSTROUTING -s "$VKTP_WG_CIDR" -o "$wan" -j MASQUERADE 2>/dev/null || \
       iptables -t nat -A POSTROUTING -s "$VKTP_WG_CIDR" -o "$wan" -j MASQUERADE
-    have netfilter-persistent && netfilter-persistent save >/dev/null 2>&1 || true
   else
     warn "$(tf warn_no_fw "$VKTP_WG_CIDR" "$wan")"
   fi
+
+  # Allow forwarding the tunnel subnet in and out. NAT alone is not enough on a
+  # host where docker (or a hardened default) sets the FORWARD policy to DROP:
+  # the client's packets are dropped before egress (tunnel comes up, but no
+  # traffic returns). The DROP lives in the iptables FORWARD chain (iptables-nft
+  # on nft hosts), so ACCEPT must be inserted there to win over it - an accept in
+  # a separate nft table would not override a drop in another chain at the same
+  # hook. Fall back to a plain nft forward chain only where iptables is absent.
+  if have iptables; then
+    iptables -C FORWARD -s "$VKTP_WG_CIDR" -j ACCEPT 2>/dev/null || \
+      iptables -I FORWARD -s "$VKTP_WG_CIDR" -j ACCEPT
+    iptables -C FORWARD -d "$VKTP_WG_CIDR" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
+      iptables -I FORWARD -d "$VKTP_WG_CIDR" -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+    have netfilter-persistent && netfilter-persistent save >/dev/null 2>&1 || true
+  elif have nft; then
+    nft 'add chain inet wings forward { type filter hook forward priority filter ; policy accept ; }' 2>/dev/null || true
+    nft add rule inet wings forward ip saddr "$VKTP_WG_CIDR" accept 2>/dev/null || true
+    nft add rule inet wings forward ip daddr "$VKTP_WG_CIDR" ct state related,established accept 2>/dev/null || true
+  fi
+  have nft && nft list ruleset > /etc/nftables.conf 2>/dev/null || true
 }
 
 start_vktp_bin() {
