@@ -101,6 +101,7 @@ t() {
       err_systemd)     echo "systemd is required for the binary install; use --docker or install manually";;
       warn_pkg)        echo "unknown package manager; ensure these are installed: %s";;
       log_deps)        echo "Installing dependencies";;
+      log_reinstall)   echo "Existing install found, stopping the service to update";;
       err_arch)        echo "unsupported arch %s; set the release asset manually";;
       log_download)    echo "Downloading %s from %s";;
       err_download)    echo "download failed: %s (override with the repo's release asset or build from source)";;
@@ -161,6 +162,7 @@ t() {
       err_systemd)     echo "для установки бинарём нужен systemd; используйте --docker или ставьте вручную";;
       warn_pkg)        echo "неизвестный пакетный менеджер; установите вручную: %s";;
       log_deps)        echo "Установка зависимостей";;
+      log_reinstall)   echo "Найдена прежняя установка, остановка сервиса для обновления";;
       err_arch)        echo "неподдерживаемая архитектура %s; задайте ассет релиза вручную";;
       log_download)    echo "Скачивание %s из %s";;
       err_download)    echo "не удалось скачать: %s (укажите ассет релиза или соберите из исходников)";;
@@ -420,6 +422,11 @@ install_panel() {
   ADMIN_PASS=$(ask_secret "$(t q_admin_pass)")
   [ -n "$ADMIN_PASS" ] || ADMIN_PASS=admin
 
+  # Re-install: a running service holds its binary open (busy executable), so
+  # overwriting it with curl stalls. Stop it first; it is (re)started below.
+  if systemctl is-active --quiet "$PANEL_SVC" 2>/dev/null; then log "$(t log_reinstall)"; fi
+  systemctl stop "$PANEL_SVC" 2>/dev/null || true
+
   if [ "$MODE" = bin ]; then download "$PANEL_REPO" "wingsv-panel-linux-$(arch_tag)" "$PANEL_BIN"; fi
 
   write_panel_config
@@ -461,8 +468,11 @@ start_panel_bin() {
   cat > "/etc/systemd/system/$PANEL_SVC.service" <<EOF
 [Unit]
 Description=WINGS V panel
-After=network-online.target
-Wants=network-online.target
+# network.target (not network-online.target): the latter makes systemctl start
+# block until a wait-online service reports every interface up, which hangs the
+# installer on hosts where that never settles. The panel binds a socket and
+# Restart=always retries, so it does not need to wait for full connectivity.
+After=network.target
 
 [Service]
 User=$SVC_USER
@@ -524,7 +534,9 @@ install_vktp() {
   local name; name=$(ask "$(t q_node_name)" "$(hostname)-vktp")
 
   # The vk-turn-proxy node always runs as a host binary (it needs host wg/NAT),
-  # even under --docker.
+  # even under --docker. Stop a running one first so its busy binary can be
+  # overwritten without stalling.
+  systemctl stop "$VKTP_SVC" 2>/dev/null || true
   download "$VKTP_REPO" "server-linux-$(arch_tag)" "$VKTP_BIN"
 
   # wg backend: 3x-ui if wired, else the node's own wg
@@ -600,8 +612,8 @@ start_vktp_bin() {
   cat > "/etc/systemd/system/$VKTP_SVC.service" <<EOF
 [Unit]
 Description=WINGS V vk-turn-proxy node
-After=network-online.target $PANEL_SVC.service
-Wants=network-online.target
+# See the panel unit: network.target avoids the network-online wait-online hang.
+After=network.target $PANEL_SVC.service
 
 [Service]
 User=$SVC_USER
