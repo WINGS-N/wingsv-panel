@@ -452,18 +452,28 @@ install_panel() {
 
   write_panel_config
   ensure_user
+
+  # Self-signed CA: for the binary install create it BEFORE the chown + start, so
+  # the root-created ca.key gets chowned to the service user - otherwise the wings
+  # service cannot read it and crash-loops ("open .../ca.key: permission denied").
+  # Docker creates it after the container is up (there the panel runs as root
+  # inside the container and reads the mounted files).
+  if [ "$TLS_SELF_SIGNED" = true ] && [ "$MODE" = bin ]; then init_ca; fi
+
   chown -R "$SVC_USER":"$SVC_USER" "$PANEL_CFG_DIR" "$PANEL_DATA_DIR"
   chmod 600 "$PANEL_CFG"
 
   if [ "$MODE" = docker ]; then start_panel_docker; else start_panel_bin; fi
 
-  # self-signed: initialise the CA (leaf is served from it) and capture the pin
-  if [ "$TLS_SELF_SIGNED" = true ]; then
-    panel_cli ca init >/dev/null 2>&1 || true
-    CA_PIN=$(panel_cli ca show-pin 2>/dev/null || true)
-  fi
+  if [ "$TLS_SELF_SIGNED" = true ] && [ "$MODE" = docker ]; then init_ca; fi
+
   open_ports "$PANEL_PORT/tcp"
   ok "$(tf ok_panel "$PUBLIC_BASE_URL")"
+}
+
+init_ca() {
+  panel_cli ca init >/dev/null 2>&1 || true
+  CA_PIN=$(panel_cli ca show-pin 2>/dev/null || true)
 }
 
 write_panel_config() {
