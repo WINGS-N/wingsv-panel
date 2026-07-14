@@ -90,8 +90,9 @@ func TestResolveVerifiesNodeBearer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("right bearer: %v", err)
 	}
-	if resp.GetWg().GetPublicKey() != "pub" {
-		t.Fatalf("wg public key = %q, want pub", resp.GetWg().GetPublicKey())
+	// own-wg first resolve tells the node to mint the peer locally and re-report.
+	if !resp.GetProvisionLocally() {
+		t.Fatalf("own-wg resolve should set provision_locally, got %+v", resp)
 	}
 }
 
@@ -137,29 +138,48 @@ func TestResolveCreatesThenReturnsExisting(t *testing.T) {
 	svc := NewService(st, fake)
 	req := &provisioningpb.ResolveClientConfigRequest{ClientId: clientID, Token: token, NodeId: "n1", Hwid: "hw"}
 
+	// First resolve: own-wg asks the node to mint the peer locally (no CreatePeer).
 	resp, err := svc.ResolveClientConfig(context.Background(), req)
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	wg := resp.GetWg()
+	if !resp.GetProvisionLocally() {
+		t.Fatalf("first resolve should set provision_locally, got %+v", resp)
+	}
+	if fake.calls != 0 {
+		t.Fatalf("origin node should not be dialed via CreatePeer, calls = %d", fake.calls)
+	}
+
+	// Report the locally-minted peer: the panel records it and returns the full
+	// config (routing AllowedIPs + MTU come from the panel).
+	report := &provisioningpb.ResolveClientConfigRequest{
+		ClientId: clientID, Token: token, NodeId: "n1", Hwid: "hw",
+		WgPublicKey: "pub", WgPrivateKey: "priv", WgAllowedIps: "10.66.66.2/32", WgServerPublicKey: "spub",
+	}
+	respR, err := svc.ResolveClientConfig(context.Background(), report)
+	if err != nil {
+		t.Fatalf("report: %v", err)
+	}
+	wg := respR.GetWg()
 	if wg.GetPrivateKey() != "priv" || wg.GetPublicKey() != "pub" || wg.GetAddress() != "10.66.66.2/32" ||
 		wg.GetServerPublicKey() != "spub" || wg.GetAllowedIps() != "0.0.0.0/0" || wg.GetMtu() != 1280 {
 		t.Fatalf("wg config wrong: %+v", wg)
 	}
-	if fake.calls != 1 {
-		t.Fatalf("provisioner calls = %d, want 1", fake.calls)
-	}
 
+	// Re-resolve (no wg fields): returns the stored peer, never provisions again.
 	fake.peer = Peer{PublicKey: "DIFFERENT"}
 	resp2, err := svc.ResolveClientConfig(context.Background(), req)
 	if err != nil {
 		t.Fatalf("resolve 2: %v", err)
 	}
+	if resp2.GetProvisionLocally() {
+		t.Fatalf("second resolve should return the stored peer, not provision_locally")
+	}
 	if resp2.GetWg().GetPublicKey() != "pub" {
 		t.Fatalf("second resolve should return the stored peer, got %q", resp2.GetWg().GetPublicKey())
 	}
-	if fake.calls != 1 {
-		t.Fatalf("provisioner was called again: %d", fake.calls)
+	if fake.calls != 0 {
+		t.Fatalf("provisioner should not be called for a single-node own-wg flow: %d", fake.calls)
 	}
 }
 
@@ -170,12 +190,17 @@ func TestResolveReplicatesPeerToOtherNodes(t *testing.T) {
 	}
 	fake := &fakeProvisioner{peer: Peer{PublicKey: "pub", PrivateKey: "priv", AllowedIPs: "10.66.66.2/32", ServerPublicKey: "spub"}}
 	svc := NewService(st, fake)
-	req := &provisioningpb.ResolveClientConfigRequest{ClientId: clientID, Token: token, NodeId: "n1"}
-	if _, err := svc.ResolveClientConfig(context.Background(), req); err != nil {
-		t.Fatalf("resolve: %v", err)
+	// Report the peer the origin node (n1) minted locally; the panel records it on
+	// n1 and replicates it to n2 via CreatePeer (one call: the origin is not dialed).
+	report := &provisioningpb.ResolveClientConfigRequest{
+		ClientId: clientID, Token: token, NodeId: "n1",
+		WgPublicKey: "pub", WgPrivateKey: "priv", WgAllowedIps: "10.66.66.2/32", WgServerPublicKey: "spub",
 	}
-	if fake.calls != 2 {
-		t.Fatalf("provisioner calls = %d, want 2 (origin + one replica)", fake.calls)
+	if _, err := svc.ResolveClientConfig(context.Background(), report); err != nil {
+		t.Fatalf("report: %v", err)
+	}
+	if fake.calls != 1 {
+		t.Fatalf("provisioner calls = %d, want 1 (replica to n2 only; origin not dialed)", fake.calls)
 	}
 	if _, err := st.GetClientWGPeer(clientID, "n1"); err != nil {
 		t.Fatalf("peer for origin node n1 missing: %v", err)

@@ -23,10 +23,22 @@ message ResolveClientConfigRequest {
   bytes token = 2;
   string hwid = 3;
   string node_id = 4;
+  // When set, the calling node is reporting a wg peer it just minted locally for
+  // this client (the own-wg provision-locally path): the panel records it instead
+  // of calling back the node's management API. Empty on the initial resolve.
+  string wg_public_key = 5;
+  string wg_private_key = 6;
+  string wg_allowed_ips = 7;
+  string wg_server_public_key = 8;
 }
 
 message ResolveClientConfigResponse {
   WireguardConfig wg = 1;
+  // provision_locally tells an own-wg node to mint the peer on its own interface
+  // and re-call ResolveClientConfig with the wg_* fields to record it, instead of
+  // the panel dialing the node's management API - which is a re-entrant call made
+  // while the node is blocked inside its own provision handler, and breaks.
+  bool provision_locally = 2;
 }
 
 message GetClientUsageRequest {

@@ -140,6 +140,31 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		return nil, err
 	}
 
+	// Report path (own-wg provision-locally, second phase): the calling node
+	// already minted the peer on its own interface and re-calls us to record it,
+	// so we never dial the node's management API back - that call is re-entrant
+	// while the node is blocked inside its own provision handler, and breaks.
+	if req.GetWgPublicKey() != "" {
+		peer := Peer{
+			PublicKey:       req.GetWgPublicKey(),
+			PrivateKey:      req.GetWgPrivateKey(),
+			AllowedIPs:      req.GetWgAllowedIps(),
+			ServerPublicKey: req.GetWgServerPublicKey(),
+		}
+		if err := s.store.UpsertClientWGPeer(dbmodel.ClientWGPeer{
+			ClientID:        req.GetClientId(),
+			NodeID:          req.GetNodeId(),
+			PublicKey:       peer.PublicKey,
+			PrivateKey:      peer.PrivateKey,
+			AllowedIPs:      peer.AllowedIPs,
+			ServerPublicKey: peer.ServerPublicKey,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		s.replicatePeer(ctx, req.GetClientId(), req.GetNodeId(), peer)
+		return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
+	}
+
 	existing, err := s.store.GetClientWGPeer(req.GetClientId(), req.GetNodeId())
 	if err == nil {
 		return s.response(existing.PrivateKey, existing.PublicKey, existing.AllowedIPs, existing.ServerPublicKey), nil
@@ -197,23 +222,12 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
 	}
 
-	// Own wg: the calling node mints the peer on its own wg interface.
-	peer, err := s.provisioner.CreatePeer(ctx, node, "", "")
-	if err != nil {
-		return nil, status.Error(codes.Internal, "create peer: "+err.Error())
-	}
-	if err := s.store.UpsertClientWGPeer(dbmodel.ClientWGPeer{
-		ClientID:        req.GetClientId(),
-		NodeID:          req.GetNodeId(),
-		PublicKey:       peer.PublicKey,
-		PrivateKey:      peer.PrivateKey,
-		AllowedIPs:      peer.AllowedIPs,
-		ServerPublicKey: peer.ServerPublicKey,
-	}); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	s.replicatePeer(ctx, req.GetClientId(), node.ID, peer)
-	return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
+	// Own wg: tell the calling node to mint the peer on its own wg interface and
+	// re-call ResolveClientConfig with the wg_* fields to record it (handled by
+	// the report path above). We deliberately do NOT dial the node's management
+	// CreatePeer here: that is a re-entrant call made while the node is blocked
+	// inside its provision handler, and the connection breaks ("broken pipe").
+	return &provisioningpb.ResolveClientConfigResponse{ProvisionLocally: true}, nil
 }
 
 // GetClientUsage returns the cap usage for the capped or disabled managed clients
