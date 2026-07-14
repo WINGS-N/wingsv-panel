@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -264,6 +265,16 @@ func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (str
 	if parsedHost, _, splitErr := net.SplitHostPort(node.GRPCEndpoint); splitErr == nil {
 		host = parsedHost
 	}
+	// A loopback management endpoint means the panel and relay are co-located (the
+	// common single-host install, where the installer registers the node on
+	// 127.0.0.1). That host is useless to remote clients, so substitute the
+	// panel's own public host (from PUBLIC_BASE_URL) - the server's external
+	// address - so the profile link carries a reachable DTLS endpoint.
+	if isLoopbackHost(host) {
+		if pub := publicHostFromBaseURL(h.cfg.PublicBaseURL); pub != "" {
+			host = pub
+		}
+	}
 	// Prefer the relay's own DTLS listen port (reported over gRPC); fall back to the
 	// convention default when the node is unreachable or does not report it.
 	port := vkTurnDefaultDTLSPort
@@ -275,6 +286,34 @@ func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (str
 		}
 	}
 	return net.JoinHostPort(host, port), nil
+}
+
+// isLoopbackHost reports whether host is a loopback address or "localhost".
+func isLoopbackHost(host string) bool {
+	h := strings.ToLower(strings.TrimSpace(host))
+	if h == "localhost" {
+		return true
+	}
+	if ip := net.ParseIP(h); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
+}
+
+// publicHostFromBaseURL extracts the bare host (no scheme, no port) from a
+// PUBLIC_BASE_URL like "https://1.2.3.4:8443" -> "1.2.3.4".
+func publicHostFromBaseURL(base string) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		return ""
+	}
+	if !strings.Contains(base, "://") {
+		base = "https://" + base
+	}
+	if u, err := url.Parse(base); err == nil {
+		return u.Hostname()
+	}
+	return ""
 }
 
 func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
