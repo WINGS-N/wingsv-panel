@@ -111,6 +111,24 @@ func (s *Service) Register(gs *grpc.Server) {
 	provisioningpb.RegisterProvisioningServer(gs, s)
 }
 
+// authorizeClientOnNode reports whether a client may be provisioned on the calling
+// node. An admin's client belongs on that admin's own nodes; a panel-local node
+// (owner_admin_id 0) is the owner's alone, so only an owner's client may use it.
+func (s *Service) authorizeClientOnNode(client storage.Client, node dbmodel.ServerNode) error {
+	if node.OwnerAdminID == client.OwnerAdminID {
+		return nil
+	}
+	if node.OwnerAdminID == 0 {
+		owner, err := s.store.FindAdminByID(client.OwnerAdminID)
+		if err == nil && auth.IsOwner(owner) {
+			return nil
+		}
+	}
+	log.Printf("provisioning: refusing client=%s (owner_admin=%d) on node=%s (owner_admin=%d)",
+		client.ID, client.OwnerAdminID, node.ID, node.OwnerAdminID)
+	return status.Error(codes.PermissionDenied, "client is not allowed on this node")
+}
+
 func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.ResolveClientConfigRequest) (*provisioningpb.ResolveClientConfigResponse, error) {
 	log.Printf("provisioning: ResolveClientConfig client=%s node=%s", req.GetClientId(), req.GetNodeId())
 	client, err := s.store.FindClientByID(req.GetClientId())
@@ -137,6 +155,16 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := verifyNodeBearer(ctx, node); err != nil {
+		return nil, err
+	}
+
+	// A valid node token only proves WHICH relay is calling, not that this client
+	// may be served there. Without the tenancy check below, any client could have a
+	// peer minted on any registered node - an admin's client on the owner's relay -
+	// because the endpoint the app dials comes from the saved config, not from the
+	// node the panel authorized. Mirrors the HTTP-side rule in
+	// resolveVkTurnEndpoint / handleNodeByID.
+	if err := s.authorizeClientOnNode(client, node); err != nil {
 		return nil, err
 	}
 

@@ -51,6 +51,94 @@ func setup(t *testing.T) (*storage.Store, string, []byte) {
 	return st, "c1", tokenBytes
 }
 
+// A valid node token proves which relay is calling, not that the client belongs
+// there. An admin must not be able to get a wg peer minted on the owner's
+// panel-local node (owner_admin_id 0), nor on another admin's node: the endpoint
+// the app dials comes from the saved config, so the node is attacker-chosen.
+func TestResolveRefusesClientOnForeignNode(t *testing.T) {
+	st, err := storage.Open(storage.Options{Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "t.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+
+	plainAdmin, err := st.CreateAdmin("admin1", "hash", false, storage.RoleAdmin)
+	if err != nil {
+		t.Fatalf("admin: %v", err)
+	}
+	otherAdmin, err := st.CreateAdmin("admin2", "hash", false, storage.RoleAdmin)
+	if err != nil {
+		t.Fatalf("other admin: %v", err)
+	}
+	token, tokenHash, err := auth.GenerateClientToken()
+	if err != nil {
+		t.Fatalf("token: %v", err)
+	}
+	if _, err := st.CreateClient("c1", plainAdmin.ID, "dev", tokenHash, token); err != nil {
+		t.Fatalf("client: %v", err)
+	}
+	// The owner's panel-local relay, and a second admin's own relay.
+	if _, err := st.CreateServerNode(dbmodel.ServerNode{
+		ID: "owner-node", Kind: storage.ServerNodeVKTurnProxy, Name: "owner relay",
+		GRPCToken: "nodesecret", OwnerAdminID: 0,
+	}); err != nil {
+		t.Fatalf("owner node: %v", err)
+	}
+	if _, err := st.CreateServerNode(dbmodel.ServerNode{
+		ID: "other-node", Kind: storage.ServerNodeVKTurnProxy, Name: "other relay",
+		GRPCToken: "nodesecret", OwnerAdminID: otherAdmin.ID,
+	}); err != nil {
+		t.Fatalf("other node: %v", err)
+	}
+	if _, err := st.CreateServerNode(dbmodel.ServerNode{
+		ID: "own-node", Kind: storage.ServerNodeVKTurnProxy, Name: "own relay",
+		GRPCToken: "nodesecret", OwnerAdminID: plainAdmin.ID,
+	}); err != nil {
+		t.Fatalf("own node: %v", err)
+	}
+
+	fake := &fakeProvisioner{peer: Peer{PublicKey: "pub"}}
+	svc := NewService(st, fake)
+	// The relay authenticates correctly - the node token is NOT the boundary here.
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer nodesecret"))
+
+	for _, nodeID := range []string{"owner-node", "other-node"} {
+		req := &provisioningpb.ResolveClientConfigRequest{ClientId: "c1", Token: token, NodeId: nodeID}
+		_, err := svc.ResolveClientConfig(ctx, req)
+		if status.Code(err) != codes.PermissionDenied {
+			t.Errorf("resolve on %s = %v, want PermissionDenied", nodeID, err)
+		}
+	}
+	if fake.calls != 0 {
+		t.Errorf("no peer may be provisioned for a refused client, calls = %d", fake.calls)
+	}
+
+	// The admin's own node still works.
+	req := &provisioningpb.ResolveClientConfigRequest{ClientId: "c1", Token: token, NodeId: "own-node"}
+	resp, err := svc.ResolveClientConfig(ctx, req)
+	if err != nil {
+		t.Fatalf("resolve on the admin's own node: %v", err)
+	}
+	if !resp.GetProvisionLocally() {
+		t.Errorf("own node should provision, got %+v", resp)
+	}
+}
+
+// The owner's own client may use the panel-local node (owner_admin_id 0).
+func TestResolveAllowsOwnerClientOnPanelLocalNode(t *testing.T) {
+	st, clientID, token := setup(t)
+	svc := NewService(st, &fakeProvisioner{peer: Peer{PublicKey: "pub"}})
+	// setup() creates an owner admin plus node n1 with owner_admin_id 0.
+	resp, err := svc.ResolveClientConfig(context.Background(),
+		&provisioningpb.ResolveClientConfigRequest{ClientId: clientID, Token: token, NodeId: "n1"})
+	if err != nil {
+		t.Fatalf("owner client on panel-local node: %v", err)
+	}
+	if !resp.GetProvisionLocally() {
+		t.Errorf("want provision_locally, got %+v", resp)
+	}
+}
+
 func TestResolveVerifiesNodeBearer(t *testing.T) {
 	st, err := storage.Open(storage.Options{Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "t.db")})
 	if err != nil {
