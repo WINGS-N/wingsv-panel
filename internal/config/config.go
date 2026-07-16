@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -12,11 +13,14 @@ type Config struct {
 	AssetLinksJSON     string
 	GitHubRepo         string
 	ReleaseAssetSuffix string
-	StaticDir          string
-	DBPath             string
-	DBKind             string
-	DBDSN              string
-	CADir              string
+	// APKCacheDir holds the downloaded release asset. Ephemeral by design: it is
+	// a cache, and losing it only costs one re-download.
+	APKCacheDir string
+	StaticDir   string
+	DBPath      string
+	DBKind      string
+	DBDSN       string
+	CADir       string
 	// TLSCert / TLSKey point at a PEM certificate + key so the panel serves HTTPS
 	// itself (Let's Encrypt via acme.sh, or bring-your-own). Empty = no direct TLS.
 	TLSCert string
@@ -50,6 +54,7 @@ func Load() Config {
 		AssetLinksJSON:     getEnv("ASSET_LINKS_JSON", ""),
 		GitHubRepo:         getEnv("GITHUB_REPO", "WINGS-N/WINGSV"),
 		ReleaseAssetSuffix: getEnv("RELEASE_ASSET_SUFFIX", ".apk"),
+		APKCacheDir:        getEnv("APK_CACHE_DIR", filepath.Join(os.TempDir(), "wingsv-apk")),
 		// Default empty so the embedded SPA bundle is served. Set STATIC_DIR
 		// explicitly to swap the frontend without rebuilding the binary.
 		StaticDir:              getEnv("STATIC_DIR", ""),

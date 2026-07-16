@@ -54,12 +54,14 @@ type Server struct {
 	adminH        *adminhandler.Handler
 	guardianH     *guardianhandler.Handler
 	ownerH        *ownerhandler.Handler
+	apk           *apkCache
 }
 
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Server {
+	releaseClient := githubapi.NewClient()
 	return &Server{
 		config:        cfg,
-		releaseClient: githubapi.NewClient(),
+		releaseClient: releaseClient,
 		staticHandler: buildStaticHandler(cfg.StaticDir),
 		store:         store,
 		hub:           hub,
@@ -67,7 +69,17 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		adminH:        adminhandler.New(cfg, store, authSvc, hub),
 		guardianH:     guardianhandler.New(store, hub),
 		ownerH:        ownerhandler.New(store, authSvc, hub),
+		apk:           newAPKCache(cfg.APKCacheDir, releaseClient, cfg.GitHubRepo, cfg.ReleaseAssetSuffix),
 	}
+}
+
+// StartAPKCache warms the release asset cache and keeps it current in the
+// background, so a new release is on disk before anyone clicks download.
+func (s *Server) StartAPKCache(ctx context.Context) {
+	if s.apk == nil {
+		return
+	}
+	go s.apk.run(ctx)
 }
 
 func (s *Server) Handler() http.Handler {
@@ -137,7 +149,7 @@ func (s *Server) handleLatestRelease(writer http.ResponseWriter, request *http.R
 }
 
 func (s *Server) handleLatestDownload(writer http.ResponseWriter, request *http.Request) {
-	_, asset, err := s.fetchLatestRelease(request.Context())
+	release, asset, err := s.fetchLatestRelease(request.Context())
 	if err != nil {
 		writeError(writer, http.StatusBadGateway, err.Error())
 		return
@@ -147,6 +159,30 @@ func (s *Server) handleLatestDownload(writer http.ResponseWriter, request *http.
 		return
 	}
 
+	// Preferred path: hand the browser a local file. http.ServeContent sets an
+	// exact Content-Length and supports Range, which is what makes the progress
+	// bar advance and a resumed download work.
+	if s.apk != nil {
+		if err := s.apk.ensure(request.Context(), release, asset); err != nil {
+			log.Printf("apk cache: falling back to streaming: %v", err)
+		} else if path, filename, _, ok := s.apk.cached(release.TagName); ok {
+			file, oErr := os.Open(path)
+			if oErr == nil {
+				defer file.Close()
+				stat, sErr := file.Stat()
+				if sErr == nil {
+					writer.Header().Set("Content-Type", "application/vnd.android.package-archive")
+					writer.Header().Set("Content-Disposition", "attachment; filename=\""+filename+"\"")
+					writer.Header().Set("Cache-Control", "public, max-age=3600")
+					http.ServeContent(writer, request, filename, stat.ModTime(), file)
+					return
+				}
+			}
+			log.Printf("apk cache: cached file unusable, streaming instead")
+		}
+	}
+
+	// Fallback: stream straight from GitHub (cache cold or unwritable).
 	req, err := http.NewRequestWithContext(request.Context(), http.MethodGet, asset.DownloadURL, nil)
 	if err != nil {
 		writeError(writer, http.StatusBadGateway, err.Error())
@@ -227,7 +263,14 @@ func (s *Server) handleFrontend(writer http.ResponseWriter, request *http.Reques
 	http.NotFound(writer, request)
 }
 
+// fetchLatestRelease serves release metadata from the APK cache, which refreshes
+// from GitHub on a TTL. Calling the API per request burned the (rate-limited)
+// anonymous quota on every page load and made the landing page fail whenever
+// GitHub was briefly unreachable.
 func (s *Server) fetchLatestRelease(ctx context.Context) (*githubapi.Release, *githubapi.ReleaseAsset, error) {
+	if s.apk != nil {
+		return s.apk.metadata(ctx)
+	}
 	release, err := s.releaseClient.FetchLatestRelease(ctx, s.config.GitHubRepo)
 	if err != nil {
 		return nil, nil, err
@@ -510,9 +553,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 	hub.AttachBus(msgBus, randomInstanceID())
 	go func() { _ = msgBus.Run(ctx) }()
 
+	apiServer := New(cfg, store, authSvc, hub)
+	// Warm the release asset before the first click and keep it current.
+	apiServer.StartAPKCache(ctx)
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           New(cfg, store, authSvc, hub).Handler(),
+		Handler:           apiServer.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
