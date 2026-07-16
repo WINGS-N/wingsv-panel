@@ -1,0 +1,8 @@
+# The image builds the frontend itself (see Dockerfile's frontend-builder), so a
+# locally-built web/dist must not ride along in the context and shadow it.
+web/dist
+node_modules
+.git
+.github
+build
+*.md
