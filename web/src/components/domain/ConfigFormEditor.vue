@@ -3,7 +3,7 @@
     <!-- App preferences -->
     <FormSection v-if="show('app')" title="Приложение" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Тема</label>
+        <label class="form-label">Тема<ConfigPendingMark path="appPreferences.themeMode" /></label>
         <OneuiSelect
           :model-value="ap.themeMode || 'THEME_MODE_UNSPECIFIED'"
           :options="themeOptions"
@@ -11,7 +11,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">DNS resolver</label>
+        <label class="form-label">DNS resolver<ConfigPendingMark path="appPreferences.dnsMode" /></label>
         <OneuiSelect
           :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'"
           :options="dnsOptions"
@@ -19,7 +19,9 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Автозапуск при загрузке</label>
+        <label class="form-label"
+          >Автозапуск при загрузке<ConfigPendingMark path="appPreferences.autoStartOnBoot"
+        /></label>
         <OneuiSwitch :model-value="!!ap.autoStartOnBoot" @change="setAp('autoStartOnBoot', $event)" />
       </div>
     </FormSection>
@@ -48,7 +50,7 @@
       </template>
       <template v-if="!provisionOnly">
         <div class="form-row">
-          <label class="form-label">Под-backend</label>
+          <label class="form-label">Под-backend<ConfigPendingMark path="turn.tunnelMode" /></label>
           <OneuiSelect
             :model-value="turn.tunnelMode || 'TUNNEL_MODE_WIREGUARD'"
             :options="tunnelModeOptions"
@@ -72,7 +74,7 @@
           />
         </div>
         <div class="form-row form-row-stack">
-          <label class="form-label">VK link (основная)</label>
+          <label class="form-label">VK link (основная)<ConfigPendingMark path="turn.link" /></label>
           <textarea
             class="text-input"
             rows="2"
@@ -113,7 +115,7 @@
           </div>
         </div>
         <div class="form-row form-row-stack">
-          <label class="form-label">Резервная VK ссылка</label>
+          <label class="form-label">Резервная VK ссылка<ConfigPendingMark path="turn.linkSecondary" /></label>
           <textarea
             class="text-input"
             rows="2"
@@ -122,7 +124,7 @@
           />
         </div>
         <div class="form-row form-row-stack">
-          <label class="form-label">Host / Port override</label>
+          <label class="form-label">Host / Port override<ConfigPendingMark path="turn.host" /></label>
           <input
             class="text-input"
             :value="turn.host || ''"
@@ -139,7 +141,7 @@
           <p class="form-hint">Переопределяет host/port из VK link. Пустые поля — без override.</p>
         </div>
         <div class="form-row">
-          <label class="form-label">Threads</label>
+          <label class="form-label">Threads<ConfigPendingMark path="turn.threads" /></label>
           <input
             class="text-input form-input-narrow"
             :value="turn.threads || ''"
@@ -148,7 +150,7 @@
           />
         </div>
         <div class="form-row">
-          <label class="form-label">Creds group size</label>
+          <label class="form-label">Creds group size<ConfigPendingMark path="turn.credsGroupSize" /></label>
           <input
             class="text-input form-input-narrow"
             :value="turn.credsGroupSize || ''"
@@ -157,7 +159,7 @@
           />
         </div>
         <div class="form-row">
-          <label class="form-label">Session mode</label>
+          <label class="form-label">Session mode<ConfigPendingMark path="turn.sessionMode" /></label>
           <OneuiSelect
             :model-value="turn.sessionMode || 'TURN_SESSION_MODE_UNSPECIFIED'"
             :options="sessionModeOptions"
@@ -165,7 +167,7 @@
           />
         </div>
         <div class="form-row">
-          <label class="form-label">Отпечаток браузера</label>
+          <label class="form-label">Отпечаток браузера<ConfigPendingMark path="turn.browserFingerprint" /></label>
           <OneuiSelect
             :model-value="turn.browserFingerprint || 'auto'"
             :options="browserFingerprintOptions"
@@ -173,7 +175,7 @@
           />
         </div>
         <div class="form-row">
-          <label class="form-label">Runtime mode</label>
+          <label class="form-label">Runtime mode<ConfigPendingMark path="turn.runtimeMode" /></label>
           <OneuiSelect
             :model-value="turn.runtimeMode || 'PROXY_RUNTIME_MODE_UNSPECIFIED'"
             :options="runtimeModeOptions"
@@ -197,15 +199,15 @@
           />
         </div>
         <div class="form-row">
-          <label class="form-label">UDP</label>
+          <label class="form-label">UDP<ConfigPendingMark path="turn.useUdp" /></label>
           <OneuiSwitch :model-value="!!turn.useUdp" @change="setTurn('useUdp', $event)" />
         </div>
         <div class="form-row">
-          <label class="form-label">Без обфускации</label>
+          <label class="form-label">Без обфускации<ConfigPendingMark path="turn.noObfuscation" /></label>
           <OneuiSwitch :model-value="!!turn.noObfuscation" @change="setTurn('noObfuscation', $event)" />
         </div>
         <div class="form-row">
-          <label class="form-label">Manual captcha</label>
+          <label class="form-label">Manual captcha<ConfigPendingMark path="turn.manualCaptcha" /></label>
           <OneuiSwitch :model-value="!!turn.manualCaptcha" @change="setTurn('manualCaptcha', $event)" />
         </div>
         <div class="form-row" v-if="!turn.manualCaptcha">
@@ -217,14 +219,16 @@
           />
         </div>
         <div class="form-row">
-          <label class="form-label">Restart on network change</label>
+          <label class="form-label"
+            >Restart on network change<ConfigPendingMark path="turn.restartOnNetworkChange"
+          /></label>
           <OneuiSwitch
             :model-value="!!turn.restartOnNetworkChange"
             @change="setTurn('restartOnNetworkChange', $event)"
           />
         </div>
         <div class="form-row">
-          <label class="form-label">DNS режим</label>
+          <label class="form-label">DNS режим<ConfigPendingMark path="appPreferences.dnsMode" /></label>
           <OneuiSelect
             :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'"
             :options="dnsOptions"
@@ -247,7 +251,7 @@
         </div>
         <h4 class="form-subsection-title">Обфускация / WRAP</h4>
         <div class="form-row">
-          <label class="form-label">Режим WRAP</label>
+          <label class="form-label">Режим WRAP<ConfigPendingMark path="turn.wrapMode" /></label>
           <OneuiSelect
             :model-value="turn.wrapMode || 'WRAP_MODE_UNSPECIFIED'"
             :options="wrapModeOptions"
@@ -285,23 +289,23 @@
     <!-- Xray basics -->
     <FormSection v-if="show('xray')" title="Xray" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Allow LAN</label>
+        <label class="form-label">Allow LAN<ConfigPendingMark path="xray.settings.allowLan" /></label>
         <OneuiSwitch :model-value="!!xraySettings.allowLan" @change="setXrayS('allowLan', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Allow insecure</label>
+        <label class="form-label">Allow insecure<ConfigPendingMark path="xray.settings.allowInsecure" /></label>
         <OneuiSwitch :model-value="!!xraySettings.allowInsecure" @change="setXrayS('allowInsecure', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">IPv6</label>
+        <label class="form-label">IPv6<ConfigPendingMark path="xray.settings.ipv6" /></label>
         <OneuiSwitch :model-value="!!xraySettings.ipv6" @change="setXrayS('ipv6', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Sniffing</label>
+        <label class="form-label">Sniffing<ConfigPendingMark path="xray.settings.sniffingEnabled" /></label>
         <OneuiSwitch :model-value="!!xraySettings.sniffingEnabled" @change="setXrayS('sniffingEnabled', $event)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Remote DNS</label>
+        <label class="form-label">Remote DNS<ConfigPendingMark path="xray.settings.remoteDns" /></label>
         <input
           class="text-input"
           :value="xraySettings.remoteDns || ''"
@@ -309,7 +313,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Direct DNS</label>
+        <label class="form-label">Direct DNS<ConfigPendingMark path="xray.settings.directDns" /></label>
         <input
           class="text-input"
           :value="xraySettings.directDns || ''"
@@ -317,7 +321,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Wake probe</label>
+        <label class="form-label">Wake probe<ConfigPendingMark path="xray.settings.wakeProbeMode" /></label>
         <OneuiSelect
           :model-value="xraySettings.wakeProbeMode || 'WAKE_PROBE_MODE_UNSPECIFIED'"
           :options="wakeProbeOptions"
@@ -329,7 +333,7 @@
     <!-- WB Stream -->
     <FormSection v-if="show('wb_stream')" title="WB Stream" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Под-backend</label>
+        <label class="form-label">Под-backend<ConfigPendingMark path="wbStream.tunnelMode" /></label>
         <OneuiSelect
           :model-value="wb.tunnelMode || 'TUNNEL_MODE_WIREGUARD'"
           :options="tunnelModeOptions"
@@ -337,23 +341,25 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Display name</label>
+        <label class="form-label">Display name<ConfigPendingMark path="wbStream.displayName" /></label>
         <input class="text-input" :value="wb.displayName || ''" @input="setWb('displayName', $event.target.value)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Room ID</label>
+        <label class="form-label">Room ID<ConfigPendingMark path="wbStream.roomId" /></label>
         <input class="text-input" :value="wb.roomId || ''" @input="setWb('roomId', $event.target.value)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Обмен room data через VK TURN</label>
+        <label class="form-label"
+          >Обмен room data через VK TURN<ConfigPendingMark path="wbStream.exchangeViaVkTurn"
+        /></label>
         <OneuiSwitch :model-value="!!wb.exchangeViaVkTurn" @change="setWb('exchangeViaVkTurn', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">E2E enabled</label>
+        <label class="form-label">E2E enabled<ConfigPendingMark path="wbStream.e2eEnabled" /></label>
         <OneuiSwitch :model-value="!!wb.e2eEnabled" @change="setWb('e2eEnabled', $event)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">E2E ключ (32 байта, base64)</label>
+        <label class="form-label">E2E ключ (32 байта, base64)<ConfigPendingMark path="wbStream.e2eSecret" /></label>
         <input class="text-input" :value="wb.e2eSecret || ''" @input="setWb('e2eSecret', $event.target.value)" />
         <div class="actions-row mt-2">
           <button class="button-secondary" type="button" @click="generateE2ESecret">
@@ -362,7 +368,7 @@
         </div>
       </div>
       <div class="form-row">
-        <label class="form-label">Параллельных комнат</label>
+        <label class="form-label">Параллельных комнат<ConfigPendingMark path="wbStream.roomCount" /></label>
         <input
           class="text-input form-input-narrow"
           :value="wb.roomCount || ''"
@@ -371,7 +377,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">DNS режим</label>
+        <label class="form-label">DNS режим<ConfigPendingMark path="appPreferences.dnsMode" /></label>
         <OneuiSelect
           :model-value="ap.dnsMode || 'DNS_MODE_UNSPECIFIED'"
           :options="dnsOptions"
@@ -383,7 +389,7 @@
     <!-- Backend selector -->
     <FormSection v-if="show('backend')" title="Бэкенд" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Активный backend</label>
+        <label class="form-label">Активный backend<ConfigPendingMark path="backend" /></label>
         <OneuiSelect
           :model-value="normalizeBackend(modelValue.backend)"
           :options="backendOptions"
@@ -424,7 +430,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">MTU</label>
+        <label class="form-label">MTU<ConfigPendingMark path="wg.iface.mtu" /></label>
         <input
           class="text-input form-input-narrow"
           :value="wg.iface?.mtu || ''"
@@ -433,7 +439,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Interface private key (base64)</label>
+        <label class="form-label">Interface private key (base64)<ConfigPendingMark path="wg.iface.privateKey" /></label>
         <input
           class="text-input"
           :value="wg.iface?.privateKey || ''"
@@ -443,7 +449,7 @@
 
       <h4 class="form-subsection-title">Peer</h4>
       <div class="form-row form-row-stack">
-        <label class="form-label">Public key (base64)</label>
+        <label class="form-label">Public key (base64)<ConfigPendingMark path="wg.peer.publicKey" /></label>
         <input
           class="text-input"
           :value="wg.peer?.publicKey || ''"
@@ -451,7 +457,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Preshared key (base64)</label>
+        <label class="form-label">Preshared key (base64)<ConfigPendingMark path="wg.peer.presharedKey" /></label>
         <input
           class="text-input"
           :value="wg.peer?.presharedKey || ''"
@@ -463,7 +469,7 @@
     <!-- AmneziaWG -->
     <FormSection v-if="show('amneziawg')" title="AmneziaWG" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row form-row-stack">
-        <label class="form-label">awg-quick конфиг</label>
+        <label class="form-label">awg-quick конфиг<ConfigPendingMark path="awg.awgQuickConfig" /></label>
         <textarea
           class="text-input admin-config-area"
           rows="10"
@@ -482,7 +488,7 @@
       :default-collapsed="collapsible"
     >
       <div class="form-row form-row-stack">
-        <label class="form-label">Режим маршрутизации</label>
+        <label class="form-label">Режим маршрутизации<ConfigPendingMark path="appRouting.mode" /></label>
         <div class="routing-mode-picker" role="radiogroup" aria-label="Routing mode">
           <button
             v-for="opt in appRoutingModeOptions"
@@ -503,7 +509,9 @@
         <p class="form-hint">{{ appRoutingModeHint }}</p>
       </div>
       <div v-if="appRoutingMode === 'bypass' || appRoutingMode === 'xbypass'" class="form-row form-row-stack">
-        <label class="form-label">Bypass-пакеты (через запятую или с новой строки)</label>
+        <label class="form-label"
+          >Bypass-пакеты (через запятую или с новой строки)<ConfigPendingMark path="appRouting.bypassPackages"
+        /></label>
         <textarea
           class="text-input"
           rows="5"
@@ -513,7 +521,9 @@
         />
       </div>
       <div v-if="appRoutingMode === 'whitelist' || appRoutingMode === 'xwhitelist'" class="form-row form-row-stack">
-        <label class="form-label">Whitelist-пакеты (через запятую или с новой строки)</label>
+        <label class="form-label"
+          >Whitelist-пакеты (через запятую или с новой строки)<ConfigPendingMark path="appRouting.whitelistPackages"
+        /></label>
         <textarea
           class="text-input"
           rows="5"
@@ -527,31 +537,31 @@
     <!-- Xposed -->
     <FormSection v-if="show('xposed')" title="Xposed" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Enabled</label>
+        <label class="form-label">Enabled<ConfigPendingMark path="xposed.enabled" /></label>
         <OneuiSwitch :model-value="!!xposed.enabled" @change="setXposed('enabled', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">All apps</label>
+        <label class="form-label">All apps<ConfigPendingMark path="xposed.allApps" /></label>
         <OneuiSwitch :model-value="!!xposed.allApps" @change="setXposed('allApps', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Native hook</label>
+        <label class="form-label">Native hook<ConfigPendingMark path="xposed.nativeHookEnabled" /></label>
         <OneuiSwitch :model-value="!!xposed.nativeHookEnabled" @change="setXposed('nativeHookEnabled', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Inline hooks</label>
+        <label class="form-label">Inline hooks<ConfigPendingMark path="xposed.inlineHooksEnabled" /></label>
         <OneuiSwitch :model-value="!!xposed.inlineHooksEnabled" @change="setXposed('inlineHooksEnabled', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Hide VPN apps</label>
+        <label class="form-label">Hide VPN apps<ConfigPendingMark path="xposed.hideVpnApps" /></label>
         <OneuiSwitch :model-value="!!xposed.hideVpnApps" @change="setXposed('hideVpnApps', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Hide from dumpsys</label>
+        <label class="form-label">Hide from dumpsys<ConfigPendingMark path="xposed.hideFromDumpsys" /></label>
         <OneuiSwitch :model-value="!!xposed.hideFromDumpsys" @change="setXposed('hideFromDumpsys', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Procfs hook</label>
+        <label class="form-label">Procfs hook<ConfigPendingMark path="xposed.procfsHookMode" /></label>
         <OneuiSelect
           :model-value="xposed.procfsHookMode || 'XPOSED_PROCFS_HOOK_MODE_UNSPECIFIED'"
           :options="procfsOptions"
@@ -559,7 +569,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">ICMP spoofing</label>
+        <label class="form-label">ICMP spoofing<ConfigPendingMark path="xposed.icmpSpoofingMode" /></label>
         <OneuiSelect
           :model-value="xposed.icmpSpoofingMode || 'XPOSED_ICMP_SPOOFING_MODE_UNSPECIFIED'"
           :options="icmpOptions"
@@ -573,19 +583,19 @@
     <!-- Root settings -->
     <FormSection v-if="show('root')" title="Root" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Root mode enabled</label>
+        <label class="form-label">Root mode enabled<ConfigPendingMark path="root.enabled" /></label>
         <OneuiSwitch :model-value="!!root.enabled" @change="setRootSettings('enabled', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Kernel WireGuard</label>
+        <label class="form-label">Kernel WireGuard<ConfigPendingMark path="root.kernelWireguard" /></label>
         <OneuiSwitch :model-value="!!root.kernelWireguard" @change="setRootSettings('kernelWireguard', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Xray TPROXY mode</label>
+        <label class="form-label">Xray TPROXY mode<ConfigPendingMark path="root.xrayTproxyMode" /></label>
         <OneuiSwitch :model-value="!!root.xrayTproxyMode" @change="setRootSettings('xrayTproxyMode', $event)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">WG-интерфейс имя (template)</label>
+        <label class="form-label">WG-интерфейс имя (template)<ConfigPendingMark path="root.wgInterfaceName" /></label>
         <input
           class="text-input"
           :value="root.wgInterfaceName || ''"
@@ -597,19 +607,21 @@
     <!-- Sharing -->
     <FormSection v-if="show('sharing')" title="Sharing" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Автозапуск раздачи</label>
+        <label class="form-label">Автозапуск раздачи<ConfigPendingMark path="sharing.autoStartOnBoot" /></label>
         <OneuiSwitch :model-value="!!sharing.autoStartOnBoot" @change="setSharing('autoStartOnBoot', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Disable IPv6</label>
+        <label class="form-label">Disable IPv6<ConfigPendingMark path="sharing.disableIpv6" /></label>
         <OneuiSwitch :model-value="!!sharing.disableIpv6" @change="setSharing('disableIpv6', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">DHCP workaround</label>
+        <label class="form-label">DHCP workaround<ConfigPendingMark path="sharing.dhcpWorkaround" /></label>
         <OneuiSwitch :model-value="!!sharing.dhcpWorkaround" @change="setSharing('dhcpWorkaround', $event)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Upstream interface (вручную)</label>
+        <label class="form-label"
+          >Upstream interface (вручную)<ConfigPendingMark path="sharing.upstreamInterface"
+        /></label>
         <input
           class="text-input"
           :value="sharing.upstreamInterface || ''"
@@ -617,7 +629,9 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Fallback upstream interface</label>
+        <label class="form-label"
+          >Fallback upstream interface<ConfigPendingMark path="sharing.fallbackUpstreamInterface"
+        /></label>
         <input
           class="text-input"
           :value="sharing.fallbackUpstreamInterface || ''"
@@ -629,19 +643,21 @@
     <!-- ByeDPI -->
     <FormSection v-if="show('byedpi')" title="ByeDPI" :collapsible="collapsible" :default-collapsed="collapsible">
       <div class="form-row">
-        <label class="form-label">Enabled</label>
+        <label class="form-label">Enabled<ConfigPendingMark path="byeDpi.enabled" /></label>
         <OneuiSwitch :model-value="!!byeDpi.enabled" @change="setByeDpi('enabled', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Авто-старт с Xray</label>
+        <label class="form-label">Авто-старт с Xray<ConfigPendingMark path="byeDpi.autoStartWithXray" /></label>
         <OneuiSwitch :model-value="!!byeDpi.autoStartWithXray" @change="setByeDpi('autoStartWithXray', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Использовать сырые аргументы (cmd_args)</label>
+        <label class="form-label"
+          >Использовать сырые аргументы (cmd_args)<ConfigPendingMark path="byeDpi.useCommandSettings"
+        /></label>
         <OneuiSwitch :model-value="!!byeDpi.useCommandSettings" @change="setByeDpi('useCommandSettings', $event)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Сырые аргументы (cmd_args)</label>
+        <label class="form-label">Сырые аргументы (cmd_args)<ConfigPendingMark path="byeDpi.cmdArgs" /></label>
         <textarea
           class="text-input admin-config-area"
           rows="4"
@@ -654,7 +670,7 @@
 
       <h4 class="form-subsection-title">Локальный прокси</h4>
       <div class="form-row form-row-stack">
-        <label class="form-label">IP</label>
+        <label class="form-label">IP<ConfigPendingMark path="byeDpi.proxyIp" /></label>
         <input
           class="text-input"
           :value="byeDpi.proxyIp || ''"
@@ -663,7 +679,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Порт</label>
+        <label class="form-label">Порт<ConfigPendingMark path="byeDpi.proxyPort" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.proxyPort || ''"
@@ -672,11 +688,11 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Auth</label>
+        <label class="form-label">Auth<ConfigPendingMark path="byeDpi.proxyAuthEnabled" /></label>
         <OneuiSwitch :model-value="!!byeDpi.proxyAuthEnabled" @change="setByeDpi('proxyAuthEnabled', $event)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Имя пользователя</label>
+        <label class="form-label">Имя пользователя<ConfigPendingMark path="byeDpi.proxyUsername" /></label>
         <input
           class="text-input"
           :value="byeDpi.proxyUsername || ''"
@@ -684,7 +700,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Пароль</label>
+        <label class="form-label">Пароль<ConfigPendingMark path="byeDpi.proxyPassword" /></label>
         <input
           class="text-input"
           :value="byeDpi.proxyPassword || ''"
@@ -694,7 +710,7 @@
 
       <h4 class="form-subsection-title">Сеть</h4>
       <div class="form-row">
-        <label class="form-label">Max connections</label>
+        <label class="form-label">Max connections<ConfigPendingMark path="byeDpi.maxConnections" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.maxConnections || ''"
@@ -703,7 +719,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Buffer size</label>
+        <label class="form-label">Buffer size<ConfigPendingMark path="byeDpi.bufferSize" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.bufferSize || ''"
@@ -712,17 +728,17 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">No domain</label>
+        <label class="form-label">No domain<ConfigPendingMark path="byeDpi.noDomain" /></label>
         <OneuiSwitch :model-value="!!byeDpi.noDomain" @change="setByeDpi('noDomain', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">TCP Fast Open</label>
+        <label class="form-label">TCP Fast Open<ConfigPendingMark path="byeDpi.tcpFastOpen" /></label>
         <OneuiSwitch :model-value="!!byeDpi.tcpFastOpen" @change="setByeDpi('tcpFastOpen', $event)" />
       </div>
 
       <h4 class="form-subsection-title">Hosts mode</h4>
       <div class="form-row">
-        <label class="form-label">Mode</label>
+        <label class="form-label">Mode<ConfigPendingMark path="byeDpi.hostsMode" /></label>
         <OneuiSelect
           :model-value="byeDpi.hostsMode || 'BYEDPI_HOSTS_MODE_UNSPECIFIED'"
           :options="byedpiHostsOptions"
@@ -730,7 +746,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Blacklist (через запятую)</label>
+        <label class="form-label">Blacklist (через запятую)<ConfigPendingMark path="byeDpi.hostsBlacklist" /></label>
         <textarea
           class="text-input"
           rows="3"
@@ -740,7 +756,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Whitelist (через запятую)</label>
+        <label class="form-label">Whitelist (через запятую)<ConfigPendingMark path="byeDpi.hostsWhitelist" /></label>
         <textarea
           class="text-input"
           rows="3"
@@ -752,7 +768,7 @@
 
       <h4 class="form-subsection-title">Desync</h4>
       <div class="form-row">
-        <label class="form-label">Method</label>
+        <label class="form-label">Method<ConfigPendingMark path="byeDpi.desyncMethod" /></label>
         <OneuiSelect
           :model-value="byeDpi.desyncMethod || 'BYEDPI_DESYNC_METHOD_UNSPECIFIED'"
           :options="byedpiDesyncOptions"
@@ -760,7 +776,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Default TTL</label>
+        <label class="form-label">Default TTL<ConfigPendingMark path="byeDpi.defaultTtl" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.defaultTtl || ''"
@@ -769,7 +785,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Split position</label>
+        <label class="form-label">Split position<ConfigPendingMark path="byeDpi.splitPosition" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.splitPosition || ''"
@@ -778,15 +794,15 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Split at host</label>
+        <label class="form-label">Split at host<ConfigPendingMark path="byeDpi.splitAtHost" /></label>
         <OneuiSwitch :model-value="!!byeDpi.splitAtHost" @change="setByeDpi('splitAtHost', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Drop SACK</label>
+        <label class="form-label">Drop SACK<ConfigPendingMark path="byeDpi.dropSack" /></label>
         <OneuiSwitch :model-value="!!byeDpi.dropSack" @change="setByeDpi('dropSack', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Fake TTL</label>
+        <label class="form-label">Fake TTL<ConfigPendingMark path="byeDpi.fakeTtl" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.fakeTtl || ''"
@@ -795,7 +811,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Fake offset</label>
+        <label class="form-label">Fake offset<ConfigPendingMark path="byeDpi.fakeOffset" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.fakeOffset || ''"
@@ -804,43 +820,43 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">Fake SNI</label>
+        <label class="form-label">Fake SNI<ConfigPendingMark path="byeDpi.fakeSni" /></label>
         <input class="text-input" :value="byeDpi.fakeSni || ''" @input="setByeDpi('fakeSni', $event.target.value)" />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">OOB data</label>
+        <label class="form-label">OOB data<ConfigPendingMark path="byeDpi.oobData" /></label>
         <input class="text-input" :value="byeDpi.oobData || ''" @input="setByeDpi('oobData', $event.target.value)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Desync HTTP</label>
+        <label class="form-label">Desync HTTP<ConfigPendingMark path="byeDpi.desyncHttp" /></label>
         <OneuiSwitch :model-value="!!byeDpi.desyncHttp" @change="setByeDpi('desyncHttp', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Desync HTTPS</label>
+        <label class="form-label">Desync HTTPS<ConfigPendingMark path="byeDpi.desyncHttps" /></label>
         <OneuiSwitch :model-value="!!byeDpi.desyncHttps" @change="setByeDpi('desyncHttps', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Desync UDP</label>
+        <label class="form-label">Desync UDP<ConfigPendingMark path="byeDpi.desyncUdp" /></label>
         <OneuiSwitch :model-value="!!byeDpi.desyncUdp" @change="setByeDpi('desyncUdp', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Host mixed case</label>
+        <label class="form-label">Host mixed case<ConfigPendingMark path="byeDpi.hostMixedCase" /></label>
         <OneuiSwitch :model-value="!!byeDpi.hostMixedCase" @change="setByeDpi('hostMixedCase', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Domain mixed case</label>
+        <label class="form-label">Domain mixed case<ConfigPendingMark path="byeDpi.domainMixedCase" /></label>
         <OneuiSwitch :model-value="!!byeDpi.domainMixedCase" @change="setByeDpi('domainMixedCase', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Host remove spaces</label>
+        <label class="form-label">Host remove spaces<ConfigPendingMark path="byeDpi.hostRemoveSpaces" /></label>
         <OneuiSwitch :model-value="!!byeDpi.hostRemoveSpaces" @change="setByeDpi('hostRemoveSpaces', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">TLSrec</label>
+        <label class="form-label">TLSrec<ConfigPendingMark path="byeDpi.tlsrecEnabled" /></label>
         <OneuiSwitch :model-value="!!byeDpi.tlsrecEnabled" @change="setByeDpi('tlsrecEnabled', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">TLSrec position</label>
+        <label class="form-label">TLSrec position<ConfigPendingMark path="byeDpi.tlsrecPosition" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.tlsrecPosition || ''"
@@ -849,11 +865,11 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">TLSrec at SNI</label>
+        <label class="form-label">TLSrec at SNI<ConfigPendingMark path="byeDpi.tlsrecAtSni" /></label>
         <OneuiSwitch :model-value="!!byeDpi.tlsrecAtSni" @change="setByeDpi('tlsrecAtSni', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">UDP fake count</label>
+        <label class="form-label">UDP fake count<ConfigPendingMark path="byeDpi.udpFakeCount" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.udpFakeCount || ''"
@@ -864,7 +880,7 @@
 
       <h4 class="form-subsection-title">Proxytest</h4>
       <div class="form-row">
-        <label class="form-label">Delay (ms)</label>
+        <label class="form-label">Delay (ms)<ConfigPendingMark path="byeDpi.proxytestDelay" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.proxytestDelay || ''"
@@ -873,7 +889,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Requests</label>
+        <label class="form-label">Requests<ConfigPendingMark path="byeDpi.proxytestRequests" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.proxytestRequests || ''"
@@ -882,7 +898,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Limit</label>
+        <label class="form-label">Limit<ConfigPendingMark path="byeDpi.proxytestLimit" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.proxytestLimit || ''"
@@ -891,7 +907,7 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Timeout (ms)</label>
+        <label class="form-label">Timeout (ms)<ConfigPendingMark path="byeDpi.proxytestTimeout" /></label>
         <input
           class="text-input form-input-narrow"
           :value="byeDpi.proxytestTimeout || ''"
@@ -900,7 +916,7 @@
         />
       </div>
       <div class="form-row form-row-stack">
-        <label class="form-label">SNI</label>
+        <label class="form-label">SNI<ConfigPendingMark path="byeDpi.proxytestSni" /></label>
         <input
           class="text-input"
           :value="byeDpi.proxytestSni || ''"
@@ -908,7 +924,9 @@
         />
       </div>
       <div class="form-row">
-        <label class="form-label">Кастомные стратегии</label>
+        <label class="form-label"
+          >Кастомные стратегии<ConfigPendingMark path="byeDpi.proxytestUseCustomStrategies"
+        /></label>
         <OneuiSwitch
           :model-value="!!byeDpi.proxytestUseCustomStrategies"
           @change="setByeDpi('proxytestUseCustomStrategies', $event)"
@@ -919,12 +937,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, provide } from 'vue';
 import { Plus, PowerOff, ShieldCheck, ShieldHalf, Shuffle, Sparkles, Split, Trash2 } from 'lucide-vue-next';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 import OneuiSelect from '@/components/controls/OneuiSelect.vue';
 import FormSection from '@/components/domain/FormSection.vue';
+import ConfigPendingMark from '@/components/domain/ConfigPendingMark.vue';
 import SamsungLoader from '@/components/layout/SamsungLoader.vue';
+import { describeValue, readPath, sameValue } from '@/utils/configDiff';
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -957,6 +977,10 @@ const props = defineProps({
   // controls (allow-auto-wg toggle + node selector) and hides every other field.
   // Config-only clients use this: there is nothing else for the panel to manage.
   provisionOnly: { type: Boolean, default: false },
+  // The config the device last reported. Fields shown here that differ from it
+  // have not reached the device yet, and each one gets a marker saying so. Null
+  // in the master config editor, where there is no single device to compare to.
+  reportedValue: { type: Object, default: null },
 });
 const emit = defineEmits(['update:modelValue', 'generate-vk-link', 'update:provisionEnabled', 'update:provisionNode']);
 
@@ -1090,6 +1114,14 @@ const byedpiDesyncOptions = [
   { value: 'BYEDPI_DESYNC_METHOD_OOB', label: 'OOB' },
   { value: 'BYEDPI_DESYNC_METHOD_DISOOB', label: 'DisOOB' },
 ];
+
+provide('configPending', (path) => {
+  if (!props.reportedValue) return null;
+  const shown = readPath(props.modelValue, path);
+  const reported = readPath(props.reportedValue, path);
+  if (sameValue(shown, reported)) return null;
+  return { text: describeValue(reported) };
+});
 
 const ap = computed(() => props.modelValue.appPreferences || {});
 const turn = computed(() => props.modelValue.turn || {});
