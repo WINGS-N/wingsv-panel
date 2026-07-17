@@ -1208,6 +1208,15 @@
     @apply h-4 w-4 shrink-0;
   }
 
+  .config-applied-detail {
+    @apply text-[12px] text-wings-mutedStrong;
+  }
+
+  /* Wraps to its own line on narrow screens instead of squeezing the badge out. */
+  .config-applied {
+    @apply flex-wrap;
+  }
+
   .config-form {
     @apply mt-3 flex flex-col gap-5;
   }

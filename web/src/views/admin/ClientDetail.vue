@@ -146,12 +146,11 @@
             <OneuiSwitch :model-value="followClient" @change="setFollowClient($event)" />
             <span class="admin-follow-label">Следить за клиентом</span>
           </span>
-          <span v-if="configApplied !== null" :class="['config-applied', configApplied ? 'is-applied' : 'is-pending']">
-            <Check v-if="configApplied" class="config-applied-icon" aria-hidden="true" />
-            <Clock v-else class="config-applied-icon" aria-hidden="true" />
-            <span v-if="configApplied">Применено клиентом</span>
-            <span v-else>Ожидает применения</span>
-          </span>
+          <ConfigAppliedBadge
+            :desired="detail?.desired_config"
+            :reported="detail?.reported_config"
+            :detail="configAppliedDetail"
+          />
         </div>
         <div class="actions-row mt-3">
           <SamsungButton
@@ -188,7 +187,8 @@
         <ConfigFormEditor
           v-if="configMode === 'form'"
           :model-value="formValue"
-          :reported-value="pendingBaseline"
+          :desired-value="detail?.desired_config"
+          :reported-value="detail?.reported_config"
           :collapsible="true"
           :has-root-access="!!detail.client?.has_root_access"
           :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
@@ -478,6 +478,11 @@
             </template>
             <template v-else>Настройки только для {{ backendTabLabel(backend) }}.</template>
           </p>
+          <ConfigAppliedBadge
+            :desired="detail?.desired_config"
+            :reported="detail?.reported_config"
+            :detail="configAppliedDetail"
+          />
           <SamsungButton v-if="!(backend === 'vk_turn' && isConfigOnly)" :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
             {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
@@ -485,7 +490,8 @@
         </div>
         <ConfigFormEditor
           :model-value="formValue"
-          :reported-value="pendingBaseline"
+          :desired-value="detail?.desired_config"
+          :reported-value="detail?.reported_config"
           :sections="backendTabSections[backend]"
           :provision-only="backend === 'vk_turn' && isConfigOnly"
           :has-root-access="!!detail.client?.has_root_access"
@@ -767,7 +773,7 @@ import CopyableLink from '@/components/domain/CopyableLink.vue';
 const JsonEditor = defineAsyncComponent(() => import('@/components/domain/JsonEditor.vue'));
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { confirm } from '@/stores/confirm.js';
-import { desiredApplied } from '@/utils/configDiff';
+import ConfigAppliedBadge from '@/components/domain/ConfigAppliedBadge.vue';
 
 const props = defineProps({ id: { type: String, required: true }, tab: { type: String, default: '' } });
 const router = useRouter();
@@ -814,20 +820,18 @@ function setActiveTab(tabId) {
 const configMode = ref('form');
 const followClient = ref(true);
 
-// What the form's values are compared against to mark fields the device does not
-// have yet. Null until the device reports something: with nothing to compare to,
-// every field would look pending, which is worse than saying nothing.
-const pendingBaseline = computed(() => detail.value?.reported_config || null);
-
-// Whether the config the panel last saved has fully reached the device. Null
-// means we cannot tell (the device has never reported), and the badge then says
-// so instead of guessing. StateReport carries no version, so the two snapshots
-// themselves are the only honest signal.
-const configApplied = computed(() => {
-  const reported = detail.value?.reported_config;
-  const desired = detail.value?.desired_config;
-  if (!reported || !desired) return null;
-  return desiredApplied(desired, reported);
+// Revision and timestamps behind the applied/pending badge. StateReport carries
+// no config version, so "when the device last reported" is as precise as the
+// applied side gets - say that rather than imply a version match.
+const configAppliedDetail = computed(() => {
+  const parts = [];
+  const revision = detail.value?.desired_revision;
+  if (revision) parts.push('ревизия ' + String(revision).slice(0, 12));
+  const pushed = detail.value?.desired_updated;
+  if (pushed) parts.push('отправлено ' + formatTs(pushed));
+  const reportedAt = detail.value?.reported_config_updated;
+  parts.push(reportedAt ? 'клиент отчитался ' + formatTs(reportedAt) : 'клиент ещё не отчитывался');
+  return parts.join(' · ');
 });
 // Whether configDraft has been seeded for the current client. Prevents loadDetail
 // (called on every live state_report) from re-seeding and wiping an in-progress

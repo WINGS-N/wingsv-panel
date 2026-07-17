@@ -46,8 +46,16 @@ export function stableJson(value) {
   return '{' + keys.map((k) => JSON.stringify(k) + ':' + stableJson(value[k])).join(',') + '}';
 }
 
-export function describeValue(value) {
-  if (value === undefined || value === null || value === '') return 'не задано';
+// `like` is the value on the panel's side, used only to read an absent field in
+// the field's own language: proto3 omits a false switch, and telling the admin a
+// switch is "не задано" when the device plainly has it off is just confusing.
+// Numbers stay "не задано" - an omitted number means the app's default, not 0.
+export function describeValue(value, like) {
+  if (value === undefined || value === null || value === '') {
+    if (typeof like === 'boolean') return 'выключено';
+    if (Array.isArray(like)) return 'пусто';
+    return 'не задано';
+  }
   if (value === true) return 'включено';
   if (value === false) return 'выключено';
   if (Array.isArray(value)) return value.length ? value.join(', ') : 'пусто';

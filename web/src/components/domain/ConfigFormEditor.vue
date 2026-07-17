@@ -977,9 +977,13 @@ const props = defineProps({
   // controls (allow-auto-wg toggle + node selector) and hides every other field.
   // Config-only clients use this: there is nothing else for the panel to manage.
   provisionOnly: { type: Boolean, default: false },
-  // The config the device last reported. Fields shown here that differ from it
-  // have not reached the device yet, and each one gets a marker saying so. Null
-  // in the master config editor, where there is no single device to compare to.
+  // The saved config the panel wants, and the one the device last reported. A
+  // field that differs between the two has been pushed but not applied, and gets
+  // a marker saying so. Deliberately NOT compared against the form's own draft:
+  // an unsaved edit is not "pending on the device", and with "follow client" on
+  // the draft is rewritten from the device every refresh, which made markers
+  // blink out. Both null in the master config editor - nothing to compare there.
+  desiredValue: { type: Object, default: null },
   reportedValue: { type: Object, default: null },
 });
 const emit = defineEmits(['update:modelValue', 'generate-vk-link', 'update:provisionEnabled', 'update:provisionNode']);
@@ -1116,11 +1120,11 @@ const byedpiDesyncOptions = [
 ];
 
 provide('configPending', (path) => {
-  if (!props.reportedValue) return null;
-  const shown = readPath(props.modelValue, path);
+  if (!props.reportedValue || !props.desiredValue) return null;
+  const desired = readPath(props.desiredValue, path);
   const reported = readPath(props.reportedValue, path);
-  if (sameValue(shown, reported)) return null;
-  return { text: describeValue(reported) };
+  if (sameValue(desired, reported)) return null;
+  return { text: describeValue(reported, desired) };
 });
 
 const ap = computed(() => props.modelValue.appPreferences || {});
