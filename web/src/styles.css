@@ -1192,6 +1192,22 @@
     @apply text-[13px] text-wings-mutedStrong;
   }
 
+  .config-applied {
+    @apply inline-flex items-center gap-1.5 text-[13px];
+  }
+
+  .config-applied.is-applied {
+    @apply text-emerald-300;
+  }
+
+  .config-applied.is-pending {
+    @apply text-amber-200;
+  }
+
+  .config-applied-icon {
+    @apply h-4 w-4 shrink-0;
+  }
+
   .config-form {
     @apply mt-3 flex flex-col gap-5;
   }

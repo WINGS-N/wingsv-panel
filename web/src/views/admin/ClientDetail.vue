@@ -146,6 +146,12 @@
             <OneuiSwitch :model-value="followClient" @change="setFollowClient($event)" />
             <span class="admin-follow-label">Следить за клиентом</span>
           </span>
+          <span v-if="configApplied !== null" :class="['config-applied', configApplied ? 'is-applied' : 'is-pending']">
+            <Check v-if="configApplied" class="config-applied-icon" aria-hidden="true" />
+            <Clock v-else class="config-applied-icon" aria-hidden="true" />
+            <span v-if="configApplied">Применено клиентом</span>
+            <span v-else>Ожидает применения</span>
+          </span>
         </div>
         <div class="actions-row mt-3">
           <SamsungButton
@@ -182,6 +188,7 @@
         <ConfigFormEditor
           v-if="configMode === 'form'"
           :model-value="formValue"
+          :reported-value="pendingBaseline"
           :collapsible="true"
           :has-root-access="!!detail.client?.has_root_access"
           :vk-oauth-authorized="!!detail.client?.vk_oauth_authorized"
@@ -478,6 +485,7 @@
         </div>
         <ConfigFormEditor
           :model-value="formValue"
+          :reported-value="pendingBaseline"
           :sections="backendTabSections[backend]"
           :provision-only="backend === 'vk_turn' && isConfigOnly"
           :has-root-access="!!detail.client?.has_root_access"
@@ -759,6 +767,7 @@ import CopyableLink from '@/components/domain/CopyableLink.vue';
 const JsonEditor = defineAsyncComponent(() => import('@/components/domain/JsonEditor.vue'));
 import { connectAdminSocket } from '@/stores/admin-socket.js';
 import { confirm } from '@/stores/confirm.js';
+import { desiredApplied } from '@/utils/configDiff';
 
 const props = defineProps({ id: { type: String, required: true }, tab: { type: String, default: '' } });
 const router = useRouter();
@@ -804,6 +813,22 @@ function setActiveTab(tabId) {
 }
 const configMode = ref('form');
 const followClient = ref(true);
+
+// What the form's values are compared against to mark fields the device does not
+// have yet. Null until the device reports something: with nothing to compare to,
+// every field would look pending, which is worse than saying nothing.
+const pendingBaseline = computed(() => detail.value?.reported_config || null);
+
+// Whether the config the panel last saved has fully reached the device. Null
+// means we cannot tell (the device has never reported), and the badge then says
+// so instead of guessing. StateReport carries no version, so the two snapshots
+// themselves are the only honest signal.
+const configApplied = computed(() => {
+  const reported = detail.value?.reported_config;
+  const desired = detail.value?.desired_config;
+  if (!reported || !desired) return null;
+  return desiredApplied(desired, reported);
+});
 // Whether configDraft has been seeded for the current client. Prevents loadDetail
 // (called on every live state_report) from re-seeding and wiping an in-progress
 // edit once followClient is off.
