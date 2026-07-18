@@ -292,6 +292,13 @@ async function downloadLatest() {
         downloadState.percent = Math.min(95, Math.floor(received / (1024 * 1024)) * 5);
       }
     }
+    // A stream can end cleanly on a truncated transfer (dropped mobile link, proxy
+    // closing the connection): read() reports done without ever throwing. Caching
+    // that blob would hand the user a broken APK on every later click, since the
+    // cached copy is served without re-downloading. Only a full-length body counts.
+    if (total > 0 && received !== total) {
+      throw new Error(`Скачано ${received} из ${total} байт, файл неполный. Попробуйте ещё раз.`);
+    }
     const blob = new Blob(chunks, { type: response.headers.get('Content-Type') || APK_CONTENT_TYPE });
     const cachedResponse = new Response(blob, {
       headers: { 'Content-Type': blob.type, 'Content-Length': String(blob.size) },
@@ -326,10 +333,28 @@ async function installFromCache() {
     downloadState.percent = 0;
     return;
   }
+  if (!cachedEntryIsComplete(response)) {
+    await cache.delete(cacheKey);
+    cacheReady.value = false;
+    downloadState.label = 'Кеш содержал неполный файл, скачайте заново';
+    downloadState.percent = 0;
+    return;
+  }
   const blob = await response.blob();
   downloadState.label = 'APK открыт из browser cache';
   downloadState.percent = 100;
   await triggerBlobDownload(blob, release.value?.asset?.name || 'WINGSV.apk');
+}
+
+// Whether a cached entry holds the whole APK. Compares the length stored at
+// cache.put time against the release metadata rather than reading the blob back,
+// so the check stays cheap on every page load. Entries cached before this check
+// existed may be truncated, which is exactly what this is here to catch.
+function cachedEntryIsComplete(response) {
+  if (!response) return false;
+  const expected = Number(release.value?.asset?.size || 0);
+  if (expected <= 0) return true;
+  return Number(response.headers.get('Content-Length') || '0') === expected;
 }
 
 async function checkCachedAsset() {
@@ -342,6 +367,11 @@ async function checkCachedAsset() {
   // Drop stale APKs cached under a different version tag.
   await pruneOtherCachedVersions(cache, cacheKey);
   const response = await cache.match(cacheKey);
+  if (response && !cachedEntryIsComplete(response)) {
+    await cache.delete(cacheKey);
+    cacheReady.value = false;
+    return;
+  }
   cacheReady.value = Boolean(response);
   if (cacheReady.value) {
     downloadState.label = 'APK готов к установке';
