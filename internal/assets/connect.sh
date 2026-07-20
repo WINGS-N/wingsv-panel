@@ -47,10 +47,16 @@ parse_args() {
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# docker_name_matching prints the first running container whose name matches $1.
+# docker_name_matching prints the first running container whose name matches $1 and
+# returns non-zero when there is none. The status has to be set explicitly: the exit
+# code of the pipeline is head's, and head succeeds on empty input, so the previous
+# version reported "found" on every host that merely had docker installed - which
+# made detect_kind pick vktp for a 3x-ui node.
 docker_name_matching() {
   have docker || return 1
-  docker ps --format '{{.Names}}' 2>/dev/null | grep -i "$1" | head -1
+  match="$(docker ps --format '{{.Names}}' 2>/dev/null | grep -i "$1" | head -1)"
+  [ -n "$match" ] || return 1
+  printf '%s\n' "$match"
 }
 
 detect_kind() {
@@ -141,13 +147,43 @@ connect_vktp() {
   log "vk-turn-proxy node $NODE_ID connected to panel $PANEL_GRPC"
 }
 
-# xui_exec runs the x-ui binary in the given container, trying common paths.
+# xui_exec runs the x-ui binary in the given container, trying common paths, and
+# fails when the binary is missing OR does not understand the subcommand.
+#
+# The output is inspected, not just the exit code: an x-ui older than the release
+# that added grpc-connect answers "Invalid subcommands" (and used to exit 0), which
+# made the whole install report success while configuring nothing. The exit-code
+# check now catches fixed builds; the output check still catches old ones.
 xui_exec() {
   container="$1"
   shift
-  docker exec "$container" x-ui "$@" 2>/dev/null && return 0
-  docker exec "$container" /app/x-ui "$@" 2>/dev/null && return 0
-  docker exec "$container" /usr/local/x-ui/x-ui "$@"
+  for binary in x-ui /app/x-ui /usr/local/x-ui/x-ui; do
+    # The assignment must not be a bare simple command: under `set -e` a non-zero
+    # docker exec would abort the script before the status is inspected.
+    if out="$(docker exec "$container" "$binary" "$@" 2>&1)"; then
+      status=0
+    else
+      status=$?
+    fi
+    # 126/127 = not executable / not found: try the next path.
+    if [ "$status" -eq 126 ] || [ "$status" -eq 127 ]; then
+      continue
+    fi
+    if [ -n "$out" ]; then
+      printf '%s\n' "$out"
+    fi
+    if [ "$status" -ne 0 ]; then
+      return "$status"
+    fi
+    case "$out" in
+      *"Invalid subcommands"*|*"usage: x-ui grpc-connect"*)
+        warn "$binary in $container does not support grpc-connect - the 3x-ui build is too old"
+        return 1
+        ;;
+    esac
+    return 0
+  done
+  return 127
 }
 
 connect_xui() {
@@ -159,8 +195,13 @@ connect_xui() {
     xui_exec "$container" grpc-connect "$PANEL_GRPC" "$TOKEN" "$NODE_ID" "0.0.0.0:${XUI_GRPC_PORT}" \
       || die "x-ui grpc-connect failed in container $container"
     docker restart "$container" >/dev/null
-    if ! docker port "$container" 2>/dev/null | grep -q ":${XUI_GRPC_PORT}"; then
-      warn "container $container does not publish port ${XUI_GRPC_PORT}; recreate it with -p ${XUI_GRPC_PORT}:${XUI_GRPC_PORT} so the panel can reach the gRPC."
+    # Fatal, not a warning: the DB is wired but the panel still cannot reach the
+    # listener, so reporting success here is the same silent no-op as above. Uses
+    # the host network namespace check too - a container on --network=host
+    # publishes nothing yet is reachable.
+    if ! docker inspect -f '{{.HostConfig.NetworkMode}}' "$container" 2>/dev/null | grep -q '^host$' \
+      && ! docker port "$container" 2>/dev/null | grep -q ":${XUI_GRPC_PORT}"; then
+      die "container $container does not publish port ${XUI_GRPC_PORT}; recreate it with -p ${XUI_GRPC_PORT}:${XUI_GRPC_PORT} so the panel can reach the gRPC (the DB is already wired, so just recreating the container is enough)."
     fi
     log "3x-ui in container $container connected to panel $PANEL_GRPC"
   elif have x-ui; then
