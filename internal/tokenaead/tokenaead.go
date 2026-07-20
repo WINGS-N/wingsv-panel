@@ -20,6 +20,7 @@ import (
 	"crypto/hkdf"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"io"
 	"net"
 	"sync"
@@ -135,6 +136,18 @@ func (authInfo) AuthType() string { return protocolName }
 type Creds struct {
 	c2s, s2c []byte
 	server   bool
+}
+
+// HashSecret maps a raw bearer token onto the shared secret both peers key the
+// transport with: its lowercase hex SHA-256 digest.
+//
+// It exists because 3x-ui never stores the raw token - `x-ui grpc-connect` keeps
+// only crypto.HashTokenSHA256(token) - so the digest is the strongest value the
+// two sides provably share. The digest must therefore be treated as key material
+// wherever it is stored, not as a one-way check value.
+func HashSecret(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 // Client builds dialer credentials keyed by token.

@@ -5,7 +5,6 @@ package xuiclient
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 
@@ -15,6 +14,7 @@ import (
 
 	"v.wingsnet.org/internal/gen/xuipb"
 	"v.wingsnet.org/internal/storage/dbmodel"
+	"v.wingsnet.org/internal/tokenaead"
 )
 
 // Client talks to 3x-ui nodes. Each call uses the node's stored gRPC token.
@@ -26,7 +26,8 @@ type Client struct {
 // Option configures a Client.
 type Option func(*Client)
 
-// WithTransportCredentials sets the gRPC transport credentials (pinned-CA mTLS).
+// WithTransportCredentials pins the gRPC transport credentials for every node,
+// overriding the per-node token-derived transport (used by tests).
 func WithTransportCredentials(c credentials.TransportCredentials) Option {
 	return func(x *Client) { x.creds = c }
 }
@@ -37,10 +38,9 @@ func WithContextDialer(d func(context.Context, string) (net.Conn, error)) Option
 }
 
 func New(opts ...Option) *Client {
-	// 3x-ui serves its Panel gRPC over TLS (reusing the panel web certificate).
-	// Encrypt the transport but skip chain verification - the bearer API token is
-	// the authenticator, and the node cert may not match its gRPC hostname.
-	c := &Client{creds: credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})}
+	// No transport is fixed here: the connection is encrypted with keys derived
+	// from the node's own token, so the credentials are built per node in dial.
+	c := &Client{}
 	for _, opt := range opts {
 		opt(c)
 	}
@@ -48,7 +48,23 @@ func New(opts ...Option) *Client {
 }
 
 func (c *Client) dial(node dbmodel.ServerNode) (*grpc.ClientConn, error) {
-	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(c.creds)}
+	// The management channel is AES-256-GCM keyed by the shared node token
+	// (tokenaead), not TLS: 3x-ui has no certificate of its own to offer, and the
+	// previous InsecureSkipVerify TLS encrypted the stream without authenticating
+	// the peer - so a MITM could take the bearer token straight off the wire.
+	// Here a wrong token simply cannot decrypt the stream.
+	//
+	// The secret is the token's SHA-256 hex digest, because that is the only form
+	// the node has: `x-ui grpc-connect` stores crypto.HashTokenSHA256(token) and
+	// never keeps the original.
+	creds := c.creds
+	if creds == nil {
+		if node.GRPCToken == "" {
+			return nil, fmt.Errorf("node %s has no gRPC token to key the transport", node.ID)
+		}
+		creds = tokenaead.Client(tokenaead.HashSecret(node.GRPCToken))
+	}
+	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	if c.dialContext != nil {
 		dialOpts = append(dialOpts, grpc.WithContextDialer(c.dialContext))
 	}
