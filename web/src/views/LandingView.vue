@@ -66,6 +66,10 @@
               Открыть в <span class="wordmark-inline">WINGS V</span>
             </SamsungButton>
           </div>
+          <p v-if="autoOpenAttempted" class="state-hint">
+            Если приложение <span class="wordmark-inline">WINGS V</span> не открылось автоматически, нажмите
+            «Открыть в <span class="wordmark-inline">WINGS V</span>».
+          </p>
           <p v-if="previewError" class="state-error">{{ previewError }}</p>
         </div>
       </section>
@@ -168,9 +172,14 @@ const RELEASE_DOWNLOAD_URL = '/api/download/latest';
 const APK_CONTENT_TYPE = 'application/vnd.android.package-archive';
 
 const params = new URLSearchParams(window.location.search);
-const initialLink = params.get('link') || '';
+// `open` carries the "launch the app now" intent (v.wingsnet.org/?open=wingsv://…),
+// `link` just prefills the field for a preview. Accept either so already-shared
+// URLs keep working, preferring `open` when both are present.
+const initialLink = (params.get('open') || params.get('link') || '').trim();
+const autoOpenRequested = Boolean((params.get('open') || '').trim());
 
 const linkInput = ref(initialLink);
+const autoOpenAttempted = ref(false);
 const preview = ref(null);
 const previewError = ref('');
 const previewLoading = ref(false);
@@ -193,6 +202,12 @@ const openLink = computed(() => {
 });
 
 onMounted(async () => {
+  // Fire the deep link first so an install-check does not delay the launch,
+  // then load the rest of the page (preview, release) behind it.
+  if (autoOpenRequested && openLink.value) {
+    openInApp();
+    autoOpenAttempted.value = true;
+  }
   await loadRelease();
   await checkCachedAsset();
   if (linkInput.value) {

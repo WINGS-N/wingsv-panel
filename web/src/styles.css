@@ -477,6 +477,10 @@
     @apply mt-3 text-[14px] text-wings-danger;
   }
 
+  .state-hint {
+    @apply mt-3 text-[14px] text-wings-muted;
+  }
+
   /* =====================================================================
      LOADER (shared with the button loader).
      ===================================================================== */
