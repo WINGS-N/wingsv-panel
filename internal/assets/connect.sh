@@ -147,17 +147,22 @@ connect_vktp() {
   log "vk-turn-proxy node $NODE_ID connected to panel $PANEL_GRPC"
 }
 
-# xui_exec runs the x-ui binary in the given container, trying common paths, and
-# fails when the binary is missing OR does not understand the subcommand.
+# xui_exec runs the real x-ui Go binary in the given container and reports success
+# only when grpc-connect actually wired the token.
 #
-# The output is inspected, not just the exit code: an x-ui older than the release
-# that added grpc-connect answers "Invalid subcommands" (and used to exit 0), which
-# made the whole install report success while configuring nothing. The exit-code
-# check now catches fixed builds; the output check still catches old ones.
+# Two traps, both of which used to report a false success while configuring nothing:
+#   - The "x-ui" on PATH is the management wrapper (a shell menu script), NOT the
+#     Go binary. It swallows an unknown subcommand like grpc-connect, prints its
+#     menu, and exits 0. So the Go binary paths are tried FIRST, and a run counts
+#     as success only when it prints the grpc-connect marker; a bare exit 0 with no
+#     marker is the wrapper no-op and falls through to the next path.
+#   - An x-ui older than the release that added grpc-connect answers "Invalid
+#     subcommands"; that is a hard "build too old", not a retry.
 xui_exec() {
   container="$1"
   shift
-  for binary in x-ui /app/x-ui /usr/local/x-ui/x-ui; do
+  saw_binary=0
+  for binary in /app/x-ui /usr/local/x-ui/x-ui x-ui; do
     # The assignment must not be a bare simple command: under `set -e` a non-zero
     # docker exec would abort the script before the status is inspected.
     if out="$(docker exec "$container" "$binary" "$@" 2>&1)"; then
@@ -169,20 +174,34 @@ xui_exec() {
     if [ "$status" -eq 126 ] || [ "$status" -eq 127 ]; then
       continue
     fi
-    if [ -n "$out" ]; then
-      printf '%s\n' "$out"
-    fi
-    if [ "$status" -ne 0 ]; then
-      return "$status"
-    fi
+    saw_binary=1
+    # The Go binary prints this line only after it actually registered the token.
+    case "$out" in
+      *"token registered"*)
+        printf '%s\n' "$out"
+        return 0
+        ;;
+    esac
+    # A real binary too old to know the subcommand: stop, no other path will help.
     case "$out" in
       *"Invalid subcommands"*|*"usage: x-ui grpc-connect"*)
+        [ -n "$out" ] && printf '%s\n' "$out"
         warn "$binary in $container does not support grpc-connect - the 3x-ui build is too old"
         return 1
         ;;
     esac
-    return 0
+    # A hard error from a real binary: surface it instead of masking it with the
+    # next candidate (typically the no-op wrapper).
+    if [ "$status" -ne 0 ]; then
+      [ -n "$out" ] && printf '%s\n' "$out"
+      return "$status"
+    fi
+    # Exit 0 with no marker: this was the management wrapper's menu, not the Go
+    # binary doing the work. Keep looking.
   done
+  if [ "$saw_binary" -eq 1 ]; then
+    warn "grpc-connect ran in $container but no x-ui binary confirmed it (only the management wrapper?)"
+  fi
   return 127
 }
 
@@ -204,9 +223,20 @@ connect_xui() {
       die "container $container does not publish port ${XUI_GRPC_PORT}; recreate it with -p ${XUI_GRPC_PORT}:${XUI_GRPC_PORT} so the panel can reach the gRPC (the DB is already wired, so just recreating the container is enough)."
     fi
     log "3x-ui in container $container connected to panel $PANEL_GRPC"
-  elif have x-ui; then
-    x-ui grpc-connect "$PANEL_GRPC" "$TOKEN" "$NODE_ID" "0.0.0.0:${XUI_GRPC_PORT}" \
-      || die "x-ui grpc-connect failed"
+  elif have x-ui || [ -x /usr/local/x-ui/x-ui ]; then
+    # Same wrapper trap as the container path: the "x-ui" on PATH may be the shell
+    # management menu, which swallows grpc-connect and exits 0. Try the Go binary
+    # first and require the success marker; a bare exit 0 with no marker is a no-op.
+    xui_ok=0
+    for binary in /usr/local/x-ui/x-ui x-ui; do
+      command -v "$binary" >/dev/null 2>&1 || [ -x "$binary" ] || continue
+      out="$("$binary" grpc-connect "$PANEL_GRPC" "$TOKEN" "$NODE_ID" "0.0.0.0:${XUI_GRPC_PORT}" 2>&1)" || true
+      [ -n "$out" ] && printf '%s\n' "$out"
+      case "$out" in
+        *"token registered"*) xui_ok=1; break ;;
+      esac
+    done
+    [ "$xui_ok" -eq 1 ] || die "grpc-connect did not register the token; the 'x-ui' found may be only the management wrapper, not the Go binary"
     systemctl restart x-ui 2>/dev/null || warn "restart x-ui so the gRPC listener comes up"
     log "3x-ui connected to panel $PANEL_GRPC"
   else
