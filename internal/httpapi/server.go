@@ -593,7 +593,11 @@ func Run(ctx context.Context, cfg config.Config) error {
 			})
 		}
 		provSvc.Register(grpcServer)
-		log.Printf("provisioning gRPC listening on %s (xui_wg_node=%q)", cfg.ProvisioningListen, cfg.XuiWGNodeID)
+		// Device-facing Guardian gRPC shares this listener: Traefik routes by the
+		// fully-qualified method path, so both services sit behind the one public
+		// host without a second certificate or entrypoint.
+		guardianhandler.NewGRPCService(apiServer.guardianH).Register(grpcServer)
+		log.Printf("provisioning + guardian gRPC listening on %s (xui_wg_node=%q)", cfg.ProvisioningListen, cfg.XuiWGNodeID)
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
 		}()

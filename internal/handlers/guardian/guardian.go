@@ -17,7 +17,6 @@ import (
 	"github.com/coder/websocket"
 	"google.golang.org/protobuf/proto"
 
-	"v.wingsnet.org/internal/auth"
 	guardianpb "v.wingsnet.org/internal/gen/guardianpb"
 	wingsvpb "v.wingsnet.org/internal/gen/wingsvpb"
 	"v.wingsnet.org/internal/guardianhub"
@@ -83,7 +82,7 @@ func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, ok := h.authenticateHello(hello)
+	client, ok := h.authenticate(hello)
 	if !ok {
 		_ = writeFrame(ctx, conn, &guardianpb.Frame{
 			Payload: &guardianpb.Frame_ServerHello{
@@ -103,17 +102,6 @@ func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.runSession(ctx, conn, client, hello)
-}
-
-func (h *Handler) authenticateHello(hello *guardianpb.ClientHello) (storage.Client, bool) {
-	client, err := h.store.FindClientByID(hello.GetClientId())
-	if err != nil {
-		return storage.Client{}, false
-	}
-	if !auth.VerifyClientToken(client.TokenHash, hello.GetClientToken()) {
-		return storage.Client{}, false
-	}
-	return client, true
 }
 
 type session struct {
@@ -139,95 +127,16 @@ func (h *Handler) runSession(ctx context.Context, conn *websocket.Conn, client s
 	log.Printf("guardian: session up client=%s device=%s app=%s ip=%s",
 		client.ID, hello.GetDeviceModel(), hello.GetAppVersion(), conn.Subprotocol())
 
-	dev := storage.ClientDeviceInfo{
-		HWID:        hello.GetHwid(),
-		DeviceName:  hello.GetDeviceName(),
-		DeviceModel: hello.GetDeviceModel(),
-		OSVersion:   hello.GetOsVersion(),
-		AppVersion:  hello.GetAppVersion(),
-	}
-	_ = h.store.UpdateClientPresence(client.ID, true, &dev)
-	h.hub.FanoutToAdmin(client.OwnerAdminID, guardianhub.AdminEvent{
-		ClientID: client.ID,
-		Frame: &guardianpb.Frame{
-			Payload: &guardianpb.Frame_StatusUpdate{
-				StatusUpdate: &guardianpb.StatusUpdate{Runtime: &guardianpb.RuntimeState{}},
-			},
-		},
-	})
+	h.markOnline(client, hello)
 	h.hub.AttachClient(client.ID, sess)
 	defer func() {
 		h.hub.DetachClient(client.ID, sess)
-		// Only mark offline if no replacement session has taken over the
-		// hub slot. Otherwise the replaced session's defer would clobber
-		// the fresh true that the new session just wrote.
-		if h.hub.ClientSink(client.ID) != nil {
-			return
-		}
-		_ = h.store.UpdateClientPresence(client.ID, false, nil)
-		h.hub.FanoutToAdmin(client.OwnerAdminID, guardianhub.AdminEvent{
-			ClientID: client.ID,
-			Frame: &guardianpb.Frame{
-				Payload: &guardianpb.Frame_Error{
-					Error: &guardianpb.ServerError{Code: "offline", Message: "client disconnected"},
-				},
-			},
-		})
+		h.markOffline(client)
 	}()
 
-	cur, err := h.store.FindClientByID(client.ID)
-	if err == nil {
-		_ = sess.SendFrame(&guardianpb.Frame{
-			Payload: &guardianpb.Frame_LogControl{
-				LogControl: &guardianpb.LogControl{
-					RuntimeEnabled: cur.LogRuntimeEnabled,
-					ProxyEnabled:   cur.LogProxyEnabled,
-					XrayEnabled:    cur.LogXRayEnabled,
-				},
-			},
-		})
-	}
-	if cfg, err := h.store.GetClientConfig(client.ID); err == nil && len(cfg.ConfigProto) > 0 {
-		// Race-fix: device reports the config_version it has already applied
-		// locally in ClientHello.LastAppliedConfigVersion. If DB hasn't moved
-		// past that version, skip the welcome push — otherwise we'd clobber
-		// admin edits that landed AFTER the device disconnected but before
-		// it reconnected to a fresh ws session.
-		deviceVersion := hello.GetLastAppliedConfigVersion()
-		if cfg.ConfigVersion > deviceVersion {
-			parsed, perr := unmarshalDesired(cfg.ConfigProto)
-			if perr == nil {
-				parsed.ConfigVersion = cfg.ConfigVersion
-				_ = sess.SendFrame(&guardianpb.Frame{
-					Payload: &guardianpb.Frame_ConfigPush{
-						ConfigPush: &guardianpb.ConfigPush{Config: parsed, Revision: cfg.Revision},
-					},
-				})
-			}
-		}
-	}
-	// Drain pending commands queued by the admin while the device was offline,
-	// AFTER the welcome ConfigPush. Order matters for generate_vk_link: the
-	// command mutates settings.vkLinks on the device, and ConfigPush carries
-	// the server's desired list which would otherwise clobber the just-
-	// generated link before the device reports it back. ConfigPush first ->
-	// device applies admin's desired state -> then deferred commands layer
-	// their mutations on top -> StateReport reflects the full result.
-	if pending, perr := h.store.DrainPendingCommands(client.ID); perr == nil {
-		for _, pc := range pending {
-			cmdID, idErr := auth.GenerateClientID()
-			if idErr != nil {
-				continue
-			}
-			_ = sess.SendFrame(&guardianpb.Frame{
-				Payload: &guardianpb.Frame_Command{
-					Command: &guardianpb.Command{
-						Type:           guardianpb.CommandType(pc.CommandType),
-						Id:             cmdID,
-						SubscriptionId: pc.SubscriptionID,
-					},
-				},
-			})
+	for _, frame := range h.welcomeFrames(client, hello.GetLastAppliedConfigVersion()) {
+		if err := sess.SendFrame(frame); err != nil {
+			return
 		}
 	}
 
@@ -270,68 +179,7 @@ func (h *Handler) runSession(ctx context.Context, conn *websocket.Conn, client s
 				client.ID, err, time.Since(connectedAt).Truncate(time.Second))
 			return
 		}
-		h.handleClientFrame(frame, sess)
-	}
-}
-
-func (h *Handler) handleClientFrame(frame *guardianpb.Frame, sess *session) {
-	switch payload := frame.GetPayload().(type) {
-	case *guardianpb.Frame_Heartbeat:
-		_ = sess.SendFrame(&guardianpb.Frame{
-			Payload: &guardianpb.Frame_Heartbeat{Heartbeat: &guardianpb.Heartbeat{TsMs: time.Now().UnixMilli()}},
-		})
-	case *guardianpb.Frame_StateReport:
-		report := payload.StateReport
-		if report.GetSnapshot() != nil {
-			if b, err := proto.Marshal(report.GetSnapshot()); err == nil {
-				_ = h.store.UpsertClientReportedConfig(sess.client.ID, b)
-			}
-		}
-		if report.GetRuntime() != nil {
-			runtime := report.GetRuntime()
-			if b, err := proto.Marshal(runtime); err == nil {
-				_ = h.store.UpsertClientRuntime(sess.client.ID, b)
-			}
-			_ = h.store.UpdateClientRootAccess(sess.client.ID, runtime.GetHasRootAccess())
-			_ = h.store.UpdateClientVkOAuthAuthorized(sess.client.ID, runtime.GetVkOauthAuthorized())
-		}
-		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
-	case *guardianpb.Frame_LogChunk:
-		chunk := payload.LogChunk
-		base := int64(chunk.GetFirstSeq())
-		lines := make([]storage.LogLine, 0, len(chunk.GetLines()))
-		for _, l := range chunk.GetLines() {
-			lines = append(lines, storage.LogLine{TS: time.UnixMilli(l.GetTsMs()), Text: l.GetText()})
-		}
-		_ = h.store.AppendClientLogs(sess.client.ID, int32(chunk.GetStream()), base, lines)
-		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
-	case *guardianpb.Frame_StatusUpdate:
-		if runtime := payload.StatusUpdate.GetRuntime(); runtime != nil {
-			if b, err := proto.Marshal(runtime); err == nil {
-				_ = h.store.UpsertClientRuntime(sess.client.ID, b)
-			}
-			_ = h.store.UpdateClientRootAccess(sess.client.ID, runtime.GetHasRootAccess())
-			_ = h.store.UpdateClientVkOAuthAuthorized(sess.client.ID, runtime.GetVkOauthAuthorized())
-		}
-		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
-	case *guardianpb.Frame_CommandAck:
-		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
-	case *guardianpb.Frame_InstalledApps:
-		if b, err := proto.Marshal(payload.InstalledApps); err == nil {
-			_ = h.store.UpsertClientInstalledApps(sess.client.ID, b)
-		}
-		metas := make([]storage.PackageMetadata, 0, len(payload.InstalledApps.GetApps()))
-		for _, app := range payload.InstalledApps.GetApps() {
-			metas = append(metas, storage.PackageMetadata{
-				Package: app.GetPackageName(),
-				Label:   app.GetLabel(),
-				IconPNG: app.GetIconPng(),
-			})
-		}
-		_ = h.store.UpsertPackageMetadata(metas)
-		h.hub.FanoutToAdmin(sess.client.OwnerAdminID, guardianhub.AdminEvent{ClientID: sess.client.ID, Frame: frame})
-	default:
-		// Unknown / not-yet-implemented frame — drop silently.
+		h.handleClientFrame(client, sess, frame)
 	}
 }
 
