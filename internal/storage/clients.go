@@ -112,7 +112,10 @@ func (s *Store) GetClientToken(id string, ownerAdminID int64) ([]byte, error) {
 func (s *Store) UpdateClientToken(id string, ownerAdminID int64, tokenHash string, tokenPlain []byte) error {
 	res := s.gdb.Model(&dbmodel.Client{}).
 		Where("id = ? AND owner_admin_id = ?", id, ownerAdminID).
-		Updates(map[string]any{"token_hash": tokenHash, "token_plain": tokenPlain})
+		// Clearing hwid releases the device binding: rotating a token is how a
+		// client is moved to another device, so the next one to present the new
+		// token binds instead of being rejected as a mismatch.
+		Updates(map[string]any{"token_hash": tokenHash, "token_plain": tokenPlain, "hwid": ""})
 	if res.Error != nil {
 		return res.Error
 	}
@@ -281,4 +284,13 @@ func (s *Store) UpdateClientSync(id string, ownerAdminID int64, mode string, int
 		return ErrNotFound
 	}
 	return nil
+}
+
+// UpgradeClientTokenHash rewrites only the stored hash, leaving the token and the
+// device binding untouched. Used to migrate a legacy bcrypt row to the current
+// digest after that token has already verified.
+func (s *Store) UpgradeClientTokenHash(id string, tokenHash string) error {
+	return s.gdb.Model(&dbmodel.Client{}).
+		Where("id = ?", id).
+		Update("token_hash", tokenHash).Error
 }

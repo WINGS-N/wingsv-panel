@@ -2,6 +2,8 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"net/http"
@@ -277,20 +279,44 @@ func newToken(numBytes int) (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
+// clientTokenHashPrefix tags the digest form so a stored hash identifies its own
+// scheme and legacy bcrypt rows keep verifying.
+const clientTokenHashPrefix = "sha512:"
+
 func GenerateClientToken() ([]byte, string, error) {
 	buf := make([]byte, 32)
 	if _, err := rand.Read(buf); err != nil {
 		return nil, "", err
 	}
-	hash, err := bcrypt.GenerateFromPassword(buf, BcryptCost)
-	if err != nil {
-		return nil, "", err
-	}
-	return buf, string(hash), nil
+	return buf, HashClientToken(buf), nil
+}
+
+// HashClientToken digests a client token for storage.
+//
+// Deliberately NOT bcrypt. A work factor exists to make guessing a low-entropy
+// human password expensive; a client token is 32 bytes of crypto/rand, so there
+// is nothing to guess and the only thing the cost buys is CPU burned on every
+// device sync - and an unauthenticated caller who knows a client id can force
+// that work at will. A plain SHA-512 over 256 bits of entropy is preimage-proof
+// and runs in microseconds. Admin passwords stay on bcrypt, where it belongs.
+func HashClientToken(token []byte) string {
+	sum := sha512.Sum512(token)
+	return clientTokenHashPrefix + hex.EncodeToString(sum[:])
 }
 
 func VerifyClientToken(hash string, token []byte) bool {
+	if strings.HasPrefix(hash, clientTokenHashPrefix) {
+		return subtle.ConstantTimeCompare([]byte(hash), []byte(HashClientToken(token))) == 1
+	}
+	// Legacy bcrypt row from before the scheme change; still valid, and the
+	// caller rewrites it after a successful verify.
 	return bcrypt.CompareHashAndPassword([]byte(hash), token) == nil
+}
+
+// ClientTokenHashNeedsUpgrade reports whether a stored hash is still in the old
+// bcrypt form and should be rewritten once the token has verified.
+func ClientTokenHashNeedsUpgrade(hash string) bool {
+	return !strings.HasPrefix(hash, clientTokenHashPrefix)
 }
 
 func GenerateClientID() (string, error) {

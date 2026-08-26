@@ -1,6 +1,9 @@
 package guardian
 
 import (
+	"crypto/subtle"
+	"log"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -22,7 +25,35 @@ func (h *Handler) authenticate(hello *guardianpb.ClientHello) (storage.Client, b
 	if !auth.VerifyClientToken(client.TokenHash, hello.GetClientToken()) {
 		return storage.Client{}, false
 	}
+	if auth.ClientTokenHashNeedsUpgrade(client.TokenHash) {
+		upgraded := auth.HashClientToken(hello.GetClientToken())
+		if err := h.store.UpgradeClientTokenHash(client.ID, upgraded); err == nil {
+			client.TokenHash = upgraded
+		}
+	}
+	if !hwidMatches(client, hello) {
+		log.Printf("guardian: hwid mismatch for client=%s, refusing", client.ID)
+		return storage.Client{}, false
+	}
 	return client, true
+}
+
+// hwidMatches ties the token to the device that first used it. The token is a
+// bearer credential that rides along in settings backups, so without this a
+// restore onto another device would hand that device full control of this
+// client. The first presented hwid binds (markOnline stores it); an admin
+// rotating the token clears the binding so the client can move.
+//
+// A device that reports no hwid is not rejected: the value comes from the
+// subscription hwid payload, which is not always present, and refusing would
+// lock those clients out entirely.
+func hwidMatches(client storage.Client, hello *guardianpb.ClientHello) bool {
+	presented := strings.TrimSpace(hello.GetHwid())
+	bound := strings.TrimSpace(client.HWID)
+	if bound == "" || presented == "" {
+		return true
+	}
+	return subtle.ConstantTimeCompare([]byte(bound), []byte(presented)) == 1
 }
 
 func (h *Handler) markOnline(client storage.Client, hello *guardianpb.ClientHello) {
