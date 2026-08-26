@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -93,7 +95,6 @@ func (s *Server) Handler() http.Handler {
 	s.adminH.Register(mux)
 	s.adminH.RegisterWS(mux)
 	s.ownerH.Register(mux)
-	s.guardianH.Register(mux)
 	mux.Handle("/metrics", metrics.Handler(
 		metrics.NewCollector(s.store, s.hub, relayclient.New(s.config.RelayToken)),
 	))
@@ -556,9 +557,10 @@ func Run(ctx context.Context, cfg config.Config) error {
 	apiServer := New(cfg, store, authSvc, hub)
 	// Warm the release asset before the first click and keep it current.
 	apiServer.StartAPKCache(ctx)
+	httpHandler := apiServer.Handler()
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           apiServer.Handler(),
+		Handler:           httpHandler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -601,6 +603,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
 		}()
+		// Devices reach Guardian on the panel's own HTTPS port rather than the
+		// dedicated gRPC one: a standalone install has no reverse proxy to split
+		// gRPC off by path, and the leaf on that port is issued for localhost only.
+		// The main listener already carries the certificate for the host the device
+		// was enrolled with, so the same address serves the web UI and the channel.
+		server.Handler = grpcMuxHandler(grpcServer, httpHandler)
 	}
 
 	// Stats collector: poll every vk-turn-proxy node (panel-local and the external
@@ -738,6 +746,22 @@ func Run(ctx context.Context, cfg config.Config) error {
 //     PublicBaseURL host, so a no-domain install still gets HTTPS whose CA SPKI
 //     matches the pin embedded in enrollment links.
 //   - neither: plain HTTP, expecting a reverse proxy to terminate TLS.
+//
+// grpcMuxHandler routes gRPC calls to the gRPC server and everything else to the
+// web handler. gRPC is HTTP/2 with its own content type, so the two never overlap;
+// h2c wrapping keeps this working when TLS is terminated by a reverse proxy and
+// the panel itself speaks cleartext.
+func grpcMuxHandler(grpcServer *grpc.Server, next http.Handler) http.Handler {
+	router := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+	return h2c.NewHandler(router, &http2.Server{})
+}
+
 func serveHTTP(cfg config.Config, server *http.Server) error {
 	switch {
 	case cfg.TLSCert != "" && cfg.TLSKey != "":
@@ -753,7 +777,12 @@ func serveHTTP(cfg config.Config, server *http.Server) error {
 		if certErr != nil {
 			return certErr
 		}
-		server.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+		// An explicit TLSConfig opts out of the automatic HTTP/2 setup, so ALPN has
+		// to advertise h2 here or the Guardian channel never negotiates it.
+		server.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			NextProtos:   []string{"h2", "http/1.1"},
+		}
 		log.Printf("serving HTTPS on %s (self-signed leaf under %s for host %q)", cfg.ListenAddr, cfg.CADir, host)
 		return server.ListenAndServeTLS("", "")
 	default:
