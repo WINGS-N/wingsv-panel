@@ -38,5 +38,14 @@ spec:
         - name: app-grpc
           port: 9091
           scheme: h2c
+    # Device-facing Guardian channel (WINGS V app -> panel), same listener and the
+    # same public cert; the method path keeps it clear of the web routes and of
+    # provisioning. Devices on the old build keep using /api/guardian/ws.
+    - kind: Rule
+      match: Host(`v.wingsnet.org`) && PathPrefix(`/wingsv.guardian.Guardian/`)
+      services:
+        - name: app-grpc
+          port: 9091
+          scheme: h2c
   tls:
     secretName: v-wingsnet-tls
