@@ -86,24 +86,17 @@ docker push ghcr.io/wings-n/wingsv-panel:latest
 
 ## Запуск в Kubernetes
 
-Манифесты находятся в `k8s/` и применяются по порядку:
-
-```
-00-namespace.yml   Namespace v-wingsnet
-01-config.yml      ConfigMap с переменными окружения (BOOTSTRAP_ADMIN_*, PUBLIC_BASE_URL, GITHUB_REPO и т. п.)
-02-issuer.yml      cert-manager Issuer для выпуска TLS-сертификата
-03-storage.yml     PVC под SQLite-базу
-04-app.yml         Deployment и Service (strategy: Recreate — SQLite допускает одного писателя)
-05-ingress.yml     Ingress (Traefik) с TLS
-```
-
-Первичное развёртывание:
+Манифесты удалены: развёртывание переезжает на Helm-чарт. До его появления
+последнюю рабочую версию манифестов можно достать из истории git:
 
 ```bash
-kubectl apply -f k8s/
+git show HEAD~1:k8s/ >/dev/null   # список файлов
+git checkout HEAD~1 -- k8s/       # вернуть в рабочее дерево
 ```
 
-Перед `kubectl apply` следует адаптировать `01-config.yml`: задать `BOOTSTRAP_ADMIN_PASSWORD`, актуальный `PUBLIC_BASE_URL` и при необходимости `GITHUB_REPO`. Образ публичный, image-pull-secrets не требуются.
+Обратите внимание: Guardian gRPC и provisioning gRPC ходят на тот же публичный
+хост, что и веб, но маршрутизируются по префиксу метода на порт 9091 (h2c) -
+чарт обязан воспроизвести оба маршрута, иначе устройства не подключатся.
 
 Обновление развёрнутого приложения:
 

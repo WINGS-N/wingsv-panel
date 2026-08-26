@@ -54,8 +54,12 @@ keys:
 
 ## Kubernetes
 
-- `k8s/04-app.yml` — single-node default (SQLite PVC, `Recreate`, 1 replica).
-- `k8s/04-app-ha.yml` — stateless multi-replica (`RollingUpdate`, 2+ replicas,
-  no PVC). Point the config map at a shared Postgres. For SPKI-pin deploys, keep
-  the CA in a shared Secret (cert-manager SelfSigned -> CA Issuer) so every
-  replica serves the same pin.
+The manifests were removed ahead of a Helm chart; the shapes they encoded, which
+the chart has to reproduce:
+
+- single-node default: SQLite PVC, `Recreate`, 1 replica.
+- stateless multi-replica: `RollingUpdate`, 2+ replicas, no PVC, config pointed at
+  a shared Postgres. For SPKI-pin deploys keep the CA in a shared Secret
+  (cert-manager SelfSigned -> CA Issuer) so every replica serves the same pin.
+- both gRPC services (provisioning and the device-facing Guardian) routed on the
+  public host by method path prefix to port 9091 over h2c.
