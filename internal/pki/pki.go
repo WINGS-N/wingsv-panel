@@ -15,6 +15,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -109,17 +110,32 @@ func (c *CA) KeyPEM() []byte { return c.keyPEM }
 // Certificate returns the parsed CA certificate.
 func (c *CA) Certificate() *x509.Certificate { return c.cert }
 
-// Pin returns the SPKI pin (SHA-256 of the CA's SubjectPublicKeyInfo). These are
-// the 32 raw bytes to place in the Guardian.server_ca_pins link field.
+// Pin returns the legacy SPKI pin (SHA-256 of the CA's SubjectPublicKeyInfo).
+// Kept because vk-turn-proxy nodes already carry "sha256/..." in their config;
+// anything new should pin with Pin512.
 func (c *CA) Pin() [PinLen]byte {
 	return sha256.Sum256(c.cert.RawSubjectPublicKeyInfo)
 }
 
-// PinBase64 returns the HPKP-style "sha256/<base64>" form of the pin, for logs,
-// CLI output, and human display.
+// Pin512 returns the SPKI pin as SHA-512/256 of the CA's SubjectPublicKeyInfo.
+// SHA-512/256 rather than full SHA-512 because the pin travels inside a QR-coded
+// enrollment link, where 32 bytes is worth keeping; the truncated SHA-512 has the
+// same 256-bit strength without SHA-256's length-extension shape.
+func (c *CA) Pin512() [PinLen]byte {
+	return sha512.Sum512_256(c.cert.RawSubjectPublicKeyInfo)
+}
+
+// PinBase64 returns the HPKP-style "sha256/<base64>" form of the legacy pin, for
+// logs, CLI output and human display.
 func (c *CA) PinBase64() string {
 	pin := c.Pin()
 	return "sha256/" + base64.StdEncoding.EncodeToString(pin[:])
+}
+
+// Pin512Base64 returns the "sha512-256/<base64>" form of the current pin.
+func (c *CA) Pin512Base64() string {
+	pin := c.Pin512()
+	return "sha512-256/" + base64.StdEncoding.EncodeToString(pin[:])
 }
 
 // IssueLeaf signs a server leaf certificate for the given hosts, valid for

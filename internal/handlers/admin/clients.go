@@ -516,6 +516,7 @@ func (h *Handler) buildClientLink(
 			AdminUsername:           admin.Username,
 			AdminId:                 admin.ID,
 			AdminAvatarVersion:      admin.AvatarVersion,
+			ServerCaPinsSha512_256:  h.caPins,
 		}
 		return preview.BuildWingsLink(cfg)
 	}

@@ -17,6 +17,7 @@ import (
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/guardianhub"
+	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/xuiclient"
 )
@@ -27,10 +28,22 @@ type Handler struct {
 	auth  *auth.Service
 	hub   *guardianhub.Hub
 	xui   *xuiclient.Client
+	// SPKI pins of the deployment CA, embedded in every enrollment link.
+	caPins [][]byte
 }
 
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
-	return &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub, xui: xuiclient.New()}
+	h := &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub, xui: xuiclient.New()}
+	// A deployment with no publicly trusted certificate - a bare-IP install, where
+	// no CA will issue one - can only be verified by the device if the enrollment
+	// link carries the CA's SPKI pin, so every link gets it whenever a panel CA
+	// exists. With a public certificate there is no CA dir, the field stays empty,
+	// and the app falls back to the system trust store.
+	if ca, err := pki.LoadCADir(cfg.CADir); err == nil {
+		pin := ca.Pin512()
+		h.caPins = [][]byte{pin[:]}
+	}
+	return h
 }
 
 // Register binds /api/admin/* routes onto the provided mux.
