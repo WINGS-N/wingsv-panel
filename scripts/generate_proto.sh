@@ -29,18 +29,21 @@ sync_vktp_control_proto() {
 }
 sync_vktp_control_proto
 
-rm -f "$ROOT_DIR/wingsv.pb.go" "$ROOT_DIR/guardian.pb.go"
-rm -f "$WINGSV_PKG_DIR/wingsv.pb.go" "$GUARDIAN_PKG_DIR/guardian.pb.go"
+rm -f "$ROOT_DIR/wingsv.pb.go" "$ROOT_DIR/guardian.pb.go" "$ROOT_DIR/guardian_grpc.pb.go"
+rm -f "$WINGSV_PKG_DIR/wingsv.pb.go" "$GUARDIAN_PKG_DIR/guardian.pb.go" "$GUARDIAN_PKG_DIR/guardian_grpc.pb.go"
 
 protoc \
   --proto_path="$PROTO_DIR" \
   --go_out="$TMP_OUT" \
   --go_opt=paths=source_relative \
+  --go-grpc_out="$TMP_OUT" \
+  --go-grpc_opt=paths=source_relative \
   "$PROTO_DIR/wingsv.proto" \
   "$PROTO_DIR/guardian.proto"
 
 mv "$ROOT_DIR/wingsv.pb.go" "$WINGSV_PKG_DIR/wingsv.pb.go"
 mv "$ROOT_DIR/guardian.pb.go" "$GUARDIAN_PKG_DIR/guardian.pb.go"
+mv "$ROOT_DIR/guardian_grpc.pb.go" "$GUARDIAN_PKG_DIR/guardian_grpc.pb.go"
 
 PROVISIONING_PKG_DIR="$OUT_DIR/provisioningpb"
 mkdir -p "$PROVISIONING_PKG_DIR"
