@@ -96,7 +96,7 @@ t() {
       cert_header)     echo "Certificate:";;
       cert_1)          echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - needs a domain and free :80";;
       cert_2)          echo "  2) Existing certificate (provide cert + key paths)";;
-      cert_3)          echo "  3) Self-signed (own CA + SPKI pin) - domain or bare IP, no external CA needed";;
+      cert_3)          echo "  3) Self-signed (own CA + SPKI pin) - nodes only; the app cannot verify it";;
       q_le_domain)     echo "domain (A record must point here)";;
       q_cert_path)     echo "path to certificate PEM (fullchain)";;
       q_key_path)      echo "path to private key PEM";;
@@ -144,7 +144,7 @@ t() {
       s_done)          echo "Done.";;
       s_panel)         echo "  Panel:         %s";;
       s_admin)         echo "  Admin:         %s / %s";;
-      s_pin)           echo "  CA SPKI pin:   %s  (embedded in app enrollment links)";;
+      s_pin)           echo "  CA SPKI pin:   %s  (how vk-turn-proxy nodes trust this panel)";;
       s_vktp)          echo "  vk-turn-proxy: local node up (UDP %s)";;
       s_xui)           echo "  3x-ui:         wired (node %s)";;
       s_next)          echo "  Next: open the panel, sign in, add clients. Register more nodes with:";;
@@ -168,7 +168,7 @@ t() {
       cert_header)     echo "Сертификат:";;
       cert_1)          echo "  1) Let's Encrypt (acme.sh, HTTP-01 standalone) - нужен домен и свободный :80";;
       cert_2)          echo "  2) Существующий сертификат (указать пути cert + key)";;
-      cert_3)          echo "  3) Самоподписанный (свой CA + SPKI pin) - домен или голый IP, без внешнего CA";;
+      cert_3)          echo "  3) Самоподписанный (свой CA + SPKI pin) - только для нод; приложение его не проверит";;
       q_le_domain)     echo "домен (A-запись должна указывать сюда)";;
       q_cert_path)     echo "путь к сертификату PEM (fullchain)";;
       q_key_path)      echo "путь к приватному ключу PEM";;
@@ -216,7 +216,7 @@ t() {
       s_done)          echo "Готово.";;
       s_panel)         echo "  Панель:        %s";;
       s_admin)         echo "  Админ:         %s / %s";;
-      s_pin)           echo "  CA SPKI pin:   %s  (встраивается в enrollment-ссылки приложения)";;
+      s_pin)           echo "  CA SPKI pin:   %s  (по нему vk-turn-proxy ноды доверяют панели)";;
       s_vktp)          echo "  vk-turn-proxy: локальная нода поднята (UDP %s)";;
       s_xui)           echo "  3x-ui:         подключён (нода %s)";;
       s_next)          echo "  Далее: откройте панель, войдите, добавляйте клиентов. Регистрация новых нод:";;

@@ -516,7 +516,6 @@ func (h *Handler) buildClientLink(
 			AdminUsername:           admin.Username,
 			AdminId:                 admin.ID,
 			AdminAvatarVersion:      admin.AvatarVersion,
-			ServerCaPins:            h.caPins,
 		}
 		return preview.BuildWingsLink(cfg)
 	}
