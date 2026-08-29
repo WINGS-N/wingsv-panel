@@ -243,6 +243,29 @@ type createClientRequest struct {
 // to form the managed profile endpoint.
 const vkTurnDefaultDTLSPort = "56000"
 
+// clientVkTurnEndpoint answers which relay THIS client's link should name.
+//
+// The client's stored config already records the relay it was provisioned against,
+// so that is the answer: an explicit nodeID overrides it, and only a client with no
+// managed profile yet falls back to the admin's default relay. Building the link
+// straight from the default instead meant a link contradicted the very config the
+// panel had saved for that client - you could point a client at one relay, see it
+// stored, and still be handed a link naming a different one.
+func (h *Handler) clientVkTurnEndpoint(admin storage.Admin, client storage.Client, nodeID string) (string, error) {
+	if strings.TrimSpace(nodeID) != "" {
+		return h.resolveVkTurnEndpoint(admin, nodeID)
+	}
+	if cfg, err := h.store.GetClientConfig(client.ID); err == nil && len(cfg.ConfigProto) > 0 {
+		parsed := &wingsvpb.Config{}
+		if proto.Unmarshal(cfg.ConfigProto, parsed) == nil {
+			if ep := existingManagedEndpoint(parsed.Turn); ep != "" {
+				return ep, nil
+			}
+		}
+	}
+	return h.resolveVkTurnEndpoint(admin, "")
+}
+
 // resolveVkTurnEndpoint returns the DTLS endpoint the app dials for the managed
 // VK-TURN profile: the host from the selected node's gRPC endpoint paired with the
 // relay DTLS port.
@@ -874,7 +897,7 @@ func (h *Handler) respondWingsvLink(w http.ResponseWriter, r *http.Request, clie
 	case "1":
 		remoteControl = true
 	}
-	vkTurnEndpoint, err := h.resolveVkTurnEndpoint(admin, r.URL.Query().Get("vk_turn_node"))
+	vkTurnEndpoint, err := h.clientVkTurnEndpoint(admin, client, r.URL.Query().Get("vk_turn_node"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -908,16 +931,7 @@ func (h *Handler) respondRotateToken(w http.ResponseWriter, r *http.Request, cli
 	// Rebuild the link in the client's own shape (Guardian vs config-only),
 	// carrying its managed vk-turn endpoint so a rotated config-only client keeps
 	// self-provisioning instead of silently switching to panel control.
-	vkTurnEndpoint := ""
-	if cfg, cErr := h.store.GetClientConfig(client.ID); cErr == nil && len(cfg.ConfigProto) > 0 {
-		parsed := &wingsvpb.Config{}
-		if proto.Unmarshal(cfg.ConfigProto, parsed) == nil {
-			vkTurnEndpoint = existingManagedEndpoint(parsed.Turn)
-		}
-	}
-	if vkTurnEndpoint == "" {
-		vkTurnEndpoint, _ = h.resolveVkTurnEndpoint(admin, "")
-	}
+	vkTurnEndpoint, _ := h.clientVkTurnEndpoint(admin, client, "")
 	link, err := h.buildClientLink(
 		client.ID, client.Name, tokenBytes, client.SyncMode, client.PeriodicIntervalMinutes,
 		admin, client.RemoteControl, vkTurnEndpoint,

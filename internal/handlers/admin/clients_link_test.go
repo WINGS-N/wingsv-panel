@@ -2,7 +2,10 @@ package admin
 
 import (
 	"bytes"
+	"path/filepath"
 	"testing"
+
+	"google.golang.org/protobuf/proto"
 
 	"v.wingsnet.org/internal/config"
 	wingsvpb "v.wingsnet.org/internal/gen/wingsvpb"
@@ -73,4 +76,59 @@ func assertManagedProfile(t *testing.T, cfg *wingsvpb.Config, token []byte) {
 	if p.GetVkTurnEndpoint() != "relay.example.com:56000" {
 		t.Fatalf("managed profile endpoint wrong: %q", p.GetVkTurnEndpoint())
 	}
+}
+
+// The link must name the relay the client's own stored config records, not whatever
+// relay happens to be the admin's default. Handing back the default meant a link
+// could contradict the config the panel had just saved for that client.
+func TestClientVkTurnEndpointPrefersTheStoredConfig(t *testing.T) {
+	h := &Handler{cfg: config.Config{}, store: newLinkTestStore(t)}
+	adm, err := h.store.CreateAdmin("owner", "hash", false, "owner")
+	if err != nil {
+		t.Fatalf("CreateAdmin: %v", err)
+	}
+	if _, err := h.store.CreateClient("c1", adm.ID, "Dev", "hash", []byte("tok")); err != nil {
+		t.Fatalf("CreateClient: %v", err)
+	}
+	client := storage.Client{ID: "c1", OwnerAdminID: adm.ID}
+	cfg := &wingsvpb.Config{Ver: 1}
+	cfg.Turn = h.managedTurn("c1", "Dev", []byte("tok"), "chosen.example:56000")
+	blob, mErr := proto.Marshal(cfg)
+	if mErr != nil {
+		t.Fatal(mErr)
+	}
+	if _, err := h.store.UpsertClientConfig("c1", blob, "r1"); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := h.clientVkTurnEndpoint(storage.Admin{ID: adm.ID}, client, "")
+	if err != nil {
+		t.Fatalf("clientVkTurnEndpoint: %v", err)
+	}
+	if got != "chosen.example:56000" {
+		t.Errorf("endpoint = %q, want the one stored on the client", got)
+	}
+}
+
+// A client with no managed profile yet has nothing to follow, so it falls back to
+// the admin's default relay - here, none, which must not be an error.
+func TestClientVkTurnEndpointFallsBackWithoutStoredConfig(t *testing.T) {
+	h := &Handler{cfg: config.Config{}, store: newLinkTestStore(t)}
+	got, err := h.clientVkTurnEndpoint(storage.Admin{ID: 1}, storage.Client{ID: "fresh"}, "")
+	if err != nil {
+		t.Fatalf("clientVkTurnEndpoint: %v", err)
+	}
+	if got != "" {
+		t.Errorf("endpoint = %q, want empty when no relay is registered", got)
+	}
+}
+
+func newLinkTestStore(t *testing.T) *storage.Store {
+	t.Helper()
+	st, err := storage.Open(storage.Options{Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "link.db")})
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	return st
 }
