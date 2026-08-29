@@ -67,8 +67,8 @@
             </SamsungButton>
           </div>
           <p v-if="autoOpenAttempted" class="state-hint">
-            Если приложение <span class="wordmark-inline">WINGS V</span> не открылось автоматически, нажмите
-            «Открыть в <span class="wordmark-inline">WINGS V</span>».
+            Если приложение <span class="wordmark-inline">WINGS V</span> не открылось автоматически, нажмите «Открыть в
+            <span class="wordmark-inline">WINGS V</span>».
           </p>
           <p v-if="previewError" class="state-error">{{ previewError }}</p>
         </div>

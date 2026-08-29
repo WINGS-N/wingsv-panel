@@ -461,9 +461,12 @@ const form = reactive({
 const defaultPort = computed(() => form.port);
 
 const wgBackendOptions = [
-  { value: '', label: 'По умолчанию' },
+  // The empty value does NOT mean "own wg": it falls through to the panel-global
+  // legacy provider (the XUI_WG_* env), which mints the peer on whatever 3x-ui node
+  // that env names. Labelling it "own wg" sent operators' nodes to the wrong place.
+  { value: '', label: 'Глобальный по умолчанию (legacy XUI_WG_*)' },
   { value: 'own', label: 'Своя wg на ноде' },
-  { value: 'xui', label: 'Через 3x-ui' },
+  { value: 'xui', label: 'Клиент на 3x-ui инбаунде' },
 ];
 const xuiNodeOptions = computed(() => [
   { value: '', label: 'Не выбран' },
@@ -773,7 +776,9 @@ async function onAdd() {
 // command carries it rather than letting connect.sh fall back to its own default
 // and leave the node unreachable for the collector.
 function connectPortEnv(endpoint) {
-  const port = String(endpoint || '').split(':').pop();
+  const port = String(endpoint || '')
+    .split(':')
+    .pop();
   return /^\d+$/.test(port) ? `VKTP_GRPC_PORT=${port} ` : '';
 }
 

@@ -319,7 +319,9 @@ const connectCopied = ref(false);
 // command carries it rather than letting connect.sh fall back to its own default
 // and leave the node unreachable for the collector.
 function connectPortEnv(endpoint) {
-  const port = String(endpoint || '').split(':').pop();
+  const port = String(endpoint || '')
+    .split(':')
+    .pop();
   return /^\d+$/.test(port) ? `VKTP_GRPC_PORT=${port} ` : '';
 }
 
@@ -362,8 +364,11 @@ const saving = ref(false);
 const editError = ref('');
 const form = reactive({ name: '', host: '', port: 0, token: '', wg_backend: '', xui_node_id: '', xui_inbound_tag: '' });
 const wgBackendOptions = [
-  { value: '', label: 'Своя wg на ноде' },
-  { value: 'own', label: 'Своя wg (явно)' },
+  // The empty value does NOT mean "own wg": it falls through to the panel-global
+  // legacy provider (the XUI_WG_* env), which mints the peer on whatever 3x-ui node
+  // that env names. Labelling it "own wg" sent operators' nodes to the wrong place.
+  { value: '', label: 'Глобальный по умолчанию (legacy XUI_WG_*)' },
+  { value: 'own', label: 'Своя wg на ноде' },
   { value: 'xui', label: 'Клиент на 3x-ui инбаунде' },
 ];
 const xuiNodes = ref([]);
