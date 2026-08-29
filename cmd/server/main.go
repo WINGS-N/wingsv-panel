@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"strings"
@@ -176,8 +177,15 @@ func runConnect(cfg config.Config, args []string) {
 	if token == "" {
 		token = "<token>"
 	}
-	fmt.Printf("curl -fsSL %s/connect.sh | sh -s -- grpc connect %s:443 %s %s %s\n",
-		strings.TrimRight(cfg.PublicBaseURL, "/"), host, token, node.ID, kind)
+	// The relay has to listen on exactly the port this node's endpoint names, so the
+	// command carries it; without it connect.sh falls back to its own default and the
+	// collector polls a port nothing is listening on.
+	env := ""
+	if _, port, splitErr := net.SplitHostPort(node.GRPCEndpoint); splitErr == nil && port != "" {
+		env = "VKTP_GRPC_PORT=" + port + " "
+	}
+	fmt.Printf("curl -fsSL %s/connect.sh | %ssh -s -- grpc connect %s:443 %s %s %s\n",
+		strings.TrimRight(cfg.PublicBaseURL, "/"), env, host, token, node.ID, kind)
 }
 
 func runServe(cfg config.Config) {

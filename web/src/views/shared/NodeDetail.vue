@@ -315,11 +315,19 @@ const connectCommand = ref('');
 const connectError = ref('');
 const connectCopied = ref(false);
 
-function buildConnectCommand(id, kind, token) {
+// The relay must listen on exactly the port this node's endpoint names, so the
+// command carries it rather than letting connect.sh fall back to its own default
+// and leave the node unreachable for the collector.
+function connectPortEnv(endpoint) {
+  const port = String(endpoint || '').split(':').pop();
+  return /^\d+$/.test(port) ? `VKTP_GRPC_PORT=${port} ` : '';
+}
+
+function buildConnectCommand(id, kind, token, endpoint) {
   const origin = window.location.origin;
   const grpc = `${window.location.hostname}:443`;
   const k = kind === 'xui' ? 'xui' : 'vktp';
-  return `curl -fsSL ${origin}/connect.sh | sh -s -- grpc connect ${grpc} ${token || '<token>'} ${id} ${k}`;
+  return `curl -fsSL ${origin}/connect.sh | ${connectPortEnv(endpoint)}sh -s -- grpc connect ${grpc} ${token || '<token>'} ${id} ${k}`;
 }
 
 async function openConnect() {
@@ -333,7 +341,7 @@ async function openConnect() {
         'У ноды нет токена в панели. Задайте его через редактирование ноды, затем откройте команду снова.';
       return;
     }
-    connectCommand.value = buildConnectCommand(data.id, data.kind, data.grpc_token);
+    connectCommand.value = buildConnectCommand(data.id, data.kind, data.grpc_token, data.grpc_endpoint);
   } catch (err) {
     connectError.value = err.message || 'Не удалось получить команду';
   }
