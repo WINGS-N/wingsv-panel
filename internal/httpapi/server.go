@@ -531,6 +531,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 	if err := store.MarkAllClientsOffline(); err != nil {
 		return err
 	}
+	// Managed profiles created before the endpoint came from the node record can
+	// still name a relay that was only ever a panel-global env value; drop those so
+	// no link keeps pointing at a host the panel does not know.
+	if err := adminhandler.MigrateManagedEndpoints(store); err != nil {
+		return err
+	}
 	authSvc := auth.New(store, cfg.SessionSecure)
 	if err := authSvc.Bootstrap(cfg.BootstrapAdminUsername, cfg.BootstrapAdminPassword); err != nil {
 		return err
@@ -584,22 +590,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 		provSvc := provisioning.NewService(store, relayclient.New(cfg.RelayToken))
 		// Per-node 3x-ui target (a node names its own 3x-ui inbound in the panel).
 		provSvc.SetXUIProvisioner(&xuiPerNodeProvider{xui: xuiclient.New()})
-		// Legacy panel-global default (XUI_WG_* env), used only for nodes with no
-		// per-node backend configured.
-		if cfg.XuiWGNodeID != "" {
-			provSvc.SetWGProvider(&xuiWGProvider{
-				store:      store,
-				xui:        xuiclient.New(),
-				nodeID:     cfg.XuiWGNodeID,
-				inboundTag: cfg.XuiWGInboundTag,
-			})
-		}
 		provSvc.Register(grpcServer)
 		// Device-facing Guardian gRPC shares this listener: Traefik routes by the
 		// fully-qualified method path, so both services sit behind the one public
 		// host without a second certificate or entrypoint.
 		guardianhandler.NewGRPCService(apiServer.guardianH).Register(grpcServer)
-		log.Printf("provisioning + guardian gRPC listening on %s (xui_wg_node=%q)", cfg.ProvisioningListen, cfg.XuiWGNodeID)
+		log.Printf("provisioning + guardian gRPC listening on %s", cfg.ProvisioningListen)
 		go func() {
 			_ = grpcServer.Serve(grpcListener)
 		}()

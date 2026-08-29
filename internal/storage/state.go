@@ -189,3 +189,23 @@ func (s *Store) GetClientReportedConfig(clientID string) ([]byte, time.Time, err
 	}
 	return m.ConfigProto, time.UnixMilli(m.UpdatedAtUnix).UTC(), nil
 }
+
+// ListClientConfigs returns every stored client config. Used by the startup
+// migration that re-points managed VK-TURN profiles at registered relays.
+func (s *Store) ListClientConfigs() ([]ClientConfig, error) {
+	var rows []dbmodel.ClientConfig
+	if err := s.gdb.Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]ClientConfig, 0, len(rows))
+	for _, m := range rows {
+		out = append(out, ClientConfig{
+			ClientID:      m.ClientID,
+			ConfigProto:   m.ConfigProto,
+			Revision:      m.Revision,
+			UpdatedAt:     time.UnixMilli(m.UpdatedAtUnix).UTC(),
+			ConfigVersion: uint64(m.ConfigVersion),
+		})
+	}
+	return out, nil
+}

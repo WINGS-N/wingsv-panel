@@ -413,17 +413,16 @@ const form = reactive({
   host: '',
   port: randomPort(),
   token: '',
-  wg_backend: '',
+  wg_backend: 'own',
   xui_node_id: '',
   xui_inbound_tag: '',
 });
 const defaultPort = computed(() => form.port);
 
+// A relay always provisions one way or the other. There used to be a third,
+// empty option that fell through to a panel-global env; it is gone, and the
+// startup migration gives every node that had it an explicit backend.
 const wgBackendOptions = [
-  // The empty value does NOT mean "own wg": it falls through to the panel-global
-  // legacy provider (the XUI_WG_* env), which mints the peer on whatever 3x-ui node
-  // that env names. Labelling it "own wg" sent operators' nodes to the wrong place.
-  { value: '', label: 'Глобальный по умолчанию (legacy XUI_WG_*)' },
   { value: 'own', label: 'Своя wg на ноде' },
   { value: 'xui', label: 'Клиент на 3x-ui инбаунде' },
 ];
@@ -607,7 +606,7 @@ function openAdd() {
   form.host = '';
   form.token = '';
   form.port = randomPort();
-  form.wg_backend = '';
+  form.wg_backend = 'own';
   form.xui_node_id = '';
   form.xui_inbound_tag = '';
   inboundOptions.value = [{ value: '', label: 'Не выбран' }];
@@ -625,7 +624,7 @@ async function openEdit(node) {
   form.host = host || '';
   form.port = Number(port) || defaultPort.value;
   form.token = '';
-  form.wg_backend = node.wg_backend || '';
+  form.wg_backend = node.wg_backend || 'own';
   form.xui_node_id = node.xui_node_id || '';
   form.xui_inbound_tag = node.xui_inbound_tag || '';
   inboundOptions.value = [{ value: '', label: 'Не выбран' }];

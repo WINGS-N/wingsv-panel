@@ -12,7 +12,7 @@ func TestConfigFilePrecedence(t *testing.T) {
 	body := "" +
 		"# panel config\n" +
 		"PUBLIC_BASE_URL = \"https://from-file.example\"\n" +
-		"XUI_WG_NODE_ID = 'node-from-file'\n" +
+		"RELAY_TOKEN = 'token-from-file'\n" +
 		"SESSION_SECURE = false  # inline comment\n" +
 		"PROVISIONING_LISTEN = \":9091\"\n"
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
@@ -20,15 +20,15 @@ func TestConfigFilePrecedence(t *testing.T) {
 	}
 	t.Setenv("WINGS_PANEL_CONFIG", path)
 	// Env overrides the file for this one key.
-	t.Setenv("XUI_WG_NODE_ID", "node-from-env")
+	t.Setenv("RELAY_TOKEN", "token-from-env")
 
 	cfg := Load()
 
 	if cfg.PublicBaseURL != "https://from-file.example" {
 		t.Errorf("PublicBaseURL from file = %q", cfg.PublicBaseURL)
 	}
-	if cfg.XuiWGNodeID != "node-from-env" {
-		t.Errorf("XuiWGNodeID should be env-overridden, got %q", cfg.XuiWGNodeID)
+	if cfg.RelayToken != "token-from-env" {
+		t.Errorf("RelayToken should be env-overridden, got %q", cfg.RelayToken)
 	}
 	if cfg.SessionSecure {
 		t.Errorf("SessionSecure should be false from file")

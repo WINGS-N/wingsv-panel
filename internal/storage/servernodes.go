@@ -31,7 +31,8 @@ const (
 // WGBackend values for a vk-turn-proxy node's managed provisioning (ServerNode.
 // WGBackend): "own" mints a peer on the node's own wg interface via the relay
 // management gRPC; "xui" mints a client on the node's configured 3x-ui inbound.
-// Empty falls back to the panel-global XUI_WG_* default.
+// Every vk-turn node carries one explicitly; migrateNodeWGBackends backfills any
+// that predate the field.
 const (
 	WGBackendOwn = "own"
 	WGBackendXUI = "xui"

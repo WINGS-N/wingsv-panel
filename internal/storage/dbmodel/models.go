@@ -222,9 +222,9 @@ type ServerNode struct {
 	RelayVersion string `gorm:"column:relay_version;not null;default:''"`
 	// WGBackend selects how a vk-turn-proxy node provisions a managed client's
 	// WireGuard config: "own" (a peer on the node's own wg interface via the relay
-	// management gRPC) or "xui" (a client on a 3x-ui node's inbound). Empty falls
-	// back to the panel's global XUI_WG_* default. XuiNodeID / XuiInboundTag name
-	// the 3x-ui node + inbound when WGBackend is "xui".
+	// management gRPC) or "xui" (a client on a 3x-ui node's inbound). Always set
+	// explicitly. XuiNodeID / XuiInboundTag name the 3x-ui node + inbound when
+	// WGBackend is "xui".
 	WGBackend     string `gorm:"column:wg_backend;not null;default:''"`
 	XuiNodeID     string `gorm:"column:xui_node_id;not null;default:''"`
 	XuiInboundTag string `gorm:"column:xui_inbound_tag;not null;default:''"`

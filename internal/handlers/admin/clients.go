@@ -229,8 +229,8 @@ type createClientRequest struct {
 	// link. Both carry a managed VK-TURN profile when a vk-turn endpoint is set.
 	RemoteControl *bool `json:"remote_control"`
 	// VkTurnNodeID picks which registered vk-turn relay the managed profile points
-	// at; the endpoint is derived from that node's host. Empty falls back to the
-	// configured VK_TURN_ENDPOINT.
+	// at; the endpoint is derived from that node's host. Empty falls back to a relay
+	// the admin owns.
 	VkTurnNodeID string `json:"vk_turn_node_id"`
 	// TrafficLimitGB caps the managed client's traffic (GiB; 0 = unlimited);
 	// ResetPeriodDays > 0 arms a periodic reset. Applied only to a managed client.
@@ -245,17 +245,15 @@ const vkTurnDefaultDTLSPort = "56000"
 
 // resolveVkTurnEndpoint returns the DTLS endpoint the app dials for the managed
 // VK-TURN profile: the host from the selected node's gRPC endpoint paired with the
-// relay DTLS port. An empty nodeID falls back to the configured VK_TURN_ENDPOINT.
+// relay DTLS port.
+//
+// An empty nodeID resolves to a relay the admin actually owns. It used to answer
+// from the panel-global VK_TURN_ENDPOINT env first, which meant a link kept naming
+// whatever host that env was set to no matter which nodes were registered - the
+// value outlived the relay it described and there was no way to see it from the UI.
 func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (string, error) {
 	nodeID = strings.TrimSpace(nodeID)
 	if nodeID == "" {
-		if ep := strings.TrimSpace(h.cfg.VkTurnEndpoint); ep != "" {
-			return ep, nil
-		}
-		// No explicit node and no configured VK_TURN_ENDPOINT: fall back to a
-		// vk-turn relay the panel manages (the installer registers one on
-		// 127.0.0.1), so a single-host install can issue profile links - the
-		// link/show path passes no node - without a manual VK_TURN_ENDPOINT.
 		nodeID = h.defaultVkTurnNodeID(admin)
 		if nodeID == "" {
 			return "", nil
@@ -311,7 +309,7 @@ func isLoopbackHost(host string) bool {
 }
 
 // defaultVkTurnNodeID picks a vk-turn relay to use when the caller did not name
-// one and no VK_TURN_ENDPOINT is configured. It prefers a panel-local node
+// one. It prefers a panel-local node
 // (owner_admin_id 0, usable by the owner) and then the admin's own node, so the
 // common single-host install "just works". Empty if none is available.
 func (h *Handler) defaultVkTurnNodeID(admin storage.Admin) string {
@@ -521,7 +519,7 @@ func (h *Handler) buildClientLink(
 		return preview.BuildWingsLink(cfg)
 	}
 	if cfg.Turn == nil {
-		return "", errors.New("set VK_TURN_ENDPOINT to issue a profile link without remote control")
+		return "", errors.New("register a vk-turn relay to issue a profile link without remote control")
 	}
 	cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_VK_TURN_PROFILE
 	return preview.BuildWingsLink(cfg)

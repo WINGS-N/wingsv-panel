@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -127,6 +129,10 @@ func Open(opts Options) (*Store, error) {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("storage: migrate admin usernames: %w", err)
 	}
+	if err := migrateNodeWGBackends(gdb); err != nil {
+		_ = sqlDB.Close()
+		return nil, fmt.Errorf("storage: migrate node wg backends: %w", err)
+	}
 	return &Store{gdb: gdb, db: sqlDB, driver: driver}, nil
 }
 
@@ -226,4 +232,50 @@ func (s *Store) DB() *sql.DB {
 // Gorm returns the GORM handle for ported methods and the db-migrate command.
 func (s *Store) Gorm() *gorm.DB {
 	return s.gdb
+}
+
+// migrateNodeWGBackends gives every vk-turn-proxy node an explicit wg backend.
+//
+// An empty wg_backend used to mean "fall through to the panel-global XUI_WG_* env",
+// an invisible default that overrode the per-node model and pointed provisioning at
+// whatever node that env named - on this panel, at a node id that no longer existed,
+// so provisioning failed with "storage: not found" and the UI still labelled the
+// empty value as the node's own wg. The env is read here one final time so a
+// self-hosted panel keeps its current behaviour across the upgrade; after this runs
+// nothing consults it again.
+func migrateNodeWGBackends(gdb *gorm.DB) error {
+	type row struct{ ID string }
+	var rows []row
+	err := gdb.Raw(
+		`SELECT id FROM server_nodes WHERE kind = ? AND (wg_backend IS NULL OR wg_backend = '')`,
+		ServerNodeVKTurnProxy,
+	).Scan(&rows).Error
+	if err != nil || len(rows) == 0 {
+		return err
+	}
+	legacyNode := strings.TrimSpace(os.Getenv("XUI_WG_NODE_ID"))
+	legacyTag := strings.TrimSpace(os.Getenv("XUI_WG_INBOUND_TAG"))
+	backend, xuiNode, xuiTag := WGBackendOwn, "", ""
+	if legacyNode != "" {
+		var exists int64
+		if err := gdb.Raw(`SELECT count(1) FROM server_nodes WHERE id = ?`, legacyNode).Scan(&exists).Error; err != nil {
+			return err
+		}
+		// A legacy env naming a node that is gone describes no working setup, so
+		// those nodes are better off owning their wg than inheriting a dead target.
+		if exists > 0 {
+			backend, xuiNode, xuiTag = WGBackendXUI, legacyNode, legacyTag
+		}
+	}
+	for _, r := range rows {
+		err := gdb.Exec(
+			`UPDATE server_nodes SET wg_backend = ?, xui_node_id = ?, xui_inbound_tag = ? WHERE id = ?`,
+			backend, xuiNode, xuiTag, r.ID,
+		).Error
+		if err != nil {
+			return err
+		}
+	}
+	log.Printf("storage: gave %d vk-turn node(s) an explicit wg backend (%s)", len(rows), backend)
+	return nil
 }

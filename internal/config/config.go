@@ -31,15 +31,6 @@ type Config struct {
 	TLSSelfSigned      bool
 	ProvisioningListen string
 	RelayToken         string
-	// VkTurnEndpoint is the VK TURN relay address the app dials to reach the
-	// panel-local vk-turn-proxy node. It is embedded in managed VK-TURN-profile
-	// enrollment links so the app can self-provision its wg config (M3).
-	VkTurnEndpoint string
-	// XuiWGNodeID / XuiWGInboundTag route DTLS-provisioning wg minting to a 3x-ui
-	// node's WireGuard inbound (which runs the real WireGuard) instead of the relay
-	// peerstore. Empty node id keeps the relay path.
-	XuiWGNodeID     string
-	XuiWGInboundTag string
 
 	BootstrapAdminUsername string
 	BootstrapAdminPassword string
@@ -67,9 +58,6 @@ func Load() Config {
 		TLSSelfSigned:          parseBoolEnv("TLS_SELF_SIGNED", false),
 		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
 		RelayToken:             getEnv("RELAY_TOKEN", ""),
-		VkTurnEndpoint:         getEnv("VK_TURN_ENDPOINT", ""),
-		XuiWGNodeID:            getEnv("XUI_WG_NODE_ID", ""),
-		XuiWGInboundTag:        getEnv("XUI_WG_INBOUND_TAG", ""),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
 		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", "admin"),
 		SessionSecure:          parseBoolEnv("SESSION_SECURE", true),

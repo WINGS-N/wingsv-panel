@@ -63,14 +63,6 @@ type PeerProvisioner interface {
 	CreatePeer(ctx context.Context, node dbmodel.ServerNode, publicKey, allowedIPs string) (Peer, error)
 }
 
-// WGProvider mints a client's WireGuard config out-of-band - for example on a
-// 3x-ui node over its Panel gRPC, when that node runs the real WireGuard rather
-// than the relay. When set it is the panel-global default (legacy XUI_WG_* env),
-// used only when the calling node carries no per-node wg backend config.
-type WGProvider interface {
-	ProvisionWG(ctx context.Context, clientID, clientName string) (Peer, error)
-}
-
 // XUIProvisioner mints a client's WireGuard config on a SPECIFIC 3x-ui node's
 // inbound. The per-node wg backend uses it: the calling vk-turn-proxy node names
 // the 3x-ui node + inbound tag it forwards to, so each admin picks their own
@@ -84,7 +76,6 @@ type Service struct {
 	provisioningpb.UnimplementedProvisioningServer
 	store       *storage.Store
 	provisioner PeerProvisioner
-	wgProvider  WGProvider
 	xuiProv     XUIProvisioner
 	allowedIPs  string
 	mtu         uint32
@@ -92,12 +83,6 @@ type Service struct {
 
 func NewService(store *storage.Store, provisioner PeerProvisioner) *Service {
 	return &Service{store: store, provisioner: provisioner, allowedIPs: "0.0.0.0/0", mtu: defaultMTU}
-}
-
-// SetWGProvider sets the panel-global default wg provider (legacy XUI_WG_* env).
-// nil restores the relay path.
-func (s *Service) SetWGProvider(p WGProvider) {
-	s.wgProvider = p
 }
 
 // SetXUIProvisioner wires the per-node 3x-ui provisioner used when a node's
@@ -204,8 +189,7 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 	// Out-of-band wg (a 3x-ui node running the real WireGuard): mint the client on
 	// the target 3x-ui inbound, persist it against the calling node and return it.
 	// No relay peerstore or cross-node replication - the 3x-ui inbound owns the
-	// peer set. Target selection is per-node (node.WGBackend/XuiNodeID/XuiInboundTag),
-	// falling back to the panel-global provider (legacy XUI_WG_* env).
+	// peer set. Target selection is per-node (node.WGBackend/XuiNodeID/XuiInboundTag).
 	if xuiNode, tag, ok, xErr := s.resolveXUITarget(node); xErr != nil {
 		return nil, status.Error(codes.Internal, xErr.Error())
 	} else if ok {
@@ -216,27 +200,6 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 			return nil, status.Error(codes.Internal, "provision xui: "+provErr.Error())
 		}
 		log.Printf("provisioning: xui provider ok for client=%s (address=%s)", req.GetClientId(), peer.AllowedIPs)
-		if err := s.store.UpsertClientWGPeer(dbmodel.ClientWGPeer{
-			ClientID:        req.GetClientId(),
-			NodeID:          req.GetNodeId(),
-			PublicKey:       peer.PublicKey,
-			PrivateKey:      peer.PrivateKey,
-			AllowedIPs:      peer.AllowedIPs,
-			ServerPublicKey: peer.ServerPublicKey,
-		}); err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-		return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
-	}
-
-	// Legacy panel-global default (XUI_WG_* env): only for a node with no explicit
-	// per-node backend, so an admin's own node can still opt into "own" wg.
-	if node.WGBackend == "" && s.wgProvider != nil {
-		log.Printf("provisioning: global wg provider for client=%s", req.GetClientId())
-		peer, provErr := s.wgProvider.ProvisionWG(ctx, req.GetClientId(), client.Name)
-		if provErr != nil {
-			return nil, status.Error(codes.Internal, "provision wg: "+provErr.Error())
-		}
 		if err := s.store.UpsertClientWGPeer(dbmodel.ClientWGPeer{
 			ClientID:        req.GetClientId(),
 			NodeID:          req.GetNodeId(),

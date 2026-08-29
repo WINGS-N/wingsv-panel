@@ -11,7 +11,7 @@ import (
 )
 
 func TestBuildClientLinkRemoteControlOn(t *testing.T) {
-	h := &Handler{cfg: config.Config{VkTurnEndpoint: "relay.example:443", PublicBaseURL: "https://panel.example"}}
+	h := &Handler{cfg: config.Config{PublicBaseURL: "https://panel.example"}}
 	token := []byte("tok-bytes")
 	link, err := h.buildClientLink("c1", "Dev", token, "always", 30, storage.Admin{ID: 1, Username: "adm"}, true, "relay.example.com:56000")
 	if err != nil {
@@ -31,7 +31,7 @@ func TestBuildClientLinkRemoteControlOn(t *testing.T) {
 }
 
 func TestBuildClientLinkRemoteControlOff(t *testing.T) {
-	h := &Handler{cfg: config.Config{VkTurnEndpoint: "relay.example:443"}}
+	h := &Handler{cfg: config.Config{}}
 	token := []byte("tok-bytes")
 	link, err := h.buildClientLink("c1", "Dev", token, "always", 30, storage.Admin{ID: 1}, false, "relay.example.com:56000")
 	if err != nil {
