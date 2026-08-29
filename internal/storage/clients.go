@@ -2,6 +2,8 @@ package storage
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -125,13 +127,57 @@ func (s *Store) UpdateClientToken(id string, ownerAdminID int64, tokenHash strin
 	return nil
 }
 
+// clientOwnedTables are every table keyed by client_id. Deleting a client used to
+// drop only its own row, so each of these kept the rows forever: unreachable (every
+// lookup resolves the client first) but still counted, still dumped, still growing -
+// one panel had 32k orphaned log rows carrying most of its database size.
+var clientOwnedTables = []string{
+	"client_configs",
+	"client_installed_apps",
+	"client_logs",
+	"client_reported_configs",
+	"client_runtime",
+	"client_traffic",
+	"client_wg_peers",
+	"pending_commands",
+}
+
+// DeleteClient removes the client and everything keyed to it, in one transaction so
+// a failure part-way cannot leave the very orphans this is here to prevent.
 func (s *Store) DeleteClient(id string, ownerAdminID int64) error {
-	res := s.gdb.Where("id = ? AND owner_admin_id = ?", id, ownerAdminID).Delete(&dbmodel.Client{})
-	if res.Error != nil {
-		return res.Error
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
+		res := tx.Where("id = ? AND owner_admin_id = ?", id, ownerAdminID).Delete(&dbmodel.Client{})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrNotFound
+		}
+		for _, table := range clientOwnedTables {
+			if err := tx.Exec("DELETE FROM "+table+" WHERE client_id = ?", id).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// PurgeOrphanClientRows deletes rows left behind by clients removed before the
+// delete cascaded. Idempotent, and cheap once the backlog is gone: the DELETEs
+// match nothing on a clean database.
+func (s *Store) PurgeOrphanClientRows() error {
+	total := int64(0)
+	for _, table := range clientOwnedTables {
+		res := s.gdb.Exec(
+			"DELETE FROM " + table + " WHERE client_id NOT IN (SELECT id FROM clients)",
+		)
+		if res.Error != nil {
+			return fmt.Errorf("storage: purge orphans from %s: %w", table, res.Error)
+		}
+		total += res.RowsAffected
 	}
-	if res.RowsAffected == 0 {
-		return ErrNotFound
+	if total > 0 {
+		log.Printf("storage: purged %d orphaned client row(s) left by deletes that did not cascade", total)
 	}
 	return nil
 }

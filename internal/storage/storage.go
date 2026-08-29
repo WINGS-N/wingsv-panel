@@ -133,7 +133,12 @@ func Open(opts Options) (*Store, error) {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("storage: migrate node wg backends: %w", err)
 	}
-	return &Store{gdb: gdb, db: sqlDB, driver: driver}, nil
+	store := &Store{gdb: gdb, db: sqlDB, driver: driver}
+	if err := store.PurgeOrphanClientRows(); err != nil {
+		_ = sqlDB.Close()
+		return nil, err
+	}
+	return store, nil
 }
 
 // applySchema creates tables and adds any missing columns. sqlite is fully
