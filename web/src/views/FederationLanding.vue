@@ -77,6 +77,46 @@
       </section>
 
       <section class="surface-card mt-6">
+        <h2 class="hero-title">Что мешает всё это выжрать</h2>
+        <p class="body-copy body-copy-wide mt-3">
+          Бесплатный доступ без защиты живёт до первого, кто решит на нём заработать. Аттестация через железо телефона
+          отрезала бы всех, у кого root, а вход по паспорту противоречит самой затее - поэтому цена входа перенесена в
+          другое место.
+        </p>
+        <div class="fed-steps">
+          <article class="fed-step">
+            <img src="/img/oneui/firewall.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+            <h3 class="fed-step-title">Вход только по приглашению</h3>
+            <p class="fed-step-copy">
+              Аккаунты не раздаются всем подряд: каждого кто-то привёл, и это записано. Ветку можно срезать целиком -
+              вместе с тем, кто наприглашал, уходят все, кого привёл он. Заводить аккаунты пачками становится дорого,
+              потому что теряются они тоже пачками.
+            </p>
+          </article>
+          <article class="fed-step">
+            <img src="/img/oneui/monitor.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+            <h3 class="fed-step-title">Профиль на сорок человек виден</h3>
+            <p class="fed-step-copy">
+              Сколько адресов пользуется одним профилем, говорит сам Xray - лог с чужими адресами назначения для этого
+              не нужен. Один профиль, светящийся из десятка городов сразу, это не человек, и такие уходят в карантин.
+            </p>
+          </article>
+          <article class="fed-step">
+            <img src="/img/oneui/privacy.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+            <h3 class="fed-step-title">Спам и торренты режутся на узле</h3>
+            <p class="fed-step-copy">
+              Почтовые порты и bittorrent закрыты на самой ноде - не потому, что мы против, а потому, что жалоба хостеру
+              прилетит донору, отдавшему сервер. Он подписывался делиться трафиком, а не отвечать за чужую рассылку.
+            </p>
+          </article>
+        </div>
+        <p class="body-copy body-copy-wide mt-4">
+          Ни одна из этих проверок не смотрит, какие сайты вы открываете: узел сообщает голове класс события и счётчик,
+          но никогда сам домен.
+        </p>
+      </section>
+
+      <section class="surface-card mt-6">
         <h2 class="hero-title">Честно о том, что видно</h2>
         <p class="body-copy body-copy-wide mt-3">
           Про приватность принято молчать общими словами. Здесь сказано прямо, в обе стороны.
