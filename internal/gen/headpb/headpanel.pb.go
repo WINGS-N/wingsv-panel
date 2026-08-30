@@ -813,20 +813,24 @@ func (x *ListNodesResponse) GetNodes() []*NodeSummary {
 }
 
 type NodeSummary struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	NodeId              string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	DonorId             string                 `protobuf:"bytes,2,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
-	Hostname            string                 `protobuf:"bytes,3,opt,name=hostname,proto3" json:"hostname,omitempty"`
-	Arch                string                 `protobuf:"bytes,4,opt,name=arch,proto3" json:"arch,omitempty"`
-	State               string                 `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
-	Reason              string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
-	Online              bool                   `protobuf:"varint,7,opt,name=online,proto3" json:"online,omitempty"`
-	AesNi               bool                   `protobuf:"varint,8,opt,name=aes_ni,json=aesNi,proto3" json:"aes_ni,omitempty"`
-	DeclaredBudgetBytes uint64                 `protobuf:"varint,9,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
-	UsedBytes           uint64                 `protobuf:"varint,10,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
-	JoinedUnix          int64                  `protobuf:"varint,11,opt,name=joined_unix,json=joinedUnix,proto3" json:"joined_unix,omitempty"`
-	LastSeenUnix        int64                  `protobuf:"varint,12,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
-	Live                *NodeCounters          `protobuf:"bytes,13,opt,name=live,proto3" json:"live,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Порты, которые нода реально заняла, и цель, чью tls-личность она
+	// заимствует. У каждой ноды свои: общие на флот - один признак для блокировки
+	OfferedPorts        []uint32      `protobuf:"varint,20,rep,packed,name=offered_ports,json=offeredPorts,proto3" json:"offered_ports,omitempty"`
+	RealityDest         string        `protobuf:"bytes,21,opt,name=reality_dest,json=realityDest,proto3" json:"reality_dest,omitempty"`
+	NodeId              string        `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	DonorId             string        `protobuf:"bytes,2,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
+	Hostname            string        `protobuf:"bytes,3,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	Arch                string        `protobuf:"bytes,4,opt,name=arch,proto3" json:"arch,omitempty"`
+	State               string        `protobuf:"bytes,5,opt,name=state,proto3" json:"state,omitempty"`
+	Reason              string        `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	Online              bool          `protobuf:"varint,7,opt,name=online,proto3" json:"online,omitempty"`
+	AesNi               bool          `protobuf:"varint,8,opt,name=aes_ni,json=aesNi,proto3" json:"aes_ni,omitempty"`
+	DeclaredBudgetBytes uint64        `protobuf:"varint,9,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
+	UsedBytes           uint64        `protobuf:"varint,10,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
+	JoinedUnix          int64         `protobuf:"varint,11,opt,name=joined_unix,json=joinedUnix,proto3" json:"joined_unix,omitempty"`
+	LastSeenUnix        int64         `protobuf:"varint,12,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
+	Live                *NodeCounters `protobuf:"bytes,13,opt,name=live,proto3" json:"live,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -859,6 +863,20 @@ func (x *NodeSummary) ProtoReflect() protoreflect.Message {
 // Deprecated: Use NodeSummary.ProtoReflect.Descriptor instead.
 func (*NodeSummary) Descriptor() ([]byte, []int) {
 	return file_headpanel_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *NodeSummary) GetOfferedPorts() []uint32 {
+	if x != nil {
+		return x.OfferedPorts
+	}
+	return nil
+}
+
+func (x *NodeSummary) GetRealityDest() string {
+	if x != nil {
+		return x.RealityDest
+	}
+	return ""
 }
 
 func (x *NodeSummary) GetNodeId() string {
@@ -1443,6 +1461,9 @@ type FleetSettings struct {
 	XhttpPort   uint32 `protobuf:"varint,8,opt,name=xhttp_port,json=xhttpPort,proto3" json:"xhttp_port,omitempty"`
 	// Версия конфига, которую голова разослала после последнего изменения
 	ConfigVersion uint64 `protobuf:"varint,9,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	// Сколько целей в проверенном пуле. Ноды разводятся по нему, поэтому dest в
+	// поле выше - лишь та, что досталась бы ноде без своей записи
+	DestPoolSize  uint32 `protobuf:"varint,10,opt,name=dest_pool_size,json=destPoolSize,proto3" json:"dest_pool_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1536,6 +1557,13 @@ func (x *FleetSettings) GetXhttpPort() uint32 {
 func (x *FleetSettings) GetConfigVersion() uint64 {
 	if x != nil {
 		return x.ConfigVersion
+	}
+	return 0
+}
+
+func (x *FleetSettings) GetDestPoolSize() uint32 {
+	if x != nil {
+		return x.DestPoolSize
 	}
 	return 0
 }
@@ -1870,8 +1898,10 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x10ListNodesRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\"K\n" +
 	"\x11ListNodesResponse\x126\n" +
-	"\x05nodes\x18\x01 \x03(\v2 .wingsv.headpanel.v1.NodeSummaryR\x05nodes\"\x9f\x03\n" +
-	"\vNodeSummary\x12\x17\n" +
+	"\x05nodes\x18\x01 \x03(\v2 .wingsv.headpanel.v1.NodeSummaryR\x05nodes\"\xe7\x03\n" +
+	"\vNodeSummary\x12#\n" +
+	"\roffered_ports\x18\x14 \x03(\rR\fofferedPorts\x12!\n" +
+	"\freality_dest\x18\x15 \x01(\tR\vrealityDest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x19\n" +
 	"\bdonor_id\x18\x02 \x01(\tR\adonorId\x12\x1a\n" +
 	"\bhostname\x18\x03 \x01(\tR\bhostname\x12\x12\n" +
@@ -1913,7 +1943,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x16\n" +
 	"\x14SetNodeStateResponse\"\x16\n" +
-	"\x14FleetSettingsRequest\"\xe2\x02\n" +
+	"\x14FleetSettingsRequest\"\x88\x03\n" +
 	"\rFleetSettings\x124\n" +
 	"\x04xray\x18\x01 \x01(\v2 .wingsv.headpanel.v1.BuildChoiceR\x04xray\x124\n" +
 	"\x04vktp\x18\x02 \x01(\v2 .wingsv.headpanel.v1.BuildChoiceR\x04vktp\x12!\n" +
@@ -1924,7 +1954,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"\btcp_port\x18\a \x01(\rR\atcpPort\x12\x1d\n" +
 	"\n" +
 	"xhttp_port\x18\b \x01(\rR\txhttpPort\x12%\n" +
-	"\x0econfig_version\x18\t \x01(\x04R\rconfigVersion\"Q\n" +
+	"\x0econfig_version\x18\t \x01(\x04R\rconfigVersion\x12$\n" +
+	"\x0edest_pool_size\x18\n" +
+	" \x01(\rR\fdestPoolSize\"Q\n" +
 	"\vBuildChoice\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +

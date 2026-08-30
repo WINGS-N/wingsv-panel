@@ -35,6 +35,7 @@ type fleetView struct {
 	TCPPort       uint32 `json:"tcp_port"`
 	XHTTPPort     uint32 `json:"xhttp_port"`
 	ConfigVersion uint64 `json:"config_version"`
+	DestPoolSize  uint32 `json:"dest_pool_size"`
 }
 
 func (h *Handler) handleFleetSettings(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -165,6 +166,7 @@ func toFleetView(s *headpb.FleetSettings) fleetView {
 		TCPPort:       s.GetTcpPort(),
 		XHTTPPort:     s.GetXhttpPort(),
 		ConfigVersion: s.GetConfigVersion(),
+		DestPoolSize:  s.GetDestPoolSize(),
 	}
 }
 
@@ -256,6 +258,10 @@ type fleetNodeView struct {
 	LastSeenUnix        int64  `json:"last_seen_unix"`
 	DeclaredBudgetBytes uint64 `json:"declared_budget_bytes"`
 	UsedBytes           uint64 `json:"used_bytes"`
+	// Порты и цель у каждой ноды свои - показываем их, а не значения флота:
+	// иначе панель уверяет, что все сидят на одной паре портов
+	OfferedPorts []uint32 `json:"offered_ports"`
+	RealityDest  string   `json:"reality_dest"`
 	// Mine отделяет свои ноды от чужих в общем списке владельца: он видит весь
 	// флот, но должен различать, за что отвечает сам
 	Mine bool `json:"mine"`
@@ -295,6 +301,8 @@ func (h *Handler) handleFleetNodes(w http.ResponseWriter, r *http.Request, admin
 			LastSeenUnix:        n.GetLastSeenUnix(),
 			DeclaredBudgetBytes: n.GetDeclaredBudgetBytes(),
 			UsedBytes:           n.GetUsedBytes(),
+			OfferedPorts:        n.GetOfferedPorts(),
+			RealityDest:         n.GetRealityDest(),
 			Mine:                n.GetDonorId() == mine,
 		})
 	}

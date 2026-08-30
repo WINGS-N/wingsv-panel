@@ -128,6 +128,10 @@ message ListNodesResponse {
 }
 
 message NodeSummary {
+  // Порты, которые нода реально заняла, и цель, чью tls-личность она
+  // заимствует. У каждой ноды свои: общие на флот - один признак для блокировки
+  repeated uint32 offered_ports = 20;
+  string reality_dest = 21;
   string node_id = 1;
   string donor_id = 2;
   string hostname = 3;
@@ -221,6 +225,9 @@ message FleetSettings {
   uint32 xhttp_port = 8;
   // Версия конфига, которую голова разослала после последнего изменения
   uint64 config_version = 9;
+  // Сколько целей в проверенном пуле. Ноды разводятся по нему, поэтому dest в
+  // поле выше - лишь та, что досталась бы ноде без своей записи
+  uint32 dest_pool_size = 10;
 }
 
 message BuildChoice {

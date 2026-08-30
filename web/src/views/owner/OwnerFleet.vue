@@ -31,12 +31,21 @@
       <div v-else class="surface-inset">
         <span class="section-kicker">REALITY dest</span>
         <p class="fed-step-copy mt-2">
-          Выбирает голова: <span class="admin-mono">{{ fleet.reality_dest || 'подбирается' }}</span
-          >. Она перепроверяет его и меняет сама, когда тот перестаёт держать хендшейк.
+          Голова держит пул проверенных целей<template v-if="fleet.dest_pool_size">
+            - сейчас в нём {{ fleet.dest_pool_size }}</template
+          >, и каждая нода берёт из него свою. Общая на весь флот означала бы, что одно правило у цензора роняет всех
+          разом. Цели перепроверяются, переставшие держать хендшейк заменяются.
         </p>
       </div>
-      <OneuiInput v-model.number="fleet.tcp_port" label="Порт TCP" type="number" :min="1" :max="65535" />
-      <OneuiInput v-model.number="fleet.xhttp_port" label="Порт XHTTP" type="number" :min="1" :max="65535" />
+
+      <div class="surface-inset">
+        <span class="section-kicker">Порты</span>
+        <p class="fed-step-copy mt-2">
+          Подбирает сама нода: 443, если может его занять, иначе порт, выведенный из её отпечатка. Ходовые альтернативы
+          вроде 8443 и 2053 есть в каждой методичке по обходу и режутся одним правилом, поэтому их тут нет. Порты видно
+          в списке нод ниже.
+        </p>
+      </div>
     </div>
 
     <div class="fleet-toggles mt-4">
@@ -109,6 +118,12 @@
               <ArrowUpDown :size="13" aria-hidden="true" />{{ bytes(n.used_bytes) }} из
               {{ bytes(n.declared_budget_bytes) }}
             </span>
+            <span v-if="n.offered_ports && n.offered_ports.length" class="inline-flex items-center gap-1">
+              <Plug :size="13" aria-hidden="true" />{{ n.offered_ports.join(' / ') }}
+            </span>
+            <span v-if="n.reality_dest" class="inline-flex items-center gap-1" title="Чью tls-личность заимствует">
+              <Fingerprint :size="13" aria-hidden="true" />{{ n.reality_dest }}
+            </span>
             <span v-if="n.arch" class="inline-flex items-center gap-1">
               <Cpu :size="13" aria-hidden="true" />{{ n.arch }}
             </span>
@@ -127,7 +142,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { ArrowUpDown, Cpu, RefreshCw, Save } from 'lucide-vue-next';
+import { ArrowUpDown, Cpu, Fingerprint, Plug, RefreshCw, Save } from 'lucide-vue-next';
 import { formatBytes } from '@/utils/format';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
