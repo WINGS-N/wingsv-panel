@@ -149,6 +149,8 @@
         </div>
         <SamsungSectionLoader v-else-if="releaseLoading" class="mt-6" />
       </section>
+
+      <FederationCounters />
     </main>
 
     <footer class="landing-footer">
@@ -165,6 +167,7 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import PreviewFacts from '@/components/domain/PreviewFacts.vue';
 import PreviewSection from '@/components/domain/PreviewSection.vue';
+import FederationCounters from '@/components/domain/FederationCounters.vue';
 
 const CACHE_NAME = 'wingsv-download-cache-v1';
 const RELEASE_API_URL = '/api/releases/latest';
