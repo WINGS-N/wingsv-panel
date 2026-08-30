@@ -76,3 +76,30 @@ func TestPeersAreIndependent(t *testing.T) {
 		t.Error("an unseen peer reported as known")
 	}
 }
+
+// Several connections to one relay discover independently and finish out of
+// order. A failure arriving after another connection has already proved the
+// derivation must not undo it, or the two flip on every attempt and the peer
+// looks unreachable rather than merely old.
+func TestAProvenPeerSurvivesALateFailure(t *testing.T) {
+	p := NewPreference()
+	p.Succeeded("relay", Legacy256)
+	p.Failed("relay", Legacy256)
+
+	if got := p.Next("relay"); got != Legacy256 {
+		t.Errorf("Next = %v after a late failure, want the proven sha256", got)
+	}
+	if v, ok := p.Known("relay"); !ok || v != Legacy256 {
+		t.Errorf("Known = %v/%v, want the proven sha256 to stand", v, ok)
+	}
+}
+
+// An unproven guess must still flip, or a peer whose first derivation is wrong
+// is never reached at all.
+func TestAnUnprovenGuessStillFlips(t *testing.T) {
+	p := NewPreference()
+	p.Failed("relay", SHA512)
+	if got := p.Next("relay"); got != Legacy256 {
+		t.Errorf("Next = %v, want the other derivation to be tried", got)
+	}
+}

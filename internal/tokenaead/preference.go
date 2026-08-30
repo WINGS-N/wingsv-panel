@@ -27,6 +27,9 @@ type prefEntry struct {
 	// at is when this was last decided, which is what bounds how long a peer
 	// stays on the old derivation after it has been upgraded.
 	at time.Time
+	// proven means the peer actually answered on this derivation, as opposed to
+	// it being the guess left over from a failure.
+	proven bool
 }
 
 // NewPreference builds an empty record.
@@ -59,22 +62,29 @@ func (p *Preference) Next(key string) Variant {
 func (p *Preference) Succeeded(key string, v Variant) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.state[key] = prefEntry{variant: v, at: p.now()}
+	p.state[key] = prefEntry{variant: v, at: p.now(), proven: true}
 }
 
 // Failed records that a peer did not accept this derivation, so the next
 // attempt uses the other one.
 //
-// A node that is simply down lands here too, and that is fine: it flips between
-// the two until it answers, which costs one attempt per poll and never gets
-// stuck on the wrong one.
+// A peer that has already answered on a derivation keeps it. Several
+// connections to one relay are open at once - the collector and two stat
+// streams - and they discover independently, so a late failure from one of them
+// would otherwise undo what another had just proved. The pair would then flip on
+// every attempt and the connection would never settle, which looks exactly like
+// an unreachable peer. A peer that really has been upgraded is still picked up,
+// through the reprobe in Next rather than through a failure here.
 func (p *Preference) Failed(key string, v Variant) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if entry, ok := p.state[key]; ok && entry.proven {
+		return
+	}
 	other := Legacy256
 	if v == Legacy256 {
 		other = SHA512
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	p.state[key] = prefEntry{variant: other, at: p.now()}
 }
 
