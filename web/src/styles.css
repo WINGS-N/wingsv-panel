@@ -263,6 +263,42 @@
     @apply inline-flex items-center gap-2 text-[13px];
   }
 
+  .fed-node-list {
+    @apply mt-2 divide-y divide-wings-divider;
+  }
+
+  .fed-node-row {
+    @apply flex items-center gap-3 py-3.5;
+  }
+
+  .fed-node-track {
+    @apply mt-2 block h-1.5 w-full max-w-[320px] overflow-hidden rounded-full bg-white/10;
+  }
+
+  .fed-node-fill {
+    @apply block h-full rounded-full bg-wings-accent;
+  }
+
+  .federation-live-head {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .live-badge {
+    @apply inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em];
+    background: rgba(35, 168, 110, 0.18);
+    color: #6fe3a4;
+  }
+
+  .live-dot {
+    @apply block h-2 w-2 shrink-0 rounded-full;
+    background: #6fe3a4;
+    animation: live-pulse 2s ease-out infinite;
+  }
+
+  .stat-value-flow {
+    @apply inline-flex items-center gap-2;
+  }
+
   .federation-uses-input {
     @apply w-16 rounded-xl bg-transparent px-3 py-2 text-center font-samsung text-[15px] text-wings-text outline-none;
     border: 1px solid theme('colors.wings.inputLine');
@@ -2169,6 +2205,26 @@ body.theme-light::before {
   background-position: center;
   background-repeat: no-repeat;
   animation: sky-shimmer 26s ease-in-out infinite alternate;
+}
+
+/* Дыхание "в эфире": расходящееся кольцо, а не мигание - мигающая точка на
+   странице, которую держат открытой, быстро начинает раздражать */
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(111, 227, 164, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(111, 227, 164, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(111, 227, 164, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
 }
 
 @keyframes sky-shimmer {

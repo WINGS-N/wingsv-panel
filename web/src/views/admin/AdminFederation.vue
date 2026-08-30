@@ -21,9 +21,14 @@
         <span class="stat-meta">активных подключений</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Скорость</span>
-        <span class="stat-value">↑ {{ rate(summary.up_rate_bps) }}</span>
-        <span class="stat-meta">↓ {{ rate(summary.down_rate_bps) }}</span>
+        <span class="stat-kicker">Отдача</span>
+        <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.up_rate_bps) }}</span>
+        <span class="stat-meta">с ваших узлов</span>
+      </div>
+      <div class="stat">
+        <span class="stat-kicker">Приём</span>
+        <span class="stat-value"><span class="traffic-rx">↓</span> {{ rate(summary.down_rate_bps) }}</span>
+        <span class="stat-meta">на устройства</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">Отдано за период</span>
@@ -56,24 +61,44 @@
 
   <section v-if="enabled && summary.node_list.length" class="surface-card mt-6">
     <h2 class="section-title">Узлы</h2>
-    <div class="keyvals">
-      <div v-for="node in summary.node_list" :key="node.id" class="keyval">
-        <div>
-          <span class="wordmark-inline">{{ node.hostname || node.id.slice(0, 8) }}</span>
-          <span class="admin-muted"> · {{ stateLabel(node.state) }}</span>
-          <span v-if="node.reason" class="admin-muted"> · {{ node.reason }}</span>
+    <!-- Строки без рамок, только разделители - как список профилей в DeX -->
+    <div class="fed-node-list">
+      <div v-for="node in summary.node_list" :key="node.id" class="fed-node-row">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="truncate text-[17px]">{{ node.hostname || node.id.slice(0, 8) }}</span>
+            <span class="admin-pill" :class="node.state === 'active' ? 'is-online' : 'is-offline'">
+              {{ stateLabel(node.state) }}
+            </span>
+          </div>
+          <span v-if="node.reason" class="mt-0.5 block truncate text-sm text-wings-muted">{{ node.reason }}</span>
+          <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
+            <span class="inline-flex items-center gap-1">
+              <Users :size="13" aria-hidden="true" />{{ node.sessions }}
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <ArrowUp :size="13" :style="{ color: FLOW_UP }" aria-hidden="true" />{{ bytes(node.used_bytes) }}
+              <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
+            </span>
+          </span>
+          <!-- Полоса бюджета: цифры выше говорят сколько, она - насколько близко
+               узел к тому, чтобы выйти из ротации -->
+          <span class="fed-node-track" aria-hidden="true">
+            <span class="fed-node-fill" :style="{ width: budgetPct(node) + '%' }"></span>
+          </span>
         </div>
-        <div class="federation-node-figures">
-          <span class="admin-muted">{{ node.sessions }} сессий</span>
-          <span class="admin-muted">{{ bytes(node.used_bytes) }} / {{ bytes(node.declared_budget_bytes) }}</span>
-          <SamsungButton
-            variant="ghost"
-            :busy="busyNode === node.id"
-            @click="setState(node, node.state === 'parked' ? 'active' : 'parked')"
-          >
-            {{ node.state === 'parked' ? 'Вернуть' : 'Снять' }}
-          </SamsungButton>
-        </div>
+
+        <SamsungButton
+          variant="ghost"
+          :busy="busyNode === node.id"
+          @click="setState(node, node.state === 'parked' ? 'active' : 'parked')"
+        >
+          <template #icon>
+            <PlayCircle v-if="node.state === 'parked'" class="button-icon" aria-hidden="true" />
+            <PauseCircle v-else class="button-icon" aria-hidden="true" />
+          </template>
+          {{ node.state === 'parked' ? 'Вернуть' : 'Снять' }}
+        </SamsungButton>
       </div>
     </div>
   </section>
@@ -81,7 +106,10 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { Plus } from 'lucide-vue-next';
+import { ArrowUp, PauseCircle, PlayCircle, Plus, Users } from 'lucide-vue-next';
+
+// Тот же цветовой код направления, что в приложении
+const FLOW_UP = '#0381fe';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatBytes } from '@/utils/format';
@@ -196,6 +224,14 @@ function rate(bytesPerSecond) {
     index += 1;
   }
   return `${value >= 100 || index === 0 ? Math.round(value) : value.toFixed(1)} ${units[index]}`;
+}
+
+// Доля выбранного бюджета. Именно она решает судьбу узла: около 85 процентов он
+// перестаёт получать новых пользователей, около 97 снимается из ротации
+function budgetPct(node) {
+  const limit = Number(node.declared_budget_bytes) || 0;
+  if (limit <= 0) return 0;
+  return Math.min(100, Math.round((Number(node.used_bytes) / limit) * 100));
 }
 
 function stateLabel(state) {

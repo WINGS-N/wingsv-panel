@@ -1,85 +1,87 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory } from 'vue-router';
 
-import LandingView from "./views/LandingView.vue";
-import LoginView from "./views/LoginView.vue";
-import RegisterView from "./views/RegisterView.vue";
-import AdminLayout from "./views/admin/AdminLayout.vue";
-import AdminClientList from "./views/admin/ClientList.vue";
-import AdminClientDetail from "./views/admin/ClientDetail.vue";
-import AdminAccount from "./views/admin/AccountView.vue";
-import AdminMasterSettings from "./views/admin/MasterSettings.vue";
-import AdminNodes from "./views/admin/AdminNodes.vue";
-import AdminFederation from "@/views/admin/AdminFederation.vue";
-import WgPeers from "./views/shared/WgPeers.vue";
-import NodeDetail from "./views/shared/NodeDetail.vue";
-import OwnerLayout from "./views/owner/OwnerLayout.vue";
-import OwnerOverview from "./views/owner/OwnerOverview.vue";
-import OwnerNodes from "./views/owner/OwnerNodes.vue";
-import OwnerAdmins from "./views/owner/OwnerAdmins.vue";
-import OwnerInviteTree from "@/views/owner/OwnerInviteTree.vue";
-import OwnerClients from "./views/owner/OwnerClients.vue";
-import OwnerAudit from "./views/owner/OwnerAudit.vue";
-import { authState, refreshSession, refreshRegistrationStatus, registrationState } from "./stores/auth.js";
+import LandingView from './views/LandingView.vue';
+import FederationLanding from './views/FederationLanding.vue';
+import LoginView from './views/LoginView.vue';
+import RegisterView from './views/RegisterView.vue';
+import AdminLayout from './views/admin/AdminLayout.vue';
+import AdminClientList from './views/admin/ClientList.vue';
+import AdminClientDetail from './views/admin/ClientDetail.vue';
+import AdminAccount from './views/admin/AccountView.vue';
+import AdminMasterSettings from './views/admin/MasterSettings.vue';
+import AdminNodes from './views/admin/AdminNodes.vue';
+import AdminFederation from '@/views/admin/AdminFederation.vue';
+import WgPeers from './views/shared/WgPeers.vue';
+import NodeDetail from './views/shared/NodeDetail.vue';
+import OwnerLayout from './views/owner/OwnerLayout.vue';
+import OwnerOverview from './views/owner/OwnerOverview.vue';
+import OwnerNodes from './views/owner/OwnerNodes.vue';
+import OwnerAdmins from './views/owner/OwnerAdmins.vue';
+import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
+import OwnerClients from './views/owner/OwnerClients.vue';
+import OwnerAudit from './views/owner/OwnerAudit.vue';
+import { authState, refreshSession, refreshRegistrationStatus, registrationState } from './stores/auth.js';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", component: LandingView, name: "landing" },
-    { path: "/login", component: LoginView, name: "login" },
-    { path: "/register", component: RegisterView, name: "register" },
+    { path: '/', component: LandingView, name: 'landing' },
+    { path: '/federation', component: FederationLanding, name: 'federation-landing' },
+    { path: '/login', component: LoginView, name: 'login' },
+    { path: '/register', component: RegisterView, name: 'register' },
     {
-      path: "/admin",
+      path: '/admin',
       component: AdminLayout,
       children: [
-        { path: "", redirect: "/admin/clients" },
-        { path: "clients", component: AdminClientList, name: "admin-clients" },
+        { path: '', redirect: '/admin/clients' },
+        { path: 'clients', component: AdminClientList, name: 'admin-clients' },
         {
-          path: "clients/:id/:tab?",
+          path: 'clients/:id/:tab?',
           component: AdminClientDetail,
-          name: "admin-client-detail",
+          name: 'admin-client-detail',
           props: true,
         },
-        { path: "account", component: AdminAccount, name: "admin-account" },
-        { path: "master", component: AdminMasterSettings, name: "admin-master" },
-        { path: "nodes", component: AdminNodes, name: "admin-nodes" },
-        { path: "federation", component: AdminFederation, name: "admin-federation" },
+        { path: 'account', component: AdminAccount, name: 'admin-account' },
+        { path: 'master', component: AdminMasterSettings, name: 'admin-master' },
+        { path: 'nodes', component: AdminNodes, name: 'admin-nodes' },
+        { path: 'federation', component: AdminFederation, name: 'admin-federation' },
         {
-          path: "nodes/:id",
+          path: 'nodes/:id',
           component: NodeDetail,
-          name: "admin-node-detail",
-          props: { apiBase: "/api/admin", backName: "admin-nodes" },
+          name: 'admin-node-detail',
+          props: { apiBase: '/api/admin', backName: 'admin-nodes' },
         },
         {
-          path: "wgpeers",
+          path: 'wgpeers',
           component: WgPeers,
-          name: "admin-wgpeers",
-          props: { apiBase: "/api/admin" },
+          name: 'admin-wgpeers',
+          props: { apiBase: '/api/admin' },
         },
       ],
     },
     {
-      path: "/owner",
+      path: '/owner',
       component: OwnerLayout,
       children: [
-        { path: "", redirect: "/owner/overview" },
-        { path: "overview", component: OwnerOverview, name: "owner-overview" },
-        { path: "nodes", component: OwnerNodes, name: "owner-nodes" },
+        { path: '', redirect: '/owner/overview' },
+        { path: 'overview', component: OwnerOverview, name: 'owner-overview' },
+        { path: 'nodes', component: OwnerNodes, name: 'owner-nodes' },
         {
-          path: "nodes/:id",
+          path: 'nodes/:id',
           component: NodeDetail,
-          name: "owner-node-detail",
-          props: { apiBase: "/api/owner", backName: "owner-nodes" },
+          name: 'owner-node-detail',
+          props: { apiBase: '/api/owner', backName: 'owner-nodes' },
         },
         {
-          path: "wgpeers",
+          path: 'wgpeers',
           component: WgPeers,
-          name: "owner-wgpeers",
-          props: { apiBase: "/api/owner" },
+          name: 'owner-wgpeers',
+          props: { apiBase: '/api/owner' },
         },
-        { path: "admins", component: OwnerAdmins, name: "owner-admins" },
-        { path: "invite-tree", component: OwnerInviteTree, name: "owner-invite-tree" },
-        { path: "clients", component: OwnerClients, name: "owner-clients" },
-        { path: "audit", component: OwnerAudit, name: "owner-audit" },
+        { path: 'admins', component: OwnerAdmins, name: 'owner-admins' },
+        { path: 'invite-tree', component: OwnerInviteTree, name: 'owner-invite-tree' },
+        { path: 'clients', component: OwnerClients, name: 'owner-clients' },
+        { path: 'audit', component: OwnerAudit, name: 'owner-audit' },
       ],
     },
   ],
@@ -98,26 +100,26 @@ router.beforeEach(async (to) => {
     await refreshSession();
     sessionProbed = true;
   }
-  if (to.path.startsWith("/admin") || to.path.startsWith("/owner")) {
+  if (to.path.startsWith('/admin') || to.path.startsWith('/owner')) {
     if (!authState.value.admin) {
       await refreshSession();
     }
     if (!authState.value.admin) {
-      return { path: "/login", query: { redirect: to.fullPath } };
+      return { path: '/login', query: { redirect: to.fullPath } };
     }
   }
-  if (to.path.startsWith("/owner") && authState.value.admin?.role !== "owner") {
-    return { path: "/admin/clients" };
+  if (to.path.startsWith('/owner') && authState.value.admin?.role !== 'owner') {
+    return { path: '/admin/clients' };
   }
-  if (to.name === "login" && authState.value.admin) {
-    return { path: "/admin/clients" };
+  if (to.name === 'login' && authState.value.admin) {
+    return { path: '/admin/clients' };
   }
-  if (to.name === "register") {
+  if (to.name === 'register') {
     if (authState.value.admin) {
-      return { path: "/admin/clients" };
+      return { path: '/admin/clients' };
     }
-    if (registrationState.value.mode === "closed") {
-      return { path: "/login" };
+    if (registrationState.value.mode === 'closed') {
+      return { path: '/login' };
     }
   }
   return true;

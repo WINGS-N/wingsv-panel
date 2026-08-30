@@ -57,6 +57,9 @@ message GlobalCounters {
   uint64 down_bytes = 6;
   double up_rate_bps = 7;
   double down_rate_bps = 8;
+  // Since the federation started, not since this period or this process.
+  // Survives a restart, and a node leaving does not take its share away with it
+  uint64 lifetime_bytes = 9;
 }
 
 // PublicCounters is what the landing page shows. No node ids, no donor ids, no
@@ -68,6 +71,9 @@ message PublicCounters {
   uint64 donated_bytes_this_period = 4;
   double up_rate_bps = 5;
   double down_rate_bps = 6;
+  // Everything the federation has ever carried. The period figure resets and
+  // makes the effort look smaller than it was; this one is the honest total
+  uint64 lifetime_bytes = 7;
 }
 
 message PublicCountersRequest {}

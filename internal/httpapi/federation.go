@@ -69,18 +69,22 @@ type publicStatsPayload struct {
 	DownBytes   uint64  `json:"down_bytes"`
 	UpRateBps   float64 `json:"up_rate_bps"`
 	DownRateBps float64 `json:"down_rate_bps"`
+	// Everything the federation has ever carried. The figures above reset with
+	// the budget period, which makes the effort look smaller than it was
+	LifetimeBytes uint64 `json:"lifetime_bytes"`
 }
 
 func publicStats(update *headpb.LiveUpdate) publicStatsPayload {
 	global := update.GetGlobal()
 	return publicStatsPayload{
-		UnixMs:      update.GetUnixMs(),
-		NodesOnline: global.GetNodesOnline(),
-		UsersOnline: global.GetSessions(),
-		UpBytes:     global.GetUpBytes(),
-		DownBytes:   global.GetDownBytes(),
-		UpRateBps:   global.GetUpRateBps(),
-		DownRateBps: global.GetDownRateBps(),
+		UnixMs:        update.GetUnixMs(),
+		NodesOnline:   global.GetNodesOnline(),
+		UsersOnline:   global.GetSessions(),
+		UpBytes:       global.GetUpBytes(),
+		DownBytes:     global.GetDownBytes(),
+		UpRateBps:     global.GetUpRateBps(),
+		DownRateBps:   global.GetDownRateBps(),
+		LifetimeBytes: global.GetLifetimeBytes(),
 	}
 }
 

@@ -1,0 +1,172 @@
+<template>
+  <!-- ============================================================
+       ПРОПАГАНДА ФЕДЕРАЦИИ - отдельная страница, на которую ведут
+       из приложения и из панели. Задача одна: объяснить, зачем
+       отдавать свой сервер, и показать, что пул живой прямо сейчас.
+       ============================================================ -->
+  <div class="landing-stage">
+    <header class="samsung-topbar">
+      <router-link class="samsung-topbar-brand" to="/">
+        <span class="wordmark-inline">WINGS V</span>
+      </router-link>
+      <router-link class="samsung-topbar-link" :to="{ name: 'login' }"> Войти в панель </router-link>
+    </header>
+
+    <section class="landing-hero">
+      <div class="landing-hero-inner">
+        <div class="landing-hero-text">
+          <span class="fed-hero-kicker">
+            <span class="live-dot" aria-hidden="true"></span>
+            федерация <span class="wordmark-inline">WINGS V</span>
+          </span>
+          <h1 class="landing-hero-headline">
+            Поделись трафиком<br />
+            во благо народа
+          </h1>
+          <p class="landing-hero-sub">
+            Свободный интернет не берётся из воздуха - его держат живые серверы живых людей. Отдайте своему серверу
+            месячный лимит, который не жалко, и им будут пользоваться те, кому платный VPN не по карману.
+          </p>
+          <div class="landing-hero-actions">
+            <SamsungButton :to="{ name: 'login' }">Отдать сервер</SamsungButton>
+            <SamsungButton variant="ghost" href="#how">Как это работает</SamsungButton>
+          </div>
+        </div>
+
+        <div class="landing-hero-art" aria-hidden="true">
+          <img src="/img/icon-cloud-up.png" alt="" class="landing-hero-illustration" />
+        </div>
+      </div>
+    </section>
+
+    <main class="page-shell">
+      <FederationCounters />
+
+      <section id="how" class="surface-card mt-6">
+        <h2 class="hero-title">Как это работает</h2>
+        <div class="fed-steps">
+          <article class="fed-step">
+            <img src="/img/icon-cloud-up.png" alt="" class="fed-step-icon" aria-hidden="true" />
+            <h3 class="fed-step-title">Вы называете лимит</h3>
+            <p class="fed-step-copy">
+              Сколько трафика в месяц вы готовы отдать. Не гигабайтом больше: как только лимит выбран, узел сам выходит
+              из ротации и ждёт следующего периода.
+            </p>
+          </article>
+          <article class="fed-step">
+            <img src="/img/icon-network.png" alt="" class="fed-step-icon" aria-hidden="true" />
+            <h3 class="fed-step-title">Одна команда на сервере</h3>
+            <p class="fed-step-copy">
+              Установщик сам поставит агента, поднимет Xray и подключит узел к пулу. Ничего настраивать руками не надо,
+              и ваши собственные клиенты на этом сервере продолжают работать как работали.
+            </p>
+          </article>
+          <article class="fed-step">
+            <img src="/img/icon-shield.png" alt="" class="fed-step-icon" aria-hidden="true" />
+            <h3 class="fed-step-title">Дальше он работает сам</h3>
+            <p class="fed-step-copy">
+              Балансировщик раздаёт узел бесплатным пользователям, следит за качеством и снимает его из ротации, если
+              сервер начал тупить. Вы видите только цифры: трафик, сессии, аптайм.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="surface-card mt-6">
+        <h2 class="hero-title">Честно о том, что видно</h2>
+        <p class="body-copy mt-3">
+          Про приватность принято молчать общими словами. Здесь сказано прямо, в обе стороны.
+        </p>
+        <div class="fed-honesty">
+          <div class="surface-inset">
+            <span class="section-kicker">Что видит донор</span>
+            <p class="fed-step-copy mt-2">
+              Только агрегаты: сколько трафика ушло, сколько сессий, сколько узел был жив. Ни одной ручки, которая
+              связала бы узел с человеком, в панели донора не существует - это не настройка, это отсутствующая
+              возможность.
+            </p>
+          </div>
+          <div class="surface-inset">
+            <span class="section-kicker">Что знает узел</span>
+            <p class="fed-step-copy mt-2">
+              Ровно то же, что знает любой VPN-оператор о своём трафике. Поэтому на узел не уходит никакой личности:
+              профиль это случайный идентификатор, без почты, имени и привязки к аккаунту.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-card mt-6">
+        <h2 class="hero-title">Отдать сервер</h2>
+        <p class="body-copy mt-3">
+          Нужен любой VPS с ядром 5.6 и свежее. Токен для установщика выдаётся в панели, в разделе
+          <span class="wordmark-inline">Федерация</span>: там же видно, сколько ваши узлы уже отдали.
+        </p>
+        <div class="actions-row">
+          <SamsungButton :to="{ name: 'login' }">Войти и получить токен</SamsungButton>
+          <SamsungButton variant="ghost" :to="{ name: 'register' }">Завести аккаунт</SamsungButton>
+        </div>
+      </section>
+    </main>
+  </div>
+</template>
+
+<script setup>
+import SamsungButton from '@/components/layout/SamsungButton.vue';
+import FederationCounters from '@/components/domain/FederationCounters.vue';
+</script>
+
+<style scoped>
+.fed-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(252, 252, 252, 0.55);
+}
+
+.fed-steps {
+  margin-top: 20px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.fed-step {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #242427;
+  padding: 20px;
+}
+
+.fed-step-icon {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.fed-step-title {
+  margin-top: 14px;
+  font-family: 'SamsungSharpSans', 'SamsungOne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fbfbfb;
+}
+
+.fed-step-copy {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(252, 252, 252, 0.62);
+}
+
+.fed-honesty {
+  margin-top: 20px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+</style>

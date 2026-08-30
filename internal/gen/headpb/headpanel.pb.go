@@ -206,15 +206,18 @@ func (x *LiveUpdate) GetNode() *NodeCounters {
 }
 
 type GlobalCounters struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	NodesTotal    uint32                 `protobuf:"varint,1,opt,name=nodes_total,json=nodesTotal,proto3" json:"nodes_total,omitempty"`
-	NodesOnline   uint32                 `protobuf:"varint,2,opt,name=nodes_online,json=nodesOnline,proto3" json:"nodes_online,omitempty"`
-	Sessions      uint32                 `protobuf:"varint,3,opt,name=sessions,proto3" json:"sessions,omitempty"`
-	Streams       uint32                 `protobuf:"varint,4,opt,name=streams,proto3" json:"streams,omitempty"`
-	UpBytes       uint64                 `protobuf:"varint,5,opt,name=up_bytes,json=upBytes,proto3" json:"up_bytes,omitempty"`
-	DownBytes     uint64                 `protobuf:"varint,6,opt,name=down_bytes,json=downBytes,proto3" json:"down_bytes,omitempty"`
-	UpRateBps     float64                `protobuf:"fixed64,7,opt,name=up_rate_bps,json=upRateBps,proto3" json:"up_rate_bps,omitempty"`
-	DownRateBps   float64                `protobuf:"fixed64,8,opt,name=down_rate_bps,json=downRateBps,proto3" json:"down_rate_bps,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	NodesTotal  uint32                 `protobuf:"varint,1,opt,name=nodes_total,json=nodesTotal,proto3" json:"nodes_total,omitempty"`
+	NodesOnline uint32                 `protobuf:"varint,2,opt,name=nodes_online,json=nodesOnline,proto3" json:"nodes_online,omitempty"`
+	Sessions    uint32                 `protobuf:"varint,3,opt,name=sessions,proto3" json:"sessions,omitempty"`
+	Streams     uint32                 `protobuf:"varint,4,opt,name=streams,proto3" json:"streams,omitempty"`
+	UpBytes     uint64                 `protobuf:"varint,5,opt,name=up_bytes,json=upBytes,proto3" json:"up_bytes,omitempty"`
+	DownBytes   uint64                 `protobuf:"varint,6,opt,name=down_bytes,json=downBytes,proto3" json:"down_bytes,omitempty"`
+	UpRateBps   float64                `protobuf:"fixed64,7,opt,name=up_rate_bps,json=upRateBps,proto3" json:"up_rate_bps,omitempty"`
+	DownRateBps float64                `protobuf:"fixed64,8,opt,name=down_rate_bps,json=downRateBps,proto3" json:"down_rate_bps,omitempty"`
+	// Since the federation started, not since this period or this process.
+	// Survives a restart, and a node leaving does not take its share away with it
+	LifetimeBytes uint64 `protobuf:"varint,9,opt,name=lifetime_bytes,json=lifetimeBytes,proto3" json:"lifetime_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -305,6 +308,13 @@ func (x *GlobalCounters) GetDownRateBps() float64 {
 	return 0
 }
 
+func (x *GlobalCounters) GetLifetimeBytes() uint64 {
+	if x != nil {
+		return x.LifetimeBytes
+	}
+	return 0
+}
+
 // PublicCounters is what the landing page shows. No node ids, no donor ids, no
 // per-node breakdown: this is served without a session
 type PublicCounters struct {
@@ -315,8 +325,11 @@ type PublicCounters struct {
 	DonatedBytesThisPeriod uint64                 `protobuf:"varint,4,opt,name=donated_bytes_this_period,json=donatedBytesThisPeriod,proto3" json:"donated_bytes_this_period,omitempty"`
 	UpRateBps              float64                `protobuf:"fixed64,5,opt,name=up_rate_bps,json=upRateBps,proto3" json:"up_rate_bps,omitempty"`
 	DownRateBps            float64                `protobuf:"fixed64,6,opt,name=down_rate_bps,json=downRateBps,proto3" json:"down_rate_bps,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Everything the federation has ever carried. The period figure resets and
+	// makes the effort look smaller than it was; this one is the honest total
+	LifetimeBytes uint64 `protobuf:"varint,7,opt,name=lifetime_bytes,json=lifetimeBytes,proto3" json:"lifetime_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PublicCounters) Reset() {
@@ -387,6 +400,13 @@ func (x *PublicCounters) GetUpRateBps() float64 {
 func (x *PublicCounters) GetDownRateBps() float64 {
 	if x != nil {
 		return x.DownRateBps
+	}
+	return 0
+}
+
+func (x *PublicCounters) GetLifetimeBytes() uint64 {
+	if x != nil {
+		return x.LifetimeBytes
 	}
 	return 0
 }
@@ -1380,7 +1400,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\aunix_ms\x18\x01 \x01(\x03R\x06unixMs\x12;\n" +
 	"\x06global\x18\x02 \x01(\v2#.wingsv.headpanel.v1.GlobalCountersR\x06global\x128\n" +
 	"\x05donor\x18\x03 \x01(\v2\".wingsv.headpanel.v1.DonorCountersR\x05donor\x125\n" +
-	"\x04node\x18\x04 \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04node\"\x88\x02\n" +
+	"\x04node\x18\x04 \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04node\"\xaf\x02\n" +
 	"\x0eGlobalCounters\x12\x1f\n" +
 	"\vnodes_total\x18\x01 \x01(\rR\n" +
 	"nodesTotal\x12!\n" +
@@ -1391,14 +1411,16 @@ const file_headpanel_proto_rawDesc = "" +
 	"\n" +
 	"down_bytes\x18\x06 \x01(\x04R\tdownBytes\x12\x1e\n" +
 	"\vup_rate_bps\x18\a \x01(\x01R\tupRateBps\x12\"\n" +
-	"\rdown_rate_bps\x18\b \x01(\x01R\vdownRateBps\"\xee\x01\n" +
+	"\rdown_rate_bps\x18\b \x01(\x01R\vdownRateBps\x12%\n" +
+	"\x0elifetime_bytes\x18\t \x01(\x04R\rlifetimeBytes\"\x95\x02\n" +
 	"\x0ePublicCounters\x12\x17\n" +
 	"\aunix_ms\x18\x01 \x01(\x03R\x06unixMs\x12!\n" +
 	"\fnodes_online\x18\x02 \x01(\rR\vnodesOnline\x12!\n" +
 	"\fusers_online\x18\x03 \x01(\rR\vusersOnline\x129\n" +
 	"\x19donated_bytes_this_period\x18\x04 \x01(\x04R\x16donatedBytesThisPeriod\x12\x1e\n" +
 	"\vup_rate_bps\x18\x05 \x01(\x01R\tupRateBps\x12\"\n" +
-	"\rdown_rate_bps\x18\x06 \x01(\x01R\vdownRateBps\"\x17\n" +
+	"\rdown_rate_bps\x18\x06 \x01(\x01R\vdownRateBps\x12%\n" +
+	"\x0elifetime_bytes\x18\a \x01(\x04R\rlifetimeBytes\"\x17\n" +
 	"\x15PublicCountersRequest\"\xd0\x02\n" +
 	"\rDonorCounters\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x14\n" +
