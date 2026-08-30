@@ -520,6 +520,12 @@
     }
   }
 
+  .oracle-badge {
+    @apply whitespace-nowrap rounded-full px-3 py-1 text-[12px] font-bold uppercase tracking-[0.1em];
+    background: theme('colors.wings.badgeBg');
+    color: theme('colors.wings.badgeText');
+  }
+
   .live-dot {
     @apply block h-2 w-2 shrink-0 rounded-full;
     background: #6fe3a4;
