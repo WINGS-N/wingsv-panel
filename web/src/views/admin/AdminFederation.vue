@@ -100,6 +100,15 @@
             <span class="inline-flex items-center gap-1">
               <ArrowUp :size="13" :style="{ color: FLOW_UP }" aria-hidden="true" />{{ bytes(node.used_bytes) }}
               <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
+              <button type="button" class="fed-node-edit" title="Изменить месячный лимит" @click="startBudget(node)">
+                <Pencil :size="13" aria-hidden="true" />
+              </button>
+            </span>
+            <span v-if="budgetFor === node.id" class="mt-2 flex flex-wrap items-center gap-2">
+              <input v-model.number="budgetGb" class="fed-budget-input" type="number" min="1" step="1" />
+              <span class="text-wings-kicker">GB в месяц</span>
+              <SamsungButton :busy="busyNode === node.id" @click="saveBudget(node)">Сохранить</SamsungButton>
+              <SamsungButton variant="ghost" @click="budgetFor = ''">Отмена</SamsungButton>
             </span>
           </span>
           <!-- Полоса бюджета: цифры выше говорят сколько, она - насколько близко
@@ -127,8 +136,17 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { ArrowDown, ArrowUp, CalendarRange, PauseCircle, PlayCircle, Plus, Server, Users } from 'lucide-vue-next';
-import { connectAdminSocket } from '@/stores/admin-socket.js';
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarRange,
+  PauseCircle,
+  Pencil,
+  PlayCircle,
+  Plus,
+  Server,
+  Users,
+} from 'lucide-vue-next';
 
 // Тот же цветовой код направления, что в приложении
 const FLOW_UP = '#0381fe';
@@ -146,6 +164,8 @@ const minting = ref(false);
 const uses = ref(1);
 const mintedUses = ref(1);
 const busyNode = ref('');
+const budgetFor = ref('');
+const budgetGb = ref(0);
 const loadError = ref('');
 const command = ref('');
 const summary = reactive({
@@ -160,7 +180,7 @@ const summary = reactive({
 });
 
 let timer = null;
-let socketHandle = null;
+let live = null;
 
 onMounted(() => {
   load();
@@ -169,21 +189,21 @@ onMounted(() => {
   timer = setInterval(load, 20000);
   // А цифры сверху идут потоком, поэтому кнопки "обновить" на этом экране нет:
   // человеку не должно приходиться думать о свежести данных
-  socketHandle = connectAdminSocket((event) => {
-    if (event.kind !== 'fed_global' || !event.payload) return;
-    const live = event.payload;
-    summary.nodes_online = live.nodes_online ?? summary.nodes_online;
-    summary.sessions = live.users_online ?? summary.sessions;
-    summary.up_rate_bps = live.up_rate_bps ?? summary.up_rate_bps;
-    summary.down_rate_bps = live.down_rate_bps ?? summary.down_rate_bps;
-  });
+  live = new EventSource('/api/admin/federation/live', { withCredentials: true });
+  live.onmessage = (event) => {
+    try {
+      Object.assign(summary, JSON.parse(event.data));
+    } catch {
+      // Полуприехавший кадр просто пропускаем: следующий придёт через секунду
+    }
+  };
 });
 
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
-  if (socketHandle) {
-    socketHandle.close();
-    socketHandle = null;
+  if (live) {
+    live.close();
+    live = null;
   }
 });
 
@@ -222,6 +242,34 @@ async function mint() {
     loadError.value = String(err.message || err);
   } finally {
     minting.value = false;
+  }
+}
+
+// Донор правит лимит в GB: байты он всё равно набирает из головы, а руками
+// вводить их некому
+function startBudget(node) {
+  budgetFor.value = node.id;
+  budgetGb.value = Math.max(1, Math.round(Number(node.declared_budget_bytes || 0) / 1024 ** 3));
+}
+
+async function saveBudget(node) {
+  const gb = Math.max(1, Math.round(Number(budgetGb.value) || 0));
+  busyNode.value = node.id;
+  try {
+    const res = await fetch(`/api/admin/federation/nodes/${node.id}/budget`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ declared_budget_bytes: gb * 1024 ** 3 }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    node.declared_budget_bytes = gb * 1024 ** 3;
+    budgetFor.value = '';
+    loadError.value = '';
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  } finally {
+    busyNode.value = '';
   }
 }
 

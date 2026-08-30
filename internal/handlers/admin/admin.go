@@ -109,6 +109,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/fleet/restart", h.requireAuth(h.handleFleetRestart))
 	mux.HandleFunc("/api/admin/federation/summary", h.requireAuth(h.handleFederationSummary))
 	mux.HandleFunc("/api/admin/federation/enroll-token", h.requireAuth(h.handleFederationEnrollToken))
+	mux.HandleFunc("/api/admin/federation/live", h.requireAuth(h.handleFederationLive))
 	mux.HandleFunc("/api/admin/federation/nodes/", h.requireAuth(h.handleFederationNodeState))
 	mux.HandleFunc("/api/admin/master/config", h.requireAuth(h.handleMasterConfig))
 	mux.HandleFunc("/api/admin/master/config/apply", h.requireAuth(h.handleMasterConfigApply))

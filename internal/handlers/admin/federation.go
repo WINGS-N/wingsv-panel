@@ -3,11 +3,13 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"v.wingsnet.org/internal/gen/headpb"
 	"v.wingsnet.org/internal/storage"
 )
 
@@ -204,26 +206,16 @@ func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusNotFound, "federation is off")
 		return
 	}
-	nodeID := strings.TrimPrefix(r.URL.Path, "/api/admin/federation/nodes/")
-	nodeID = strings.TrimSuffix(nodeID, "/state")
-	if nodeID == "" || strings.Contains(nodeID, "/") {
+	nodeID, action, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/api/admin/federation/nodes/"), "/")
+	if nodeID == "" {
 		writeError(w, http.StatusBadRequest, "missing node id")
-		return
-	}
-	var req struct {
-		State  string `json:"state"`
-		Reason string `json:"reason"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "bad request body")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
-	// The node has to belong to this admin. The head does not check ownership on
-	// SetNodeState, so a panel that skipped this would let any admin park anyone's
-	// machine
+	// The node has to belong to this admin. The head checks no ownership here, so
+	// a panel that skipped this would let any admin touch anyone's machine
 	owned, err := h.fed.ListNodes(ctx, donorID(admin))
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
@@ -240,9 +232,88 @@ func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusNotFound, "no such node")
 		return
 	}
-	if err := h.fed.SetNodeState(ctx, nodeID, req.State, req.Reason); err != nil {
-		writeError(w, http.StatusBadGateway, err.Error())
+
+	switch action {
+	case "state":
+		var req struct {
+			State  string `json:"state"`
+			Reason string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "bad request body")
+			return
+		}
+		if err := h.fed.SetNodeState(ctx, nodeID, req.State, req.Reason); err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	case "budget":
+		var req struct {
+			DeclaredBudgetBytes uint64 `json:"declared_budget_bytes"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, http.StatusBadRequest, "bad request body")
+			return
+		}
+		got, err := h.fed.SetNodeBudget(ctx, nodeID, req.DeclaredBudgetBytes)
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"declared_budget_bytes": got})
+	default:
+		writeError(w, http.StatusNotFound, "no such node action")
+	}
+}
+
+// handleFederationLive streams the asking donor's own counters. The admin
+// socket carries the fleet-wide figures, and those belong on the landing page,
+// not on a page titled "your nodes"
+func (h *Handler) handleFederationLive(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if !h.federationOn() {
+		writeError(w, http.StatusNotFound, "federation is off")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming unsupported")
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	frames := make(chan []byte, 1)
+	go h.fed.StreamDonor(r.Context(), donorID(admin), func(update *headpb.LiveUpdate) {
+		d := update.GetDonor()
+		payload, err := json.Marshal(map[string]any{
+			"nodes":         d.GetNodes(),
+			"nodes_online":  d.GetNodesOnline(),
+			"sessions":      d.GetSessions(),
+			"up_rate_bps":   d.GetUpRateBps(),
+			"down_rate_bps": d.GetDownRateBps(),
+			"used_bytes":    d.GetUsedBytes(),
+		})
+		if err != nil {
+			return
+		}
+		select {
+		case <-frames:
+		default:
+		}
+		frames <- payload
+	})
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case payload := <-frames:
+			if _, err := fmt.Fprintf(w, "data: %s\n\n", payload); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }

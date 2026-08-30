@@ -162,6 +162,22 @@ func (c *Client) SetNodeState(ctx context.Context, nodeID, state, reason string)
 	return err
 }
 
+// SetNodeBudget changes what the donor pledged for the month and returns the
+// budget the head settled on.
+func (c *Client) SetNodeBudget(ctx context.Context, nodeID string, bytes uint64) (uint64, error) {
+	client, err := c.dial()
+	if err != nil {
+		return 0, err
+	}
+	got, err := client.SetNodeBudget(ctx, &headpb.SetNodeBudgetRequest{
+		NodeId: nodeID, DeclaredBudgetBytes: bytes,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return got.GetDeclaredBudgetBytes(), nil
+}
+
 // retryDelay is how long the live loop waits before re-dialing a head that is
 // down. Long enough not to hammer it, short enough that the counter comes back
 // on its own after a head restart.
@@ -185,7 +201,31 @@ func (c *Client) StreamGlobal(ctx context.Context, onUpdate func(*headpb.LiveUpd
 	}
 }
 
+// StreamDonor is the same loop scoped to one donor. A donor watching their own
+// page must never be fed the fleet's numbers: they are a different, larger set
+// and reading them as one's own is simply wrong
+func (c *Client) StreamDonor(ctx context.Context, donorID string, onUpdate func(*headpb.LiveUpdate)) {
+	if !c.Enabled() {
+		return
+	}
+	for ctx.Err() == nil {
+		if err := c.streamScoped(ctx, &headpb.LiveSubscribe{
+			Scope: headpb.LiveScope_LIVE_SCOPE_DONOR, DonorId: donorID,
+		}, onUpdate); err != nil && ctx.Err() == nil {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(retryDelay):
+			}
+		}
+	}
+}
+
 func (c *Client) streamOnce(ctx context.Context, onUpdate func(*headpb.LiveUpdate)) error {
+	return c.streamScoped(ctx, &headpb.LiveSubscribe{Scope: headpb.LiveScope_LIVE_SCOPE_GLOBAL}, onUpdate)
+}
+
+func (c *Client) streamScoped(ctx context.Context, sub *headpb.LiveSubscribe, onUpdate func(*headpb.LiveUpdate)) error {
 	client, err := c.dial()
 	if err != nil {
 		return err
@@ -194,7 +234,7 @@ func (c *Client) streamOnce(ctx context.Context, onUpdate func(*headpb.LiveUpdat
 	if err != nil {
 		return err
 	}
-	if err := stream.Send(&headpb.LiveSubscribe{Scope: headpb.LiveScope_LIVE_SCOPE_GLOBAL}); err != nil {
+	if err := stream.Send(sub); err != nil {
 		return err
 	}
 	for {

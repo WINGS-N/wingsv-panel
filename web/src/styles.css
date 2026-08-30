@@ -1023,6 +1023,18 @@
     @apply text-[13px] text-wings-muted;
   }
 
+  .fed-node-edit {
+    @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-wings-muted transition-colors;
+  }
+
+  .fed-node-edit:hover {
+    @apply bg-white/10 text-wings-text;
+  }
+
+  .fed-budget-input {
+    @apply h-9 w-24 rounded-[12px] border border-white/10 bg-white/5 px-3 text-[14px] text-wings-text outline-none;
+  }
+
   .admin-mono {
     font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     @apply inline-block max-w-full rounded-md bg-white/10 px-1.5 py-0.5 text-[12px];
