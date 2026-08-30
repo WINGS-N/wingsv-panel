@@ -28,6 +28,7 @@ import (
 	"v.wingsnet.org/internal/bus"
 	"v.wingsnet.org/internal/collector"
 	"v.wingsnet.org/internal/config"
+	"v.wingsnet.org/internal/fedclient"
 	"v.wingsnet.org/internal/githubapi"
 	"v.wingsnet.org/internal/guardianhub"
 	adminhandler "v.wingsnet.org/internal/handlers/admin"
@@ -57,6 +58,10 @@ type Server struct {
 	guardianH     *guardianhandler.Handler
 	ownerH        *ownerhandler.Handler
 	apk           *apkCache
+	fedLive       *federationLive
+	// fedConfigured is fixed at construction so the request path never races the
+	// goroutine that starts the live stream
+	fedConfigured bool
 }
 
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Server {
@@ -72,6 +77,8 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		guardianH:     guardianhandler.New(store, hub),
 		ownerH:        ownerhandler.New(store, authSvc, hub),
 		apk:           newAPKCache(cfg.APKCacheDir, releaseClient, cfg.GitHubRepo, cfg.ReleaseAssetSuffix),
+		fedLive:       &federationLive{},
+		fedConfigured: cfg.FederationHead != "" && cfg.FederationSecret != "",
 	}
 }
 
@@ -92,6 +99,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/download/latest", s.handleLatestDownload)
 	mux.HandleFunc("/.well-known/assetlinks.json", s.handleAssetLinks)
 	mux.HandleFunc("/connect.sh", s.handleConnectScript)
+	mux.HandleFunc("/api/federation/stats", s.handleFederationStats)
 	s.adminH.Register(mux)
 	s.adminH.RegisterWS(mux)
 	s.ownerH.Register(mux)
@@ -642,6 +650,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return relayclient.New(token)
 	}, liveEmit)
 	go liveStreamer.Run(ctx)
+
+	// Federation counters, when a head is configured. Same emit closure as the
+	// relay stats above, so the admin socket carries one more event kind and
+	// needs no change of its own.
+	fed := fedclient.New(cfg.FederationHead, cfg.FederationSecret)
+	apiServer.StartFederationLive(ctx, fed, liveEmit)
 
 	go collector.New(store, relayFactory, collector.Options{
 		Interval:        3 * time.Second,
