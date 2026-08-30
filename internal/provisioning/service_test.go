@@ -317,3 +317,63 @@ func TestResolveUnknownNode(t *testing.T) {
 		t.Fatalf("code = %v, want NotFound", status.Code(err))
 	}
 }
+
+// The enrollment QR carries one link to stay scannable, so the rest of the pool
+// has to arrive on the provision the same enrolment performs. Without this a
+// client is one dead link away from not connecting at all.
+func TestResolveCarriesTheOwnersWholeLinkPool(t *testing.T) {
+	st, clientID, token := setup(t)
+	admins, err := st.ListAdmins()
+	if err != nil || len(admins) == 0 {
+		t.Fatalf("admins: %v", err)
+	}
+	pool := []string{"https://vk.com/call/a", "https://vk.com/call/b", "https://vk.com/call/c"}
+	if err := st.SetAdminVKLinks(admins[0].ID, pool); err != nil {
+		t.Fatalf("set links: %v", err)
+	}
+
+	svc := NewService(st, &fakeProvisioner{peer: Peer{PublicKey: "pub"}})
+	// On the node's own wg the first call only says "mint it yourself"; the config
+	// - and the pool with it - comes back when the node reports the peer
+	if _, err := svc.ResolveClientConfig(context.Background(),
+		&provisioningpb.ResolveClientConfigRequest{ClientId: clientID, Token: token, NodeId: "n1"}); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	resp, err := svc.ResolveClientConfig(context.Background(), &provisioningpb.ResolveClientConfigRequest{
+		ClientId: clientID, Token: token, NodeId: "n1", Hwid: "hw",
+		WgPublicKey: "pub", WgPrivateKey: "priv", WgAllowedIps: "10.66.66.2/32", WgServerPublicKey: "spub",
+	})
+	if err != nil {
+		t.Fatalf("report: %v", err)
+	}
+	got := resp.GetVkLinks()
+	if len(got) != len(pool) {
+		t.Fatalf("provision carried %d links, want the whole pool of %d: %v", len(got), len(pool), got)
+	}
+	for i, want := range pool {
+		if got[i] != want {
+			t.Errorf("link %d = %q, want %q", i, got[i], want)
+		}
+	}
+}
+
+// An admin with no pool is not an error: the client still gets its tunnel and
+// whatever link its QR already carried.
+func TestResolveWithNoLinksStillProvisions(t *testing.T) {
+	st, clientID, token := setup(t)
+	svc := NewService(st, &fakeProvisioner{peer: Peer{PublicKey: "pub"}})
+	if _, err := svc.ResolveClientConfig(context.Background(),
+		&provisioningpb.ResolveClientConfigRequest{ClientId: clientID, Token: token, NodeId: "n1"}); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	resp, err := svc.ResolveClientConfig(context.Background(), &provisioningpb.ResolveClientConfigRequest{
+		ClientId: clientID, Token: token, NodeId: "n1", Hwid: "hw",
+		WgPublicKey: "pub", WgPrivateKey: "priv", WgAllowedIps: "10.66.66.2/32", WgServerPublicKey: "spub",
+	})
+	if err != nil {
+		t.Fatalf("report: %v", err)
+	}
+	if len(resp.GetVkLinks()) != 0 {
+		t.Errorf("links = %v, want none", resp.GetVkLinks())
+	}
+}

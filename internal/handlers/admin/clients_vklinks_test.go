@@ -28,11 +28,13 @@ func TestApplyAdminVKLinksCapsAndGates(t *testing.T) {
 	}
 	h := &Handler{store: st}
 
-	// Enrollment link / QR: capped to 2.
+	// Enrollment link / QR: one link, and one only. The rest of the pool arrives
+	// on the DTLS provision that the same enrolment performs, so a denser barcode
+	// would buy nothing.
 	linkTurn := managedTurnForTest()
 	h.applyAdminVKLinks(linkTurn, admin.ID, maxEnrollmentVKLinks)
-	if got := len(linkTurn.GetLinks()); got != 2 {
-		t.Fatalf("enrollment link should carry 2 VK links, got %d (%v)", got, linkTurn.GetLinks())
+	if got := len(linkTurn.GetLinks()); got != 1 {
+		t.Fatalf("enrollment link should carry exactly 1 VK link, got %d (%v)", got, linkTurn.GetLinks())
 	}
 
 	// Stored config: full pool (WS source of truth).

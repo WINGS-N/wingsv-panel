@@ -551,10 +551,11 @@ func (h *Handler) buildClientLink(
 }
 
 // maxEnrollmentVKLinks caps how many VK links the enrollment link / QR carries.
-// The QR only needs a couple to bootstrap the relay; the rest of the admin's pool
-// reaches a remote-controlled client over the Guardian WS (config-on-connect
-// pushes the full stored config). Keeping the QR small keeps it scannable.
-const maxEnrollmentVKLinks = 2
+//
+// One. The rest of the pool now arrives on the DTLS provision that the very same
+// enrolment performs, so a second link in the barcode buys nothing and every link
+// makes the QR denser and harder to scan. See ResolveClientConfigResponse.vk_links.
+const maxEnrollmentVKLinks = 1
 
 // applyAdminVKLinks embeds the admin's shared VK Links pool into turn. The app
 // imports these append-only into its own shared settings.vkLinks (any profile

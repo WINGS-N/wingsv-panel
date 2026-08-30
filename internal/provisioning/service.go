@@ -175,12 +175,12 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		s.replicatePeer(ctx, req.GetClientId(), req.GetNodeId(), peer)
-		return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
+		return s.response(client.OwnerAdminID, peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
 	}
 
 	existing, err := s.store.GetClientWGPeer(req.GetClientId(), req.GetNodeId())
 	if err == nil {
-		return s.response(existing.PrivateKey, existing.PublicKey, existing.AllowedIPs, existing.ServerPublicKey), nil
+		return s.response(client.OwnerAdminID, existing.PrivateKey, existing.PublicKey, existing.AllowedIPs, existing.ServerPublicKey), nil
 	}
 	if !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -210,7 +210,7 @@ func (s *Service) ResolveClientConfig(ctx context.Context, req *provisioningpb.R
 		}); err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-		return s.response(peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
+		return s.response(client.OwnerAdminID, peer.PrivateKey, peer.PublicKey, peer.AllowedIPs, peer.ServerPublicKey), nil
 	}
 
 	// Own wg: tell the calling node to mint the peer on its own wg interface and
@@ -304,8 +304,27 @@ func (s *Service) replicatePeer(ctx context.Context, clientID, originNodeID stri
 	}
 }
 
-func (s *Service) response(privateKey, publicKey, address, serverPublicKey string) *provisioningpb.ResolveClientConfigResponse {
+// response builds the resolved config, including the owner's whole VK link pool.
+//
+// The pool travels on every resolve rather than only the first: the enrollment QR
+// carries a single link to stay scannable, a reinstalled client has nothing but
+// that one, and the panel is the only side that knows the rest. The app merges
+// append-only, so sending all of them costs nothing and needs no bookkeeping
+// about which one the QR happened to get.
+func (s *Service) response(
+	ownerAdminID int64,
+	privateKey, publicKey, address, serverPublicKey string,
+) *provisioningpb.ResolveClientConfigResponse {
+	links, err := s.store.GetAdminVKLinks(ownerAdminID)
+	if err != nil {
+		// A pool we could not read is not a reason to fail an enrolment that
+		// otherwise worked: the client still gets its tunnel and the link it
+		// already has
+		log.Printf("provisioning: could not read vk links for admin %d: %v", ownerAdminID, err)
+		links = nil
+	}
 	return &provisioningpb.ResolveClientConfigResponse{
+		VkLinks: links,
 		Wg: &provisioningpb.WireguardConfig{
 			PrivateKey:      privateKey,
 			PublicKey:       publicKey,
