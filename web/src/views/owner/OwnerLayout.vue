@@ -46,6 +46,10 @@
             <UsersRound class="admin-nav-icon" aria-hidden="true" />
             <span>Администраторы</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-invite-tree' }" active-class="is-active">
+            <Network class="admin-nav-icon" aria-hidden="true" />
+            <span>Дерево инвайтов</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-clients' }" active-class="is-active">
             <Smartphone class="admin-nav-icon" aria-hidden="true" />
             <span>Все клиенты</span>
@@ -71,7 +75,16 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowLeft, ClipboardList, LayoutDashboard, LogOut, Server, Smartphone, UsersRound } from 'lucide-vue-next';
+import {
+  ArrowLeft,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Network,
+  Server,
+  Smartphone,
+  UsersRound,
+} from 'lucide-vue-next';
 import { authState, logout, myAvatarUrl } from '@/stores/auth.js';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 

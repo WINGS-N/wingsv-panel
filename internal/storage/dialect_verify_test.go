@@ -97,6 +97,62 @@ func exerciseDialect(t *testing.T, driver Driver, dsn string) {
 		t.Fatalf("package metadata merge lost old values: %+v err=%v", m["com.x"], err)
 	}
 
+	// The invite tree walks edges and updates a subtree, which is the newest
+	// thing here and the easiest to get wrong on a dialect that is not sqlite
+	invited, err := st.CreateAdmin("invited", "hash", false, RoleAdmin)
+	if err != nil {
+		t.Fatalf("CreateAdmin invited: %v", err)
+	}
+	deeper, err := st.CreateAdmin("deeper", "hash", false, RoleAdmin)
+	if err != nil {
+		t.Fatalf("CreateAdmin deeper: %v", err)
+	}
+	if _, err := st.CreateInvite("tok-1", time.Now().Add(time.Hour), admin.ID); err != nil {
+		t.Fatalf("CreateInvite: %v", err)
+	}
+	if err := st.RedeemInvite("tok-1", invited.ID); err != nil {
+		t.Fatalf("RedeemInvite: %v", err)
+	}
+	if _, err := st.CreateInvite("tok-2", time.Now().Add(time.Hour), invited.ID); err != nil {
+		t.Fatalf("CreateInvite 2: %v", err)
+	}
+	if err := st.RedeemInvite("tok-2", deeper.ID); err != nil {
+		t.Fatalf("RedeemInvite 2: %v", err)
+	}
+	members, err := st.InviteTree()
+	if err != nil {
+		t.Fatalf("InviteTree: %v", err)
+	}
+	depth := map[int64]int{}
+	for _, m := range members {
+		depth[m.AdminID] = m.Depth
+	}
+	if depth[invited.ID] != 1 || depth[deeper.ID] != 2 {
+		t.Fatalf("tree depths wrong: %+v", depth)
+	}
+	affected, err := st.SuspendSubtree(invited.ID, "abuse")
+	if err != nil {
+		t.Fatalf("SuspendSubtree: %v", err)
+	}
+	if affected != 2 {
+		t.Fatalf("SuspendSubtree cut %d, want the branch of two", affected)
+	}
+	for _, id := range []int64{invited.ID, deeper.ID} {
+		suspended, reason, err := st.IsSuspended(id)
+		if err != nil || !suspended || reason != "abuse" {
+			t.Fatalf("IsSuspended(%d) = %v %q err=%v", id, suspended, reason, err)
+		}
+	}
+	if suspended, _, _ := st.IsSuspended(admin.ID); suspended {
+		t.Fatal("the cut reached above the branch it was made at")
+	}
+	if _, err := st.RestoreSubtree(invited.ID); err != nil {
+		t.Fatalf("RestoreSubtree: %v", err)
+	}
+	if suspended, _, _ := st.IsSuspended(deeper.ID); suspended {
+		t.Fatal("restore did not lift the branch")
+	}
+
 	if err := st.AppendAudit(AuditEntry{ActorAdminID: admin.ID, Action: "test.action", IP: "1.2.3.4"}); err != nil {
 		t.Fatalf("AppendAudit: %v", err)
 	}

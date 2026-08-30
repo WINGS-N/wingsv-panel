@@ -16,6 +16,7 @@ import OwnerLayout from "./views/owner/OwnerLayout.vue";
 import OwnerOverview from "./views/owner/OwnerOverview.vue";
 import OwnerNodes from "./views/owner/OwnerNodes.vue";
 import OwnerAdmins from "./views/owner/OwnerAdmins.vue";
+import OwnerInviteTree from "@/views/owner/OwnerInviteTree.vue";
 import OwnerClients from "./views/owner/OwnerClients.vue";
 import OwnerAudit from "./views/owner/OwnerAudit.vue";
 import { authState, refreshSession, refreshRegistrationStatus, registrationState } from "./stores/auth.js";
@@ -76,6 +77,7 @@ const router = createRouter({
           props: { apiBase: "/api/owner" },
         },
         { path: "admins", component: OwnerAdmins, name: "owner-admins" },
+        { path: "invite-tree", component: OwnerInviteTree, name: "owner-invite-tree" },
         { path: "clients", component: OwnerClients, name: "owner-clients" },
         { path: "audit", component: OwnerAudit, name: "owner-audit" },
       ],
