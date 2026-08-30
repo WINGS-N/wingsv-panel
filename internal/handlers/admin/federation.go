@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -157,11 +156,17 @@ func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
 		return
 	}
-	base := strings.TrimRight(h.cfg.PublicBaseURL, "/")
+	// The head builds the command: it is what serves the installer and knows its
+	// own public address. The panel only falls back when the head serves none,
+	// and then it says so rather than inventing a URL
+	command := got.GetInstallCommand()
+	if command == "" {
+		command = "the federation head is not serving an installer; set its -sub-base and -agent-release"
+	}
 	writeJSON(w, http.StatusOK, enrollTokenView{
 		Token:       got.GetEnrollToken(),
 		ExpiresUnix: got.GetExpiresUnix(),
-		Command:     fmt.Sprintf("curl -fsSL %s/fed/join.sh | sh -s -- %s", base, got.GetEnrollToken()),
+		Command:     command,
 	})
 }
 

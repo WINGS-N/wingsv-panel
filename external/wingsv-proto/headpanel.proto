@@ -137,6 +137,10 @@ message MintEnrollTokenResponse {
   // secret as well, because the transport is keyed before the node has one
   string enroll_token = 1;
   int64 expires_unix = 2;
+  // The whole command a donor pastes. Built by the head because the head is what
+  // knows its own public address and serves the installer; a panel guessing at it
+  // is a panel handing out a link to a 404
+  string install_command = 3;
 }
 
 message EnsureUserRequest {

@@ -41,7 +41,9 @@ func (f *fakeHead) ListNodes(_ context.Context, req *headpb.ListNodesRequest) (*
 
 func (f *fakeHead) MintEnrollToken(_ context.Context, req *headpb.MintEnrollTokenRequest) (*headpb.MintEnrollTokenResponse, error) {
 	return &headpb.MintEnrollTokenResponse{
-		EnrollToken: "fleet." + req.GetDonorId(), ExpiresUnix: 1 << 40,
+		EnrollToken:    "fleet." + req.GetDonorId(),
+		ExpiresUnix:    1 << 40,
+		InstallCommand: "curl -fsSL https://fed.example/fed/join.sh | sh -s -- fleet." + req.GetDonorId() + " 500",
 	}, nil
 }
 
@@ -174,8 +176,9 @@ func TestEnrollTokenComesWithTheInstallCommand(t *testing.T) {
 	if got.Token != "fleet.admin-7" {
 		t.Errorf("token = %q", got.Token)
 	}
-	if !strings.HasPrefix(got.Command, "curl -fsSL https://v.wingsnet.org/fed/join.sh") ||
-		!strings.HasSuffix(got.Command, got.Token) {
+	// The head builds it, so the panel must pass it through rather than guess
+	if !strings.HasPrefix(got.Command, "curl -fsSL https://fed.example/fed/join.sh") ||
+		!strings.Contains(got.Command, got.Token) {
 		t.Errorf("command = %q", got.Command)
 	}
 }

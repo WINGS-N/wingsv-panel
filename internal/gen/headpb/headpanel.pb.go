@@ -988,10 +988,14 @@ type MintEnrollTokenResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The compound value the installer takes verbatim. It carries the fleet
 	// secret as well, because the transport is keyed before the node has one
-	EnrollToken   string `protobuf:"bytes,1,opt,name=enroll_token,json=enrollToken,proto3" json:"enroll_token,omitempty"`
-	ExpiresUnix   int64  `protobuf:"varint,2,opt,name=expires_unix,json=expiresUnix,proto3" json:"expires_unix,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	EnrollToken string `protobuf:"bytes,1,opt,name=enroll_token,json=enrollToken,proto3" json:"enroll_token,omitempty"`
+	ExpiresUnix int64  `protobuf:"varint,2,opt,name=expires_unix,json=expiresUnix,proto3" json:"expires_unix,omitempty"`
+	// The whole command a donor pastes. Built by the head because the head is what
+	// knows its own public address and serves the installer; a panel guessing at it
+	// is a panel handing out a link to a 404
+	InstallCommand string `protobuf:"bytes,3,opt,name=install_command,json=installCommand,proto3" json:"install_command,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MintEnrollTokenResponse) Reset() {
@@ -1036,6 +1040,13 @@ func (x *MintEnrollTokenResponse) GetExpiresUnix() int64 {
 		return x.ExpiresUnix
 	}
 	return 0
+}
+
+func (x *MintEnrollTokenResponse) GetInstallCommand() string {
+	if x != nil {
+		return x.InstallCommand
+	}
+	return ""
 }
 
 type EnsureUserRequest struct {
@@ -1418,10 +1429,11 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x16MintEnrollTokenRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\rR\n" +
-	"ttlSeconds\"_\n" +
+	"ttlSeconds\"\x88\x01\n" +
 	"\x17MintEnrollTokenResponse\x12!\n" +
 	"\fenroll_token\x18\x01 \x01(\tR\venrollToken\x12!\n" +
-	"\fexpires_unix\x18\x02 \x01(\x03R\vexpiresUnix\",\n" +
+	"\fexpires_unix\x18\x02 \x01(\x03R\vexpiresUnix\x12'\n" +
+	"\x0finstall_command\x18\x03 \x01(\tR\x0einstallCommand\",\n" +
 	"\x11EnsureUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x96\x01\n" +
 	"\x0eUserAllocation\x12\x17\n" +
