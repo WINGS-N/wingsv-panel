@@ -2,7 +2,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "panel.name" . }}
+  namespace: {{ include "panel.namespace" . }}
   annotations:
 {{ toYaml .Values.ingress.annotations | indent 4 }}
 spec:
@@ -11,28 +12,17 @@ spec:
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
-      secretName: {{ .Values.ingress.tls.secretName }}
+      secretName: {{ include "panel.tlsSecret" . }}
 {{- end }}
   rules:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
-{{- if .Values.ingress.provisioning.enabled }}
-          # More specific first: the provisioning gRPC lives on its own port, and
-          # a catch-all root rule would swallow it.
-          - path: {{ .Values.ingress.provisioning.path }}
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ .Release.Name }}
-                port:
-                  name: provisioning
-{{- end }}
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ .Release.Name }}
+                name: {{ include "panel.name" . }}
                 port:
                   name: http
 {{- end }}

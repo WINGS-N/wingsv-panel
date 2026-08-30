@@ -2,7 +2,8 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-data
+  name: {{ include "panel.name" . }}-data
+  namespace: {{ include "panel.namespace" . }}
 spec:
   accessModes:
     - ReadWriteOnce

@@ -1,18 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "panel.name" . }}
+  namespace: {{ include "panel.namespace" . }}
 spec:
   replicas: {{ .Values.replicas }}
   strategy:
     type: {{ .Values.strategy }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: {{ include "panel.name" . }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: {{ include "panel.name" . }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
@@ -62,7 +63,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-data
+            claimName: {{ include "panel.name" . }}-data
 {{- end }}
 {{- with .Values.nodeSelector }}
       nodeSelector:

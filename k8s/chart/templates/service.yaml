@@ -1,18 +1,31 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ include "panel.name" . }}
+  namespace: {{ include "panel.namespace" . }}
 spec:
   type: {{ .Values.service.type }}
   selector:
-    app: {{ .Release.Name }}
+    app: {{ include "panel.name" . }}
   ports:
     - name: http
       port: {{ .Values.service.port }}
       targetPort: http
 {{- if .Values.config.provisioningListen }}
-    # Plaintext h2c. The ingress terminates TLS and forwards the provisioning
-    # gRPC here, so a node verifies the panel by system trust with no pin.
+---
+# The provisioning gRPC gets a service of its own rather than a second port on
+# the one above. Traefik routes to it by name and scheme h2c, and a name that
+# says what it carries survives someone reordering ports later.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "panel.name" . }}-grpc
+  namespace: {{ include "panel.namespace" . }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "panel.name" . }}
+  ports:
     - name: provisioning
       port: {{ .Values.config.provisioningListen | trimPrefix ":" | int }}
       targetPort: provisioning

@@ -1,0 +1,96 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "panel.pgName" . }}-app
+  namespace: {{ include "panel.namespace" . }}
+type: kubernetes.io/basic-auth
+stringData:
+  username: {{ .Values.postgres.owner | quote }}
+  password: {{ required "postgres.password is required when the bundled database is enabled" .Values.postgres.password | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "panel.name" . }}-dsn
+  namespace: {{ include "panel.namespace" . }}
+type: Opaque
+stringData:
+  dsn: postgres://{{ .Values.postgres.owner }}:{{ .Values.postgres.password }}@{{ include "panel.pgName" . }}-rw.{{ include "panel.namespace" . }}.svc.cluster.local:5432/{{ .Values.postgres.database }}?sslmode={{ .Values.postgres.sslmode }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "panel.pgName" . }}
+  namespace: {{ include "panel.namespace" . }}
+spec:
+  instances: {{ .Values.postgres.instances }}
+  imageName: {{ .Values.postgres.imageName }}
+  enableSuperuserAccess: false
+  primaryUpdateMethod: restart
+  primaryUpdateStrategy: unsupervised
+  postgresql:
+    parameters:
+      # Logical decoding is what lets a later cluster import from this one
+      # without a filesystem-level backup. Turning it on afterwards costs a
+      # restart, so it is on from the start.
+      wal_level: logical
+{{- with .Values.postgres.parameters }}
+{{ toYaml . | indent 6 }}
+{{- end }}
+  bootstrap:
+{{- if .Values.postgres.import.enabled }}
+    # A logical import over the network: CNPG runs pg_dump against the old
+    # cluster and restores into this one. It happens once, at creation; editing
+    # these fields later does nothing, the cluster has to be recreated.
+    initdb:
+      database: {{ .Values.postgres.database }}
+      owner: {{ .Values.postgres.owner }}
+      secret:
+        name: {{ include "panel.pgName" . }}-app
+      import:
+        type: microservice
+        databases:
+          - {{ .Values.postgres.import.database | default .Values.postgres.database }}
+        source:
+          externalCluster: source
+{{- else }}
+    initdb:
+      database: {{ .Values.postgres.database }}
+      owner: {{ .Values.postgres.owner }}
+      encoding: UTF8
+      localeCType: C
+      localeCollate: C
+      secret:
+        name: {{ include "panel.pgName" . }}-app
+{{- end }}
+{{- if .Values.postgres.import.enabled }}
+  externalClusters:
+    - name: source
+      connectionParameters:
+        host: {{ required "postgres.import.host is required when importing" .Values.postgres.import.host | quote }}
+        user: {{ .Values.postgres.import.owner | default .Values.postgres.owner | quote }}
+        dbname: {{ .Values.postgres.import.database | default .Values.postgres.database | quote }}
+        sslmode: {{ .Values.postgres.import.sslmode | quote }}
+      password:
+        name: {{ include "panel.pgName" . }}-app
+        key: password
+{{- end }}
+  storage:
+    size: {{ .Values.postgres.storage.size }}
+{{- with .Values.postgres.storage.storageClass }}
+    storageClass: {{ . }}
+{{- end }}
+    resizeInUseVolumes: true
+  resources:
+{{ toYaml .Values.postgres.resources | indent 4 }}
+  enablePDB: true
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: preferred
+    topologyKey: kubernetes.io/hostname
+{{- with .Values.postgres.nodeSelector }}
+    nodeSelector:
+{{ toYaml . | indent 6 }}
+{{- end }}
+{{- end }}

@@ -1,37 +1,76 @@
-# Generic on purpose: no node pins, no cluster-specific hostnames beyond what is
-# set here. Cluster-specific values live outside this repo.
+# Cluster prerequisites, not installed by this chart: the CNPG operator (for the
+# bundled database), cert-manager with a ClusterIssuer, and Traefik. If they are
+# already in the cluster - and they are - nothing here duplicates them; the chart
+# only creates the custom resources they act on.
+
+# Where everything lands. Set on purpose so a plain "helm install" puts the panel
+# in wingsvpn. Helm still records the release in the namespace of -n, so pass
+# "-n wingsvpn" too or "helm list -n wingsvpn" will come back empty.
+namespace: wingsvpn
+
+# Object names are built from this, not from the release name: panel,
+# panel-grpc, panel-pg, panel-config, panel-secrets, panel-tls.
+nameOverride: panel
 
 image:
   repository: ghcr.io/wings-n/wingsv-panel
   tag: latest
   pullPolicy: Always
 
-# One replica with Recreate is the safe default: on sqlite there is a single
-# writer and a RWO volume, so a rolling update would deadlock on the volume. With
-# Postgres set database.driver=pgsql and replicas can go up - the cross-replica
-# bus rides LISTEN/NOTIFY.
 replicas: 1
-strategy: Recreate
+# RollingUpdate is right on Postgres. On sqlite set this to Recreate: a rolling
+# update would have two pods fighting over one RWO volume and one writer.
+strategy: RollingUpdate
 
 config:
   publicBaseURL: "https://v.wingsnet.org"
   githubRepo: "WINGS-N/WINGSV"
   releaseAssetSuffix: ".apk"
   sessionSecure: true
-  # Devices reach Guardian on the panel's own HTTPS port; this one is the
-  # plaintext h2c listener the ingress forwards provisioning gRPC to, so nodes
-  # verify the panel by system trust with no pin.
+  # The plaintext h2c listener the proxy forwards provisioning gRPC to. Nodes
+  # verify the panel by system trust at the edge, so there is no pin here.
   provisioningListen: ":9091"
 
+# The bundled database. CNPG runs it; this chart only declares the Cluster and
+# the credentials, and renders the DSN the panel reads.
+postgres:
+  enabled: true
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.4-system-trixie
+  database: wingsv
+  owner: wingsv
+  # Required. Seeds the database and is what the rendered DSN carries.
+  password: ""
+  sslmode: require
+  parameters:
+    max_connections: "300"
+  storage:
+    size: 10Gi
+    storageClass: longhorn
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1536Mi
+  nodeSelector: {}
+  # One-shot logical import from an existing cluster, for moving the database
+  # between namespaces. CNPG runs it at creation and never again - changing
+  # these fields later has no effect, the cluster has to be recreated. Turn it
+  # off once the move is done so a future recreate starts empty rather than
+  # silently re-importing stale data.
+  import:
+    enabled: false
+    # e.g. wingsv-pg-rw.v-wingsnet.svc.cluster.local
+    host: ""
+    database: ""
+    owner: ""
+    sslmode: require
+
 database:
-  # sqlite | pgsql | mariadb.
-  #
-  # sqlite has one writer and needs a volume, which is what pins the panel to a
-  # single replica and to the Recreate strategy above. pgsql and mariadb make it
-  # stateless, and the cross-replica fanout then rides Postgres LISTEN/NOTIFY -
-  # so on pgsql, and only there, replicas above one actually work.
+  # sqlite | pgsql | mariadb. With postgres.enabled the chart supplies the DSN
+  # itself and dsnSecret is ignored.
   driver: pgsql
-  # Read from a secret rather than templated in: it carries the password.
   dsnSecret:
     name: ""
     key: dsn
@@ -61,6 +100,15 @@ relayToken: ""
 
 existingSecret: ""
 
+# cert-manager is expected to be in the cluster already. The chart asks it for a
+# certificate; it does not install it.
+certificate:
+  enabled: true
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  extraDNSNames: []
+
 persistence:
   # Only sqlite needs it. On Postgres the panel holds nothing worth a volume.
   enabled: false
@@ -77,18 +125,18 @@ ingress:
   className: traefik
   host: v.wingsnet.org
   annotations:
-    cert-manager.io/issuer: letsencrypt-http
     # Without this the router attaches to every entrypoint, including metrics and
     # ssh - where an HTTP router breaks TCP passthrough for anything else on it.
     traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
   tls:
     enabled: true
-    secretName: v-wingsnet-tls
-  # Provisioning gRPC is h2c on its own port and needs a path route of its own.
+    # Empty means panel-tls, issued by the Certificate above.
+    secretName: ""
+  # Provisioning gRPC is h2c and needs a Traefik IngressRoute; a plain Ingress
+  # has no way to say the backend speaks cleartext HTTP/2.
   provisioning:
-    enabled: false
+    enabled: true
     path: /wingsv.provisioning.v1.Provisioning/
-    annotations: {}
 
 resources:
   requests:

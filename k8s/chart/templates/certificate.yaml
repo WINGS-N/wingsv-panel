@@ -1,0 +1,20 @@
+{{- if .Values.certificate.enabled }}
+# Issued explicitly instead of by an annotation on the Ingress: the same
+# certificate is referenced by both the Ingress and the Traefik IngressRoute,
+# and an annotation would tie its life to one of them.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "panel.tlsSecret" . }}
+  namespace: {{ include "panel.namespace" . }}
+spec:
+  secretName: {{ include "panel.tlsSecret" . }}
+  issuerRef:
+    kind: {{ .Values.certificate.issuerRef.kind }}
+    name: {{ required "certificate.issuerRef.name is required" .Values.certificate.issuerRef.name }}
+  dnsNames:
+    - {{ .Values.ingress.host | quote }}
+{{- range .Values.certificate.extraDNSNames }}
+    - {{ . | quote }}
+{{- end }}
+{{- end }}

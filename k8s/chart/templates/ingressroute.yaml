@@ -1,0 +1,22 @@
+{{- if .Values.ingress.provisioning.enabled }}
+# Plain Ingress cannot say "talk h2c to the backend", and the provisioning gRPC
+# is cleartext HTTP/2 behind the TLS the proxy terminates. Hence the Traefik CRD
+# for this one route while everything else stays on the Ingress.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "panel.name" . }}-provisioning
+  namespace: {{ include "panel.namespace" . }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`{{ .Values.ingress.provisioning.path }}`)
+      services:
+        - name: {{ include "panel.name" . }}-grpc
+          port: {{ .Values.config.provisioningListen | trimPrefix ":" | int }}
+          scheme: h2c
+  tls:
+    secretName: {{ include "panel.tlsSecret" . }}
+{{- end }}
