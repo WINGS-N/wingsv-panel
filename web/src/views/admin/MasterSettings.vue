@@ -41,7 +41,7 @@
       <div v-if="seedMode !== 'empty'" class="actions-row mt-4">
         <SamsungButton :busy="busySeed" :disabled="!canSeed" @click="onSeed">
           <template #icon><DownloadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busySeed ? 'Загружаем…' : 'Загрузить шаблон' }}
+          {{ busySeed ? 'Загружаем...' : 'Загрузить шаблон' }}
         </SamsungButton>
       </div>
     </SamsungCard>
@@ -97,11 +97,11 @@
       <div class="actions-row mt-4">
         <SamsungButton :busy="busySave" @click="onSave">
           <template #icon><Save class="button-icon" aria-hidden="true" /></template>
-          {{ busySave ? 'Сохраняем…' : 'Сохранить' }}
+          {{ busySave ? 'Сохраняем...' : 'Сохранить' }}
         </SamsungButton>
         <SamsungButton variant="secondary" :busy="busyApply" :disabled="!hasAnyScope" @click="askApply">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyApply ? 'Раскатываем…' : 'Применить ко всем' }}
+          {{ busyApply ? 'Раскатываем...' : 'Применить ко всем' }}
         </SamsungButton>
       </div>
     </SamsungCard>
@@ -115,7 +115,7 @@
       <template #actions>
         <SamsungButton :busy="busyApply" @click="performApply">
           <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-          {{ busyApply ? 'Раскатываем…' : 'Применить' }}
+          {{ busyApply ? 'Раскатываем...' : 'Применить' }}
         </SamsungButton>
         <SamsungButton variant="secondary" :disabled="busyApply" @click="cancelApply">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>

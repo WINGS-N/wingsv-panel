@@ -81,7 +81,23 @@ func TestAnUnconfiguredClientIsDisabled(t *testing.T) {
 func TestAnUnknownStateIsRefused(t *testing.T) {
 	c := testClient()
 	c.states["known"] = pending{verifier: "v"}
-	if _, _, _, err := c.Complete(t.Context(), "not-known", "code"); err == nil {
+	if _, _, _, _, err := c.Complete(t.Context(), "not-known", "code"); err == nil {
 		t.Error("an unknown state was accepted")
+	}
+}
+
+// Слеш на конце issuer'а значащий. go-oidc сверяет то, что дали ему, с тем, что
+// вернул провайдер в discovery, посимвольно - а MAS отдаёт issuer со слешем.
+// Любая "нормализация" по дороге ломает вход целиком.
+func TestIssuerIsPassedThroughUntouched(t *testing.T) {
+	const withSlash = "https://mxaccount.example.org/"
+	c := New(Config{
+		Issuer:       withSlash,
+		ClientID:     "panel",
+		ClientSecret: "s",
+		RedirectURL:  "https://panel.example/api/oidc/callback",
+	})
+	if got := c.cfg.Issuer; got != withSlash {
+		t.Errorf("Issuer = %q, want %q: трогать его нельзя", got, withSlash)
 	}
 }

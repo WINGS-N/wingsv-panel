@@ -76,7 +76,10 @@ func (h *Handler) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), matrixTimeout)
 	defer cancel()
-	target, err := h.oidc.Start(ctx, safeReturnTo(r.URL.Query().Get("return_to")), linkAdminID)
+	// Код приглашения запоминается на нашей стороне: обратно провайдер отдаст
+	// только state и code, и без этого первый вход зарегистрировать некого
+	target, err := h.oidc.Start(ctx, safeReturnTo(r.URL.Query().Get("return_to")), linkAdminID,
+		strings.TrimSpace(r.URL.Query().Get("invite")))
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "account service unreachable: "+err.Error())
 		return
@@ -97,7 +100,7 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), matrixTimeout)
 	defer cancel()
 
-	identity, returnTo, linkAdminID, err := h.oidc.Complete(ctx,
+	identity, returnTo, linkAdminID, invite, err := h.oidc.Complete(ctx,
 		r.URL.Query().Get("state"), r.URL.Query().Get("code"))
 	if err != nil {
 		switch {
@@ -133,7 +136,7 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 	knownBefore := h.oidcAccountKnown(identity.MatrixID)
 	admin, sess, err := h.auth.LoginWithMatrix(
 		identity.MatrixID, identity.Localpart, identity.Subject,
-		r.URL.Query().Get("invite"),
+		invite,
 	)
 	if err != nil {
 		var suspended *auth.SuspendedError

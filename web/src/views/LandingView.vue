@@ -52,14 +52,14 @@
               id="link-input"
               v-model.trim="linkInput"
               class="link-input"
-              placeholder="wingsv://… или vless://…"
+              placeholder="wingsv://... или vless://..."
               rows="4"
             />
           </div>
           <div class="actions-row">
             <SamsungButton :busy="previewLoading" :disabled="!linkInput" @click="loadPreview">
               <template #icon><Eye class="button-icon" aria-hidden="true" /></template>
-              {{ previewLoading ? 'Проверяем…' : 'Предпросмотр' }}
+              {{ previewLoading ? 'Проверяем...' : 'Предпросмотр' }}
             </SamsungButton>
             <SamsungButton variant="secondary" :disabled="!openLink" @click="openInApp">
               <template #icon><ExternalLink class="button-icon" aria-hidden="true" /></template>
@@ -108,7 +108,7 @@
           </div>
           <SamsungButton variant="ghost" :busy="releaseLoading" @click="loadRelease">
             <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-            {{ releaseLoading ? 'Обновляем…' : 'Обновить' }}
+            {{ releaseLoading ? 'Обновляем...' : 'Обновить' }}
           </SamsungButton>
         </div>
 
@@ -138,7 +138,7 @@
                   <CheckCircle2 v-if="cacheReady" class="button-icon" aria-hidden="true" />
                   <Download v-else class="button-icon" aria-hidden="true" />
                 </template>
-                {{ downloading ? 'Скачиваем…' : cacheReady ? 'Установить' : 'Скачать APK' }}
+                {{ downloading ? 'Скачиваем...' : cacheReady ? 'Установить' : 'Скачать APK' }}
               </SamsungButton>
               <SamsungButton variant="secondary" :disabled="!openLink" @click="openInApp">
                 <template #icon><ExternalLink class="button-icon" aria-hidden="true" /></template>
@@ -175,7 +175,7 @@ const RELEASE_DOWNLOAD_URL = '/api/download/latest';
 const APK_CONTENT_TYPE = 'application/vnd.android.package-archive';
 
 const params = new URLSearchParams(window.location.search);
-// `open` carries the "launch the app now" intent (v.wingsnet.org/?open=wingsv://…),
+// `open` carries the "launch the app now" intent (v.wingsnet.org/?open=wingsv://...),
 // `link` just prefills the field for a preview. Accept either so already-shared
 // URLs keep working, preferring `open` when both are present.
 const initialLink = (params.get('open') || params.get('link') || '').trim();

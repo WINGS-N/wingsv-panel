@@ -64,7 +64,11 @@ type pending struct {
 	// linkAdminID is set when an existing admin is attaching a Matrix account
 	// rather than signing in with one.
 	linkAdminID int64
-	at          time.Time
+	// invite is carried through the round trip because the provider gives back
+	// only state and code. Without it a first-time visitor arrives at the
+	// callback with no code in hand and cannot be registered at all.
+	invite string
+	at     time.Time
 }
 
 // Client drives the login flow.
@@ -88,14 +92,14 @@ func New(cfg Config) *Client {
 func (c *Client) Enabled() bool { return c.cfg.Enabled() }
 
 // ErrDisabled means no account service is configured.
-var ErrDisabled = errors.New("matrixauth: matrix login is not configured")
+var ErrDisabled = errors.New("oidcauth: matrix login is not configured")
 
 // ErrForeignHomeserver means the identity is not ours. Refusing it is the point:
 // an identity from somewhere else costs nothing to mint.
-var ErrForeignHomeserver = errors.New("matrixauth: identity is not from this homeserver")
+var ErrForeignHomeserver = errors.New("oidcauth: identity is not from this homeserver")
 
 // ErrUnknownState means the callback does not match a login this panel started.
-var ErrUnknownState = errors.New("matrixauth: unknown or expired login")
+var ErrUnknownState = errors.New("oidcauth: unknown or expired login")
 
 func (c *Client) discover(ctx context.Context) error {
 	c.mu.Lock()
@@ -103,7 +107,9 @@ func (c *Client) discover(ctx context.Context) error {
 	if c.provider != nil {
 		return nil
 	}
-	provider, err := oidc.NewProvider(ctx, strings.TrimRight(c.cfg.Issuer, "/"))
+	// Issuer передаётся как есть: библиотека сверяет его с тем, что вернул
+	// провайдер, посимвольно, и лишний или срезанный слеш ломает вход
+	provider, err := oidc.NewProvider(ctx, c.cfg.Issuer)
 	if err != nil {
 		return err
 	}
@@ -123,7 +129,7 @@ func (c *Client) discover(ctx context.Context) error {
 //
 // PKCE even though this is a confidential client: the code travels through a
 // browser redirect either way, and the extra binding costs nothing.
-func (c *Client) Start(ctx context.Context, returnTo string, linkAdminID int64) (string, error) {
+func (c *Client) Start(ctx context.Context, returnTo string, linkAdminID int64, invite string) (string, error) {
 	if !c.cfg.Enabled() {
 		return "", ErrDisabled
 	}
@@ -143,7 +149,8 @@ func (c *Client) Start(ctx context.Context, returnTo string, linkAdminID int64) 
 	c.mu.Lock()
 	c.sweepLocked()
 	c.states[state] = pending{
-		verifier: verifier, returnTo: returnTo, linkAdminID: linkAdminID, at: time.Now(),
+		verifier: verifier, returnTo: returnTo, linkAdminID: linkAdminID,
+		invite: invite, at: time.Now(),
 	}
 	oauthCfg := c.oauth
 	c.mu.Unlock()
@@ -155,12 +162,12 @@ func (c *Client) Start(ctx context.Context, returnTo string, linkAdminID int64) 
 }
 
 // Complete exchanges the code and returns who signed in.
-func (c *Client) Complete(ctx context.Context, state, code string) (Identity, string, int64, error) {
+func (c *Client) Complete(ctx context.Context, state, code string) (Identity, string, int64, string, error) {
 	if !c.cfg.Enabled() {
-		return Identity{}, "", 0, ErrDisabled
+		return Identity{}, "", 0, "", ErrDisabled
 	}
 	if err := c.discover(ctx); err != nil {
-		return Identity{}, "", 0, err
+		return Identity{}, "", 0, "", err
 	}
 
 	c.mu.Lock()
@@ -170,21 +177,21 @@ func (c *Client) Complete(ctx context.Context, state, code string) (Identity, st
 	oauthCfg, verifier := c.oauth, c.verifier
 	c.mu.Unlock()
 	if !ok {
-		return Identity{}, "", 0, ErrUnknownState
+		return Identity{}, "", 0, "", ErrUnknownState
 	}
 
 	token, err := oauthCfg.Exchange(ctx, code,
 		oauth2.SetAuthURLParam("code_verifier", got.verifier))
 	if err != nil {
-		return Identity{}, "", 0, err
+		return Identity{}, "", 0, "", err
 	}
 	rawID, ok := token.Extra("id_token").(string)
 	if !ok {
-		return Identity{}, "", 0, errors.New("matrixauth: no id token in the response")
+		return Identity{}, "", 0, "", errors.New("oidcauth: no id token in the response")
 	}
 	idToken, err := verifier.Verify(ctx, rawID)
 	if err != nil {
-		return Identity{}, "", 0, err
+		return Identity{}, "", 0, "", err
 	}
 
 	var claims struct {
@@ -194,20 +201,20 @@ func (c *Client) Complete(ctx context.Context, state, code string) (Identity, st
 		Picture           string `json:"picture"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
-		return Identity{}, "", 0, err
+		return Identity{}, "", 0, "", err
 	}
 	identity, err := c.identityFrom(claims.Subject, claims.PreferredUsername, claims.Name, claims.Picture)
 	if err != nil {
-		return Identity{}, "", 0, err
+		return Identity{}, "", 0, "", err
 	}
-	return identity, got.returnTo, got.linkAdminID, nil
+	return identity, got.returnTo, got.linkAdminID, got.invite, nil
 }
 
 // identityFrom builds the MXID and refuses anything that is not ours.
 func (c *Client) identityFrom(subject, localpart, name, picture string) (Identity, error) {
 	localpart = strings.TrimSpace(localpart)
 	if localpart == "" {
-		return Identity{}, errors.New("matrixauth: the account service returned no username")
+		return Identity{}, errors.New("oidcauth: the account service returned no username")
 	}
 	// MAS can hand back either a bare localpart or a full MXID depending on how
 	// it is configured, so normalise before checking the domain
@@ -217,7 +224,7 @@ func (c *Client) identityFrom(subject, localpart, name, picture string) (Identit
 	}
 	at, domain, found := strings.Cut(strings.TrimPrefix(mxid, "@"), ":")
 	if !found || at == "" {
-		return Identity{}, fmt.Errorf("matrixauth: %q is not a matrix id", mxid)
+		return Identity{}, fmt.Errorf("oidcauth: %q is not a matrix id", mxid)
 	}
 	if !strings.EqualFold(domain, c.cfg.Homeserver) {
 		return Identity{}, ErrForeignHomeserver

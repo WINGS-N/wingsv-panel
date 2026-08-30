@@ -61,8 +61,23 @@
             :disabled="!canSubmit || registrationState.mode === 'closed'"
           >
             <template #icon><UserPlus class="button-icon" aria-hidden="true" /></template>
-            {{ busy ? 'Создаём…' : 'Создать аккаунт' }}
+            {{ busy ? 'Создаём...' : 'Создать аккаунт' }}
           </SamsungButton>
+
+          <SamsungButton
+            v-if="matrix.enabled"
+            variant="secondary"
+            class="login-submit mt-3"
+            type="button"
+            :disabled="registrationState.mode === 'invite' && !inviteToken"
+            @click="registerWithMatrix"
+          >
+            <template #icon><img src="/img/matrix.svg" alt="" class="button-icon" aria-hidden="true" /></template>
+            Создать по Matrix ID
+          </SamsungButton>
+          <p v-if="matrix.enabled" class="login-oidc-hint">
+            логином станет часть до двоеточия: <span class="admin-mono">@логин:{{ matrix.homeserver }}</span>
+          </p>
 
           <router-link class="login-back-link" :to="{ name: 'login' }"> Уже есть аккаунт — войти </router-link>
         </form>
@@ -77,7 +92,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { UserPlus } from 'lucide-vue-next';
 import { register, registrationState } from '@/stores/auth.js';
@@ -89,6 +104,24 @@ const username = ref('');
 const password = ref('');
 const passwordConfirm = ref('');
 const inviteToken = ref('');
+const matrix = reactive({ enabled: false, homeserver: '' });
+
+// Код приглашения уходит в start, а не в callback: обратно провайдер вернёт
+// только state и code, и без этого зарегистрировать первого посетителя нечем
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/oidc/status', { credentials: 'include' });
+    if (res.ok) Object.assign(matrix, await res.json());
+  } catch {
+    // Аккаунт-сервис недоступен - просто не показываем кнопку
+  }
+});
+
+function registerWithMatrix() {
+  const params = new URLSearchParams({ return_to: '/admin/clients' });
+  if (inviteToken.value) params.set('invite', inviteToken.value);
+  window.location.href = `/api/oidc/start?${params.toString()}`;
+}
 const error = ref('');
 const busy = ref(false);
 const year = computed(() => new Date().getFullYear());

@@ -110,7 +110,7 @@
             </SamsungButton>
             <SamsungButton variant="secondary" :busy="busyRotate" @click="onRotateToken">
               <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-              {{ busyRotate ? 'Ротируем…' : 'Ротировать токен' }}
+              {{ busyRotate ? 'Ротируем...' : 'Ротировать токен' }}
             </SamsungButton>
           </div>
         </div>
@@ -180,7 +180,7 @@
           <div class="actions-row mt-2">
             <SamsungButton variant="secondary" :busy="busyImport" :disabled="!importLinkDraft" @click="importFromLink">
               <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-              {{ busyImport ? 'Распаковываем…' : 'Подставить' }}
+              {{ busyImport ? 'Распаковываем...' : 'Подставить' }}
             </SamsungButton>
           </div>
         </details>
@@ -205,7 +205,7 @@
         <div class="actions-row mt-4">
           <SamsungButton :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+            {{ busyPush ? 'Отправляем...' : 'Применить (Push)' }}
           </SamsungButton>
           <SamsungButton variant="secondary" @click="resetConfigDraft">
             <template #icon><RotateCcw class="button-icon" aria-hidden="true" /></template>
@@ -221,7 +221,7 @@
           </p>
           <SamsungButton :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+            {{ busyPush ? 'Отправляем...' : 'Применить (Push)' }}
           </SamsungButton>
         </div>
         <div class="form-section mt-3">
@@ -315,7 +315,7 @@
           <p class="admin-muted">Per-app routing: какие приложения идут через тунель.</p>
           <SamsungButton :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+            {{ busyPush ? 'Отправляем...' : 'Применить (Push)' }}
           </SamsungButton>
         </div>
         <div class="form-section mt-3">
@@ -485,7 +485,7 @@
           />
           <SamsungButton v-if="!(backend === 'vk_turn' && isConfigOnly)" :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+            {{ busyPush ? 'Отправляем...' : 'Применить (Push)' }}
           </SamsungButton>
         </div>
         <ConfigFormEditor
@@ -511,7 +511,7 @@
           <p class="admin-muted">Профили клиента по сетевому бэкенду.</p>
           <SamsungButton :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
-            {{ busyPush ? 'Отправляем…' : 'Применить (Push)' }}
+            {{ busyPush ? 'Отправляем...' : 'Применить (Push)' }}
           </SamsungButton>
         </div>
         <div class="mt-3">
@@ -535,7 +535,7 @@
               @click="importProfile"
             >
               <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-              {{ busyProfileImport ? 'Распаковываем…' : 'Добавить' }}
+              {{ busyProfileImport ? 'Распаковываем...' : 'Добавить' }}
             </SamsungButton>
           </div>
         </details>
@@ -719,7 +719,7 @@
         <div class="actions-row mt-4">
           <SamsungButton variant="danger" :busy="busyDelete" @click="onDelete">
             <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-            {{ busyDelete ? 'Удаляем…' : 'Удалить клиента' }}
+            {{ busyDelete ? 'Удаляем...' : 'Удалить клиента' }}
           </SamsungButton>
         </div>
       </section>
@@ -937,7 +937,7 @@ const wingsvLinkPreview = computed(() => {
   const link = wingsvLink.value || '';
   if (!link) return 'wingsv://...';
   if (link.length <= 56) return link;
-  return link.slice(0, 28) + '…' + link.slice(-16);
+  return link.slice(0, 28) + '...' + link.slice(-16);
 });
 
 async function copyLinkInline() {
@@ -1035,7 +1035,7 @@ const connectionFacts = computed(() => {
 function shortKey(value) {
   const v = String(value || '').trim();
   if (v.length <= 14) return v;
-  return v.slice(0, 6) + '…' + v.slice(-6);
+  return v.slice(0, 6) + '...' + v.slice(-6);
 }
 
 function syncModeLabel(mode) {

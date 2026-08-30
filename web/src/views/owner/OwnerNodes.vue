@@ -447,7 +447,7 @@ async function onXuiNodeChange(nodeId) {
   }
   const reqNode = form.xui_node_id;
   inboundsLoading.value = true;
-  inboundOptions.value = [{ value: '', label: 'Загрузка…' }];
+  inboundOptions.value = [{ value: '', label: 'Загрузка...' }];
   try {
     const res = await fetch(`/api/owner/nodes/${reqNode}/inbounds`, { credentials: 'include' });
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || 'Не удалось получить инбаунды');

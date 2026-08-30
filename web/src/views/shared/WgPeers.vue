@@ -63,7 +63,7 @@ const filtered = computed(() => {
 
 function shortKey(key) {
   if (!key) return '—';
-  return key.length > 16 ? `${key.slice(0, 8)}…${key.slice(-6)}` : key;
+  return key.length > 16 ? `${key.slice(0, 8)}...${key.slice(-6)}` : key;
 }
 
 async function load() {

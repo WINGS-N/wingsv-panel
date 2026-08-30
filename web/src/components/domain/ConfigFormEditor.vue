@@ -110,7 +110,7 @@
               @click="$emit('generate-vk-link')"
             >
               <Sparkles class="button-icon" aria-hidden="true" />
-              <span>{{ generateVkLinkBusy ? 'Запрос на устройство…' : 'Сгенерировать VK link' }}</span>
+              <span>{{ generateVkLinkBusy ? 'Запрос на устройство...' : 'Сгенерировать VK link' }}</span>
             </button>
           </div>
         </div>

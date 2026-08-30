@@ -35,7 +35,7 @@
 
           <SamsungButton class="login-submit" type="submit" :busy="busy" :disabled="!username || !password">
             <template #icon><LogIn class="button-icon" aria-hidden="true" /></template>
-            {{ busy ? 'Входим…' : 'Войти' }}
+            {{ busy ? 'Входим...' : 'Войти' }}
           </SamsungButton>
 
           <SamsungButton
@@ -45,8 +45,12 @@
             type="button"
             @click="signInWithMatrix"
           >
-            Войти через {{ matrix.homeserver }}
+            <template #icon><img src="/img/matrix.svg" alt="" class="button-icon" aria-hidden="true" /></template>
+            Войти по Matrix ID
           </SamsungButton>
+          <p class="login-oidc-hint">
+            аккаунт <span class="wordmark-inline">:{{ matrix.homeserver }}</span>
+          </p>
 
           <p v-if="matrixError" class="state-error mt-3">{{ matrixError }}</p>
 

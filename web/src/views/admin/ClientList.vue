@@ -79,7 +79,7 @@
           <SamsungButton @click="scrollToTable">Открыть таблицу</SamsungButton>
           <SamsungButton variant="secondary" :busy="creating" @click="openCreate">
             <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-            {{ creating ? 'Создаём…' : 'Новый клиент' }}
+            {{ creating ? 'Создаём...' : 'Новый клиент' }}
           </SamsungButton>
         </div>
       </div>
@@ -93,7 +93,7 @@
         </div>
         <SamsungButton :busy="creating" @click="openCreate">
           <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          {{ creating ? 'Создаём…' : 'Новый клиент' }}
+          {{ creating ? 'Создаём...' : 'Новый клиент' }}
         </SamsungButton>
       </header>
 
@@ -324,7 +324,7 @@
         <template #actions>
           <SamsungButton :busy="creating" :disabled="!canCreate" @click="createClient">
             <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-            {{ creating ? 'Создаём…' : 'Создать' }}
+            {{ creating ? 'Создаём...' : 'Создать' }}
           </SamsungButton>
           <SamsungButton variant="secondary" :disabled="creating" @click="closeCreate">
             <template #icon><X class="button-icon" aria-hidden="true" /></template>
@@ -347,7 +347,7 @@
         <template #actions>
           <SamsungButton variant="danger" :busy="deletingId === confirmDelete?.id" @click="performDelete">
             <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-            {{ deletingId === confirmDelete?.id ? 'Удаляем…' : 'Удалить' }}
+            {{ deletingId === confirmDelete?.id ? 'Удаляем...' : 'Удалить' }}
           </SamsungButton>
           <SamsungButton variant="secondary" :disabled="deletingId === confirmDelete?.id" @click="cancelDelete">
             <template #icon><X class="button-icon" aria-hidden="true" /></template>
@@ -381,7 +381,7 @@
         <template #actions>
           <SamsungButton :busy="savingLimit" @click="saveLimit">
             <template #icon><Check class="button-icon" aria-hidden="true" /></template>
-            {{ savingLimit ? 'Сохраняем…' : 'Сохранить' }}
+            {{ savingLimit ? 'Сохраняем...' : 'Сохранить' }}
           </SamsungButton>
           <SamsungButton variant="secondary" :disabled="savingLimit" @click="closeEditLimit">
             <template #icon><X class="button-icon" aria-hidden="true" /></template>

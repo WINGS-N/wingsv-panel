@@ -20,7 +20,7 @@
         />
         <SamsungButton variant="secondary" :busy="avatarBusy" @click="fileInput?.click()">
           <template #icon><Camera class="button-icon" aria-hidden="true" /></template>
-          {{ avatarBusy ? 'Загружаем…' : 'Загрузить' }}
+          {{ avatarBusy ? 'Загружаем...' : 'Загрузить' }}
         </SamsungButton>
         <SamsungButton v-if="hasCustomAvatar" variant="secondary" :disabled="avatarBusy" @click="removeAvatar">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
@@ -45,7 +45,7 @@
       <div class="actions-row mt-4">
         <SamsungButton type="submit" :busy="busy" :disabled="!canSubmit">
           <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
-          {{ busy ? 'Сохраняем…' : 'Сменить пароль' }}
+          {{ busy ? 'Сохраняем...' : 'Сменить пароль' }}
         </SamsungButton>
       </div>
     </form>

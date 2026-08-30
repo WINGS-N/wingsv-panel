@@ -167,7 +167,7 @@
   }
 
   .body-copy {
-    @apply max-w-[64ch] leading-[1.6] text-wings-muted;
+    @apply max-w-[78ch] leading-[1.6] text-wings-muted;
     overflow-wrap: anywhere;
   }
 
@@ -265,22 +265,6 @@
     @apply mt-5 flex flex-wrap gap-3;
   }
 
-  .fed-actions {
-    @apply flex flex-wrap items-center gap-3;
-  }
-
-  .fed-mint-group {
-    @apply flex flex-wrap items-center gap-3;
-  }
-
-  .fed-refresh {
-    @apply ml-auto;
-  }
-
-  .federation-uses {
-    @apply inline-flex items-center gap-2 text-[13px];
-  }
-
   .fed-node-list {
     @apply mt-2 divide-y divide-wings-divider;
   }
@@ -295,6 +279,10 @@
 
   .fed-node-fill {
     @apply block h-full rounded-full bg-wings-accent;
+  }
+
+  .login-oidc-hint {
+    @apply mt-2 text-center text-[12px] text-wings-kicker;
   }
 
   .tree-root {
@@ -378,6 +366,14 @@
     @apply rotate-90;
   }
 
+  /* Поля формы в ряд, пока хватает ширины. Инпуты стоят инпутами, с подписью
+     над ними - а не вжимаются в строку рядом с кнопкой */
+  .form-grid {
+    @apply grid gap-4;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    max-width: 720px;
+  }
+
   .federation-live-head {
     @apply flex flex-wrap items-center gap-3;
   }
@@ -386,12 +382,6 @@
     @apply block h-2 w-2 shrink-0 rounded-full;
     background: #6fe3a4;
     animation: live-pulse 2s ease-out infinite;
-  }
-
-  .federation-uses-input {
-    @apply w-16 rounded-xl bg-transparent px-3 py-2 text-center font-samsung text-[15px] text-wings-text outline-none;
-    border: 1px solid theme('colors.wings.inputLine');
-    min-height: 48px;
   }
 
   .action-button {
@@ -746,7 +736,7 @@
   }
 
   /* The big page label + horizontal underline-tab navigation, exactly like
-     "Учетная запись" + (Профиль / Безопасность / …) on Samsung Account. */
+     "Учетная запись" + (Профиль / Безопасность / ...) on Samsung Account. */
   .admin-titlebar {
     @apply flex flex-wrap items-end justify-between gap-x-10 gap-y-4 border-b border-wings-divider pb-1;
   }

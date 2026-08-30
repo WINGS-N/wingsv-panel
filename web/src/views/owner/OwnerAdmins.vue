@@ -128,7 +128,7 @@
       <template #actions>
         <SamsungButton :busy="creating" :disabled="!canCreate" @click="onCreateAdmin">
           <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          {{ creating ? 'Создаём…' : 'Создать' }}
+          {{ creating ? 'Создаём...' : 'Создать' }}
         </SamsungButton>
         <SamsungButton variant="secondary" @click="closeCreate">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>
@@ -151,7 +151,7 @@
       <template #actions>
         <SamsungButton variant="danger" :busy="deletingId === confirmDelete?.id" @click="performDelete">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          {{ deletingId === confirmDelete?.id ? 'Удаляем…' : 'Удалить' }}
+          {{ deletingId === confirmDelete?.id ? 'Удаляем...' : 'Удалить' }}
         </SamsungButton>
         <SamsungButton variant="secondary" :disabled="deletingId === confirmDelete?.id" @click="cancelDelete">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>
@@ -170,7 +170,7 @@
       <template #actions>
         <SamsungButton :busy="resetting" :disabled="!resetPassword" @click="onResetSubmit">
           <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
-          {{ resetting ? 'Меняем…' : 'Сменить' }}
+          {{ resetting ? 'Меняем...' : 'Сменить' }}
         </SamsungButton>
         <SamsungButton variant="secondary" @click="resetTarget = null">
           <template #icon><X class="button-icon" aria-hidden="true" /></template>

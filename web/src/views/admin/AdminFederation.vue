@@ -8,7 +8,7 @@
            к ней только шумела бы -->
       <span class="live-dot" role="status" aria-label="Данные обновляются" title="Данные обновляются"></span>
     </div>
-    <p class="body-copy">
+    <p class="body-copy body-copy-wide">
       Отдайте мощности своего сервера в общий пул — с него будут обслуживаться бесплатные пользователи в пределах
       месячного лимита, который вы назначаете сами.
     </p>
@@ -57,19 +57,15 @@
       </div>
     </div>
 
-    <div class="fed-actions mt-4">
-      <!-- Кнопка и счётчик - одно действие, поэтому стоят вплотную. Обновление
-           сводки к ним отношения не имеет и уезжает к правому краю -->
-      <div class="fed-mint-group">
-        <SamsungButton :busy="minting" @click="mint">
-          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          Подключить сервер
-        </SamsungButton>
-        <label class="federation-uses">
-          <span class="admin-muted">серверов на один токен</span>
-          <input v-model.number="uses" type="number" min="1" max="64" class="federation-uses-input" />
-        </label>
-      </div>
+    <div class="form-grid mt-5">
+      <OneuiInput v-model.number="uses" label="Серверов на один токен" type="number" :min="1" :max="64" />
+    </div>
+
+    <div class="actions-row">
+      <SamsungButton :busy="minting" @click="mint">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Подключить сервер
+      </SamsungButton>
     </div>
 
     <div v-if="command" class="entry-card mt-4">
@@ -136,6 +132,7 @@ import { connectAdminSocket } from '@/stores/admin-socket.js';
 const FLOW_UP = '#0381fe';
 const FLOW_DOWN = '#15b76f';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatBytes } from '@/utils/format';
 

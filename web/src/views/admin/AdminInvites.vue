@@ -7,23 +7,19 @@
     </p>
     <p v-if="loadError" class="state-error mt-3">{{ loadError }}</p>
 
-    <div class="fed-actions mt-4">
-      <div class="fed-mint-group">
-        <SamsungButton :busy="creating" @click="create">
-          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-          Выписать код
-        </SamsungButton>
-        <label class="federation-uses">
-          <span class="admin-muted">человек по коду</span>
-          <input v-model.number="maxUses" type="number" min="1" max="50" class="federation-uses-input" />
-        </label>
-        <label class="federation-uses">
-          <span class="admin-muted">живёт часов</span>
-          <input v-model.number="ttlHours" type="number" min="0" max="8760" class="federation-uses-input" />
-        </label>
-      </div>
+    <!-- Поля стоят полями, а не втиснуты в строку рядом с кнопкой: подпись над
+         вводом и кнопка снизу - то, как выглядит любая форма в этой панели -->
+    <div class="form-grid mt-5">
+      <OneuiInput v-model.number="maxUses" label="Человек по коду" type="number" :min="1" :max="50" />
+      <OneuiInput v-model.number="ttlHours" label="Живёт часов (0 - без срока)" type="number" :min="0" :max="8760" />
     </div>
-    <p class="admin-muted mt-2 text-[13px]">Ноль часов - код без срока.</p>
+
+    <div class="actions-row">
+      <SamsungButton :busy="creating" @click="create">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Выписать код
+      </SamsungButton>
+    </div>
 
     <div v-if="invites.length" class="fed-node-list mt-4">
       <div v-for="it in invites" :key="it.token" class="fed-node-row">
@@ -55,6 +51,7 @@
 import { onMounted, ref } from 'vue';
 import { CalendarRange, Plus, Users } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 
 const invites = ref([]);

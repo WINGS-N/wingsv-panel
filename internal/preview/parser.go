@@ -1142,7 +1142,7 @@ func addPackageFacts(section *PreviewSection, label string, pkgs []string) {
 	}
 	joined := strings.Join(preview, ", ")
 	if truncated {
-		joined = fmt.Sprintf("%s … +%d", joined, len(pkgs)-maxPreview)
+		joined = fmt.Sprintf("%s ... +%d", joined, len(pkgs)-maxPreview)
 	}
 	section.Facts = append(section.Facts, PreviewFact{
 		Label: label,

@@ -3,7 +3,7 @@
     <div class="actions-row">
       <SamsungButton variant="secondary" :busy="loading" @click="load">
         <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-        {{ loading ? 'Обновляем…' : 'Обновить' }}
+        {{ loading ? 'Обновляем...' : 'Обновить' }}
       </SamsungButton>
     </div>
 

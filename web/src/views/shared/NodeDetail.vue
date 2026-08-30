@@ -127,7 +127,7 @@
   <SamsungModal :model-value="showConnect" title="Команда подключения ноды" @update:model-value="showConnect = false">
     <p class="body-copy">Выполните на хосте ноды — включит gRPC-управление и DTLS-provisioning.</p>
     <p v-if="connectError" class="state-error mt-2">{{ connectError }}</p>
-    <p v-else-if="!connectCommand" class="admin-muted mt-4">Загрузка…</p>
+    <p v-else-if="!connectCommand" class="admin-muted mt-4">Загрузка...</p>
     <div v-else class="connect-block mt-4">
       <pre class="connect-cmd">{{ connectCommand }}</pre>
       <SamsungButton variant="secondary" size="small" @click="copyConnect">

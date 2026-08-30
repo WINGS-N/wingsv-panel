@@ -7,9 +7,9 @@ let reconnectTimer = null;
 
 function ensureSocket() {
   if (socket && socket.readyState <= 1) return socket;
-  const wsUrl = `${location.origin.replace(/^http/, "ws")}/api/admin/ws`;
+  const wsUrl = `${location.origin.replace(/^http/, 'ws')}/api/admin/ws`;
   socket = new WebSocket(wsUrl);
-  socket.addEventListener("message", (event) => {
+  socket.addEventListener('message', (event) => {
     let payload;
     try {
       payload = JSON.parse(event.data);
@@ -17,10 +17,14 @@ function ensureSocket() {
       return;
     }
     for (const fn of listeners) {
-      try { fn(payload); } catch (err) { console.warn("admin-ws listener", err); }
+      try {
+        fn(payload);
+      } catch (err) {
+        console.warn('admin-ws listener', err);
+      }
     }
   });
-  socket.addEventListener("close", () => {
+  socket.addEventListener('close', () => {
     socket = null;
     if (listeners.size > 0 && !reconnectTimer) {
       reconnectTimer = setTimeout(() => {
@@ -29,7 +33,7 @@ function ensureSocket() {
       }, 5000);
     }
   });
-  socket.addEventListener("error", () => {
+  socket.addEventListener('error', () => {
     if (socket && socket.readyState === WebSocket.OPEN) socket.close();
   });
   return socket;

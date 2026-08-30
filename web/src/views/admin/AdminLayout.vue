@@ -6,7 +6,7 @@
          on the right (mirrors SAMSUNG wordmark + avatar on the
          reference). Title bar below: page label "Control Panel" plus
          underline-tab navigation (Клиенты / Аккаунт), exactly like
-         "Учетная запись" + (Профиль / Безопасность / …).
+         "Учетная запись" + (Профиль / Безопасность / ...).
          ============================================================ -->
     <header class="admin-header">
       <div class="admin-brand-row">
