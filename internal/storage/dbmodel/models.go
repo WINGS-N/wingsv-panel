@@ -18,8 +18,14 @@ type Admin struct {
 	AvatarPNG          []byte `gorm:"column:avatar_png"`
 	AvatarVersion      int64  `gorm:"column:avatar_version;not null;default:0"`
 	VKLinks            string `gorm:"column:vk_links;not null;default:''"`
-	CreatedAtUnix      int64  `gorm:"column:created_at;not null"`
-	UpdatedAtUnix      int64  `gorm:"column:updated_at;not null"`
+	// SuspendedAtUnix cuts this admin out of the invite tree. Zero means active.
+	// A suspension is inherited by everyone below: an invite tree is only worth
+	// having if a bad branch can be taken off at any point in it.
+	SuspendedAtUnix int64  `gorm:"column:suspended_at;not null;default:0"`
+	SuspendedReason string `gorm:"column:suspended_reason;not null;default:''"`
+	SuspendedByRoot int64  `gorm:"column:suspended_by_root;not null;default:0"`
+	CreatedAtUnix   int64  `gorm:"column:created_at;not null"`
+	UpdatedAtUnix   int64  `gorm:"column:updated_at;not null"`
 }
 
 func (Admin) TableName() string { return "admins" }

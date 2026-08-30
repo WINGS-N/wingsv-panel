@@ -49,6 +49,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/settings", h.requireOwner(h.handleSettings))
 	mux.HandleFunc("/api/owner/invites", h.requireOwner(h.handleInvites))
 	mux.HandleFunc("/api/owner/invites/", h.requireOwner(h.handleInviteByToken))
+	mux.HandleFunc("/api/owner/invite-tree", h.requireOwner(h.handleInviteTree))
+	mux.HandleFunc("/api/owner/invite-tree/", h.requireOwner(h.handleInviteBranch))
 }
 
 type ownedHandler func(w http.ResponseWriter, r *http.Request, admin storage.Admin)

@@ -123,6 +123,11 @@ func (s *Service) Login(username, password string) (storage.Admin, storage.Admin
 	if !VerifyPassword(admin.PasswordHash, password) {
 		return storage.Admin{}, storage.AdminSession{}, ErrInvalidCredentials
 	}
+	// A cut branch cannot log back in. Checked after the password so a suspended
+	// account is not distinguishable from a wrong password by anyone guessing.
+	if suspended, reason, err := s.store.IsSuspended(admin.ID); err == nil && suspended {
+		return storage.Admin{}, storage.AdminSession{}, &SuspendedError{Reason: reason}
+	}
 	id, err := newToken(32)
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
@@ -155,7 +160,24 @@ func (s *Service) Authenticate(r *http.Request) (storage.Admin, error) {
 	if err != nil {
 		return storage.Admin{}, ErrSessionExpired
 	}
+	// Suspension is re-checked on every request, not only at login: a cut that
+	// waits for a cookie to expire is not a cut.
+	if suspended, reason, err := s.store.IsSuspended(admin.ID); err == nil && suspended {
+		return storage.Admin{}, &SuspendedError{Reason: reason}
+	}
 	return admin, nil
+}
+
+// SuspendedError means the admin's branch of the invite tree was cut. Separate
+// from a wrong password so the panel can explain what happened rather than
+// leaving somebody retyping a password that was never the problem.
+type SuspendedError struct{ Reason string }
+
+func (e *SuspendedError) Error() string {
+	if e.Reason == "" {
+		return "account suspended"
+	}
+	return "account suspended: " + e.Reason
 }
 
 func (s *Service) ChangePassword(adminID int64, oldPassword, newPassword string) error {
