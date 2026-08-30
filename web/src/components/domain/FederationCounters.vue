@@ -5,11 +5,10 @@
   <section v-if="live" class="surface-card mt-6">
     <div class="federation-live-head">
       <h2 class="hero-title">Федерация</h2>
-      <!-- Пульс, а не просто слово "онлайн": цифры ниже меняются сами, и точка
-           объясняет почему, без подписи -->
+      <!-- Точка объясняет, почему цифры ниже шевелятся сами по себе -->
       <span class="live-badge" :title="`Обновлено ${agoLabel}`">
         <span class="live-dot" aria-hidden="true"></span>
-        в эфире
+        живые данные
       </span>
     </div>
     <p class="body-copy mt-3">
