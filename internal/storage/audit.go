@@ -16,6 +16,10 @@ const (
 	// SettingAllowAdminGRPC gates whether non-owner admins may register their own
 	// external vk-turn-proxy / 3x-ui gRPC endpoints. Stored as "true"/"false".
 	SettingAllowAdminGRPC = "allow_admin_grpc"
+	// SettingFederationEnabled gates every federation surface. Off by default,
+	// and the sections behind it are not rendered at all rather than rendered
+	// disabled: a deployment that never opted in has nothing to reason about.
+	SettingFederationEnabled = "federation_enabled"
 )
 
 type AuditEntry struct {

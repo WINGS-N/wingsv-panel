@@ -10,12 +10,8 @@ import (
 
 	"v.wingsnet.org/internal/fedclient"
 	"v.wingsnet.org/internal/gen/headpb"
+	"v.wingsnet.org/internal/storage"
 )
-
-// SettingFederationEnabled gates every federation surface. Off by default: the
-// sections it controls are not rendered at all rather than rendered disabled, so
-// nothing about the federation exists for an operator who has not opted in.
-const SettingFederationEnabled = "federation_enabled"
 
 // publicStatsInterval is how often an SSE subscriber is pushed a frame. One
 // second, because the point of a live counter is that it visibly moves.
@@ -135,7 +131,7 @@ func (s *Server) federationEnabled() bool {
 	if !s.fedConfigured || s.store == nil {
 		return false
 	}
-	value, err := s.store.GetPlatformSetting(SettingFederationEnabled, "")
+	value, err := s.store.GetPlatformSetting(storage.SettingFederationEnabled, "")
 	if err != nil {
 		return false
 	}

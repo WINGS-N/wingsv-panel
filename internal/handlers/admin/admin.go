@@ -16,6 +16,7 @@ import (
 
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/config"
+	"v.wingsnet.org/internal/fedclient"
 	"v.wingsnet.org/internal/guardianhub"
 	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/storage"
@@ -28,12 +29,19 @@ type Handler struct {
 	auth  *auth.Service
 	hub   *guardianhub.Hub
 	xui   *xuiclient.Client
+	// fed talks to the federation head. Nil-safe: a deployment with no head
+	// configured simply has no federation surface
+	fed *fedclient.Client
 	// SPKI pins of the deployment CA, embedded in every enrollment link.
 	caPins [][]byte
 }
 
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
-	h := &Handler{cfg: cfg, store: store, auth: authSvc, hub: hub, xui: xuiclient.New()}
+	h := &Handler{
+		cfg: cfg, store: store, auth: authSvc, hub: hub,
+		xui: xuiclient.New(),
+		fed: fedclient.New(cfg.FederationHead, cfg.FederationSecret),
+	}
 	// A deployment with no publicly trusted certificate - a bare-IP install, where
 	// no CA will issue one - can only be verified by the device if the enrollment
 	// link carries the CA's SPKI pin, so every link gets it whenever a panel CA
@@ -69,6 +77,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/vk-links", h.requireAuth(h.handleVKLinks))
 	mux.HandleFunc("/api/admin/avatars/", h.handleAvatar)
 	mux.HandleFunc("/api/admin/me/avatar", h.requireAuth(h.handleMyAvatar))
+	mux.HandleFunc("/api/admin/federation/summary", h.requireAuth(h.handleFederationSummary))
+	mux.HandleFunc("/api/admin/federation/enroll-token", h.requireAuth(h.handleFederationEnrollToken))
+	mux.HandleFunc("/api/admin/federation/nodes/", h.requireAuth(h.handleFederationNodeState))
 	mux.HandleFunc("/api/admin/master/config", h.requireAuth(h.handleMasterConfig))
 	mux.HandleFunc("/api/admin/master/config/apply", h.requireAuth(h.handleMasterConfigApply))
 	mux.HandleFunc("/api/admin/master/config/seed", h.requireAuth(h.handleMasterConfigSeed))
