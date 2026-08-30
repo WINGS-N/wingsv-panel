@@ -59,8 +59,8 @@ func TestWrongTokenFails(t *testing.T) {
 func TestVariantsDoNotInteroperate(t *testing.T) {
 	const secret = "shared-secret"
 	if bytes.Equal(
-		deriveKeyVariant(Legacy256, []byte(secret), "c2s"),
-		deriveKeyVariant(SHA512, []byte(secret), "c2s"),
+		deriveKey(Legacy256, []byte(secret), "c2s"),
+		deriveKey(SHA512, []byte(secret), "c2s"),
 	) {
 		t.Fatal("both variants derived the same key")
 	}
