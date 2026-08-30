@@ -4,12 +4,7 @@
        cards with the same vocabulary as the Account dashboard.
        ============================================================ -->
   <div class="landing-stage">
-    <header class="samsung-topbar">
-      <router-link class="samsung-topbar-brand" to="/">
-        <span class="wordmark-inline">WINGS V</span>
-      </router-link>
-      <router-link class="samsung-topbar-link" :to="{ name: 'login' }"> Войти в панель </router-link>
-    </header>
+    <PublicTopbar />
 
     <!-- Big-headline hero. Headline + sub-line on the left, primary
          pill CTA below; right column reserved for product art. -->
@@ -164,6 +159,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { CheckCircle2, Download, ExternalLink, Eye, RefreshCw } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import PublicTopbar from '@/components/layout/PublicTopbar.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 import PreviewFacts from '@/components/domain/PreviewFacts.vue';
 import PreviewSection from '@/components/domain/PreviewSection.vue';

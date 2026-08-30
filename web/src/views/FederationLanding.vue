@@ -5,14 +5,7 @@
        отдавать свой сервер, и показать, что пул живой прямо сейчас.
        ============================================================ -->
   <div class="landing-stage">
-    <header class="samsung-topbar">
-      <router-link class="samsung-topbar-brand" to="/">
-        <span class="wordmark-inline">WINGS V</span>
-        <span class="samsung-topbar-divider">|</span>
-        <span class="samsung-topbar-tag">Federation</span>
-      </router-link>
-      <router-link class="samsung-topbar-link" :to="{ name: 'login' }"> Войти в панель </router-link>
-    </header>
+    <PublicTopbar tag="Federation" />
 
     <section class="landing-hero">
       <div class="landing-hero-inner">
@@ -101,10 +94,11 @@
           </article>
           <article class="fed-step">
             <img src="/img/oneui/monitor.svg" alt="" class="fed-step-icon" aria-hidden="true" />
-            <h3 class="fed-step-title">Один профиль на сорок человек</h3>
+            <h3 class="fed-step-title">Один доступ на сорок человек</h3>
             <p class="fed-step-copy">
-              Сколько адресов пользуется одним профилем, говорит сам Xray - лог с чужими адресами назначения для этого
-              не нужен. Один профиль, светящийся из десятка городов сразу, это не человек, и такие уходят в карантин.
+              Своим доступом человек пользуется с двух-трёх устройств. Если один и тот же доступ работает сразу из
+              десятка разных мест, это уже не человек, а перепродажа - и такой аккаунт уходит в карантин. Чтобы это
+              увидеть, достаточно посчитать, откуда заходят; что именно открывают, знать не нужно.
             </p>
           </article>
           <article class="fed-step">
@@ -164,6 +158,7 @@
 
 <script setup>
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import PublicTopbar from '@/components/layout/PublicTopbar.vue';
 import FederationCounters from '@/components/domain/FederationCounters.vue';
 </script>
 

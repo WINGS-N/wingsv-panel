@@ -93,6 +93,22 @@
     }
   }
 
+  .public-nav {
+    @apply flex flex-wrap items-center gap-5;
+  }
+
+  .public-nav-link {
+    @apply text-[15px] text-wings-muted no-underline transition-colors;
+  }
+
+  .public-nav-link:hover {
+    @apply text-wings-text;
+  }
+
+  .public-nav-link.is-active {
+    @apply font-bold text-wings-text;
+  }
+
   .samsung-topbar-brand {
     @apply inline-flex items-center font-sharp text-[22px] font-bold tracking-[-0.01em] text-wings-text no-underline;
     gap: 6px;
