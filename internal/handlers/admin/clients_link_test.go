@@ -3,6 +3,7 @@ package admin
 import (
 	"bytes"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"google.golang.org/protobuf/proto"
@@ -11,6 +12,7 @@ import (
 	wingsvpb "v.wingsnet.org/internal/gen/wingsvpb"
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/storage"
+	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
 func TestBuildClientLinkRemoteControlOn(t *testing.T) {
@@ -131,4 +133,62 @@ func newLinkTestStore(t *testing.T) *storage.Store {
 	}
 	t.Cleanup(func() { _ = st.Close() })
 	return st
+}
+
+// Enabling provisioning without naming a relay must leave the client with no managed
+// profile rather than failing the save or quietly picking a relay for the admin.
+// Choosing one implicitly is what handed clients a relay nobody selected.
+func TestApplyProvisionWithoutANodeTurnsProvisioningOff(t *testing.T) {
+	h := &Handler{cfg: config.Config{}, store: newLinkTestStore(t)}
+	adm, err := h.store.CreateAdmin("owner", "hash", false, "owner")
+	if err != nil {
+		t.Fatalf("CreateAdmin: %v", err)
+	}
+	if _, err := h.store.CreateClient("c1", adm.ID, "Dev", "hash", []byte("tok")); err != nil {
+		t.Fatalf("CreateClient: %v", err)
+	}
+	client := storage.Client{ID: "c1", OwnerAdminID: adm.ID, Name: "Dev"}
+
+	cfg := &wingsvpb.Config{Ver: 1}
+	if err := h.applyProvisionToConfig(storage.Admin{ID: adm.ID}, client, cfg, true, ""); err != nil {
+		t.Fatalf("applyProvisionToConfig: %v", err)
+	}
+	if ep := existingManagedEndpoint(cfg.Turn); ep != "" {
+		t.Errorf("a client with no relay chosen got endpoint %q", ep)
+	}
+	for _, p := range cfg.GetTurn().GetProfiles() {
+		if isManagedProfile(p) {
+			t.Errorf("managed profile survived with no relay: %+v", p)
+		}
+	}
+}
+
+// A relay named explicitly still wins and produces a managed profile.
+func TestApplyProvisionWithANodeKeepsTheProfile(t *testing.T) {
+	h := &Handler{cfg: config.Config{}, store: newLinkTestStore(t)}
+	adm, err := h.store.CreateAdmin("owner", "hash", false, "owner")
+	if err != nil {
+		t.Fatalf("CreateAdmin: %v", err)
+	}
+	if _, err := h.store.CreateClient("c1", adm.ID, "Dev", "hash", []byte("tok")); err != nil {
+		t.Fatalf("CreateClient: %v", err)
+	}
+	node, err := h.store.CreateServerNode(dbmodel.ServerNode{
+		ID: "n1", Kind: storage.ServerNodeVKTurnProxy, Name: "relay",
+		GRPCEndpoint: "relay.example:25612", OwnerAdminID: adm.ID, WGBackend: storage.WGBackendOwn,
+	})
+	if err != nil {
+		t.Fatalf("CreateServerNode: %v", err)
+	}
+	client := storage.Client{ID: "c1", OwnerAdminID: adm.ID, Name: "Dev"}
+
+	cfg := &wingsvpb.Config{Ver: 1}
+	if err := h.applyProvisionToConfig(storage.Admin{ID: adm.ID}, client, cfg, true, node.ID); err != nil {
+		t.Fatalf("applyProvisionToConfig: %v", err)
+	}
+	if ep := existingManagedEndpoint(cfg.Turn); ep == "" {
+		t.Error("an explicitly chosen relay produced no managed endpoint")
+	} else if !strings.HasPrefix(ep, "relay.example:") {
+		t.Errorf("endpoint = %q, want the chosen node's host", ep)
+	}
 }

@@ -195,7 +195,7 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request, admin storage
 	// the remote-control toggle is hidden and remote control is forced on. This
 	// asks whether the admin actually has a relay registered rather than whether a
 	// panel-global endpoint env happens to be set.
-	payload["self_provisioning"] = h.defaultVkTurnNodeID(admin) != ""
+	payload["self_provisioning"] = h.hasVkTurnNode(admin)
 	writeJSON(w, http.StatusOK, payload)
 }
 

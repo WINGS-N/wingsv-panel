@@ -246,11 +246,11 @@ const vkTurnDefaultDTLSPort = "56000"
 // clientVkTurnEndpoint answers which relay THIS client's link should name.
 //
 // The client's stored config already records the relay it was provisioned against,
-// so that is the answer: an explicit nodeID overrides it, and only a client with no
-// managed profile yet falls back to the admin's default relay. Building the link
-// straight from the default instead meant a link contradicted the very config the
-// panel had saved for that client - you could point a client at one relay, see it
-// stored, and still be handed a link naming a different one.
+// so that is the answer; an explicit nodeID overrides it. A client with no managed
+// profile has no relay, and the link carries none - provisioning is simply off for
+// it. Building the link from a default instead meant a link contradicted the very
+// config the panel had saved for that client: you could point a client at one relay,
+// see it stored, and still be handed a link naming a different one.
 func (h *Handler) clientVkTurnEndpoint(admin storage.Admin, client storage.Client, nodeID string) (string, error) {
 	if strings.TrimSpace(nodeID) != "" {
 		return h.resolveVkTurnEndpoint(admin, nodeID)
@@ -263,24 +263,23 @@ func (h *Handler) clientVkTurnEndpoint(admin storage.Admin, client storage.Clien
 			}
 		}
 	}
-	return h.resolveVkTurnEndpoint(admin, "")
+	// Nothing chosen and nothing stored: no relay, so no managed profile.
+	return "", nil
 }
 
 // resolveVkTurnEndpoint returns the DTLS endpoint the app dials for the managed
 // VK-TURN profile: the host from the selected node's gRPC endpoint paired with the
 // relay DTLS port.
 //
-// An empty nodeID resolves to a relay the admin actually owns. It used to answer
-// from the panel-global VK_TURN_ENDPOINT env first, which meant a link kept naming
-// whatever host that env was set to no matter which nodes were registered - the
-// value outlived the relay it described and there was no way to see it from the UI.
+// An empty nodeID means no relay was chosen, which means no managed profile - the
+// caller turns provisioning off rather than getting one. There is deliberately no
+// default: picking a relay on the admin's behalf is what let links name a host the
+// admin never selected, first from a panel-global env and then from whichever
+// registered node happened to be the oldest.
 func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (string, error) {
 	nodeID = strings.TrimSpace(nodeID)
 	if nodeID == "" {
-		nodeID = h.defaultVkTurnNodeID(admin)
-		if nodeID == "" {
-			return "", nil
-		}
+		return "", nil
 	}
 	node, err := h.store.GetServerNode(nodeID)
 	if err != nil {
@@ -331,11 +330,14 @@ func isLoopbackHost(host string) bool {
 	return false
 }
 
-// defaultVkTurnNodeID picks a vk-turn relay to use when the caller did not name
-// one. It prefers a panel-local node
-// (owner_admin_id 0, usable by the owner) and then the admin's own node, so the
-// common single-host install "just works". Empty if none is available.
-func (h *Handler) defaultVkTurnNodeID(admin storage.Admin) string {
+// hasVkTurnNode reports whether the admin has any relay they could pick. It answers
+// whether the UI should offer self-provisioning at all; it never selects one, because
+// choosing a relay for the admin is the caller's job and no longer happens implicitly.
+func (h *Handler) hasVkTurnNode(admin storage.Admin) bool {
+	return h.anyVkTurnNodeID(admin) != ""
+}
+
+func (h *Handler) anyVkTurnNodeID(admin storage.Admin) string {
 	owners := []int64{admin.ID}
 	if auth.IsOwner(admin) {
 		owners = []int64{0, admin.ID}
@@ -762,7 +764,11 @@ func (h *Handler) applyProvisionToConfig(admin storage.Admin, client storage.Cli
 		}
 	}
 	if strings.TrimSpace(endpoint) == "" {
-		return errors.New("no vk-turn endpoint: select a vk-turn server")
+		// No relay chosen: the client simply has no managed profile. Refusing the
+		// save instead would only push the admin to pick "whatever", and inventing a
+		// default here is exactly the behaviour that handed clients the wrong relay.
+		cfg.Turn = stripManagedTurnProfiles(cfg.Turn)
+		return nil
 	}
 	cfg.Turn = applyManagedTurnProfile(cfg.Turn, client.ID, client.Name, token, endpoint)
 	markVkTurnBackend(cfg)
