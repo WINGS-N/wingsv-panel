@@ -49,6 +49,15 @@
             <Server class="admin-nav-icon" aria-hidden="true" />
             <span>VK TURN Server</span>
           </router-link>
+          <router-link
+            v-if="federationOn"
+            class="admin-nav-link"
+            :to="{ name: 'admin-federation' }"
+            active-class="is-active"
+          >
+            <Share2 class="admin-nav-icon" aria-hidden="true" />
+            <span>Федерация</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'admin-account' }" active-class="is-active">
             <UserCog class="admin-nav-icon" aria-hidden="true" />
             <span>Аккаунт</span>
@@ -77,13 +86,17 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Crown, LogOut, Server, SlidersHorizontal, UserCog, Users } from 'lucide-vue-next';
+import { Crown, LogOut, Server, Share2, SlidersHorizontal, UserCog, Users } from 'lucide-vue-next';
 import { authState, isOwner, logout, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
 const busy = ref(false);
 const admin = computed(() => authState.value.admin);
+
+// The nav entry appears only once the operator turned the federation on. Asking
+// the API rather than a flag in the session keeps one source of truth.
+const federationOn = ref(false);
 
 // Two-letter monogram for the account chip (e.g. "NK" for "Nikita Kim").
 const avatarInitials = computed(() => {
@@ -97,9 +110,17 @@ const avatarInitials = computed(() => {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 });
 
-onMounted(() => {
+onMounted(async () => {
   if (!admin.value) {
     refreshSession();
+  }
+  try {
+    const res = await fetch('/api/admin/federation/summary', { credentials: 'include' });
+    if (res.ok) {
+      federationOn.value = Boolean((await res.json()).enabled);
+    }
+  } catch {
+    // A head that is down is not a reason to hide the rest of the panel.
   }
 });
 
