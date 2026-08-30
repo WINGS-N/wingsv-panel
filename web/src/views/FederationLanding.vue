@@ -82,33 +82,67 @@
           - несколько серверов на выбор, средний - один и с урезанной скоростью, низкий - карантин. Каждое решение
           записывается вместе с тем, что на него повлияло, чтобы на вопрос "за что" был ответ, а не пожатие плечами.
         </p>
-        <div class="fed-steps">
-          <article class="fed-step">
-            <img src="/img/oneui/firewall.svg" alt="" class="fed-step-icon" aria-hidden="true" />
-            <h3 class="fed-step-title">Вход только по приглашению</h3>
-            <p class="fed-step-copy">
-              Аккаунты не раздаются всем подряд: каждого кто-то привёл, и это записано. Ветку можно срезать целиком -
-              вместе с тем, кто наприглашал, уходят все, кого привёл он. Заводить аккаунты пачками становится дорого,
-              потому что теряются они тоже пачками.
-            </p>
-          </article>
-          <article class="fed-step">
-            <img src="/img/oneui/monitor.svg" alt="" class="fed-step-icon" aria-hidden="true" />
-            <h3 class="fed-step-title">Один доступ на сорок человек</h3>
-            <p class="fed-step-copy">
-              Своим доступом человек пользуется с двух-трёх устройств. Если один и тот же доступ работает сразу из
-              десятка разных мест, это уже не человек, а перепродажа - и такой аккаунт уходит в карантин. Чтобы это
-              увидеть, достаточно посчитать, откуда заходят; что именно открывают, знать не нужно.
-            </p>
-          </article>
-          <article class="fed-step">
-            <img src="/img/oneui/privacy.svg" alt="" class="fed-step-icon" aria-hidden="true" />
-            <h3 class="fed-step-title">Спам и торренты режутся на узле</h3>
-            <p class="fed-step-copy">
-              Почтовые порты и bittorrent закрыты на самой ноде - не потому, что мы против, а потому, что жалоба хостеру
-              прилетит донору, отдавшему сервер. Он подписывался делиться трафиком, а не отвечать за чужую рассылку.
-            </p>
-          </article>
+        <div class="fed-rail">
+          <button type="button" class="fed-rail-nav is-prev" aria-label="Предыдущие карточки" @click="scrollRail(-1)">
+            <ChevronLeft :size="18" aria-hidden="true" />
+          </button>
+          <div ref="rail" class="fed-rail-track">
+            <article class="fed-step">
+              <img src="/img/oneui/firewall.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+              <h3 class="fed-step-title">Вход только по приглашению</h3>
+              <p class="fed-step-copy">
+                Аккаунты не раздаются всем подряд: каждого кто-то привёл, и это записано. Ветку можно срезать целиком -
+                вместе с тем, кто наприглашал, уходят все, кого привёл он. Заводить аккаунты пачками становится дорого,
+                потому что теряются они тоже пачками.
+              </p>
+            </article>
+            <article class="fed-step">
+              <img src="/img/oneui/monitor.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+              <h3 class="fed-step-title">Один доступ на сорок человек</h3>
+              <p class="fed-step-copy">
+                Своим доступом человек пользуется с двух-трёх устройств. Если один и тот же доступ работает сразу из
+                десятка разных мест, это уже не человек, а перепродажа - и такой аккаунт уходит в карантин. Чтобы это
+                увидеть, достаточно посчитать, откуда заходят; что именно открывают, знать не нужно.
+              </p>
+            </article>
+            <article class="fed-step">
+              <img src="/img/oneui/privacy.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+              <h3 class="fed-step-title">Спам и торренты режутся на узле</h3>
+              <p class="fed-step-copy">
+                Почтовые порты и bittorrent закрыты на самой ноде - не потому, что мы против, а потому, что жалоба
+                хостеру прилетит донору, отдавшему сервер. Он подписывался делиться трафиком, а не отвечать за чужую
+                рассылку.
+              </p>
+            </article>
+            <article class="fed-step">
+              <img src="/img/oneui/server.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+              <h3 class="fed-step-title">Ключи не уезжают с сервера</h3>
+              <p class="fed-step-copy">
+                Входную личность узла генерирует сам узел, наружу отдаётся только открытая половина. Взломанный сервер
+                уносит с собой свои ключи и ничьи больше - одной утечки не хватит, чтобы прикинуться остальными.
+              </p>
+            </article>
+            <article class="fed-step">
+              <img src="/img/oneui/sharing.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+              <h3 class="fed-step-title">Узел не знает, кто через него идёт</h3>
+              <p class="fed-step-copy">
+                Профиль приезжает на сервер случайной строкой: ни почты, ни имени, ни номера. Донор видит трафик и
+                количество сессий, а кнопки, которая превратила бы их в людей, нет ни у него, ни у нас.
+              </p>
+            </article>
+            <article class="fed-step">
+              <img src="/img/oneui/terminal.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+              <h3 class="fed-step-title">Узлы проверяются оттуда, где ими пользуются</h3>
+              <p class="fed-step-copy">
+                Сервер, доступный из Европы, может быть придушен для домашнего провайдера. Поэтому качество меряется не
+                пингом из дата-центра, а реальной скачкой с точек внутри страны - и сервер, через который перестало
+                течь, уходит из выдачи сам.
+              </p>
+            </article>
+          </div>
+          <button type="button" class="fed-rail-nav is-next" aria-label="Следующие карточки" @click="scrollRail(1)">
+            <ChevronRight :size="18" aria-hidden="true" />
+          </button>
         </div>
         <p class="body-copy body-copy-wide mt-4">
           Сейчас всё это считается по количеству и поведению, а не по содержимому. Обещать, что так будет всегда, мы не
@@ -157,9 +191,21 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import PublicTopbar from '@/components/layout/PublicTopbar.vue';
 import FederationCounters from '@/components/domain/FederationCounters.vue';
+
+const rail = ref(null);
+
+// Листаем на ширину видимой части минус карточка, чтобы соседняя оставалась в
+// кадре и было видно, что список продолжается
+function scrollRail(direction) {
+  const el = rail.value;
+  if (!el) return;
+  el.scrollBy({ left: direction * Math.max(240, el.clientWidth - 120), behavior: 'smooth' });
+}
 </script>
 
 <style scoped>
@@ -224,6 +270,64 @@ import FederationCounters from '@/components/domain/FederationCounters.vue';
   font-size: 14px;
   line-height: 1.55;
   color: rgba(252, 252, 252, 0.62);
+}
+
+.fed-rail {
+  position: relative;
+  margin-top: 20px;
+}
+
+.fed-rail-track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.fed-rail-track::-webkit-scrollbar {
+  display: none;
+}
+
+.fed-rail-track > .fed-step {
+  flex: 0 0 min(300px, 78vw);
+  scroll-snap-align: start;
+}
+
+.fed-rail-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: none;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 20, 22, 0.92);
+  color: #fbfbfb;
+  transition: background 0.15s ease;
+}
+
+.fed-rail-nav:hover {
+  background: rgba(40, 40, 44, 0.96);
+}
+
+.fed-rail-nav.is-prev {
+  left: -14px;
+}
+
+.fed-rail-nav.is-next {
+  right: -14px;
+}
+
+@media (min-width: 768px) {
+  .fed-rail-nav {
+    display: flex;
+  }
 }
 
 .fed-honesty {
