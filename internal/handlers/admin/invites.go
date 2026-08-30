@@ -17,6 +17,10 @@ import (
 // leaked code is a contained problem rather than an open door.
 const maxInviteUses = 50
 
+// minDonatedBytes is the traffic a donor has to have actually carried before
+// they may invite. A node that is merely registered proves nothing
+const minDonatedBytes = 1 << 30
+
 type inviteView struct {
 	Token     string `json:"token"`
 	CreatedAt string `json:"created_at"`
@@ -47,7 +51,12 @@ func (h *Handler) handleInvites(w http.ResponseWriter, r *http.Request, admin st
 		for _, it := range invites {
 			out = append(out, h.inviteView(it))
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"invites": out})
+		body := map[string]any{"invites": out, "may_invite": true}
+		if err := h.mayInvite(r, admin); err != nil {
+			body["may_invite"] = false
+			body["reason"] = err.Error()
+		}
+		writeJSON(w, http.StatusOK, body)
 
 	case http.MethodPost:
 		if err := h.mayInvite(r, admin); err != nil {
@@ -95,10 +104,9 @@ func (h *Handler) handleInvites(w http.ResponseWriter, r *http.Request, admin st
 
 // mayInvite decides who gets to grow the tree.
 //
-// The owner always may. Everybody else has to be in the federation first: the
-// invite tree is what makes a free account cost something, and an administrator
-// who has donated nothing has no stake to lose if the branch they grow turns
-// out to be a farm. Donating a node is that stake.
+// The owner always may. Everybody else has to have carried real traffic first:
+// a pledge costs nothing to make on an account that exists only to grow a
+// branch, so the stake is the traffic, not the promise.
 //
 // A head that cannot be reached is a refusal, not a pass. Failing open here
 // would hand out the one privilege the whole anti-abuse design rests on.
@@ -117,6 +125,9 @@ func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 	}
 	if summary.GetNodes() == 0 {
 		return errors.New("приглашать могут те, кто отдал в федерацию хотя бы один сервер")
+	}
+	if summary.GetUsedBytes() < minDonatedBytes {
+		return errors.New("сервер отдан, но через него ещё никто не прошёл: приглашения открываются после первого гигабайта")
 	}
 	return nil
 }

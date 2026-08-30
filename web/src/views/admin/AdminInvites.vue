@@ -2,19 +2,20 @@
   <section class="surface-card">
     <h2 class="section-title">Приглашения</h2>
     <p class="body-copy body-copy-wide">
-      Вход в панель только по приглашению - этим и держится дерево. Код можно выдать одному человеку или сразу
-      нескольким; лимит считает тех, кто пришёл по самому коду, а сколько людей приведут они дальше - уже их дело.
+      Зарегистрироваться в панели можно только по коду. Один код можно выдать одному человеку или сразу нескольким -
+      счётчик ведётся по тем, кто пришёл именно по нему.
     </p>
     <p v-if="loadError" class="state-error mt-3">{{ loadError }}</p>
+    <p v-if="!mayInvite && blockReason" class="state-hint">{{ blockReason }}</p>
 
     <!-- Поля стоят полями, а не втиснуты в строку рядом с кнопкой: подпись над
          вводом и кнопка снизу - то, как выглядит любая форма в этой панели -->
-    <div class="form-grid mt-5">
+    <div v-if="mayInvite" class="form-grid mt-5">
       <OneuiInput v-model.number="maxUses" label="Человек по коду" type="number" :min="1" :max="50" />
       <OneuiInput v-model.number="ttlHours" label="Живёт часов (0 - без срока)" type="number" :min="0" :max="8760" />
     </div>
 
-    <div class="actions-row">
+    <div v-if="mayInvite" class="actions-row">
       <SamsungButton :busy="creating" @click="create">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
         Выписать код
@@ -60,6 +61,8 @@ const creating = ref(false);
 const loadError = ref('');
 const maxUses = ref(1);
 const ttlHours = ref(0);
+const mayInvite = ref(true);
+const blockReason = ref('');
 
 onMounted(load);
 
@@ -68,7 +71,10 @@ async function load() {
   try {
     const res = await fetch('/api/admin/invites', { credentials: 'include' });
     if (!res.ok) throw new Error(await errorText(res));
-    invites.value = (await res.json()).invites || [];
+    const data = await res.json();
+    invites.value = data.invites || [];
+    mayInvite.value = data.may_invite !== false;
+    blockReason.value = data.reason || '';
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
