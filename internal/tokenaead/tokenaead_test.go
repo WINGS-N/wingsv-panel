@@ -102,3 +102,44 @@ func TestKeyDerivationFixture(t *testing.T) {
 		}
 	}
 }
+
+// A peer stuck on the old derivation must be reached through the very same
+// Creds the first, failed attempt used. grpc keeps one Creds for the life of a
+// ClientConn and reconnects through it, so if the keys were fixed when the
+// Creds was built, the preference could flip for ever and every retry would
+// still carry the derivation that had already been refused.
+func TestOneCredsSwitchesDerivationAfterAFailure(t *testing.T) {
+	const token = "a-peer-that-never-upgraded"
+	// The server speaks only the old derivation, as a deployed relay does.
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := grpc.NewServer(grpc.Creds(ServerVariant(token, Legacy256)))
+	healthpb.RegisterHealthServer(srv, health.NewServer())
+	go func() { _ = srv.Serve(lis) }()
+	defer srv.Stop()
+
+	pref := NewPreference()
+	creds := ClientFor(token, "legacy-peer", pref)
+	if creds.variant != SHA512 {
+		t.Fatalf("first attempt used %v, want sha512 to be tried first", creds.variant)
+	}
+
+	// The first dial is expected to fail; what matters is that the second one,
+	// through this same Creds, gets through.
+	_ = dialCheck(t, lis.Addr().String(), creds)
+
+	var lastErr error
+	for i := 0; i < 5; i++ {
+		if lastErr = dialCheck(t, lis.Addr().String(), creds); lastErr == nil {
+			break
+		}
+	}
+	if lastErr != nil {
+		t.Fatalf("the same Creds never reached the legacy peer: %v", lastErr)
+	}
+	if v, ok := pref.Known("legacy-peer"); !ok || v != Legacy256 {
+		t.Errorf("preference settled on %v (known=%v), want the legacy derivation", v, ok)
+	}
+}

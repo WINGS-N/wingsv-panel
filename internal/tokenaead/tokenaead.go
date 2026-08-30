@@ -196,11 +196,16 @@ type Creds struct {
 	// path; more than one is a fleet mid-migration
 	accept []keypair
 
-	// variant, pref and prefKey are the dialing side's half of the migration: the
-	// connection reports back whether the peer accepted this derivation
+	// variant, pref, prefKey and token are the dialing side's half of the
+	// migration: the connection reports back whether the peer accepted this
+	// derivation, and token is kept so the next handshake can re-derive. Without
+	// it the keys would be frozen at construction, and since grpc reuses one
+	// Creds for every reconnect, a peer answering on the other derivation would
+	// never be retried however often the preference flipped.
 	variant Variant
 	pref    *Preference
 	prefKey string
+	token   string
 }
 
 // ClientFor builds dialer credentials for one peer, choosing the derivation from
@@ -215,7 +220,7 @@ func ClientFor(token, peerKey string, pref *Preference) *Creds {
 	}
 	v := pref.Next(peerKey)
 	c := ClientVariant(token, v)
-	c.variant, c.pref, c.prefKey = v, pref, peerKey
+	c.variant, c.pref, c.prefKey, c.token = v, pref, peerKey, token
 	return c
 }
 
@@ -281,7 +286,17 @@ func wrap(raw net.Conn, writeKey, readKey []byte) (net.Conn, credentials.AuthInf
 
 // ClientHandshake wraps raw for the dialing side: it writes c2s, reads s2c.
 func (c *Creds) ClientHandshake(_ context.Context, _ string, raw net.Conn) (net.Conn, credentials.AuthInfo, error) {
-	conn, info, err := wrap(raw, c.c2s, c.s2c)
+	c2s, s2c, variant := c.c2s, c.s2c, c.variant
+	// Re-derive per handshake rather than reuse what construction picked. grpc
+	// holds one Creds for the life of a ClientConn and reconnects through it, so
+	// keys fixed at construction would outlive every correction the preference
+	// makes and the peer would never be reached at all.
+	if c.pref != nil && c.token != "" {
+		variant = c.pref.Next(c.prefKey)
+		c2s = deriveKey(variant, []byte(c.token), "c2s")
+		s2c = deriveKey(variant, []byte(c.token), "s2c")
+	}
+	conn, info, err := wrap(raw, c2s, s2c)
 	if err != nil || c.pref == nil {
 		return conn, info, err
 	}
@@ -290,10 +305,10 @@ func (c *Creds) ClientHandshake(_ context.Context, _ string, raw net.Conn) (net.
 	ac := conn.(*aeadConn)
 	ac.onFirstRead = func(ok bool) {
 		if ok {
-			c.pref.Succeeded(c.prefKey, c.variant)
+			c.pref.Succeeded(c.prefKey, variant)
 			return
 		}
-		c.pref.Failed(c.prefKey, c.variant)
+		c.pref.Failed(c.prefKey, variant)
 	}
 	return ac, info, err
 }
