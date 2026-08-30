@@ -130,6 +130,14 @@ message NodeSummary {
 message MintEnrollTokenRequest {
   string donor_id = 1;
   uint32 ttl_seconds = 2;
+  // How many nodes may join on this one token. Zero and one both mean one.
+  //
+  // It exists for a donor bringing a fleet rather than a machine: a DaemonSet
+  // enrols every host it lands on from one Secret, and minting per host would
+  // mean one release per host. The single-use default stands for the paste-one-
+  // command case, where a token that outlives its node is a token somebody else
+  // can use.
+  uint32 uses = 3;
 }
 
 message MintEnrollTokenResponse {
@@ -141,6 +149,8 @@ message MintEnrollTokenResponse {
   // knows its own public address and serves the installer; a panel guessing at it
   // is a panel handing out a link to a 404
   string install_command = 3;
+  // How many joins this token still authorises when it was issued
+  uint32 uses = 4;
 }
 
 message EnsureUserRequest {

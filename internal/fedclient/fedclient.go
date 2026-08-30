@@ -114,7 +114,11 @@ func (c *Client) DonorSummary(ctx context.Context, donorID string) (*headpb.Dono
 }
 
 // MintEnrollToken returns the string a donor pastes into the installer.
-func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.Duration) (*headpb.MintEnrollTokenResponse, error) {
+//
+// uses is how many nodes may join on the one token. One is the ordinary case;
+// more is a donor enrolling a fleet from a single Secret, which is what a
+// Kubernetes DaemonSet does. The head caps it.
+func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.Duration, uses uint32) (*headpb.MintEnrollTokenResponse, error) {
 	client, err := c.dial()
 	if err != nil {
 		return nil, err
@@ -122,6 +126,7 @@ func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.D
 	return client.MintEnrollToken(ctx, &headpb.MintEnrollTokenRequest{
 		DonorId:    donorID,
 		TtlSeconds: uint32(ttl.Seconds()),
+		Uses:       uses,
 	})
 }
 

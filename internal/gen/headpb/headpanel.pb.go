@@ -933,9 +933,17 @@ func (x *NodeSummary) GetLive() *NodeCounters {
 }
 
 type MintEnrollTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DonorId       string                 `protobuf:"bytes,1,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
-	TtlSeconds    uint32                 `protobuf:"varint,2,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	DonorId    string                 `protobuf:"bytes,1,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
+	TtlSeconds uint32                 `protobuf:"varint,2,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	// How many nodes may join on this one token. Zero and one both mean one.
+	//
+	// It exists for a donor bringing a fleet rather than a machine: a DaemonSet
+	// enrols every host it lands on from one Secret, and minting per host would
+	// mean one release per host. The single-use default stands for the paste-one-
+	// command case, where a token that outlives its node is a token somebody else
+	// can use.
+	Uses          uint32 `protobuf:"varint,3,opt,name=uses,proto3" json:"uses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -984,6 +992,13 @@ func (x *MintEnrollTokenRequest) GetTtlSeconds() uint32 {
 	return 0
 }
 
+func (x *MintEnrollTokenRequest) GetUses() uint32 {
+	if x != nil {
+		return x.Uses
+	}
+	return 0
+}
+
 type MintEnrollTokenResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The compound value the installer takes verbatim. It carries the fleet
@@ -994,8 +1009,10 @@ type MintEnrollTokenResponse struct {
 	// knows its own public address and serves the installer; a panel guessing at it
 	// is a panel handing out a link to a 404
 	InstallCommand string `protobuf:"bytes,3,opt,name=install_command,json=installCommand,proto3" json:"install_command,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// How many joins this token still authorises when it was issued
+	Uses          uint32 `protobuf:"varint,4,opt,name=uses,proto3" json:"uses,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MintEnrollTokenResponse) Reset() {
@@ -1047,6 +1064,13 @@ func (x *MintEnrollTokenResponse) GetInstallCommand() string {
 		return x.InstallCommand
 	}
 	return ""
+}
+
+func (x *MintEnrollTokenResponse) GetUses() uint32 {
+	if x != nil {
+		return x.Uses
+	}
+	return 0
 }
 
 type EnsureUserRequest struct {
@@ -1425,15 +1449,17 @@ const file_headpanel_proto_rawDesc = "" +
 	"\vjoined_unix\x18\v \x01(\x03R\n" +
 	"joinedUnix\x12$\n" +
 	"\x0elast_seen_unix\x18\f \x01(\x03R\flastSeenUnix\x125\n" +
-	"\x04live\x18\r \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04live\"T\n" +
+	"\x04live\x18\r \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04live\"h\n" +
 	"\x16MintEnrollTokenRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\rR\n" +
-	"ttlSeconds\"\x88\x01\n" +
+	"ttlSeconds\x12\x12\n" +
+	"\x04uses\x18\x03 \x01(\rR\x04uses\"\x9c\x01\n" +
 	"\x17MintEnrollTokenResponse\x12!\n" +
 	"\fenroll_token\x18\x01 \x01(\tR\venrollToken\x12!\n" +
 	"\fexpires_unix\x18\x02 \x01(\x03R\vexpiresUnix\x12'\n" +
-	"\x0finstall_command\x18\x03 \x01(\tR\x0einstallCommand\",\n" +
+	"\x0finstall_command\x18\x03 \x01(\tR\x0einstallCommand\x12\x12\n" +
+	"\x04uses\x18\x04 \x01(\rR\x04uses\",\n" +
 	"\x11EnsureUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x96\x01\n" +
 	"\x0eUserAllocation\x12\x17\n" +

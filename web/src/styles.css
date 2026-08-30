@@ -259,6 +259,16 @@
     @apply mt-5 flex flex-wrap gap-3;
   }
 
+  .federation-uses {
+    @apply inline-flex items-center gap-2 text-[13px];
+  }
+
+  .federation-uses-input {
+    @apply w-16 rounded-xl bg-transparent px-3 py-2 text-center font-samsung text-[15px] text-wings-text outline-none;
+    border: 1px solid theme('colors.wings.inputLine');
+    min-height: 48px;
+  }
+
   .action-button {
     @apply inline-flex items-center justify-center gap-2 rounded-full border-none px-6 font-samsung text-[15px] font-bold leading-none transition-colors duration-150 ease-in-out;
     min-height: 48px;

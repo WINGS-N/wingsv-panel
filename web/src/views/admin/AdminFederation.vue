@@ -37,11 +37,19 @@
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
         Подключить сервер
       </SamsungButton>
+      <label class="federation-uses">
+        <span class="admin-muted">серверов на один токен</span>
+        <input v-model.number="uses" type="number" min="1" max="64" class="federation-uses-input" />
+      </label>
       <SamsungButton variant="ghost" :busy="loading" @click="load">Обновить</SamsungButton>
     </div>
 
     <div v-if="command" class="entry-card mt-4">
-      <p class="body-copy">Выполните на сервере, который отдаёте. Токен одноразовый и скоро протухнет.</p>
+      <p class="body-copy">
+        Выполните на сервере, который отдаёте.
+        <template v-if="mintedUses > 1"> Токен рассчитан на {{ mintedUses }} серверов и скоро протухнет. </template>
+        <template v-else> Токен одноразовый и скоро протухнет. </template>
+      </p>
       <CopyableLink :value="command" class="mt-3" />
     </div>
   </section>
@@ -81,6 +89,10 @@ import { formatBytes } from '@/utils/format';
 const enabled = ref(false);
 const loading = ref(false);
 const minting = ref(false);
+// Сколько серверов вступит по одному токену. Больше одного нужно там, где
+// ноды поднимаются из общего секрета - в кубере это DaemonSet.
+const uses = ref(1);
+const mintedUses = ref(1);
 const busyNode = ref('');
 const loadError = ref('');
 const command = ref('');
@@ -131,10 +143,12 @@ async function mint() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ uses: Math.max(1, Number(uses.value) || 1) }),
     });
     if (!res.ok) throw new Error(await errorText(res));
-    command.value = (await res.json()).command;
+    const got = await res.json();
+    command.value = got.command;
+    mintedUses.value = got.uses || 1;
   } catch (err) {
     loadError.value = String(err.message || err);
   } finally {

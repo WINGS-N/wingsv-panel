@@ -132,6 +132,9 @@ type enrollTokenView struct {
 	// Command is what the donor pastes. Built here rather than in the browser so
 	// the public base URL is the one the panel actually serves on
 	Command string `json:"command"`
+	// Uses is how many nodes may still join on this token. One for the ordinary
+	// paste-one-command donor; more for a fleet enrolling from one Secret.
+	Uses uint32 `json:"uses"`
 }
 
 func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -144,14 +147,15 @@ func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var req struct {
-		TTLMinutes int `json:"ttl_minutes"`
+		TTLMinutes int    `json:"ttl_minutes"`
+		Uses       uint32 `json:"uses"`
 	}
 	// An empty body is fine: the head applies its own default
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
-	got, err := h.fed.MintEnrollToken(ctx, donorID(admin), time.Duration(req.TTLMinutes)*time.Minute)
+	got, err := h.fed.MintEnrollToken(ctx, donorID(admin), time.Duration(req.TTLMinutes)*time.Minute, req.Uses)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
 		return
@@ -167,6 +171,7 @@ func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Req
 		Token:       got.GetEnrollToken(),
 		ExpiresUnix: got.GetExpiresUnix(),
 		Command:     command,
+		Uses:        got.GetUses(),
 	})
 }
 
