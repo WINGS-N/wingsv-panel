@@ -93,8 +93,31 @@
     }
   }
 
+  /* Ссылки живут рядом с вордмарком, а не в противоположном углу: разделы
+     принадлежат сайту, а аккаунт - человеку, и справа остаётся только он */
+  .public-bar-left {
+    @apply flex flex-wrap items-center gap-x-10 gap-y-2;
+  }
+
   .public-nav {
-    @apply flex flex-wrap items-center gap-5;
+    @apply flex flex-wrap items-center gap-6;
+  }
+
+  .public-account {
+    @apply inline-flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-[15px] text-wings-text no-underline transition-colors;
+    background: theme('colors.wings.chip');
+  }
+
+  .public-account:hover {
+    background: theme('colors.wings.secondary');
+  }
+
+  .public-avatar {
+    @apply h-8 w-8 rounded-full object-cover;
+  }
+
+  .public-account-name {
+    @apply max-w-[14ch] truncate;
   }
 
   .public-nav-link {
