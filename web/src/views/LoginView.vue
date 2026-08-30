@@ -38,6 +38,18 @@
             {{ busy ? 'Входим…' : 'Войти' }}
           </SamsungButton>
 
+          <SamsungButton
+            v-if="matrix.enabled"
+            variant="secondary"
+            class="login-submit mt-3"
+            type="button"
+            @click="signInWithMatrix"
+          >
+            Войти через {{ matrix.homeserver }}
+          </SamsungButton>
+
+          <p v-if="matrixError" class="state-error mt-3">{{ matrixError }}</p>
+
           <router-link v-if="registrationState.mode !== 'closed'" class="login-back-link" :to="{ name: 'register' }"
             >Создать аккаунт</router-link
           >
@@ -53,7 +65,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { LogIn } from 'lucide-vue-next';
 import { login, registrationState } from '@/stores/auth.js';
@@ -61,12 +73,51 @@ import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
+
 const route = useRoute();
 const username = ref('');
 const password = ref('');
 const error = ref('');
 const busy = ref(false);
 const year = computed(() => new Date().getFullYear());
+
+const matrix = reactive({ enabled: false, homeserver: '' });
+
+// Whatever went wrong happened on a redirect, so the reason arrives in the URL.
+// Spelling it out beats leaving somebody staring at a login form that just
+// bounced them for no stated reason.
+const matrixReasons = {
+  foreign_homeserver: 'Этот аккаунт не с нашего homeserver.',
+  expired: 'Вход просрочен, попробуйте ещё раз.',
+  suspended: 'Аккаунт отключён.',
+  registration_closed: 'Регистрация закрыта.',
+  invite_required: 'Нужен инвайт.',
+  username_taken: 'Такой логин уже занят в панели.',
+  already_linked: 'Этот аккаунт уже привязан к другому админу.',
+  link_failed: 'Не удалось привязать аккаунт.',
+  exchange_failed: 'Homeserver не подтвердил вход.',
+  login_failed: 'Вход не удался.',
+};
+
+const matrixError = computed(() => {
+  const code = route.query.matrix_error;
+  if (!code) return '';
+  return matrixReasons[code] || 'Вход через Matrix не удался.';
+});
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/admin/matrix/status', { credentials: 'include' });
+    if (res.ok) Object.assign(matrix, await res.json());
+  } catch {
+    // No account service is a normal state, not something to shout about.
+  }
+});
+
+function signInWithMatrix() {
+  const back = route.query.redirect || '/admin/clients';
+  window.location.href = `/api/admin/matrix/start?return_to=${encodeURIComponent(back)}`;
+}
 
 async function onSubmit() {
   if (busy.value) return;

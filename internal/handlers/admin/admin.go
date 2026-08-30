@@ -18,6 +18,7 @@ import (
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/fedclient"
 	"v.wingsnet.org/internal/guardianhub"
+	"v.wingsnet.org/internal/matrixauth"
 	"v.wingsnet.org/internal/pki"
 	"v.wingsnet.org/internal/storage"
 	"v.wingsnet.org/internal/xuiclient"
@@ -32,6 +33,9 @@ type Handler struct {
 	// fed talks to the federation head. Nil-safe: a deployment with no head
 	// configured simply has no federation surface
 	fed *fedclient.Client
+	// matrix is the deployment's own account service. Nil-safe: without one the
+	// panel simply never offers the button
+	matrix *matrixauth.Client
 	// SPKI pins of the deployment CA, embedded in every enrollment link.
 	caPins [][]byte
 }
@@ -41,6 +45,13 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		cfg: cfg, store: store, auth: authSvc, hub: hub,
 		xui: xuiclient.New(),
 		fed: fedclient.New(cfg.FederationHead, cfg.FederationSecret),
+		matrix: matrixauth.New(matrixauth.Config{
+			Issuer:       cfg.MatrixIssuer,
+			Homeserver:   cfg.MatrixHomeserver,
+			ClientID:     cfg.MatrixClientID,
+			ClientSecret: cfg.MatrixClientSecret,
+			RedirectURL:  strings.TrimRight(cfg.PublicBaseURL, "/") + "/api/admin/matrix/callback",
+		}),
 	}
 	// A deployment with no publicly trusted certificate - a bare-IP install, where
 	// no CA will issue one - can only be verified by the device if the enrollment
@@ -77,6 +88,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/vk-links", h.requireAuth(h.handleVKLinks))
 	mux.HandleFunc("/api/admin/avatars/", h.handleAvatar)
 	mux.HandleFunc("/api/admin/me/avatar", h.requireAuth(h.handleMyAvatar))
+	mux.HandleFunc("/api/admin/matrix/status", h.handleMatrixStatus)
+	mux.HandleFunc("/api/admin/matrix/start", h.handleMatrixStart)
+	mux.HandleFunc("/api/admin/matrix/callback", h.handleMatrixCallback)
+	mux.HandleFunc("/api/admin/matrix/link", h.requireAuth(h.handleMatrixLink))
 	mux.HandleFunc("/api/admin/federation/summary", h.requireAuth(h.handleFederationSummary))
 	mux.HandleFunc("/api/admin/federation/enroll-token", h.requireAuth(h.handleFederationEnrollToken))
 	mux.HandleFunc("/api/admin/federation/nodes/", h.requireAuth(h.handleFederationNodeState))

@@ -24,8 +24,14 @@ type Admin struct {
 	SuspendedAtUnix int64  `gorm:"column:suspended_at;not null;default:0"`
 	SuspendedReason string `gorm:"column:suspended_reason;not null;default:''"`
 	SuspendedByRoot int64  `gorm:"column:suspended_by_root;not null;default:0"`
-	CreatedAtUnix   int64  `gorm:"column:created_at;not null"`
-	UpdatedAtUnix   int64  `gorm:"column:updated_at;not null"`
+	// MatrixID is the account on our own homeserver, empty when the admin signs
+	// in with a password. A pointer because the uniqueness has to allow many
+	// admins with no account at all, and only NULL does that - an empty string
+	// would collide with every other admin who never linked one.
+	MatrixID      *string `gorm:"column:matrix_id;uniqueIndex"`
+	MatrixSubject string  `gorm:"column:matrix_subject;not null;default:''"`
+	CreatedAtUnix int64   `gorm:"column:created_at;not null"`
+	UpdatedAtUnix int64   `gorm:"column:updated_at;not null"`
 }
 
 func (Admin) TableName() string { return "admins" }

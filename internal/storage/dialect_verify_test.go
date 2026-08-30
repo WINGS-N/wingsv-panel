@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -151,6 +152,28 @@ func exerciseDialect(t *testing.T, driver Driver, dsn string) {
 	}
 	if suspended, _, _ := st.IsSuspended(deeper.ID); suspended {
 		t.Fatal("restore did not lift the branch")
+	}
+
+	// matrix_id is unique but nullable, which is where dialects like to differ:
+	// two admins with no account must both be allowed, one account must not be
+	if err := st.LinkMatrixID(invited.ID, "@invited:wings.example", "sub-a"); err != nil {
+		t.Fatalf("LinkMatrixID: %v", err)
+	}
+	if err := st.LinkMatrixID(deeper.ID, "@invited:wings.example", "sub-a"); !errors.Is(err, ErrMatrixIDTaken) {
+		t.Fatalf("LinkMatrixID twice = %v, want ErrMatrixIDTaken", err)
+	}
+	got, err := st.FindAdminByMatrixID("@invited:wings.example")
+	if err != nil || got.ID != invited.ID {
+		t.Fatalf("FindAdminByMatrixID = %+v err=%v", got, err)
+	}
+	if id, err := st.MatrixIDFor(deeper.ID); err != nil || id != "" {
+		t.Fatalf("MatrixIDFor unlinked = %q err=%v", id, err)
+	}
+	if err := st.UnlinkMatrixID(invited.ID); err != nil {
+		t.Fatalf("UnlinkMatrixID: %v", err)
+	}
+	if _, err := st.FindAdminByMatrixID("@invited:wings.example"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("the account is still linked after unlinking: %v", err)
 	}
 
 	// The rollup upserts a batch with an ON CONFLICT clause, which is exactly the

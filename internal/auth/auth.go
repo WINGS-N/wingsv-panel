@@ -354,3 +354,110 @@ func GenerateClientID() (string, error) {
 func GenerateInviteToken() (string, error) {
 	return newToken(16)
 }
+
+// ErrMatrixAccountUnknown means nobody has attached this Matrix account, and the
+// deployment is not accepting new registrations from it.
+var ErrMatrixAccountUnknown = errors.New("auth: this matrix account is not linked to an admin")
+
+// LoginWithMatrix signs somebody in with an account on our own homeserver.
+//
+// A first-time account is subject to exactly the same registration rules as a
+// password signup. That matters more than it looks: if Matrix login could create
+// an admin while registration is invite-only, it would be a way straight around
+// the invite tree, and the tree is the only thing making an identity cost
+// anything at all.
+func (s *Service) LoginWithMatrix(matrixID, localpart, subject, inviteToken string) (storage.Admin, storage.AdminSession, error) {
+	matrixID = strings.ToLower(strings.TrimSpace(matrixID))
+	if matrixID == "" {
+		return storage.Admin{}, storage.AdminSession{}, ErrInvalidCredentials
+	}
+
+	admin, err := s.store.FindAdminByMatrixID(matrixID)
+	switch {
+	case err == nil:
+		if suspended, reason, sErr := s.store.IsSuspended(admin.ID); sErr == nil && suspended {
+			return storage.Admin{}, storage.AdminSession{}, &SuspendedError{Reason: reason}
+		}
+		sess, sErr := s.newSession(admin.ID)
+		if sErr != nil {
+			return storage.Admin{}, storage.AdminSession{}, sErr
+		}
+		_ = s.store.MarkAdminLogin(admin.ID)
+		return admin, sess, nil
+	case !errors.Is(err, storage.ErrNotFound):
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+
+	mode, err := s.store.GetPlatformSetting(storage.SettingRegistrationMode, RegistrationModeOpen)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	switch mode {
+	case RegistrationModeClosed:
+		return storage.Admin{}, storage.AdminSession{}, ErrRegistrationClosed
+	case RegistrationModeInvite:
+		if strings.TrimSpace(inviteToken) == "" {
+			return storage.Admin{}, storage.AdminSession{}, ErrRegistrationInvite
+		}
+	}
+
+	username, err := ValidateNewUsername(localpart)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	if _, err := s.store.FindAdminByUsername(username); err == nil {
+		// Somebody already holds the name. Refusing beats silently taking over an
+		// existing password account with a Matrix login
+		return storage.Admin{}, storage.AdminSession{}, ErrUsernameTaken
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+
+	// No password: this account signs in through the homeserver and nothing else
+	hash, err := HashPassword(mustRandomPassword())
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	created, err := s.store.CreateAdmin(username, hash, false, storage.RoleAdmin)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	if mode == RegistrationModeInvite {
+		if err := s.store.RedeemInvite(inviteToken, created.ID); err != nil {
+			_ = s.store.DeleteAdmin(created.ID)
+			return storage.Admin{}, storage.AdminSession{}, ErrInviteTokenInvalid
+		}
+	}
+	if err := s.store.LinkMatrixID(created.ID, matrixID, subject); err != nil {
+		_ = s.store.DeleteAdmin(created.ID)
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	sess, err := s.newSession(created.ID)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	_ = s.store.MarkAdminLogin(created.ID)
+	return created, sess, nil
+}
+
+// newSession mints a session for an admin who has already been authenticated.
+func (s *Service) newSession(adminID int64) (storage.AdminSession, error) {
+	id, err := newToken(32)
+	if err != nil {
+		return storage.AdminSession{}, err
+	}
+	return s.store.CreateSession(id, adminID, SessionTTL)
+}
+
+// mustRandomPassword fills the password column for an account that never uses
+// one. It is unguessable and nobody is ever told it, so the only way in is the
+// homeserver.
+func mustRandomPassword() string {
+	token, err := newToken(32)
+	if err != nil {
+		// newToken only fails if the system entropy source does, at which point
+		// nothing here is safe to continue with
+		panic("auth: no entropy for a placeholder password: " + err.Error())
+	}
+	return token
+}

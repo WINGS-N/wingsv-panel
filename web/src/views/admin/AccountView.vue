@@ -49,15 +49,64 @@
         </SamsungButton>
       </div>
     </form>
+
+    <template v-if="matrix.enabled">
+      <h2 class="admin-section-subtitle mt-5">Matrix</h2>
+      <p class="admin-muted">
+        Вход через <strong>{{ matrix.homeserver }}</strong
+        >. Аватар подтянется оттуда только если здесь своего нет — загруженный вручную не трогаем.
+      </p>
+      <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
+      <div class="actions-row mt-3">
+        <template v-if="matrix.matrix_id">
+          <span class="admin-mono">{{ matrix.matrix_id }}</span>
+          <SamsungButton variant="ghost" :busy="matrixBusy" @click="unlinkMatrix">Отвязать</SamsungButton>
+        </template>
+        <SamsungButton v-else @click="linkMatrix">Привязать аккаунт</SamsungButton>
+      </div>
+    </template>
   </section>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { Camera, KeyRound, Trash2 } from 'lucide-vue-next';
 import { authState, changePassword, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+
+const matrix = reactive({ enabled: false, homeserver: '', matrix_id: '' });
+const matrixBusy = ref(false);
+const matrixError = ref('');
+
+onMounted(loadMatrix);
+
+async function loadMatrix() {
+  try {
+    const res = await fetch('/api/admin/matrix/link', { credentials: 'include' });
+    if (res.ok) Object.assign(matrix, await res.json());
+  } catch {
+    // No account service configured is a normal state.
+  }
+}
+
+function linkMatrix() {
+  window.location.href = `/api/admin/matrix/start?return_to=${encodeURIComponent('/admin/account')}`;
+}
+
+async function unlinkMatrix() {
+  matrixBusy.value = true;
+  matrixError.value = '';
+  try {
+    const res = await fetch('/api/admin/matrix/link', { method: 'DELETE', credentials: 'include' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await loadMatrix();
+  } catch (err) {
+    matrixError.value = String(err.message || err);
+  } finally {
+    matrixBusy.value = false;
+  }
+}
 
 const admin = computed(() => authState.value.admin);
 const oldPassword = ref('');

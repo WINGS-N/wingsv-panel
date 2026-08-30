@@ -34,6 +34,15 @@ type Config struct {
 	// FederationHead is the wingsvpn-federation head's panel-facing gRPC address.
 	// Empty keeps every federation surface off, which is the default.
 	FederationHead string
+	// Matrix login through the deployment's own account service. Pinning the
+	// issuer is what keeps identities to our homeserver: an identity minted
+	// anywhere else costs nothing, and the invite tree only works because one
+	// costs something.
+	MatrixIssuer       string
+	MatrixHomeserver   string
+	MatrixClientID     string
+	MatrixClientSecret string
+
 	// FederationSecret keys that link. It is deliberately not the fleet secret
 	// every donated node holds: that would hand a donor the operator's view.
 	FederationSecret string
@@ -64,6 +73,10 @@ func Load() Config {
 		TLSSelfSigned:          parseBoolEnv("TLS_SELF_SIGNED", false),
 		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
 		RelayToken:             getEnv("RELAY_TOKEN", ""),
+		MatrixIssuer:           strings.TrimRight(getEnv("MATRIX_ISSUER", ""), "/"),
+		MatrixHomeserver:       getEnv("MATRIX_HOMESERVER", ""),
+		MatrixClientID:         getEnv("MATRIX_CLIENT_ID", ""),
+		MatrixClientSecret:     getEnv("MATRIX_CLIENT_SECRET", ""),
 		FederationHead:         getEnv("FEDERATION_HEAD", ""),
 		FederationSecret:       getEnv("FEDERATION_SECRET", ""),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
