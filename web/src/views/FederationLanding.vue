@@ -291,7 +291,9 @@ function scrollRail(direction) {
 }
 
 .fed-rail-track > .fed-step {
-  flex: 0 0 min(300px, 78vw);
+  /* Карточка тянется вместе с секцией: фиксированные 300px оставляли справа
+     пустую полосу, а текст переносился раньше, чем кончалась карточка */
+  flex: 0 0 clamp(260px, 31%, 420px);
   scroll-snap-align: start;
 }
 
