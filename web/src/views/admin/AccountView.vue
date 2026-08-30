@@ -29,7 +29,7 @@
       </div>
     </div>
     <p v-if="avatarError" class="admin-error mt-2">{{ avatarError }}</p>
-    <p class="admin-muted mt-2">PNG / JPEG / WebP, до 2 МБ.</p>
+    <p class="admin-muted mt-2">PNG / JPEG / WebP, до 2 MB.</p>
 
     <h2 class="admin-section-subtitle mt-6">Сменить пароль</h2>
     <form class="admin-account-form" @submit.prevent="onSubmit">
@@ -149,7 +149,7 @@ async function onFilePicked(e) {
   e.target.value = '';
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) {
-    avatarError.value = 'Файл слишком большой (макс. 2 МБ)';
+    avatarError.value = 'Файл слишком большой (макс. 2 MB)';
     return;
   }
   avatarError.value = '';

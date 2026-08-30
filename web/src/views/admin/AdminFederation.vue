@@ -2,7 +2,12 @@
   <!-- Rendered only when the operator turned the federation on. Off means the
        section does not exist, not that it exists and is greyed out. -->
   <section v-if="enabled" class="surface-card">
-    <h2 class="section-title">Федерация</h2>
+    <div class="federation-live-head">
+      <h2 class="section-title">Федерация</h2>
+      <!-- Просто точка: она говорит "цифры живые" одним своим видом, подпись
+           к ней только шумела бы -->
+      <span class="live-dot" role="status" aria-label="Данные обновляются" title="Данные обновляются"></span>
+    </div>
     <p class="body-copy">
       Отдайте мощности своего сервера в общий пул — с него будут обслуживаться бесплатные пользователи в пределах
       месячного лимита, который вы назначаете сами.
@@ -11,42 +16,60 @@
 
     <div class="admin-stats">
       <div class="stat">
-        <span class="stat-kicker">Ваших узлов</span>
+        <span class="stat-kicker">
+          <Server :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Ваших узлов
+        </span>
         <span class="stat-value">{{ summary.nodes_online }} / {{ summary.nodes }}</span>
         <span class="stat-meta">онлайн сейчас</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Сессий</span>
+        <span class="stat-kicker">
+          <Users :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Сессий
+        </span>
         <span class="stat-value">{{ summary.sessions }}</span>
         <span class="stat-meta">активных подключений</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Отдача</span>
+        <span class="stat-kicker">
+          <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
+          Отдача
+        </span>
         <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.up_rate_bps) }}</span>
         <span class="stat-meta">с ваших узлов</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Приём</span>
+        <span class="stat-kicker">
+          <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
+          Приём
+        </span>
         <span class="stat-value"><span class="traffic-rx">↓</span> {{ rate(summary.down_rate_bps) }}</span>
         <span class="stat-meta">на устройства</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Отдано за период</span>
+        <span class="stat-kicker">
+          <CalendarRange :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Отдано за период
+        </span>
         <span class="stat-value">{{ bytes(summary.used_bytes) }}</span>
         <span class="stat-meta">из {{ bytes(summary.declared_budget_bytes) }}</span>
       </div>
     </div>
 
-    <div class="actions-row mt-4">
-      <SamsungButton :busy="minting" @click="mint">
-        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-        Подключить сервер
-      </SamsungButton>
-      <label class="federation-uses">
-        <span class="admin-muted">серверов на один токен</span>
-        <input v-model.number="uses" type="number" min="1" max="64" class="federation-uses-input" />
-      </label>
-      <SamsungButton variant="ghost" :busy="loading" @click="load">Обновить</SamsungButton>
+    <div class="fed-actions mt-4">
+      <!-- Кнопка и счётчик - одно действие, поэтому стоят вплотную. Обновление
+           сводки к ним отношения не имеет и уезжает к правому краю -->
+      <div class="fed-mint-group">
+        <SamsungButton :busy="minting" @click="mint">
+          <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+          Подключить сервер
+        </SamsungButton>
+        <label class="federation-uses">
+          <span class="admin-muted">серверов на один токен</span>
+          <input v-model.number="uses" type="number" min="1" max="64" class="federation-uses-input" />
+        </label>
+      </div>
     </div>
 
     <div v-if="command" class="entry-card mt-4">
@@ -106,10 +129,12 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
-import { ArrowUp, PauseCircle, PlayCircle, Plus, Users } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, CalendarRange, PauseCircle, PlayCircle, Plus, Server, Users } from 'lucide-vue-next';
+import { connectAdminSocket } from '@/stores/admin-socket.js';
 
 // Тот же цветовой код направления, что в приложении
 const FLOW_UP = '#0381fe';
+const FLOW_DOWN = '#15b76f';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatBytes } from '@/utils/format';
@@ -136,16 +161,31 @@ const summary = reactive({
 });
 
 let timer = null;
+let socketHandle = null;
 
 onMounted(() => {
   load();
-  // The head recomputes rotation every ten seconds, so anything faster only adds
-  // load without telling the donor anything new.
-  timer = setInterval(load, 15000);
+  // Список узлов и их состояния приходят по REST: они меняются медленно, и
+  // опрашивать их чаще смысла нет
+  timer = setInterval(load, 20000);
+  // А цифры сверху идут потоком, поэтому кнопки "обновить" на этом экране нет:
+  // человеку не должно приходиться думать о свежести данных
+  socketHandle = connectAdminSocket((event) => {
+    if (event.kind !== 'fed_global' || !event.payload) return;
+    const live = event.payload;
+    summary.nodes_online = live.nodes_online ?? summary.nodes_online;
+    summary.sessions = live.users_online ?? summary.sessions;
+    summary.up_rate_bps = live.up_rate_bps ?? summary.up_rate_bps;
+    summary.down_rate_bps = live.down_rate_bps ?? summary.down_rate_bps;
+  });
 });
 
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
+  if (socketHandle) {
+    socketHandle.close();
+    socketHandle = null;
+  }
 });
 
 async function load() {
@@ -216,7 +256,7 @@ function bytes(value) {
 
 function rate(bytesPerSecond) {
   const bits = (bytesPerSecond || 0) * 8;
-  const units = ['бит/с', 'Кбит/с', 'Мбит/с', 'Гбит/с'];
+  const units = ['bit/s', 'Kbit/s', 'Mbit/s', 'Gbit/s'];
   let index = 0;
   let value = bits;
   while (value >= 1000 && index < units.length - 1) {

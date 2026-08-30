@@ -281,7 +281,7 @@
             <div class="form-row form-row-stack mt-3">
               <OneuiInput
                 v-model.number="trafficLimitGb"
-                label="Лимит трафика (ГБ, 0 — без лимита)"
+                label="Лимит трафика (GB, 0 — без лимита)"
                 type="number"
                 :min="0"
               />
@@ -367,7 +367,7 @@
           >. Лимит считает суммарный трафик клиента; при исчерпании доступ отрезается до сброса.
         </p>
         <div class="form-row form-row-stack mt-3">
-          <OneuiInput v-model.number="editLimitGb" label="Лимит трафика (ГБ, 0 — без лимита)" type="number" :min="0" />
+          <OneuiInput v-model.number="editLimitGb" label="Лимит трафика (GB, 0 — без лимита)" type="number" :min="0" />
         </div>
         <div class="form-row form-row-stack mt-2">
           <OneuiInput

@@ -265,6 +265,18 @@
     @apply mt-5 flex flex-wrap gap-3;
   }
 
+  .fed-actions {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .fed-mint-group {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .fed-refresh {
+    @apply ml-auto;
+  }
+
   .federation-uses {
     @apply inline-flex items-center gap-2 text-[13px];
   }
@@ -289,20 +301,10 @@
     @apply flex flex-wrap items-center gap-3;
   }
 
-  .live-badge {
-    @apply inline-flex items-center gap-2 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em];
-    background: rgba(35, 168, 110, 0.18);
-    color: #6fe3a4;
-  }
-
   .live-dot {
     @apply block h-2 w-2 shrink-0 rounded-full;
     background: #6fe3a4;
     animation: live-pulse 2s ease-out infinite;
-  }
-
-  .stat-value-flow {
-    @apply inline-flex items-center gap-2;
   }
 
   .federation-uses-input {
@@ -2103,7 +2105,11 @@
   }
 
   .stat-kicker {
-    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-wings-kicker;
+    @apply inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-wings-kicker;
+  }
+
+  .stat-kicker-icon {
+    @apply shrink-0;
   }
 
   .stat-value {

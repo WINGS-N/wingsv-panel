@@ -5,11 +5,8 @@
   <section v-if="live" class="surface-card mt-6">
     <div class="federation-live-head">
       <h2 class="hero-title">Федерация</h2>
-      <!-- Точка объясняет, почему цифры ниже шевелятся сами по себе -->
-      <span class="live-badge" :title="`Обновлено ${agoLabel}`">
-        <span class="live-dot" aria-hidden="true"></span>
-        живые данные
-      </span>
+      <!-- Просто точка: она говорит "цифры живые" одним своим видом -->
+      <span class="live-dot" role="status" :title="`Обновлено ${agoLabel}`" aria-label="Данные обновляются"></span>
     </div>
     <p class="body-copy body-copy-wide mt-3">
       Свободный доступ держится на серверах, которые админы отдали в общий пул. Вот что там происходит прямо сейчас.
@@ -17,38 +14,50 @@
 
     <div class="admin-stats">
       <div class="stat">
-        <span class="stat-kicker">Узлов онлайн</span>
+        <span class="stat-kicker">
+          <Server :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Узлов онлайн
+        </span>
         <span class="stat-value">{{ live.nodes_online }}</span>
         <span class="stat-meta">пожертвовано админами</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Пользователей сейчас</span>
+        <span class="stat-kicker">
+          <Users :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Пользователей сейчас
+        </span>
         <span class="stat-value">{{ live.users_online }}</span>
         <span class="stat-meta">активных подключений</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Отдача</span>
-        <span class="stat-value stat-value-flow">
-          <ArrowUp :size="22" :style="{ color: FLOW_UP }" aria-hidden="true" />
-          {{ formatRate(live.up_rate_bps) }}
+        <span class="stat-kicker">
+          <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
+          Отдача
         </span>
+        <span class="stat-value">{{ formatRate(live.up_rate_bps) }}</span>
         <span class="stat-meta">с узлов федерации</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Приём</span>
-        <span class="stat-value stat-value-flow">
-          <ArrowDown :size="22" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
-          {{ formatRate(live.down_rate_bps) }}
+        <span class="stat-kicker">
+          <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
+          Приём
         </span>
+        <span class="stat-value">{{ formatRate(live.down_rate_bps) }}</span>
         <span class="stat-meta">на устройства</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Передано</span>
+        <span class="stat-kicker">
+          <CalendarRange :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Передано
+        </span>
         <span class="stat-value">{{ formatBytes(live.up_bytes + live.down_bytes) }}</span>
         <span class="stat-meta">за текущий период</span>
       </div>
       <div class="stat">
-        <span class="stat-kicker">Всего за всё время</span>
+        <span class="stat-kicker">
+          <ArrowUpDown :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          Всего за всё время
+        </span>
         <span class="stat-value">{{ formatBytes(live.lifetime_bytes) }}</span>
         <span class="stat-meta">с самого запуска федерации</span>
       </div>
@@ -58,7 +67,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { ArrowDown, ArrowUp } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarRange, Server, Users } from 'lucide-vue-next';
 
 // Тот же цветовой код направления, что в приложении: приём зелёный, отдача синяя
 const FLOW_DOWN = '#15b76f';
@@ -107,7 +116,7 @@ onBeforeUnmount(() => {
 
 function formatRate(bytesPerSecond) {
   const bits = (bytesPerSecond || 0) * 8;
-  const units = ['бит/с', 'Кбит/с', 'Мбит/с', 'Гбит/с'];
+  const units = ['bit/s', 'Kbit/s', 'Mbit/s', 'Gbit/s'];
   let index = 0;
   let value = bits;
   while (value >= 1000 && index < units.length - 1) {
@@ -118,7 +127,7 @@ function formatRate(bytesPerSecond) {
 }
 
 function formatBytes(size) {
-  const units = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let index = 0;
   let value = size || 0;
   while (value >= 1024 && index < units.length - 1) {
