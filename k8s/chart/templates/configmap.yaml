@@ -18,8 +18,8 @@ data:
 {{- if .Values.federation.enabled }}
   FEDERATION_HEAD: {{ required "federation.head is required when the federation is enabled" .Values.federation.head | quote }}
 {{- end }}
-{{- if .Values.matrix.enabled }}
-  MATRIX_ISSUER: {{ required "matrix.issuer is required when matrix login is enabled" .Values.matrix.issuer | quote }}
-  MATRIX_HOMESERVER: {{ required "matrix.homeserver is required when matrix login is enabled" .Values.matrix.homeserver | quote }}
-  MATRIX_CLIENT_ID: {{ required "matrix.clientID is required when matrix login is enabled" .Values.matrix.clientID | quote }}
+{{- if .Values.oidc.enabled }}
+  OIDC_ISSUER: {{ required "oidc.issuer is required when the login is enabled" .Values.oidc.issuer | quote }}
+  MATRIX_HOMESERVER: {{ required "oidc.homeserver is required when the login is enabled" .Values.oidc.homeserver | quote }}
+  OIDC_CLIENT_ID: {{ required "oidc.clientID is required when the login is enabled" .Values.oidc.clientID | quote }}
 {{- end }}

@@ -89,12 +89,16 @@ federation:
   head: ""
   secret: ""
 
-matrix:
+# Вход через собственный аккаунт-сервис. Механизм - обычный OIDC, но issuer
+# ПИНИТСЯ: пускаем только свой homeserver, иначе инвайт-дерево теряет смысл -
+# любой чужой провайдер начнёт штамповать личности бесплатно.
+oidc:
   enabled: false
   issuer: ""
-  homeserver: ""
   clientID: ""
   clientSecret: ""
+  # Показывается на кнопке входа и из него собирается Matrix ID
+  homeserver: ""
 
 relayToken: ""
 
