@@ -9,7 +9,7 @@
     </router-link>
 
     <nav class="public-nav">
-      <router-link class="public-nav-link" :to="{ name: 'landing' }" active-class="is-active">Приложение</router-link>
+      <router-link class="public-nav-link" :to="{ name: 'landing' }" active-class="is-active">Главная</router-link>
       <router-link class="public-nav-link" :to="{ name: 'federation-landing' }" active-class="is-active">
         Федерация
       </router-link>
