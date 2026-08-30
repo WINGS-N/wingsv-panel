@@ -188,6 +188,7 @@ func (s *Store) CreateInviteWithUses(token string, expiresAt time.Time, createdB
 		CreatedAt:        time.UnixMilli(now).UTC(),
 		ExpiresAt:        time.UnixMilli(exp).UTC(),
 		CreatedByAdminID: createdByAdminID,
+		MaxUses:          maxUses,
 	}, nil
 }
 

@@ -69,3 +69,19 @@ func TestAnExpiredInviteIsRefusedEvenWithUsesLeft(t *testing.T) {
 		t.Fatal("протухший код пустил, потому что у него остались места")
 	}
 }
+
+// Свежевыписанный код должен вернуться с тем лимитом, который заказали: панель
+// показывает ответ как есть, и ноль в нём выглядит как сломанный код.
+func TestANewInviteReportsItsLimit(t *testing.T) {
+	st := inviteStore(t)
+	got, err := st.CreateInviteWithUses("group", time.Time{}, 1, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.MaxUses != 4 {
+		t.Errorf("MaxUses = %d, want 4", got.MaxUses)
+	}
+	if got.UseCount != 0 {
+		t.Errorf("UseCount = %d, want 0 у нового кода", got.UseCount)
+	}
+}
