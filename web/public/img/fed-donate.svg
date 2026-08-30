@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="">
+  <defs>
+    <linearGradient id="fedSquircle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa9ff"/>
+      <stop offset="1" stop-color="#1259d1"/>
+    </linearGradient>
+    <filter id="fedGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Squircle, а не круг: та же форма, что у иконок One UI -->
+  <path fill="url(#fedSquircle)"
+        d="M256 16C114 16 16 114 16 256s98 240 240 240 240-98 240-240S398 16 256 16z"
+        transform="translate(0,0)"/>
+  <path fill="url(#fedSquircle)"
+        d="M176 32h160c79.5 0 144 64.5 144 144v160c0 79.5-64.5 144-144 144H176C96.5 480 32 415.5 32 336V176C32 96.5 96.5 32 176 32z"/>
+
+  <g filter="url(#fedGlow)" fill="none" stroke="#ffffff" stroke-width="20"
+     stroke-linecap="round" stroke-linejoin="round">
+    <!-- Облако -->
+    <path d="M170 330c-30 0-54-24-54-54s24-54 54-54c4 0 8 0 12 1 10-33 41-57 76-57 44 0 80 36 80 80v2c28 4 49 28 49 57 0 32-26 58-58 58H170z"/>
+    <!-- Стрелка вверх: отдаёшь, а не забираешь -->
+    <path d="M256 400V250"/>
+    <path d="M212 292l44-44 44 44"/>
+  </g>
+</svg>

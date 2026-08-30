@@ -103,7 +103,7 @@
             </span>
           </span>
           <!-- Полоса бюджета: цифры выше говорят сколько, она - насколько близко
-               нода к тому, чтобы выйти из ротации -->
+               нода к тому, чтобы выйти из выдачи -->
           <span class="fed-node-track" aria-hidden="true">
             <span class="fed-node-fill" :style="{ width: budgetPct(node) + '%' }"></span>
           </span>
@@ -268,7 +268,7 @@ function rate(bytesPerSecond) {
 }
 
 // Доля выбранного бюджета. Именно она решает судьбу ноды: около 85 процентов он
-// перестаёт получать новых пользователей, около 97 снимается из ротации
+// перестаёт получать новых пользователей, около 97 снимается с выдачи
 function budgetPct(node) {
   const limit = Number(node.declared_budget_bytes) || 0;
   if (limit <= 0) return 0;

@@ -8,6 +8,8 @@
     <header class="samsung-topbar">
       <router-link class="samsung-topbar-brand" to="/">
         <span class="wordmark-inline">WINGS V</span>
+        <span class="samsung-topbar-divider">|</span>
+        <span class="samsung-topbar-tag">Federation</span>
       </router-link>
       <router-link class="samsung-topbar-link" :to="{ name: 'login' }"> Войти в панель </router-link>
     </header>
@@ -17,7 +19,7 @@
         <div class="landing-hero-text">
           <span class="fed-hero-kicker">
             <span class="live-dot" aria-hidden="true"></span>
-            федерация <span class="wordmark-inline">WINGS V</span>
+            <span>общий пул серверов</span>
           </span>
           <h1 class="landing-hero-headline">
             Поделись трафиком<br />
@@ -34,7 +36,7 @@
         </div>
 
         <div class="landing-hero-art" aria-hidden="true">
-          <img src="/img/icon-cloud-up.png" alt="" class="landing-hero-illustration" />
+          <img src="/img/fed-donate.svg" alt="" class="landing-hero-illustration" />
         </div>
       </div>
     </section>
@@ -46,11 +48,11 @@
         <h2 class="hero-title">Как это работает</h2>
         <div class="fed-steps">
           <article class="fed-step">
-            <img src="/img/icon-cloud-up.png" alt="" class="fed-step-icon" aria-hidden="true" />
+            <img src="/img/fed-donate.svg" alt="" class="fed-step-icon" aria-hidden="true" />
             <h3 class="fed-step-title">Вы называете лимит</h3>
             <p class="fed-step-copy">
               Сколько трафика в месяц вы готовы отдать. Не гигабайтом больше: как только лимит выбран, нода сама выходит
-              из ротации и ждёт следующего периода.
+              из выдачи и ждёт следующего месяца.
             </p>
           </article>
           <article class="fed-step">
@@ -65,7 +67,7 @@
             <img src="/img/icon-shield.png" alt="" class="fed-step-icon" aria-hidden="true" />
             <h3 class="fed-step-title">Дальше он работает сам</h3>
             <p class="fed-step-copy">
-              Балансировщик раздаёт ноду бесплатным пользователям, следит за качеством и снимает её из ротации, если
+              Балансировщик раздаёт ноду бесплатным пользователям, следит за качеством и снимает её с выдачи, если
               сервер начал тупить. Вы видите только цифры: трафик, сессии, аптайм.
             </p>
           </article>
@@ -120,12 +122,21 @@ import FederationCounters from '@/components/domain/FederationCounters.vue';
 .fed-hero-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgba(252, 252, 252, 0.55);
+  letter-spacing: 0.1em;
+  color: rgba(252, 252, 252, 0.72);
+}
+
+/* Wordmark набран другим шрифтом и своим трекингом, из-за чего на общей строке
+   он вставал выше и жирнее соседних слов. Здесь он подчиняется строке. */
+.fed-hero-kicker .wordmark-inline {
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
 }
 
 .fed-steps {
