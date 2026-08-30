@@ -651,6 +651,24 @@ func Run(ctx context.Context, cfg config.Config) error {
 	}, liveEmit)
 	go liveStreamer.Run(ctx)
 
+	// Invite-tree usage, recomputed slowly. It reads every client and walks the
+	// whole tree, so it belongs on a ticker rather than on a page load - and it is
+	// monitoring only: nothing enforces on a subtree total.
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for {
+			if err := store.RollupAdminTraffic(); err != nil {
+				log.Printf("invite tree traffic rollup: %v", err)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+
 	// Federation counters, when a head is configured. Same emit closure as the
 	// relay stats above, so the admin socket carries one more event kind and
 	// needs no change of its own.

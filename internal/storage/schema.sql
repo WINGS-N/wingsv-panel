@@ -152,6 +152,18 @@ CREATE TABLE IF NOT EXISTS invite_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_invite_tokens_created_at ON invite_tokens(created_at DESC);
 
+-- What a member of the invite tree moved, and what everybody below them moved.
+-- Recomputed by a periodic job, never joined on the fly. Monitoring only.
+CREATE TABLE IF NOT EXISTS admin_traffic_rollup (
+    admin_id INTEGER PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
+    own_bytes INTEGER NOT NULL DEFAULT 0,
+    subtree_bytes INTEGER NOT NULL DEFAULT 0,
+    own_clients INTEGER NOT NULL DEFAULT 0,
+    subtree_clients INTEGER NOT NULL DEFAULT 0,
+    subtree_admins INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS admin_master_config (
     admin_id INTEGER PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
     config_proto BLOB,

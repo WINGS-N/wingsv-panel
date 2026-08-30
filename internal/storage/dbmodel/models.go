@@ -326,6 +326,26 @@ type PeerTraffic struct {
 
 func (PeerTraffic) TableName() string { return "peer_traffic" }
 
+// AdminTrafficRollup is what a member of the invite tree moved, and what
+// everybody below them moved. Recomputed by a periodic job rather than joined on
+// the fly: it needs every client, their traffic and a walk of the whole tree, and
+// doing that on a page load makes the page cost grow with the federation.
+//
+// Monitoring only. Nothing enforces on subtree_bytes - a personal limit is what
+// cuts somebody off, and holding a person responsible for the traffic of people
+// they invited a year ago is not a rule anybody could live with.
+type AdminTrafficRollup struct {
+	AdminID        int64  `gorm:"column:admin_id;primaryKey"`
+	OwnBytes       uint64 `gorm:"column:own_bytes;not null;default:0"`
+	SubtreeBytes   uint64 `gorm:"column:subtree_bytes;not null;default:0"`
+	OwnClients     int64  `gorm:"column:own_clients;not null;default:0"`
+	SubtreeClients int64  `gorm:"column:subtree_clients;not null;default:0"`
+	SubtreeAdmins  int64  `gorm:"column:subtree_admins;not null;default:0"`
+	UpdatedAtUnix  int64  `gorm:"column:updated_at;not null;default:0"`
+}
+
+func (AdminTrafficRollup) TableName() string { return "admin_traffic_rollup" }
+
 // NodeTrafficTotal is a per-node persistent accumulator of transferred bytes, so
 // all-time totals survive sample-retention pruning and relay counter resets.
 // last_rx/last_tx hold the previous cumulative reading; each poll adds the
@@ -348,6 +368,7 @@ func All() []any {
 		&AdminSession{},
 		&Client{},
 		&InviteToken{},
+		&AdminTrafficRollup{},
 		&AuditLog{},
 		&AdminMasterConfig{},
 		&ClientConfig{},

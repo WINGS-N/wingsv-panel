@@ -3,7 +3,7 @@
     <h2 class="section-title">Дерево приглашений</h2>
     <p class="body-copy">
       Кто кого привёл. Ветвь можно срезать в любой точке — вместе со срезанным уходят все, кого он пригласил, и их
-      сессии закрываются сразу.
+      сессии закрываются сразу. Трафик по поддереву — только наблюдение: он никого не отрезает, режет лишь личный лимит.
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
 
@@ -20,6 +20,12 @@
             <span v-if="m.suspended" class="state-error">срезан{{ m.reason ? `: ${m.reason}` : '' }}</span>
             <span v-else-if="m.cut" class="admin-muted">под срезом выше</span>
             <span v-else class="admin-muted">активен</span>
+            <span class="admin-muted">
+              {{ bytes(m.own_bytes) }}
+              <template v-if="m.subtree_admins">
+                · ветвь {{ bytes(m.subtree_bytes) }} ({{ m.subtree_admins }} чел., {{ m.subtree_clients }} клиентов)
+              </template>
+            </span>
           </div>
           <div class="admin-list-actions">
             <SamsungButton
@@ -58,6 +64,7 @@ import { computed, onMounted, ref } from 'vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungModal from '@/components/layout/SamsungModal.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
+import { formatBytes } from '@/utils/format';
 
 const members = ref([]);
 const loading = ref(false);
@@ -141,6 +148,10 @@ async function act(member, action, body) {
   } finally {
     busyID.value = 0;
   }
+}
+
+function bytes(value) {
+  return formatBytes(value || 0);
 }
 
 async function errorText(res) {

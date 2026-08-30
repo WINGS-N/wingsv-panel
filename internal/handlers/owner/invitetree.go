@@ -22,6 +22,14 @@ type treeMemberView struct {
 	Cut       bool   `json:"cut"`
 	Reason    string `json:"reason"`
 	CreatedAt int64  `json:"created_at"`
+	// Usage is monitoring only. A subtree total never cuts anybody off: a
+	// personal limit does that, and holding somebody responsible for what people
+	// they invited a year ago are doing is not a rule anybody could live with.
+	OwnBytes       uint64 `json:"own_bytes"`
+	SubtreeBytes   uint64 `json:"subtree_bytes"`
+	OwnClients     int64  `json:"own_clients"`
+	SubtreeClients int64  `json:"subtree_clients"`
+	SubtreeAdmins  int64  `json:"subtree_admins"`
 }
 
 // handleInviteTree answers who brought whom in.
@@ -38,6 +46,12 @@ func (h *Handler) handleInviteTree(w http.ResponseWriter, r *http.Request, _ sto
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// A rollup that has not run yet is not an error: the tree is still worth
+	// showing, just without the numbers
+	usage, err := h.store.AdminTrafficMap()
+	if err != nil {
+		usage = map[int64]storage.AdminTraffic{}
+	}
 	out := make([]treeMemberView, 0, len(members))
 	for _, m := range members {
 		out = append(out, treeMemberView{
@@ -50,6 +64,12 @@ func (h *Handler) handleInviteTree(w http.ResponseWriter, r *http.Request, _ sto
 			Cut:       m.Cut,
 			Reason:    m.Reason,
 			CreatedAt: m.CreatedAt.Unix(),
+
+			OwnBytes:       usage[m.AdminID].OwnBytes,
+			SubtreeBytes:   usage[m.AdminID].SubtreeBytes,
+			OwnClients:     usage[m.AdminID].OwnClients,
+			SubtreeClients: usage[m.AdminID].SubtreeClients,
+			SubtreeAdmins:  usage[m.AdminID].SubtreeAdmins,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"members": out})

@@ -153,6 +153,25 @@ func exerciseDialect(t *testing.T, driver Driver, dsn string) {
 		t.Fatal("restore did not lift the branch")
 	}
 
+	// The rollup upserts a batch with an ON CONFLICT clause, which is exactly the
+	// kind of thing that behaves differently per dialect
+	if err := st.RollupAdminTraffic(); err != nil {
+		t.Fatalf("RollupAdminTraffic: %v", err)
+	}
+	if err := st.RollupAdminTraffic(); err != nil {
+		t.Fatalf("RollupAdminTraffic second pass: %v", err)
+	}
+	usage, err := st.AdminTrafficMap()
+	if err != nil {
+		t.Fatalf("AdminTrafficMap: %v", err)
+	}
+	if _, ok := usage[admin.ID]; !ok {
+		t.Fatalf("no rollup row for the owner: %+v", usage)
+	}
+	if got := usage[admin.ID].SubtreeAdmins; got != 2 {
+		t.Fatalf("owner brought in %d, want the two below them", got)
+	}
+
 	if err := st.AppendAudit(AuditEntry{ActorAdminID: admin.ID, Action: "test.action", IP: "1.2.3.4"}); err != nil {
 		t.Fatalf("AppendAudit: %v", err)
 	}
