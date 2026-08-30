@@ -30,6 +30,7 @@ const (
 	FederationHead_RevokeUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/RevokeUser"
 	FederationHead_MintEnrollToken_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/MintEnrollToken"
 	FederationHead_SetNodeState_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/SetNodeState"
+	FederationHead_SetNodeBudget_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/SetNodeBudget"
 	FederationHead_GetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/GetFleetSettings"
 	FederationHead_SetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetFleetSettings"
 	FederationHead_RestartComponent_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/RestartComponent"
@@ -57,6 +58,10 @@ type FederationHeadClient interface {
 	RevokeUser(ctx context.Context, in *RevokeUserRequest, opts ...grpc.CallOption) (*RevokeUserResponse, error)
 	MintEnrollToken(ctx context.Context, in *MintEnrollTokenRequest, opts ...grpc.CallOption) (*MintEnrollTokenResponse, error)
 	SetNodeState(ctx context.Context, in *SetNodeStateRequest, opts ...grpc.CallOption) (*SetNodeStateResponse, error)
+	// Сколько трафика донор обещает в этом месяце. Меняется на живой ноде: пока
+	// этого не было, поднять лимит можно было только перезачислением, теряя
+	// личность ноды, результаты зондов и уже посчитанный за период трафик.
+	SetNodeBudget(ctx context.Context, in *SetNodeBudgetRequest, opts ...grpc.CallOption) (*SetNodeBudgetResponse, error)
 	// Настройки всего флота: какие сборки нести, чем прикрываться, обновляться ли
 	// самим. Это решение оператора, а не донора и не флага на ноде.
 	GetFleetSettings(ctx context.Context, in *FleetSettingsRequest, opts ...grpc.CallOption) (*FleetSettings, error)
@@ -156,6 +161,16 @@ func (c *federationHeadClient) SetNodeState(ctx context.Context, in *SetNodeStat
 	return out, nil
 }
 
+func (c *federationHeadClient) SetNodeBudget(ctx context.Context, in *SetNodeBudgetRequest, opts ...grpc.CallOption) (*SetNodeBudgetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetNodeBudgetResponse)
+	err := c.cc.Invoke(ctx, FederationHead_SetNodeBudget_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *federationHeadClient) GetFleetSettings(ctx context.Context, in *FleetSettingsRequest, opts ...grpc.CallOption) (*FleetSettings, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FleetSettings)
@@ -208,6 +223,10 @@ type FederationHeadServer interface {
 	RevokeUser(context.Context, *RevokeUserRequest) (*RevokeUserResponse, error)
 	MintEnrollToken(context.Context, *MintEnrollTokenRequest) (*MintEnrollTokenResponse, error)
 	SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error)
+	// Сколько трафика донор обещает в этом месяце. Меняется на живой ноде: пока
+	// этого не было, поднять лимит можно было только перезачислением, теряя
+	// личность ноды, результаты зондов и уже посчитанный за период трафик.
+	SetNodeBudget(context.Context, *SetNodeBudgetRequest) (*SetNodeBudgetResponse, error)
 	// Настройки всего флота: какие сборки нести, чем прикрываться, обновляться ли
 	// самим. Это решение оператора, а не донора и не флага на ноде.
 	GetFleetSettings(context.Context, *FleetSettingsRequest) (*FleetSettings, error)
@@ -247,6 +266,9 @@ func (UnimplementedFederationHeadServer) MintEnrollToken(context.Context, *MintE
 }
 func (UnimplementedFederationHeadServer) SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetNodeState not implemented")
+}
+func (UnimplementedFederationHeadServer) SetNodeBudget(context.Context, *SetNodeBudgetRequest) (*SetNodeBudgetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetNodeBudget not implemented")
 }
 func (UnimplementedFederationHeadServer) GetFleetSettings(context.Context, *FleetSettingsRequest) (*FleetSettings, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFleetSettings not implemented")
@@ -411,6 +433,24 @@ func _FederationHead_SetNodeState_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_SetNodeBudget_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetNodeBudgetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).SetNodeBudget(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_SetNodeBudget_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).SetNodeBudget(ctx, req.(*SetNodeBudgetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FederationHead_GetFleetSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FleetSettingsRequest)
 	if err := dec(in); err != nil {
@@ -499,6 +539,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetNodeState",
 			Handler:    _FederationHead_SetNodeState_Handler,
+		},
+		{
+			MethodName: "SetNodeBudget",
+			Handler:    _FederationHead_SetNodeBudget_Handler,
 		},
 		{
 			MethodName: "GetFleetSettings",

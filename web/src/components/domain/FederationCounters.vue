@@ -16,7 +16,7 @@
       <div class="stat">
         <span class="stat-kicker">
           <Server :size="14" class="stat-kicker-icon" aria-hidden="true" />
-          Узлов онлайн
+          Нод онлайн
         </span>
         <span class="stat-value">{{ live.nodes_online }}</span>
         <span class="stat-meta">пожертвовано админами</span>
@@ -35,7 +35,7 @@
           Отдача
         </span>
         <span class="stat-value">{{ formatRate(live.up_rate_bps) }}</span>
-        <span class="stat-meta">с узлов федерации</span>
+        <span class="stat-meta">с нод федерации</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">

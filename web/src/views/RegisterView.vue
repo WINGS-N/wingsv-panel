@@ -72,12 +72,9 @@
             :disabled="registrationState.mode === 'invite' && !inviteToken"
             @click="registerWithMatrix"
           >
-            <template #icon><img src="/img/matrix.svg" alt="" class="button-icon" aria-hidden="true" /></template>
+            <template #icon><img src="/img/matrix.svg" alt="" class="button-icon-brand" aria-hidden="true" /></template>
             Создать по Matrix ID
           </SamsungButton>
-          <p v-if="matrix.enabled" class="login-oidc-hint">
-            логином станет часть до двоеточия: <span class="admin-mono">@логин:{{ matrix.homeserver }}</span>
-          </p>
 
           <router-link class="login-back-link" :to="{ name: 'login' }"> Уже есть аккаунт — войти </router-link>
         </form>

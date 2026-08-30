@@ -16,7 +16,7 @@ func testClient() *Client {
 // mint, so the invite tree would mean nothing if one were accepted
 func TestAnIdentityFromAnotherHomeserverIsRefused(t *testing.T) {
 	c := testClient()
-	if _, err := c.identityFrom("sub", "@evil:attacker.example", "", ""); !errors.Is(err, ErrForeignHomeserver) {
+	if _, err := c.identityFrom("sub", "@evil:attacker.example", ""); !errors.Is(err, ErrForeignHomeserver) {
 		t.Errorf("err = %v, want the foreign homeserver refused", err)
 	}
 }
@@ -25,11 +25,11 @@ func TestAnIdentityFromAnotherHomeserverIsRefused(t *testing.T) {
 // set up, and both have to land on the same account
 func TestBothFormsOfUsernameProduceTheSameID(t *testing.T) {
 	c := testClient()
-	fromLocalpart, err := c.identityFrom("sub", "alice", "Alice", "")
+	fromLocalpart, err := c.identityFrom("sub", "alice", "Alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fromFull, err := c.identityFrom("sub", "@alice:wings.example", "Alice", "")
+	fromFull, err := c.identityFrom("sub", "@alice:wings.example", "Alice")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestBothFormsOfUsernameProduceTheSameID(t *testing.T) {
 // foreign would lock people out for no reason
 func TestTheHomeserverCheckIsCaseInsensitive(t *testing.T) {
 	c := testClient()
-	got, err := c.identityFrom("sub", "@alice:WINGS.EXAMPLE", "", "")
+	got, err := c.identityFrom("sub", "@alice:WINGS.EXAMPLE", "")
 	if err != nil {
 		t.Fatalf("err = %v", err)
 	}
@@ -56,7 +56,7 @@ func TestTheHomeserverCheckIsCaseInsensitive(t *testing.T) {
 
 func TestAnEmptyUsernameIsRefused(t *testing.T) {
 	c := testClient()
-	if _, err := c.identityFrom("sub", "   ", "", ""); err == nil {
+	if _, err := c.identityFrom("sub", "   ", ""); err == nil {
 		t.Error("an account with no username was accepted")
 	}
 }

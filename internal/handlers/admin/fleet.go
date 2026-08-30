@@ -244,3 +244,59 @@ func fetchReleases(ctx context.Context, repo string) ([]releaseView, error) {
 	}
 	return out, nil
 }
+
+type fleetNodeView struct {
+	ID                  string `json:"id"`
+	DonorID             string `json:"donor_id"`
+	Hostname            string `json:"hostname"`
+	State               string `json:"state"`
+	Reason              string `json:"reason"`
+	Online              bool   `json:"online"`
+	Arch                string `json:"arch"`
+	LastSeenUnix        int64  `json:"last_seen_unix"`
+	DeclaredBudgetBytes uint64 `json:"declared_budget_bytes"`
+	UsedBytes           uint64 `json:"used_bytes"`
+	// Mine отделяет свои ноды от чужих в общем списке владельца: он видит весь
+	// флот, но должен различать, за что отвечает сам
+	Mine bool `json:"mine"`
+}
+
+// handleFleetNodes lists nodes. The owner sees the whole federation, everybody
+// else only their own - a donor has no business enumerating other people's
+// machines, and that is a decision made here rather than in the browser.
+func (h *Handler) handleFleetNodes(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if !h.federationOn() {
+		writeError(w, http.StatusNotFound, "federation is off")
+		return
+	}
+	mine := donorID(admin)
+	scope := mine
+	if admin.Role == storage.RoleOwner {
+		scope = ""
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
+	defer cancel()
+
+	resp, err := h.fed.ListNodes(ctx, scope)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
+		return
+	}
+	out := make([]fleetNodeView, 0, len(resp.GetNodes()))
+	for _, n := range resp.GetNodes() {
+		out = append(out, fleetNodeView{
+			ID:                  n.GetNodeId(),
+			DonorID:             n.GetDonorId(),
+			Hostname:            n.GetHostname(),
+			State:               n.GetState(),
+			Reason:              n.GetReason(),
+			Online:              n.GetOnline(),
+			Arch:                n.GetArch(),
+			LastSeenUnix:        n.GetLastSeenUnix(),
+			DeclaredBudgetBytes: n.GetDeclaredBudgetBytes(),
+			UsedBytes:           n.GetUsedBytes(),
+			Mine:                n.GetDonorId() == mine,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": out, "all": scope == ""})
+}

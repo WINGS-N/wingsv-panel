@@ -281,6 +281,12 @@
     @apply block h-full rounded-full bg-wings-accent;
   }
 
+  /* Логотип сервиса, а не глиф в строке: на 16px фирменный знак читается как
+     мусор рядом с текстом кнопки */
+  .button-icon-brand {
+    @apply h-6 w-6 shrink-0;
+  }
+
   .login-oidc-hint {
     @apply mt-2 text-center text-[12px] text-wings-kicker;
   }

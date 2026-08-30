@@ -18,7 +18,7 @@
       <div class="stat">
         <span class="stat-kicker">
           <Server :size="14" class="stat-kicker-icon" aria-hidden="true" />
-          Ваших узлов
+          Ваших нод
         </span>
         <span class="stat-value">{{ summary.nodes_online }} / {{ summary.nodes }}</span>
         <span class="stat-meta">онлайн сейчас</span>
@@ -37,7 +37,7 @@
           Отдача
         </span>
         <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.up_rate_bps) }}</span>
-        <span class="stat-meta">с ваших узлов</span>
+        <span class="stat-meta">с ваших нод</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
@@ -79,7 +79,7 @@
   </section>
 
   <section v-if="enabled && summary.node_list.length" class="surface-card mt-6">
-    <h2 class="section-title">Узлы</h2>
+    <h2 class="section-title">Ноды</h2>
     <!-- Строки без рамок, только разделители - как список профилей в DeX -->
     <div class="fed-node-list">
       <div v-for="node in summary.node_list" :key="node.id" class="fed-node-row">
@@ -101,7 +101,7 @@
             </span>
           </span>
           <!-- Полоса бюджета: цифры выше говорят сколько, она - насколько близко
-               узел к тому, чтобы выйти из ротации -->
+               нода к тому, чтобы выйти из ротации -->
           <span class="fed-node-track" aria-hidden="true">
             <span class="fed-node-fill" :style="{ width: budgetPct(node) + '%' }"></span>
           </span>
@@ -162,7 +162,7 @@ let socketHandle = null;
 
 onMounted(() => {
   load();
-  // Список узлов и их состояния приходят по REST: они меняются медленно, и
+  // Список нод и их состояния приходят по REST: они меняются медленно, и
   // опрашивать их чаще смысла нет
   timer = setInterval(load, 20000);
   // А цифры сверху идут потоком, поэтому кнопки "обновить" на этом экране нет:
@@ -265,7 +265,7 @@ function rate(bytesPerSecond) {
   return `${value >= 100 || index === 0 ? Math.round(value) : value.toFixed(1)} ${units[index]}`;
 }
 
-// Доля выбранного бюджета. Именно она решает судьбу узла: около 85 процентов он
+// Доля выбранного бюджета. Именно она решает судьбу ноды: около 85 процентов он
 // перестаёт получать новых пользователей, около 97 снимается из ротации
 function budgetPct(node) {
   const limit = Number(node.declared_budget_bytes) || 0;

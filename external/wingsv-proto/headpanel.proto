@@ -25,6 +25,10 @@ service FederationHead {
   rpc RevokeUser(RevokeUserRequest) returns (RevokeUserResponse);
   rpc MintEnrollToken(MintEnrollTokenRequest) returns (MintEnrollTokenResponse);
   rpc SetNodeState(SetNodeStateRequest) returns (SetNodeStateResponse);
+  // Сколько трафика донор обещает в этом месяце. Меняется на живой ноде: пока
+  // этого не было, поднять лимит можно было только перезачислением, теряя
+  // личность ноды, результаты зондов и уже посчитанный за период трафик.
+  rpc SetNodeBudget(SetNodeBudgetRequest) returns (SetNodeBudgetResponse);
   // Настройки всего флота: какие сборки нести, чем прикрываться, обновляться ли
   // самим. Это решение оператора, а не донора и не флага на ноде.
   rpc GetFleetSettings(FleetSettingsRequest) returns (FleetSettings);
@@ -234,4 +238,14 @@ message RestartComponentRequest {
 
 message RestartComponentResponse {
   uint32 nodes = 1;
+}
+
+message SetNodeBudgetRequest {
+  string node_id = 1;
+  uint64 declared_budget_bytes = 2;
+}
+
+message SetNodeBudgetResponse {
+  uint64 declared_budget_bytes = 1;
+  uint64 used_bytes = 2;
 }

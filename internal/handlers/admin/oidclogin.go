@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -124,7 +123,6 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 			h.oidcFail(w, r, "link_failed")
 			return
 		}
-		h.importAvatar(ctx, linkAdminID, identity.AvatarURL)
 		_ = h.store.AppendAudit(storage.AuditEntry{
 			ActorAdminID: linkAdminID, Action: "admin.matrix_linked",
 			TargetType: "admin", Message: identity.MatrixID,
@@ -133,7 +131,6 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	knownBefore := h.oidcAccountKnown(identity.MatrixID)
 	admin, sess, err := h.auth.LoginWithMatrix(
 		identity.MatrixID, identity.Localpart, identity.Subject,
 		invite,
@@ -153,11 +150,6 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 			h.oidcFail(w, r, "login_failed")
 		}
 		return
-	}
-	// Only on the login that created the account. An ordinary repeat login has no
-	// business restyling somebody's profile behind their back
-	if !knownBefore {
-		h.importAvatar(ctx, admin.ID, identity.AvatarURL)
 	}
 	h.auth.WriteSessionCookie(w, sess)
 	_ = h.store.AppendAudit(storage.AuditEntry{
@@ -195,44 +187,4 @@ func redirectTarget(returnTo, fallback string) string {
 func (h *Handler) oidcAccountKnown(matrixID string) bool {
 	_, err := h.store.FindAdminByMatrixID(matrixID)
 	return err == nil
-}
-
-// importAvatar takes the Matrix picture, and only when there is one to take and
-// nothing here to lose.
-//
-// Two conditions, both of them about not making a decision for somebody: an
-// avatar uploaded here is their choice and is never overwritten, and a Matrix
-// account with no picture has nothing worth pulling - replacing a real avatar
-// with a default would be worse than doing nothing. Best effort throughout: a
-// homeserver that will not serve a picture is not a reason to fail a login that
-// already worked.
-func (h *Handler) importAvatar(ctx context.Context, adminID int64, pictureURL string) {
-	if strings.TrimSpace(pictureURL) == "" {
-		return
-	}
-	has, err := h.store.HasAvatar(adminID)
-	if err != nil || has {
-		return
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pictureURL, nil)
-	if err != nil {
-		return
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return
-	}
-	mime := resp.Header.Get("Content-Type")
-	if !strings.HasPrefix(mime, "image/") {
-		return
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAvatarBytes+1))
-	if err != nil || len(body) == 0 || len(body) > maxAvatarBytes {
-		return
-	}
-	_, _ = h.store.SetAdminAvatar(adminID, mime, body)
 }

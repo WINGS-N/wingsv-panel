@@ -1698,6 +1698,110 @@ func (x *RestartComponentResponse) GetNodes() uint32 {
 	return 0
 }
 
+type SetNodeBudgetRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	NodeId              string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	DeclaredBudgetBytes uint64                 `protobuf:"varint,2,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SetNodeBudgetRequest) Reset() {
+	*x = SetNodeBudgetRequest{}
+	mi := &file_headpanel_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetNodeBudgetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetNodeBudgetRequest) ProtoMessage() {}
+
+func (x *SetNodeBudgetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetNodeBudgetRequest.ProtoReflect.Descriptor instead.
+func (*SetNodeBudgetRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SetNodeBudgetRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *SetNodeBudgetRequest) GetDeclaredBudgetBytes() uint64 {
+	if x != nil {
+		return x.DeclaredBudgetBytes
+	}
+	return 0
+}
+
+type SetNodeBudgetResponse struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	DeclaredBudgetBytes uint64                 `protobuf:"varint,1,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
+	UsedBytes           uint64                 `protobuf:"varint,2,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SetNodeBudgetResponse) Reset() {
+	*x = SetNodeBudgetResponse{}
+	mi := &file_headpanel_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetNodeBudgetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetNodeBudgetResponse) ProtoMessage() {}
+
+func (x *SetNodeBudgetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetNodeBudgetResponse.ProtoReflect.Descriptor instead.
+func (*SetNodeBudgetResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *SetNodeBudgetResponse) GetDeclaredBudgetBytes() uint64 {
+	if x != nil {
+		return x.DeclaredBudgetBytes
+	}
+	return 0
+}
+
+func (x *SetNodeBudgetResponse) GetUsedBytes() uint64 {
+	if x != nil {
+		return x.UsedBytes
+	}
+	return 0
+}
+
 var File_headpanel_proto protoreflect.FileDescriptor
 
 const file_headpanel_proto_rawDesc = "" +
@@ -1829,12 +1933,19 @@ const file_headpanel_proto_rawDesc = "" +
 	"\tcomponent\x18\x01 \x01(\tR\tcomponent\x12\x17\n" +
 	"\anode_id\x18\x02 \x01(\tR\x06nodeId\"0\n" +
 	"\x18RestartComponentResponse\x12\x14\n" +
-	"\x05nodes\x18\x01 \x01(\rR\x05nodes*i\n" +
+	"\x05nodes\x18\x01 \x01(\rR\x05nodes\"c\n" +
+	"\x14SetNodeBudgetRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x122\n" +
+	"\x15declared_budget_bytes\x18\x02 \x01(\x04R\x13declaredBudgetBytes\"j\n" +
+	"\x15SetNodeBudgetResponse\x122\n" +
+	"\x15declared_budget_bytes\x18\x01 \x01(\x04R\x13declaredBudgetBytes\x12\x1d\n" +
+	"\n" +
+	"used_bytes\x18\x02 \x01(\x04R\tusedBytes*i\n" +
 	"\tLiveScope\x12\x1a\n" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\xc4\b\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\xac\t\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -1846,7 +1957,8 @@ const file_headpanel_proto_rawDesc = "" +
 	"\n" +
 	"RevokeUser\x12&.wingsv.headpanel.v1.RevokeUserRequest\x1a'.wingsv.headpanel.v1.RevokeUserResponse\x12l\n" +
 	"\x0fMintEnrollToken\x12+.wingsv.headpanel.v1.MintEnrollTokenRequest\x1a,.wingsv.headpanel.v1.MintEnrollTokenResponse\x12c\n" +
-	"\fSetNodeState\x12(.wingsv.headpanel.v1.SetNodeStateRequest\x1a).wingsv.headpanel.v1.SetNodeStateResponse\x12a\n" +
+	"\fSetNodeState\x12(.wingsv.headpanel.v1.SetNodeStateRequest\x1a).wingsv.headpanel.v1.SetNodeStateResponse\x12f\n" +
+	"\rSetNodeBudget\x12).wingsv.headpanel.v1.SetNodeBudgetRequest\x1a*.wingsv.headpanel.v1.SetNodeBudgetResponse\x12a\n" +
 	"\x10GetFleetSettings\x12).wingsv.headpanel.v1.FleetSettingsRequest\x1a\".wingsv.headpanel.v1.FleetSettings\x12Z\n" +
 	"\x10SetFleetSettings\x12\".wingsv.headpanel.v1.FleetSettings\x1a\".wingsv.headpanel.v1.FleetSettings\x12o\n" +
 	"\x10RestartComponent\x12,.wingsv.headpanel.v1.RestartComponentRequest\x1a-.wingsv.headpanel.v1.RestartComponentResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
@@ -1864,7 +1976,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -1891,6 +2003,8 @@ var file_headpanel_proto_goTypes = []any{
 	(*BuildChoice)(nil),              // 22: wingsv.headpanel.v1.BuildChoice
 	(*RestartComponentRequest)(nil),  // 23: wingsv.headpanel.v1.RestartComponentRequest
 	(*RestartComponentResponse)(nil), // 24: wingsv.headpanel.v1.RestartComponentResponse
+	(*SetNodeBudgetRequest)(nil),     // 25: wingsv.headpanel.v1.SetNodeBudgetRequest
+	(*SetNodeBudgetResponse)(nil),    // 26: wingsv.headpanel.v1.SetNodeBudgetResponse
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -1909,22 +2023,24 @@ var file_headpanel_proto_depIdxs = []int32{
 	16, // 13: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
 	12, // 14: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
 	18, // 15: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	20, // 16: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
-	21, // 17: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
-	23, // 18: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
-	4,  // 19: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 20: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	10, // 21: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 22: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	15, // 23: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	17, // 24: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	13, // 25: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	19, // 26: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	21, // 27: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	21, // 28: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	24, // 29: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
-	19, // [19:30] is the sub-list for method output_type
-	8,  // [8:19] is the sub-list for method input_type
+	25, // 16: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
+	20, // 17: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
+	21, // 18: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
+	23, // 19: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
+	4,  // 20: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 21: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	10, // 22: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 23: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	15, // 24: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	17, // 25: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	13, // 26: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	19, // 27: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	26, // 28: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
+	21, // 29: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	21, // 30: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 31: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	20, // [20:32] is the sub-list for method output_type
+	8,  // [8:20] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name
@@ -1941,7 +2057,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

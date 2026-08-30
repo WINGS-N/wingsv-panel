@@ -54,7 +54,8 @@
       <h2 class="admin-section-subtitle mt-5">Matrix</h2>
       <p class="admin-muted">
         Вход через <strong>{{ matrix.homeserver }}</strong
-        >. Аватар подтянется оттуда только если здесь своего нет — загруженный вручную не трогаем.
+        >. Аватар придётся загрузить здесь: аккаунт-сервис его не хранит, а профиль Matrix отдаёт картинку только вместе
+        с доступом ко всей переписке — ради аватарки такое не берут.
       </p>
       <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
       <div class="actions-row mt-3">

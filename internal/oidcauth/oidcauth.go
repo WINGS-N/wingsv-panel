@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +51,6 @@ type Identity struct {
 	Localpart   string
 	Subject     string
 	DisplayName string
-	AvatarURL   string
 }
 
 // pendingTTL bounds how long a started login stays valid. Short: it covers one
@@ -120,7 +120,11 @@ func (c *Client) discover(ctx context.Context) error {
 		ClientSecret: c.cfg.ClientSecret,
 		Endpoint:     provider.Endpoint(),
 		RedirectURL:  c.cfg.RedirectURL,
-		Scopes:       []string{oidc.ScopeOpenID, "profile"},
+		// Только openid: у MAS нет скоупа profile, и запрос на него отбивается
+		// политикой ещё на согласии - причём страницу отказа он же не может
+		// отрисовать, так что наружу это выглядит как 500 без объяснений.
+		// Имя, localpart и аватар приезжают claim-ами в id_token и так.
+		Scopes: []string{oidc.ScopeOpenID},
 	}
 	return nil
 }
@@ -198,12 +202,27 @@ func (c *Client) Complete(ctx context.Context, state, code string) (Identity, st
 		Subject           string `json:"sub"`
 		PreferredUsername string `json:"preferred_username"`
 		Name              string `json:"name"`
-		Picture           string `json:"picture"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return Identity{}, "", 0, "", err
 	}
-	identity, err := c.identityFrom(claims.Subject, claims.PreferredUsername, claims.Name, claims.Picture)
+	// MAS кладёт в id_token только служебные claim-ы: в его discovery
+	// claims_supported это iss/sub/aud/iat/exp и хеши, без preferred_username.
+	// Имя приходится добирать из userinfo - штатный путь OIDC, который заодно
+	// не зависит от того, что конкретный провайдер решил положить в токен.
+	if strings.TrimSpace(claims.PreferredUsername) == "" {
+		if info, infoErr := c.userInfo(ctx, oauthCfg, token); infoErr == nil {
+			if claims.PreferredUsername == "" {
+				claims.PreferredUsername = firstNonEmpty(info.PreferredUsername, info.Username)
+			}
+			if claims.Name == "" {
+				claims.Name = info.Name
+			}
+		} else {
+			log.Printf("oidcauth: userinfo unavailable: %v", infoErr)
+		}
+	}
+	identity, err := c.identityFrom(claims.Subject, claims.PreferredUsername, claims.Name)
 	if err != nil {
 		return Identity{}, "", 0, "", err
 	}
@@ -211,7 +230,7 @@ func (c *Client) Complete(ctx context.Context, state, code string) (Identity, st
 }
 
 // identityFrom builds the MXID and refuses anything that is not ours.
-func (c *Client) identityFrom(subject, localpart, name, picture string) (Identity, error) {
+func (c *Client) identityFrom(subject, localpart, name string) (Identity, error) {
 	localpart = strings.TrimSpace(localpart)
 	if localpart == "" {
 		return Identity{}, errors.New("oidcauth: the account service returned no username")
@@ -234,7 +253,6 @@ func (c *Client) identityFrom(subject, localpart, name, picture string) (Identit
 		Localpart:   at,
 		Subject:     subject,
 		DisplayName: strings.TrimSpace(name),
-		AvatarURL:   strings.TrimSpace(picture),
 	}, nil
 }
 
@@ -254,4 +272,40 @@ func randomString() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+// userInfoClaims is what the userinfo endpoint may carry. MAS spells the
+// username as "username"; the OIDC-standard name is preferred_username, and
+// both are read rather than betting on one.
+type userInfoClaims struct {
+	PreferredUsername string `json:"preferred_username"`
+	Username          string `json:"username"`
+	Name              string `json:"name"`
+}
+
+func (c *Client) userInfo(ctx context.Context, oauthCfg *oauth2.Config, token *oauth2.Token) (userInfoClaims, error) {
+	var out userInfoClaims
+	c.mu.Lock()
+	provider := c.provider
+	c.mu.Unlock()
+	if provider == nil {
+		return out, errors.New("oidcauth: no provider")
+	}
+	info, err := provider.UserInfo(ctx, oauthCfg.TokenSource(ctx, token))
+	if err != nil {
+		return out, err
+	}
+	if err := info.Claims(&out); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
 }

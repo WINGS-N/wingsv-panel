@@ -5,8 +5,8 @@
       <span v-if="fleet.config_version" class="admin-pill is-info">конфиг {{ fleet.config_version }}</span>
     </div>
     <p class="body-copy body-copy-wide">
-      Какие сборки несут все узлы сразу. Версия выбирается из релизов нашего форка - апстримовый Xray не несёт патчей
-      WINGS, и узел с ним выглядит здоровым, пока статистика по пирам остаётся пустой.
+      Какие сборки несут все ноды сразу. Версия выбирается из релизов нашего форка - апстримовый Xray не несёт патчей
+      WINGS, и нода с ним выглядит здоровым, пока статистика по пирам остаётся пустой.
     </p>
     <p v-if="loadError" class="state-error mt-3">{{ loadError }}</p>
 
@@ -31,7 +31,7 @@
         <span>
           <span class="fleet-toggle-name">Обновляться самим</span>
           <span class="fleet-toggle-hint">
-            Узел поставит новую сборку сразу. Перезапуск рвёт живые соединения, включая клиентов самого донора.
+            Нода поставит новую сборку сразу. Перезапуск рвёт живые соединения, включая клиентов самого донора.
           </span>
         </span>
       </label>
@@ -65,11 +65,53 @@
     </div>
     <p v-if="notice" class="admin-muted mt-3 text-[13px]">{{ notice }}</p>
   </section>
+
+  <section class="surface-card mt-6">
+    <div class="federation-live-head">
+      <h2 class="section-title">Ноды федерации</h2>
+      <span class="admin-pill" :class="onlineCount ? 'is-online' : 'is-offline'">
+        {{ onlineCount }} / {{ nodes.length }} онлайн
+      </span>
+    </div>
+    <p class="body-copy body-copy-wide">Весь флот целиком, включая чужие ноды: свои помечены отдельно.</p>
+
+    <div v-if="nodes.length" class="fed-node-list mt-2">
+      <div v-for="n in nodes" :key="n.id" class="fed-node-row">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="admin-mono text-[15px]">{{ n.hostname || n.id.slice(0, 8) }}</span>
+            <span class="admin-pill" :class="n.online ? 'is-online' : 'is-offline'">
+              {{ n.online ? 'онлайн' : 'молчит' }}
+            </span>
+            <span v-if="n.mine" class="admin-pill is-info">моя</span>
+            <span v-else class="admin-muted text-[13px]">{{ n.donor_id }}</span>
+          </div>
+          <span v-if="n.reason" class="mt-0.5 block truncate text-sm text-wings-muted">{{ n.reason }}</span>
+          <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
+            <span class="inline-flex items-center gap-1">
+              <ArrowUpDown :size="13" aria-hidden="true" />{{ bytes(n.used_bytes) }} из
+              {{ bytes(n.declared_budget_bytes) }}
+            </span>
+            <span v-if="n.arch" class="inline-flex items-center gap-1">
+              <Cpu :size="13" aria-hidden="true" />{{ n.arch }}
+            </span>
+            <span class="admin-pill is-offline">{{ n.state }}</span>
+          </span>
+        </div>
+        <SamsungButton variant="ghost" :busy="restarting" @click="restartOne(n)">
+          <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
+          Перезапустить
+        </SamsungButton>
+      </div>
+    </div>
+    <p v-else class="admin-muted mt-4">Нод пока нет.</p>
+  </section>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
-import { RefreshCw, Save } from 'lucide-vue-next';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { ArrowUpDown, Cpu, RefreshCw, Save } from 'lucide-vue-next';
+import { formatBytes } from '@/utils/format';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
@@ -91,9 +133,41 @@ const loadError = ref('');
 const notice = ref('');
 const saving = ref(false);
 const restarting = ref(false);
+const nodes = ref([]);
+
+const onlineCount = computed(() => nodes.value.filter((n) => n.online).length);
+const bytes = (v) => formatBytes(v || 0);
+
+async function loadNodes() {
+  try {
+    const res = await fetch('/api/admin/fleet/nodes', { credentials: 'include' });
+    if (!res.ok) return;
+    nodes.value = (await res.json()).nodes || [];
+  } catch {
+    // Список нод - не повод ломать всю страницу настроек
+  }
+}
+
+async function restartOne(node) {
+  restarting.value = true;
+  try {
+    const res = await fetch('/api/admin/fleet/restart', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ component: 'xray', node_id: node.id }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    notice.value = `Команда ушла на ${node.hostname || node.id.slice(0, 8)}.`;
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  } finally {
+    restarting.value = false;
+  }
+}
 
 onMounted(async () => {
-  await Promise.all([load(), loadReleases()]);
+  await Promise.all([load(), loadReleases(), loadNodes()]);
 });
 
 async function load() {
@@ -138,7 +212,7 @@ async function save() {
     if (!res.ok) throw new Error(await errorText(res));
     Object.assign(fleet, await res.json());
     loadError.value = '';
-    notice.value = `Применено. Узлы подхватят конфиг ${fleet.config_version} на ближайшем подключении.`;
+    notice.value = `Применено. Ноды подхватят конфиг ${fleet.config_version} на ближайшем подключении.`;
   } catch (err) {
     loadError.value = String(err.message || err);
   } finally {
@@ -156,7 +230,7 @@ async function restart(component) {
       body: JSON.stringify({ component }),
     });
     if (!res.ok) throw new Error(await errorText(res));
-    notice.value = `Команда ушла на ${(await res.json()).nodes} узлов.`;
+    notice.value = `Команда ушла на ${(await res.json()).nodes} нод.`;
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
