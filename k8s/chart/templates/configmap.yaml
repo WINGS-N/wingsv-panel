@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+data:
+  LISTEN_ADDR: ":{{ .Values.service.targetPort }}"
+  PUBLIC_BASE_URL: {{ .Values.config.publicBaseURL | quote }}
+  GITHUB_REPO: {{ .Values.config.githubRepo | quote }}
+  RELEASE_ASSET_SUFFIX: {{ .Values.config.releaseAssetSuffix | quote }}
+  SESSION_SECURE: {{ .Values.config.sessionSecure | quote }}
+  PROVISIONING_LISTEN: {{ .Values.config.provisioningListen | quote }}
+  DB_KIND: {{ .Values.database.driver | quote }}
+{{- if eq .Values.database.driver "sqlite" }}
+  DB_PATH: {{ .Values.database.path | quote }}
+{{- end }}
+  BOOTSTRAP_ADMIN_USERNAME: {{ .Values.bootstrap.username | quote }}
+{{- if .Values.federation.enabled }}
+  FEDERATION_HEAD: {{ required "federation.head is required when the federation is enabled" .Values.federation.head | quote }}
+{{- end }}
+{{- if .Values.matrix.enabled }}
+  MATRIX_ISSUER: {{ required "matrix.issuer is required when matrix login is enabled" .Values.matrix.issuer | quote }}
+  MATRIX_HOMESERVER: {{ required "matrix.homeserver is required when matrix login is enabled" .Values.matrix.homeserver | quote }}
+  MATRIX_CLIENT_ID: {{ required "matrix.clientID is required when matrix login is enabled" .Values.matrix.clientID | quote }}
+{{- end }}

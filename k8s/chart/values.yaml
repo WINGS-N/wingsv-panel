@@ -1,0 +1,103 @@
+# Generic on purpose: no node pins, no cluster-specific hostnames beyond what is
+# set here. Cluster-specific values live outside this repo.
+
+image:
+  repository: ghcr.io/wings-n/wingsv-panel
+  tag: latest
+  pullPolicy: Always
+
+# One replica with Recreate is the safe default: on sqlite there is a single
+# writer and a RWO volume, so a rolling update would deadlock on the volume. With
+# Postgres set database.driver=pgsql and replicas can go up - the cross-replica
+# bus rides LISTEN/NOTIFY.
+replicas: 1
+strategy: Recreate
+
+config:
+  publicBaseURL: "https://v.wingsnet.org"
+  githubRepo: "WINGS-N/WINGSV"
+  releaseAssetSuffix: ".apk"
+  sessionSecure: true
+  # Devices reach Guardian on the panel's own HTTPS port; this one is the
+  # plaintext h2c listener the ingress forwards provisioning gRPC to, so nodes
+  # verify the panel by system trust with no pin.
+  provisioningListen: ":9091"
+
+database:
+  # sqlite | pgsql | mariadb.
+  #
+  # sqlite has one writer and needs a volume, which is what pins the panel to a
+  # single replica and to the Recreate strategy above. pgsql and mariadb make it
+  # stateless, and the cross-replica fanout then rides Postgres LISTEN/NOTIFY -
+  # so on pgsql, and only there, replicas above one actually work.
+  driver: pgsql
+  # Read from a secret rather than templated in: it carries the password.
+  dsnSecret:
+    name: ""
+    key: dsn
+  # sqlite only
+  path: /data/v-wingsnet.db
+
+bootstrap:
+  # Changed on first login. Left at the default it is exactly as bad as it looks.
+  username: admin
+  password: ""
+
+federation:
+  enabled: false
+  # Panel-facing gRPC of the head. Its own secret, never the fleet secret: that
+  # one is held by every donated node.
+  head: ""
+  secret: ""
+
+matrix:
+  enabled: false
+  issuer: ""
+  homeserver: ""
+  clientID: ""
+  clientSecret: ""
+
+relayToken: ""
+
+existingSecret: ""
+
+persistence:
+  # Only sqlite needs it. On Postgres the panel holds nothing worth a volume.
+  enabled: false
+  size: 2Gi
+  storageClass: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  host: v.wingsnet.org
+  annotations:
+    cert-manager.io/issuer: letsencrypt-http
+    # Without this the router attaches to every entrypoint, including metrics and
+    # ssh - where an HTTP router breaks TCP passthrough for anything else on it.
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+  tls:
+    enabled: true
+    secretName: v-wingsnet-tls
+  # Provisioning gRPC is h2c on its own port and needs a path route of its own.
+  provisioning:
+    enabled: false
+    path: /wingsv.provisioning.v1.Provisioning/
+    annotations: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
