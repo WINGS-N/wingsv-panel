@@ -520,9 +520,17 @@
     }
   }
 
-  .oracle-badge {
-    @apply whitespace-nowrap rounded-full px-3 py-1 text-[12px] font-bold uppercase tracking-[0.1em];
-    background: theme('colors.wings.badgeBg');
+  /* Подпись под заголовком, а не пилюля: имя подсистемы читается как часть
+     раздела, а не как ярлык сбоку */
+  .oracle-line {
+    @apply mt-1 flex flex-wrap items-center gap-2 font-sharp text-[20px] font-bold tracking-[-0.005em] text-wings-mutedStrong;
+  }
+
+  .oracle-divider {
+    @apply text-wings-kicker;
+  }
+
+  .oracle-name {
     color: theme('colors.wings.badgeText');
   }
 

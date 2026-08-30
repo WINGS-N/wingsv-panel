@@ -77,10 +77,12 @@
       </section>
 
       <section class="surface-card mt-6">
-        <div class="federation-live-head">
-          <h2 class="hero-title">Безопасность</h2>
-          <span class="oracle-badge"><span class="wordmark-inline">WINGS V</span> | Oracle</span>
-        </div>
+        <h2 class="hero-title">Безопасность</h2>
+        <p class="oracle-line">
+          Secured by <span class="wordmark-inline">WINGS V</span>
+          <span class="oracle-divider" aria-hidden="true">|</span>
+          <span class="oracle-name">Oracle</span>
+        </p>
         <p class="body-copy body-copy-wide mt-3">
           У каждого аккаунта есть уровень доверия. Он начинается посередине и двигается сам: подозрительное поведение
           опускает его, спокойное - поднимает обратно, потому что вес каждого сигнала со временем тает. Высокий уровень
