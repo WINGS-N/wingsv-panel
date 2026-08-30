@@ -35,14 +35,28 @@ func TestHashSecretMatchesWhatTheNodeStores(t *testing.T) {
 	}
 }
 
+// serveAEAD stands in for an updated node, which accepts both derivations.
 func serveAEAD(t *testing.T, secret string, stub xuipb.PanelServer) *bufconn.Listener {
 	t.Helper()
+	return serveAEADWith(t, stub, tokenaead.ServerAny(secret, tokenaead.SHA512, tokenaead.Legacy256))
+}
+
+func serveAEADWith(t *testing.T, stub xuipb.PanelServer, creds credentials.TransportCredentials) *bufconn.Listener {
+	t.Helper()
 	lis := bufconn.Listen(1 << 20)
-	gs := grpc.NewServer(grpc.Creds(credentials.TransportCredentials(tokenaead.Server(secret))))
+	gs := grpc.NewServer(grpc.Creds(creds))
 	xuipb.RegisterPanelServer(gs, stub)
 	go func() { _ = gs.Serve(lis) }()
 	t.Cleanup(gs.Stop)
 	return lis
+}
+
+// freshPeers isolates the process-wide derivation memory from other tests.
+func freshPeers(t *testing.T) {
+	t.Helper()
+	previous := tokenaead.Peers
+	tokenaead.Peers = tokenaead.NewPreference()
+	t.Cleanup(func() { tokenaead.Peers = previous })
 }
 
 // End to end over the real transport: a node keyed by the stored digest accepts a
@@ -96,5 +110,57 @@ func TestDialRefusesNodeWithoutToken(t *testing.T) {
 	node := dbmodel.ServerNode{ID: "x1", Kind: "xui", GRPCEndpoint: "passthrough:///bufnet"}
 	if _, err := client.dial(node); err == nil {
 		t.Fatal("want an error for a node with no gRPC token")
+	}
+}
+
+// A node that has not been updated yet speaks only the old derivation. The panel
+// must find that out and settle on it by itself, because nobody is going to
+// configure a per-node setting for 42 admins' servers.
+func TestPanelConvergesOnANodeStillOnTheOldDerivation(t *testing.T) {
+	freshPeers(t)
+	const token = "xui-tok"
+	stub := &stubPanel{}
+	lis := serveAEADWith(t, stub, tokenaead.Server(storedNodeSecret(token)))
+
+	client := New(WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+		return lis.DialContext(ctx)
+	}))
+	node := dbmodel.ServerNode{ID: "old-node", Kind: "xui", GRPCEndpoint: "passthrough:///bufnet", GRPCToken: token}
+
+	// The first attempt is spent discovering the node is older. That cost is the
+	// price of having no handshake to ask on.
+	if _, err := client.AddClient(context.Background(), node, `{"email":"u1"}`); err == nil {
+		t.Fatal("a legacy-only node accepted the new derivation")
+	}
+	if v, ok := tokenaead.Peers.Known("old-node"); !ok || v != tokenaead.Legacy256 {
+		t.Fatalf("panel did not remember the node as legacy: %v ok=%v", v, ok)
+	}
+
+	// Every attempt after that works, without anything being configured.
+	for i := 0; i < 3; i++ {
+		if _, err := client.AddClient(context.Background(), node, `{"email":"u1"}`); err != nil {
+			t.Fatalf("attempt %d after converging: %v", i+2, err)
+		}
+	}
+}
+
+// An updated node must be reached on SHA-512 on the very first call, or the
+// migration would be pointless.
+func TestUpdatedNodeIsDialledOnTheNewDerivationImmediately(t *testing.T) {
+	freshPeers(t)
+	const token = "xui-tok"
+	stub := &stubPanel{}
+	lis := serveAEAD(t, storedNodeSecret(token), stub)
+
+	client := New(WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+		return lis.DialContext(ctx)
+	}))
+	node := dbmodel.ServerNode{ID: "new-node", Kind: "xui", GRPCEndpoint: "passthrough:///bufnet", GRPCToken: token}
+
+	if _, err := client.AddClient(context.Background(), node, `{"email":"u1"}`); err != nil {
+		t.Fatalf("AddClient: %v", err)
+	}
+	if v, ok := tokenaead.Peers.Known("new-node"); !ok || v != tokenaead.SHA512 {
+		t.Fatalf("node settled on %v ok=%v, want sha512", v, ok)
 	}
 }

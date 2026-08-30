@@ -47,7 +47,7 @@ func WithContextDialer(d func(context.Context, string) (net.Conn, error)) Option
 // is still also sent as a bearer credential for defense in depth. Pass
 // WithTransportCredentials to override the transport (e.g. tests).
 func New(token string, opts ...Option) *Provisioner {
-	p := &Provisioner{token: token, creds: tokenaead.Client(token)}
+	p := &Provisioner{token: token}
 	for _, opt := range opts {
 		opt(p)
 	}
@@ -55,7 +55,14 @@ func New(token string, opts ...Option) *Provisioner {
 }
 
 func (p *Provisioner) dial(node dbmodel.ServerNode) (*grpc.ClientConn, error) {
-	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(p.creds)}
+	// Credentials are built per node rather than once per Provisioner: the key
+	// derivation is chosen from what that node last answered on, and the
+	// collector rebuilds a Provisioner on every poll.
+	creds := p.creds
+	if creds == nil {
+		creds = tokenaead.ClientFor(p.token, node.GRPCEndpoint, tokenaead.Peers)
+	}
+	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	if p.dialContext != nil {
 		dialOpts = append(dialOpts, grpc.WithContextDialer(p.dialContext))
 	}

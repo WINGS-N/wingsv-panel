@@ -62,7 +62,11 @@ func (c *Client) dial(node dbmodel.ServerNode) (*grpc.ClientConn, error) {
 		if node.GRPCToken == "" {
 			return nil, fmt.Errorf("node %s has no gRPC token to key the transport", node.ID)
 		}
-		creds = tokenaead.Client(tokenaead.HashSecret(node.GRPCToken))
+		// The key derivation is chosen per node from what that node last answered
+		// on, because the fleet is mid-migration from SHA-256 to SHA-512 and
+		// nodes update on their own schedule. The shared secret itself stays the
+		// SHA-256 digest either way: that is the only form a node holds.
+		creds = tokenaead.ClientFor(tokenaead.HashSecret(node.GRPCToken), node.ID, tokenaead.Peers)
 	}
 	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	if c.dialContext != nil {
