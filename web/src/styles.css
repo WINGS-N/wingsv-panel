@@ -171,6 +171,12 @@
     overflow-wrap: anywhere;
   }
 
+  /* Для абзацев в одно-два предложения: на 64ch они рвутся посреди мысли и
+     оставляют половину карточки пустой */
+  .body-copy-wide {
+    @apply max-w-[92ch];
+  }
+
   .section-title,
   .hero-title {
     overflow-wrap: anywhere;
