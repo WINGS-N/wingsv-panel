@@ -18,6 +18,9 @@ service FederationHead {
   // only: there is no RPC anywhere in this service that maps a node to a profile
   // or to a user, and adding one would break the privacy invariant
   rpc DonorSummary(DonorSummaryRequest) returns (DonorCounters);
+  // Помесячная разбивка того же вклада. Счётчик за период обнуляется, и без
+  // истории донору нечего показать за прошлый месяц.
+  rpc DonorHistory(DonorHistoryRequest) returns (DonorHistoryResponse);
   // Gives a free user nodes, or returns what they already have. Idempotent, so
   // the panel can call it on every login without moving anybody
   rpc EnsureUser(EnsureUserRequest) returns (UserAllocation);
@@ -103,6 +106,24 @@ message DonorCounters {
 
 message DonorSummaryRequest {
   string donor_id = 1;
+}
+
+message DonorHistoryRequest {
+  string donor_id = 1;
+  // Сколько последних месяцев вернуть, 0 - двенадцать
+  uint32 months = 2;
+}
+
+// DonorMonth is one closed or running month of a donor's contribution. Month is
+// YYYY-MM in UTC: the head serves donors in every timezone, and a boundary that
+// moves with the reader would make two people see different totals.
+message DonorMonth {
+  string month = 1;
+  uint64 bytes = 2;
+}
+
+message DonorHistoryResponse {
+  repeated DonorMonth months = 1;
 }
 
 message NodeCounters {

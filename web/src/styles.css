@@ -1023,6 +1023,32 @@
     @apply text-[13px] text-wings-muted;
   }
 
+  .fed-months {
+    @apply flex flex-col gap-3;
+  }
+
+  .fed-month {
+    @apply grid items-center gap-3;
+    grid-template-columns: 96px 1fr auto;
+  }
+
+  .fed-month-name {
+    @apply text-[13px] text-wings-muted;
+  }
+
+  .fed-month-track {
+    @apply block h-2 overflow-hidden rounded-full bg-white/10;
+  }
+
+  .fed-month-fill {
+    @apply block h-full rounded-full;
+    background: theme('colors.wings.accent');
+  }
+
+  .fed-month-value {
+    @apply text-[13px] tabular-nums text-wings-text;
+  }
+
   .fed-node-edit {
     @apply inline-flex h-6 w-6 items-center justify-center rounded-full text-wings-muted transition-colors;
   }

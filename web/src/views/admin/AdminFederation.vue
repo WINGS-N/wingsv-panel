@@ -78,6 +78,20 @@
     </div>
   </section>
 
+  <section v-if="enabled && summary.months.length" class="surface-card mt-6">
+    <h2 class="section-title">По месяцам</h2>
+    <p class="admin-muted mt-1">Сколько трафика ушло через ваши серверы. Счётчик сверху обнуляется, этот - нет.</p>
+    <div class="fed-months mt-4">
+      <div v-for="m in summary.months" :key="m.month" class="fed-month">
+        <span class="fed-month-name">{{ monthName(m.month) }}</span>
+        <span class="fed-month-track" aria-hidden="true">
+          <span class="fed-month-fill" :style="{ width: monthPct(m) + '%' }"></span>
+        </span>
+        <span class="fed-month-value">{{ bytes(m.bytes) }}</span>
+      </div>
+    </div>
+  </section>
+
   <section v-if="enabled && summary.node_list.length" class="surface-card mt-6">
     <h2 class="section-title">Ноды</h2>
     <!-- Строки без рамок, только разделители - как список профилей в DeX -->
@@ -177,6 +191,7 @@ const summary = reactive({
   used_bytes: 0,
   declared_budget_bytes: 0,
   node_list: [],
+  months: [],
 });
 
 let timer = null;
@@ -216,7 +231,7 @@ async function load() {
     enabled.value = Boolean(data.enabled);
     // Голова могла отвалиться: раздел остаётся, цифры замирают, причина видна
     loadError.value = data.error || '';
-    Object.assign(summary, { ...data, node_list: data.node_list || [] });
+    Object.assign(summary, { ...data, node_list: data.node_list || [], months: data.months || [] });
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
@@ -317,6 +332,35 @@ function rate(bytesPerSecond) {
 
 // Доля выбранного бюджета. Именно она решает судьбу ноды: около 85 процентов он
 // перестаёт получать новых пользователей, около 97 снимается с выдачи
+// Полоса меряется относительно лучшего месяца: абсолютной шкалы у пожертвований
+// нет, а сравнивать с прошлым месяцем человек и так будет
+function monthPct(entry) {
+  const top = Math.max(...summary.months.map((m) => Number(m.bytes) || 0), 1);
+  return Math.max(2, Math.round((Number(entry.bytes) / top) * 100));
+}
+
+const MONTHS = [
+  'январь',
+  'февраль',
+  'март',
+  'апрель',
+  'май',
+  'июнь',
+  'июль',
+  'август',
+  'сентябрь',
+  'октябрь',
+  'ноябрь',
+  'декабрь',
+];
+
+function monthName(value) {
+  const [year, month] = String(value).split('-');
+  const name = MONTHS[Number(month) - 1];
+  if (!name) return value;
+  return Number(year) === new Date().getFullYear() ? name : `${name} ${year}`;
+}
+
 function budgetPct(node) {
   const limit = Number(node.declared_budget_bytes) || 0;
   if (limit <= 0) return 0;

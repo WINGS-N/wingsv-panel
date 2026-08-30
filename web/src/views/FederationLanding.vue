@@ -98,7 +98,7 @@
             </article>
             <article class="fed-step">
               <img src="/img/oneui/monitor.svg" alt="" class="fed-step-icon" aria-hidden="true" />
-              <h3 class="fed-step-title">Один доступ на сорок человек</h3>
+              <h3 class="fed-step-title">Один аккаунт - один человек</h3>
               <p class="fed-step-copy">
                 Своим доступом человек пользуется с двух-трёх устройств. Если один и тот же доступ работает сразу из
                 десятка разных мест, это уже не человек, а перепродажа - и такой аккаунт уходит в карантин. Чтобы это

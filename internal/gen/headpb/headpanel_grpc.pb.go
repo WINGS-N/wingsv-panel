@@ -26,6 +26,7 @@ const (
 	FederationHead_StreamLive_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/StreamLive"
 	FederationHead_ListNodes_FullMethodName         = "/wingsv.headpanel.v1.FederationHead/ListNodes"
 	FederationHead_DonorSummary_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/DonorSummary"
+	FederationHead_DonorHistory_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/DonorHistory"
 	FederationHead_EnsureUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/EnsureUser"
 	FederationHead_RevokeUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/RevokeUser"
 	FederationHead_MintEnrollToken_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/MintEnrollToken"
@@ -51,6 +52,9 @@ type FederationHeadClient interface {
 	// only: there is no RPC anywhere in this service that maps a node to a profile
 	// or to a user, and adding one would break the privacy invariant
 	DonorSummary(ctx context.Context, in *DonorSummaryRequest, opts ...grpc.CallOption) (*DonorCounters, error)
+	// Помесячная разбивка того же вклада. Счётчик за период обнуляется, и без
+	// истории донору нечего показать за прошлый месяц.
+	DonorHistory(ctx context.Context, in *DonorHistoryRequest, opts ...grpc.CallOption) (*DonorHistoryResponse, error)
 	// Gives a free user nodes, or returns what they already have. Idempotent, so
 	// the panel can call it on every login without moving anybody
 	EnsureUser(ctx context.Context, in *EnsureUserRequest, opts ...grpc.CallOption) (*UserAllocation, error)
@@ -115,6 +119,16 @@ func (c *federationHeadClient) DonorSummary(ctx context.Context, in *DonorSummar
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DonorCounters)
 	err := c.cc.Invoke(ctx, FederationHead_DonorSummary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) DonorHistory(ctx context.Context, in *DonorHistoryRequest, opts ...grpc.CallOption) (*DonorHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DonorHistoryResponse)
+	err := c.cc.Invoke(ctx, FederationHead_DonorHistory_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -216,6 +230,9 @@ type FederationHeadServer interface {
 	// only: there is no RPC anywhere in this service that maps a node to a profile
 	// or to a user, and adding one would break the privacy invariant
 	DonorSummary(context.Context, *DonorSummaryRequest) (*DonorCounters, error)
+	// Помесячная разбивка того же вклада. Счётчик за период обнуляется, и без
+	// истории донору нечего показать за прошлый месяц.
+	DonorHistory(context.Context, *DonorHistoryRequest) (*DonorHistoryResponse, error)
 	// Gives a free user nodes, or returns what they already have. Idempotent, so
 	// the panel can call it on every login without moving anybody
 	EnsureUser(context.Context, *EnsureUserRequest) (*UserAllocation, error)
@@ -254,6 +271,9 @@ func (UnimplementedFederationHeadServer) ListNodes(context.Context, *ListNodesRe
 }
 func (UnimplementedFederationHeadServer) DonorSummary(context.Context, *DonorSummaryRequest) (*DonorCounters, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DonorSummary not implemented")
+}
+func (UnimplementedFederationHeadServer) DonorHistory(context.Context, *DonorHistoryRequest) (*DonorHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DonorHistory not implemented")
 }
 func (UnimplementedFederationHeadServer) EnsureUser(context.Context, *EnsureUserRequest) (*UserAllocation, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EnsureUser not implemented")
@@ -357,6 +377,24 @@ func _FederationHead_DonorSummary_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FederationHeadServer).DonorSummary(ctx, req.(*DonorSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_DonorHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DonorHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).DonorHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_DonorHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).DonorHistory(ctx, req.(*DonorHistoryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -523,6 +561,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DonorSummary",
 			Handler:    _FederationHead_DonorSummary_Handler,
+		},
+		{
+			MethodName: "DonorHistory",
+			Handler:    _FederationHead_DonorHistory_Handler,
 		},
 		{
 			MethodName: "EnsureUser",

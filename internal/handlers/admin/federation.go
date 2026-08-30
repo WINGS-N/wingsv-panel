@@ -57,20 +57,27 @@ type federationNodeView struct {
 	Sessions            uint32  `json:"sessions"`
 }
 
+// federationMonthView is one closed month of the donor's own contribution
+type federationMonthView struct {
+	Month string `json:"month"`
+	Bytes uint64 `json:"bytes"`
+}
+
 type federationSummaryView struct {
 	Enabled bool `json:"enabled"`
 	// Aggregates only. There is deliberately no field here naming a profile or a
 	// user: a donor learns what their machines did, never who did it
-	Nodes               uint32               `json:"nodes"`
-	NodesOnline         uint32               `json:"nodes_online"`
-	Sessions            uint32               `json:"sessions"`
-	UpBytes             uint64               `json:"up_bytes"`
-	DownBytes           uint64               `json:"down_bytes"`
-	UpRateBps           float64              `json:"up_rate_bps"`
-	DownRateBps         float64              `json:"down_rate_bps"`
-	DeclaredBudgetBytes uint64               `json:"declared_budget_bytes"`
-	UsedBytes           uint64               `json:"used_bytes"`
-	NodeList            []federationNodeView `json:"node_list"`
+	Nodes               uint32                `json:"nodes"`
+	NodesOnline         uint32                `json:"nodes_online"`
+	Sessions            uint32                `json:"sessions"`
+	UpBytes             uint64                `json:"up_bytes"`
+	DownBytes           uint64                `json:"down_bytes"`
+	UpRateBps           float64               `json:"up_rate_bps"`
+	DownRateBps         float64               `json:"down_rate_bps"`
+	DeclaredBudgetBytes uint64                `json:"declared_budget_bytes"`
+	UsedBytes           uint64                `json:"used_bytes"`
+	NodeList            []federationNodeView  `json:"node_list"`
+	Months              []federationMonthView `json:"months"`
 	// Error непустой, когда федерация включена, но голова не отвечает. Раздел
 	// при этом остаётся на месте: перезапуск головы не должен выглядеть как
 	// отключение федерации
@@ -126,6 +133,15 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 		DownRateBps:         summary.GetDownRateBps(),
 		DeclaredBudgetBytes: summary.GetDeclaredBudgetBytes(),
 		UsedBytes:           summary.GetUsedBytes(),
+	}
+	// История - не повод завалить экран: голова без неё отдаёт Unimplemented,
+	// и раздел просто останется без графика
+	if history, err := h.fed.DonorHistory(ctx, donor, 12); err == nil {
+		for _, m := range history {
+			view.Months = append(view.Months, federationMonthView{
+				Month: m.GetMonth(), Bytes: m.GetBytes(),
+			})
+		}
 	}
 	for _, n := range nodes.GetNodes() {
 		view.NodeList = append(view.NodeList, federationNodeView{

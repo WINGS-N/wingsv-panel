@@ -178,6 +178,19 @@ func (c *Client) SetNodeBudget(ctx context.Context, nodeID string, bytes uint64)
 	return got.GetDeclaredBudgetBytes(), nil
 }
 
+// DonorHistory is the donor's contribution month by month
+func (c *Client) DonorHistory(ctx context.Context, donorID string, months uint32) ([]*headpb.DonorMonth, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	got, err := client.DonorHistory(ctx, &headpb.DonorHistoryRequest{DonorId: donorID, Months: months})
+	if err != nil {
+		return nil, err
+	}
+	return got.GetMonths(), nil
+}
+
 // retryDelay is how long the live loop waits before re-dialing a head that is
 // down. Long enough not to hammer it, short enough that the counter comes back
 // on its own after a head restart.
