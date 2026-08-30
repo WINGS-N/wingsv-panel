@@ -58,7 +58,7 @@
             </p>
           </article>
           <article class="fed-step">
-            <img src="/img/icon-network.png" alt="" class="fed-step-icon" aria-hidden="true" />
+            <img src="/img/oneui/terminal.svg" alt="" class="fed-step-icon" aria-hidden="true" />
             <h3 class="fed-step-title">Одна команда на сервере</h3>
             <p class="fed-step-copy">
               Установщик сам поставит агента, поднимет Xray и подключит ноду к пулу. Ничего настраивать руками не надо,
@@ -66,7 +66,7 @@
             </p>
           </article>
           <article class="fed-step">
-            <img src="/img/icon-shield.png" alt="" class="fed-step-icon" aria-hidden="true" />
+            <img src="/img/oneui/monitor.svg" alt="" class="fed-step-icon" aria-hidden="true" />
             <h3 class="fed-step-title">Дальше он работает сам</h3>
             <p class="fed-step-copy">
               Балансировщик раздаёт ноду бесплатным пользователям, следит за качеством и снимает её с выдачи, если
