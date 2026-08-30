@@ -19,8 +19,10 @@ import (
 	"crypto/cipher"
 	"crypto/hkdf"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+	"hash"
 	"io"
 	"net"
 	"sync"
@@ -36,10 +38,33 @@ const (
 	hkdfSalt      = "wingsv-mgmt-grpc-v1"
 )
 
-func deriveKey(token []byte, label string) []byte {
+// Variant selects the hash the key derivation runs on.
+//
+// The panel's existing links - 3x-ui nodes and vk-turn-proxy relays - derive with
+// SHA-256, because a deployed node never stores a raw token, only its SHA-256
+// digest, and that digest is the only value the two sides provably share.
+// Changing those is a fleet-wide flag day. Links where both ends are new, which
+// today means the federation head, use SHA-512 per the project rule.
+type Variant int
+
+const (
+	// Legacy256 is the zero value because it is what every existing link is
+	Legacy256 Variant = 0
+	// SHA512 is for links this project mints both ends of
+	SHA512 Variant = 1
+)
+
+func (v Variant) hash() func() hash.Hash {
+	if v == SHA512 {
+		return sha512.New
+	}
+	return sha256.New
+}
+
+func deriveKeyVariant(v Variant, token []byte, label string) []byte {
 	// A non-empty token is required upstream; hkdf.Key never fails for these
 	// fixed lengths, so a derivation error is treated as a programming bug.
-	key, err := hkdf.Key(sha256.New, token, []byte(hkdfSalt), label, keyLen)
+	key, err := hkdf.Key(v.hash(), token, []byte(hkdfSalt), label, keyLen)
 	if err != nil {
 		panic("tokenaead: hkdf: " + err.Error())
 	}
@@ -151,13 +176,26 @@ func HashSecret(token string) string {
 }
 
 // Client builds dialer credentials keyed by token.
-func Client(token string) *Creds {
-	return &Creds{c2s: deriveKey([]byte(token), "c2s"), s2c: deriveKey([]byte(token), "s2c")}
+func Client(token string) *Creds { return ClientVariant(token, Legacy256) }
+
+// ClientVariant builds dialer credentials with an explicit derivation variant.
+func ClientVariant(token string, v Variant) *Creds {
+	return &Creds{
+		c2s: deriveKeyVariant(v, []byte(token), "c2s"),
+		s2c: deriveKeyVariant(v, []byte(token), "s2c"),
+	}
 }
 
 // Server builds listener credentials keyed by token.
-func Server(token string) *Creds {
-	return &Creds{c2s: deriveKey([]byte(token), "c2s"), s2c: deriveKey([]byte(token), "s2c"), server: true}
+func Server(token string) *Creds { return ServerVariant(token, Legacy256) }
+
+// ServerVariant builds listener credentials with an explicit derivation variant.
+func ServerVariant(token string, v Variant) *Creds {
+	return &Creds{
+		c2s:    deriveKeyVariant(v, []byte(token), "c2s"),
+		s2c:    deriveKeyVariant(v, []byte(token), "s2c"),
+		server: true,
+	}
 }
 
 func wrap(raw net.Conn, writeKey, readKey []byte) (net.Conn, credentials.AuthInfo, error) {

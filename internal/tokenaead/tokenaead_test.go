@@ -1,6 +1,7 @@
 package tokenaead
 
 import (
+	"bytes"
 	"context"
 	"net"
 	"testing"
@@ -50,5 +51,32 @@ func TestWrongTokenFails(t *testing.T) {
 	defer stop()
 	if err := dialCheck(t, addr, Client("WRONG-token-xyz")); err == nil {
 		t.Fatal("wrong-token RPC unexpectedly succeeded")
+	}
+}
+
+// The two variants must not interoperate: if a SHA-512 peer could talk to a
+// SHA-256 one, the derivation would not actually be doing anything.
+func TestVariantsDoNotInteroperate(t *testing.T) {
+	const secret = "shared-secret"
+	if bytes.Equal(
+		deriveKeyVariant(Legacy256, []byte(secret), "c2s"),
+		deriveKeyVariant(SHA512, []byte(secret), "c2s"),
+	) {
+		t.Fatal("both variants derived the same key")
+	}
+}
+
+// The default has to stay SHA-256, because every deployed 3x-ui node and relay
+// derives that way and a changed default silently breaks all of them.
+func TestDefaultStaysLegacyForDeployedPeers(t *testing.T) {
+	const secret = "shared-secret"
+	if !bytes.Equal(
+		Client(secret).c2s,
+		ClientVariant(secret, Legacy256).c2s,
+	) {
+		t.Error("Client no longer derives the way deployed nodes do")
+	}
+	if !bytes.Equal(Server(secret).s2c, ServerVariant(secret, Legacy256).s2c) {
+		t.Error("Server no longer derives the way deployed nodes do")
 	}
 }
