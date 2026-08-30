@@ -1,0 +1,143 @@
+// Head to panel. Separate from federation.proto because the peers are different:
+// this side is the operator's own panel, the other side is somebody else's server
+syntax = "proto3";
+
+package wingsv.headpanel.v1;
+
+option go_package = "wingsnet.org/federation/gen/headpb;headpb";
+
+service FederationHead {
+  // Aggregates for the public landing page. Deliberately the narrowest message
+  // in this file: it is served to anybody
+  rpc GetPublicCounters(PublicCountersRequest) returns (PublicCounters);
+  // One long-lived stream so the panel can change what it is watching without
+  // dialing again
+  rpc StreamLive(stream LiveSubscribe) returns (stream LiveUpdate);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  // What a donor is allowed to see about their own contribution. Aggregates
+  // only: there is no RPC anywhere in this service that maps a node to a profile
+  // or to a user, and adding one would break the privacy invariant
+  rpc DonorSummary(DonorSummaryRequest) returns (DonorCounters);
+  rpc MintEnrollToken(MintEnrollTokenRequest) returns (MintEnrollTokenResponse);
+  rpc SetNodeState(SetNodeStateRequest) returns (SetNodeStateResponse);
+}
+
+enum LiveScope {
+  LIVE_SCOPE_UNSPECIFIED = 0;
+  LIVE_SCOPE_GLOBAL = 1;
+  LIVE_SCOPE_DONOR = 2;
+  LIVE_SCOPE_NODE = 3;
+}
+
+message LiveSubscribe {
+  LiveScope scope = 1;
+  // Set for DONOR and NODE scope respectively
+  string donor_id = 2;
+  string node_id = 3;
+}
+
+message LiveUpdate {
+  int64 unix_ms = 1;
+  GlobalCounters global = 2;
+  DonorCounters donor = 3;
+  NodeCounters node = 4;
+}
+
+message GlobalCounters {
+  uint32 nodes_total = 1;
+  uint32 nodes_online = 2;
+  uint32 sessions = 3;
+  uint32 streams = 4;
+  uint64 up_bytes = 5;
+  uint64 down_bytes = 6;
+  double up_rate_bps = 7;
+  double down_rate_bps = 8;
+}
+
+// PublicCounters is what the landing page shows. No node ids, no donor ids, no
+// per-node breakdown: this is served without a session
+message PublicCounters {
+  int64 unix_ms = 1;
+  uint32 nodes_online = 2;
+  uint32 users_online = 3;
+  uint64 donated_bytes_this_period = 4;
+  double up_rate_bps = 5;
+  double down_rate_bps = 6;
+}
+
+message PublicCountersRequest {}
+
+message DonorCounters {
+  string donor_id = 1;
+  uint32 nodes = 2;
+  uint32 nodes_online = 3;
+  uint32 sessions = 4;
+  uint64 up_bytes = 5;
+  uint64 down_bytes = 6;
+  double up_rate_bps = 7;
+  double down_rate_bps = 8;
+  uint64 declared_budget_bytes = 9;
+  uint64 used_bytes = 10;
+}
+
+message DonorSummaryRequest {
+  string donor_id = 1;
+}
+
+message NodeCounters {
+  string node_id = 1;
+  string state = 2;
+  string reason = 3;
+  uint32 sessions = 4;
+  double up_rate_bps = 5;
+  double down_rate_bps = 6;
+  uint64 used_bytes = 7;
+  uint64 declared_budget_bytes = 8;
+  int64 last_seen_unix = 9;
+  bool online = 10;
+}
+
+message ListNodesRequest {
+  // Empty lists the whole fleet, which only the operator may ask for
+  string donor_id = 1;
+}
+
+message ListNodesResponse {
+  repeated NodeSummary nodes = 1;
+}
+
+message NodeSummary {
+  string node_id = 1;
+  string donor_id = 2;
+  string hostname = 3;
+  string arch = 4;
+  string state = 5;
+  string reason = 6;
+  bool online = 7;
+  bool aes_ni = 8;
+  uint64 declared_budget_bytes = 9;
+  uint64 used_bytes = 10;
+  int64 joined_unix = 11;
+  int64 last_seen_unix = 12;
+  NodeCounters live = 13;
+}
+
+message MintEnrollTokenRequest {
+  string donor_id = 1;
+  uint32 ttl_seconds = 2;
+}
+
+message MintEnrollTokenResponse {
+  // The compound value the installer takes verbatim. It carries the fleet
+  // secret as well, because the transport is keyed before the node has one
+  string enroll_token = 1;
+  int64 expires_unix = 2;
+}
+
+message SetNodeStateRequest {
+  string node_id = 1;
+  string state = 2;
+  string reason = 3;
+}
+
+message SetNodeStateResponse {}

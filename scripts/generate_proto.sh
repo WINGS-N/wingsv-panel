@@ -18,6 +18,24 @@ PATH="$PATH:$(go env GOPATH)/bin"
 # script to update it. Override the source with VKTP_PROTO_REPO / VKTP_PROTO_REF.
 VKTP_PROTO_REPO="${VKTP_PROTO_REPO:-https://github.com/WINGS-N/vk-turn-proxy.git}"
 VKTP_PROTO_REF="${VKTP_PROTO_REF:-main}"
+# The federation head's panel API proto is owned by wingsvpn-federation. Same
+# arrangement as control.proto above, but the sync only runs when FED_PROTO_REPO
+# is set: that repository is not published yet, so the committed copy is the
+# source of truth until it is, and a clone failure must not look like a no-op.
+sync_federation_proto() {
+  local repo="${FED_PROTO_REPO:-}"
+  if [ -z "$repo" ]; then
+    return 0
+  fi
+  local tmp
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  git clone --quiet --depth 1 --filter=blob:none --sparse \
+    --branch "${FED_PROTO_REF:-main}" "$repo" "$tmp"
+  git -C "$tmp" sparse-checkout set proto >/dev/null
+  cp "$tmp/proto/headpanel.proto" "$PROTO_DIR/headpanel.proto"
+}
+
 sync_vktp_control_proto() {
   local tmp
   tmp="$(mktemp -d)"
@@ -28,6 +46,7 @@ sync_vktp_control_proto() {
   cp "$tmp/proto/control.proto" "$PROTO_DIR/control.proto"
 }
 sync_vktp_control_proto
+sync_federation_proto
 
 rm -f "$ROOT_DIR/wingsv.pb.go" "$ROOT_DIR/guardian.pb.go" "$ROOT_DIR/guardian_grpc.pb.go"
 rm -f "$WINGSV_PKG_DIR/wingsv.pb.go" "$GUARDIAN_PKG_DIR/guardian.pb.go" "$GUARDIAN_PKG_DIR/guardian_grpc.pb.go"
@@ -88,3 +107,19 @@ protoc \
   --go-grpc_out="$ROOT_DIR" \
   --go-grpc_opt=module=v.wingsnet.org \
   "$PROTO_DIR/xui.proto"
+
+HEAD_PKG_DIR="$OUT_DIR/headpb"
+mkdir -p "$HEAD_PKG_DIR"
+rm -f "$HEAD_PKG_DIR"/*.pb.go
+
+# headpanel.proto declares go_package=wingsnet.org/federation/gen/headpb (the
+# federation's own path); the M override maps it into the panel's tree.
+protoc \
+  --proto_path="$PROTO_DIR" \
+  --go_out="$ROOT_DIR" \
+  --go_opt=module=v.wingsnet.org \
+  --go_opt=Mheadpanel.proto=v.wingsnet.org/internal/gen/headpb \
+  --go-grpc_out="$ROOT_DIR" \
+  --go-grpc_opt=module=v.wingsnet.org \
+  --go-grpc_opt=Mheadpanel.proto=v.wingsnet.org/internal/gen/headpb \
+  "$PROTO_DIR/headpanel.proto"
