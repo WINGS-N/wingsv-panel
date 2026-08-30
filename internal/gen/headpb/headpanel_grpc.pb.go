@@ -30,6 +30,9 @@ const (
 	FederationHead_RevokeUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/RevokeUser"
 	FederationHead_MintEnrollToken_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/MintEnrollToken"
 	FederationHead_SetNodeState_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/SetNodeState"
+	FederationHead_GetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/GetFleetSettings"
+	FederationHead_SetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetFleetSettings"
+	FederationHead_RestartComponent_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/RestartComponent"
 )
 
 // FederationHeadClient is the client API for FederationHead service.
@@ -54,6 +57,12 @@ type FederationHeadClient interface {
 	RevokeUser(ctx context.Context, in *RevokeUserRequest, opts ...grpc.CallOption) (*RevokeUserResponse, error)
 	MintEnrollToken(ctx context.Context, in *MintEnrollTokenRequest, opts ...grpc.CallOption) (*MintEnrollTokenResponse, error)
 	SetNodeState(ctx context.Context, in *SetNodeStateRequest, opts ...grpc.CallOption) (*SetNodeStateResponse, error)
+	// Настройки всего флота: какие сборки нести, чем прикрываться, обновляться ли
+	// самим. Это решение оператора, а не донора и не флага на ноде.
+	GetFleetSettings(ctx context.Context, in *FleetSettingsRequest, opts ...grpc.CallOption) (*FleetSettings, error)
+	SetFleetSettings(ctx context.Context, in *FleetSettings, opts ...grpc.CallOption) (*FleetSettings, error)
+	// Перезапустить компонент. Пустой node_id - на всём флоте.
+	RestartComponent(ctx context.Context, in *RestartComponentRequest, opts ...grpc.CallOption) (*RestartComponentResponse, error)
 }
 
 type federationHeadClient struct {
@@ -147,6 +156,36 @@ func (c *federationHeadClient) SetNodeState(ctx context.Context, in *SetNodeStat
 	return out, nil
 }
 
+func (c *federationHeadClient) GetFleetSettings(ctx context.Context, in *FleetSettingsRequest, opts ...grpc.CallOption) (*FleetSettings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FleetSettings)
+	err := c.cc.Invoke(ctx, FederationHead_GetFleetSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) SetFleetSettings(ctx context.Context, in *FleetSettings, opts ...grpc.CallOption) (*FleetSettings, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FleetSettings)
+	err := c.cc.Invoke(ctx, FederationHead_SetFleetSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) RestartComponent(ctx context.Context, in *RestartComponentRequest, opts ...grpc.CallOption) (*RestartComponentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestartComponentResponse)
+	err := c.cc.Invoke(ctx, FederationHead_RestartComponent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationHeadServer is the server API for FederationHead service.
 // All implementations must embed UnimplementedFederationHeadServer
 // for forward compatibility.
@@ -169,6 +208,12 @@ type FederationHeadServer interface {
 	RevokeUser(context.Context, *RevokeUserRequest) (*RevokeUserResponse, error)
 	MintEnrollToken(context.Context, *MintEnrollTokenRequest) (*MintEnrollTokenResponse, error)
 	SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error)
+	// Настройки всего флота: какие сборки нести, чем прикрываться, обновляться ли
+	// самим. Это решение оператора, а не донора и не флага на ноде.
+	GetFleetSettings(context.Context, *FleetSettingsRequest) (*FleetSettings, error)
+	SetFleetSettings(context.Context, *FleetSettings) (*FleetSettings, error)
+	// Перезапустить компонент. Пустой node_id - на всём флоте.
+	RestartComponent(context.Context, *RestartComponentRequest) (*RestartComponentResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
 }
 
@@ -202,6 +247,15 @@ func (UnimplementedFederationHeadServer) MintEnrollToken(context.Context, *MintE
 }
 func (UnimplementedFederationHeadServer) SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetNodeState not implemented")
+}
+func (UnimplementedFederationHeadServer) GetFleetSettings(context.Context, *FleetSettingsRequest) (*FleetSettings, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFleetSettings not implemented")
+}
+func (UnimplementedFederationHeadServer) SetFleetSettings(context.Context, *FleetSettings) (*FleetSettings, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetFleetSettings not implemented")
+}
+func (UnimplementedFederationHeadServer) RestartComponent(context.Context, *RestartComponentRequest) (*RestartComponentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestartComponent not implemented")
 }
 func (UnimplementedFederationHeadServer) mustEmbedUnimplementedFederationHeadServer() {}
 func (UnimplementedFederationHeadServer) testEmbeddedByValue()                        {}
@@ -357,6 +411,60 @@ func _FederationHead_SetNodeState_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_GetFleetSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FleetSettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).GetFleetSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_GetFleetSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).GetFleetSettings(ctx, req.(*FleetSettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_SetFleetSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FleetSettings)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).SetFleetSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_SetFleetSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).SetFleetSettings(ctx, req.(*FleetSettings))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_RestartComponent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestartComponentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).RestartComponent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_RestartComponent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).RestartComponent(ctx, req.(*RestartComponentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationHead_ServiceDesc is the grpc.ServiceDesc for FederationHead service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -391,6 +499,18 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetNodeState",
 			Handler:    _FederationHead_SetNodeState_Handler,
+		},
+		{
+			MethodName: "GetFleetSettings",
+			Handler:    _FederationHead_GetFleetSettings_Handler,
+		},
+		{
+			MethodName: "SetFleetSettings",
+			Handler:    _FederationHead_SetFleetSettings_Handler,
+		},
+		{
+			MethodName: "RestartComponent",
+			Handler:    _FederationHead_RestartComponent_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -25,6 +25,12 @@ service FederationHead {
   rpc RevokeUser(RevokeUserRequest) returns (RevokeUserResponse);
   rpc MintEnrollToken(MintEnrollTokenRequest) returns (MintEnrollTokenResponse);
   rpc SetNodeState(SetNodeStateRequest) returns (SetNodeStateResponse);
+  // Настройки всего флота: какие сборки нести, чем прикрываться, обновляться ли
+  // самим. Это решение оператора, а не донора и не флага на ноде.
+  rpc GetFleetSettings(FleetSettingsRequest) returns (FleetSettings);
+  rpc SetFleetSettings(FleetSettings) returns (FleetSettings);
+  // Перезапустить компонент. Пустой node_id - на всём флоте.
+  rpc RestartComponent(RestartComponentRequest) returns (RestartComponentResponse);
 }
 
 enum LiveScope {
@@ -188,3 +194,44 @@ message SetNodeStateRequest {
 }
 
 message SetNodeStateResponse {}
+
+message FleetSettingsRequest {}
+
+// FleetSettings - то, что оператор задаёт один раз на весь флот.
+message FleetSettings {
+  // Сборки. Пустой url означает "не трогать": нода продолжит нести то, что уже
+  // поставила, а не останется без Xray.
+  BuildChoice xray = 1;
+  BuildChoice vktp = 2;
+  // Ставить новую сборку сразу, как только она приехала. Перезапуск рвёт живые
+  // соединения, поэтому по умолчанию выключено.
+  bool auto_upgrade = 3;
+  // Чью tls-личность занимает REALITY. Пусто и auto_dest - голова выбирает сама
+  // из проверенного пула.
+  string reality_dest = 4;
+  bool auto_dest = 5;
+  // ML-DSA-65 поверх REALITY. Помещается не в каждый заимствованный хендшейк,
+  // поэтому переключатель, а не константа.
+  bool post_quantum = 6;
+  uint32 tcp_port = 7;
+  uint32 xhttp_port = 8;
+  // Версия конфига, которую голова разослала после последнего изменения
+  uint64 config_version = 9;
+}
+
+message BuildChoice {
+  string version = 1;
+  string url = 2;
+  string sha512 = 3;
+}
+
+message RestartComponentRequest {
+  // xray | vktp
+  string component = 1;
+  // Пусто - весь флот
+  string node_id = 2;
+}
+
+message RestartComponentResponse {
+  uint32 nodes = 1;
+}

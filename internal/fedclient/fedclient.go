@@ -205,3 +205,36 @@ func (c *Client) streamOnce(ctx context.Context, onUpdate func(*headpb.LiveUpdat
 		onUpdate(update)
 	}
 }
+
+// FleetSettings is what the fleet currently serves
+func (c *Client) FleetSettings(ctx context.Context) (*headpb.FleetSettings, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.GetFleetSettings(ctx, &headpb.FleetSettingsRequest{})
+}
+
+// SetFleetSettings applies the operator's choice to every node
+func (c *Client) SetFleetSettings(ctx context.Context, in *headpb.FleetSettings) (*headpb.FleetSettings, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.SetFleetSettings(ctx, in)
+}
+
+// RestartComponent bounces xray or the relay. An empty nodeID means the fleet.
+func (c *Client) RestartComponent(ctx context.Context, component, nodeID string) (uint32, error) {
+	client, err := c.dial()
+	if err != nil {
+		return 0, err
+	}
+	resp, err := client.RestartComponent(ctx, &headpb.RestartComponentRequest{
+		Component: component, NodeId: nodeID,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.GetNodes(), nil
+}

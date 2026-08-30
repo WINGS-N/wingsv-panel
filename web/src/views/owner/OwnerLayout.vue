@@ -46,6 +46,10 @@
             <UsersRound class="admin-nav-icon" aria-hidden="true" />
             <span>Администраторы</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-fleet' }" active-class="is-active">
+            <Boxes class="admin-nav-icon" aria-hidden="true" />
+            <span>Флот</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-invite-tree' }" active-class="is-active">
             <Network class="admin-nav-icon" aria-hidden="true" />
             <span>Дерево инвайтов</span>
@@ -76,6 +80,7 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
+  Boxes,
   ArrowLeft,
   ClipboardList,
   LayoutDashboard,

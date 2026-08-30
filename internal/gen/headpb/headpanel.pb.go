@@ -1386,6 +1386,318 @@ func (*SetNodeStateResponse) Descriptor() ([]byte, []int) {
 	return file_headpanel_proto_rawDescGZIP(), []int{18}
 }
 
+type FleetSettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FleetSettingsRequest) Reset() {
+	*x = FleetSettingsRequest{}
+	mi := &file_headpanel_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FleetSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FleetSettingsRequest) ProtoMessage() {}
+
+func (x *FleetSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FleetSettingsRequest.ProtoReflect.Descriptor instead.
+func (*FleetSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{19}
+}
+
+// FleetSettings - то, что оператор задаёт один раз на весь флот.
+type FleetSettings struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Сборки. Пустой url означает "не трогать": нода продолжит нести то, что уже
+	// поставила, а не останется без Xray.
+	Xray *BuildChoice `protobuf:"bytes,1,opt,name=xray,proto3" json:"xray,omitempty"`
+	Vktp *BuildChoice `protobuf:"bytes,2,opt,name=vktp,proto3" json:"vktp,omitempty"`
+	// Ставить новую сборку сразу, как только она приехала. Перезапуск рвёт живые
+	// соединения, поэтому по умолчанию выключено.
+	AutoUpgrade bool `protobuf:"varint,3,opt,name=auto_upgrade,json=autoUpgrade,proto3" json:"auto_upgrade,omitempty"`
+	// Чью tls-личность занимает REALITY. Пусто и auto_dest - голова выбирает сама
+	// из проверенного пула.
+	RealityDest string `protobuf:"bytes,4,opt,name=reality_dest,json=realityDest,proto3" json:"reality_dest,omitempty"`
+	AutoDest    bool   `protobuf:"varint,5,opt,name=auto_dest,json=autoDest,proto3" json:"auto_dest,omitempty"`
+	// ML-DSA-65 поверх REALITY. Помещается не в каждый заимствованный хендшейк,
+	// поэтому переключатель, а не константа.
+	PostQuantum bool   `protobuf:"varint,6,opt,name=post_quantum,json=postQuantum,proto3" json:"post_quantum,omitempty"`
+	TcpPort     uint32 `protobuf:"varint,7,opt,name=tcp_port,json=tcpPort,proto3" json:"tcp_port,omitempty"`
+	XhttpPort   uint32 `protobuf:"varint,8,opt,name=xhttp_port,json=xhttpPort,proto3" json:"xhttp_port,omitempty"`
+	// Версия конфига, которую голова разослала после последнего изменения
+	ConfigVersion uint64 `protobuf:"varint,9,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FleetSettings) Reset() {
+	*x = FleetSettings{}
+	mi := &file_headpanel_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FleetSettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FleetSettings) ProtoMessage() {}
+
+func (x *FleetSettings) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FleetSettings.ProtoReflect.Descriptor instead.
+func (*FleetSettings) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *FleetSettings) GetXray() *BuildChoice {
+	if x != nil {
+		return x.Xray
+	}
+	return nil
+}
+
+func (x *FleetSettings) GetVktp() *BuildChoice {
+	if x != nil {
+		return x.Vktp
+	}
+	return nil
+}
+
+func (x *FleetSettings) GetAutoUpgrade() bool {
+	if x != nil {
+		return x.AutoUpgrade
+	}
+	return false
+}
+
+func (x *FleetSettings) GetRealityDest() string {
+	if x != nil {
+		return x.RealityDest
+	}
+	return ""
+}
+
+func (x *FleetSettings) GetAutoDest() bool {
+	if x != nil {
+		return x.AutoDest
+	}
+	return false
+}
+
+func (x *FleetSettings) GetPostQuantum() bool {
+	if x != nil {
+		return x.PostQuantum
+	}
+	return false
+}
+
+func (x *FleetSettings) GetTcpPort() uint32 {
+	if x != nil {
+		return x.TcpPort
+	}
+	return 0
+}
+
+func (x *FleetSettings) GetXhttpPort() uint32 {
+	if x != nil {
+		return x.XhttpPort
+	}
+	return 0
+}
+
+func (x *FleetSettings) GetConfigVersion() uint64 {
+	if x != nil {
+		return x.ConfigVersion
+	}
+	return 0
+}
+
+type BuildChoice struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	Sha512        string                 `protobuf:"bytes,3,opt,name=sha512,proto3" json:"sha512,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BuildChoice) Reset() {
+	*x = BuildChoice{}
+	mi := &file_headpanel_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BuildChoice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BuildChoice) ProtoMessage() {}
+
+func (x *BuildChoice) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BuildChoice.ProtoReflect.Descriptor instead.
+func (*BuildChoice) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *BuildChoice) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *BuildChoice) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *BuildChoice) GetSha512() string {
+	if x != nil {
+		return x.Sha512
+	}
+	return ""
+}
+
+type RestartComponentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// xray | vktp
+	Component string `protobuf:"bytes,1,opt,name=component,proto3" json:"component,omitempty"`
+	// Пусто - весь флот
+	NodeId        string `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestartComponentRequest) Reset() {
+	*x = RestartComponentRequest{}
+	mi := &file_headpanel_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestartComponentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestartComponentRequest) ProtoMessage() {}
+
+func (x *RestartComponentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestartComponentRequest.ProtoReflect.Descriptor instead.
+func (*RestartComponentRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *RestartComponentRequest) GetComponent() string {
+	if x != nil {
+		return x.Component
+	}
+	return ""
+}
+
+func (x *RestartComponentRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+type RestartComponentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Nodes         uint32                 `protobuf:"varint,1,opt,name=nodes,proto3" json:"nodes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestartComponentResponse) Reset() {
+	*x = RestartComponentResponse{}
+	mi := &file_headpanel_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestartComponentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestartComponentResponse) ProtoMessage() {}
+
+func (x *RestartComponentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestartComponentResponse.ProtoReflect.Descriptor instead.
+func (*RestartComponentResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *RestartComponentResponse) GetNodes() uint32 {
+	if x != nil {
+		return x.Nodes
+	}
+	return 0
+}
+
 var File_headpanel_proto protoreflect.FileDescriptor
 
 const file_headpanel_proto_rawDesc = "" +
@@ -1496,12 +1808,33 @@ const file_headpanel_proto_rawDesc = "" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x16\n" +
-	"\x14SetNodeStateResponse*i\n" +
+	"\x14SetNodeStateResponse\"\x16\n" +
+	"\x14FleetSettingsRequest\"\xe2\x02\n" +
+	"\rFleetSettings\x124\n" +
+	"\x04xray\x18\x01 \x01(\v2 .wingsv.headpanel.v1.BuildChoiceR\x04xray\x124\n" +
+	"\x04vktp\x18\x02 \x01(\v2 .wingsv.headpanel.v1.BuildChoiceR\x04vktp\x12!\n" +
+	"\fauto_upgrade\x18\x03 \x01(\bR\vautoUpgrade\x12!\n" +
+	"\freality_dest\x18\x04 \x01(\tR\vrealityDest\x12\x1b\n" +
+	"\tauto_dest\x18\x05 \x01(\bR\bautoDest\x12!\n" +
+	"\fpost_quantum\x18\x06 \x01(\bR\vpostQuantum\x12\x19\n" +
+	"\btcp_port\x18\a \x01(\rR\atcpPort\x12\x1d\n" +
+	"\n" +
+	"xhttp_port\x18\b \x01(\rR\txhttpPort\x12%\n" +
+	"\x0econfig_version\x18\t \x01(\x04R\rconfigVersion\"Q\n" +
+	"\vBuildChoice\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +
+	"\x06sha512\x18\x03 \x01(\tR\x06sha512\"P\n" +
+	"\x17RestartComponentRequest\x12\x1c\n" +
+	"\tcomponent\x18\x01 \x01(\tR\tcomponent\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\"0\n" +
+	"\x18RestartComponentResponse\x12\x14\n" +
+	"\x05nodes\x18\x01 \x01(\rR\x05nodes*i\n" +
 	"\tLiveScope\x12\x1a\n" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\x94\x06\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\xc4\b\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -1513,7 +1846,10 @@ const file_headpanel_proto_rawDesc = "" +
 	"\n" +
 	"RevokeUser\x12&.wingsv.headpanel.v1.RevokeUserRequest\x1a'.wingsv.headpanel.v1.RevokeUserResponse\x12l\n" +
 	"\x0fMintEnrollToken\x12+.wingsv.headpanel.v1.MintEnrollTokenRequest\x1a,.wingsv.headpanel.v1.MintEnrollTokenResponse\x12c\n" +
-	"\fSetNodeState\x12(.wingsv.headpanel.v1.SetNodeStateRequest\x1a).wingsv.headpanel.v1.SetNodeStateResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
+	"\fSetNodeState\x12(.wingsv.headpanel.v1.SetNodeStateRequest\x1a).wingsv.headpanel.v1.SetNodeStateResponse\x12a\n" +
+	"\x10GetFleetSettings\x12).wingsv.headpanel.v1.FleetSettingsRequest\x1a\".wingsv.headpanel.v1.FleetSettings\x12Z\n" +
+	"\x10SetFleetSettings\x12\".wingsv.headpanel.v1.FleetSettings\x1a\".wingsv.headpanel.v1.FleetSettings\x12o\n" +
+	"\x10RestartComponent\x12,.wingsv.headpanel.v1.RestartComponentRequest\x1a-.wingsv.headpanel.v1.RestartComponentResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
 
 var (
 	file_headpanel_proto_rawDescOnce sync.Once
@@ -1528,28 +1864,33 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_headpanel_proto_goTypes = []any{
-	(LiveScope)(0),                  // 0: wingsv.headpanel.v1.LiveScope
-	(*LiveSubscribe)(nil),           // 1: wingsv.headpanel.v1.LiveSubscribe
-	(*LiveUpdate)(nil),              // 2: wingsv.headpanel.v1.LiveUpdate
-	(*GlobalCounters)(nil),          // 3: wingsv.headpanel.v1.GlobalCounters
-	(*PublicCounters)(nil),          // 4: wingsv.headpanel.v1.PublicCounters
-	(*PublicCountersRequest)(nil),   // 5: wingsv.headpanel.v1.PublicCountersRequest
-	(*DonorCounters)(nil),           // 6: wingsv.headpanel.v1.DonorCounters
-	(*DonorSummaryRequest)(nil),     // 7: wingsv.headpanel.v1.DonorSummaryRequest
-	(*NodeCounters)(nil),            // 8: wingsv.headpanel.v1.NodeCounters
-	(*ListNodesRequest)(nil),        // 9: wingsv.headpanel.v1.ListNodesRequest
-	(*ListNodesResponse)(nil),       // 10: wingsv.headpanel.v1.ListNodesResponse
-	(*NodeSummary)(nil),             // 11: wingsv.headpanel.v1.NodeSummary
-	(*MintEnrollTokenRequest)(nil),  // 12: wingsv.headpanel.v1.MintEnrollTokenRequest
-	(*MintEnrollTokenResponse)(nil), // 13: wingsv.headpanel.v1.MintEnrollTokenResponse
-	(*EnsureUserRequest)(nil),       // 14: wingsv.headpanel.v1.EnsureUserRequest
-	(*UserAllocation)(nil),          // 15: wingsv.headpanel.v1.UserAllocation
-	(*RevokeUserRequest)(nil),       // 16: wingsv.headpanel.v1.RevokeUserRequest
-	(*RevokeUserResponse)(nil),      // 17: wingsv.headpanel.v1.RevokeUserResponse
-	(*SetNodeStateRequest)(nil),     // 18: wingsv.headpanel.v1.SetNodeStateRequest
-	(*SetNodeStateResponse)(nil),    // 19: wingsv.headpanel.v1.SetNodeStateResponse
+	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
+	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
+	(*LiveUpdate)(nil),               // 2: wingsv.headpanel.v1.LiveUpdate
+	(*GlobalCounters)(nil),           // 3: wingsv.headpanel.v1.GlobalCounters
+	(*PublicCounters)(nil),           // 4: wingsv.headpanel.v1.PublicCounters
+	(*PublicCountersRequest)(nil),    // 5: wingsv.headpanel.v1.PublicCountersRequest
+	(*DonorCounters)(nil),            // 6: wingsv.headpanel.v1.DonorCounters
+	(*DonorSummaryRequest)(nil),      // 7: wingsv.headpanel.v1.DonorSummaryRequest
+	(*NodeCounters)(nil),             // 8: wingsv.headpanel.v1.NodeCounters
+	(*ListNodesRequest)(nil),         // 9: wingsv.headpanel.v1.ListNodesRequest
+	(*ListNodesResponse)(nil),        // 10: wingsv.headpanel.v1.ListNodesResponse
+	(*NodeSummary)(nil),              // 11: wingsv.headpanel.v1.NodeSummary
+	(*MintEnrollTokenRequest)(nil),   // 12: wingsv.headpanel.v1.MintEnrollTokenRequest
+	(*MintEnrollTokenResponse)(nil),  // 13: wingsv.headpanel.v1.MintEnrollTokenResponse
+	(*EnsureUserRequest)(nil),        // 14: wingsv.headpanel.v1.EnsureUserRequest
+	(*UserAllocation)(nil),           // 15: wingsv.headpanel.v1.UserAllocation
+	(*RevokeUserRequest)(nil),        // 16: wingsv.headpanel.v1.RevokeUserRequest
+	(*RevokeUserResponse)(nil),       // 17: wingsv.headpanel.v1.RevokeUserResponse
+	(*SetNodeStateRequest)(nil),      // 18: wingsv.headpanel.v1.SetNodeStateRequest
+	(*SetNodeStateResponse)(nil),     // 19: wingsv.headpanel.v1.SetNodeStateResponse
+	(*FleetSettingsRequest)(nil),     // 20: wingsv.headpanel.v1.FleetSettingsRequest
+	(*FleetSettings)(nil),            // 21: wingsv.headpanel.v1.FleetSettings
+	(*BuildChoice)(nil),              // 22: wingsv.headpanel.v1.BuildChoice
+	(*RestartComponentRequest)(nil),  // 23: wingsv.headpanel.v1.RestartComponentRequest
+	(*RestartComponentResponse)(nil), // 24: wingsv.headpanel.v1.RestartComponentResponse
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -1558,27 +1899,35 @@ var file_headpanel_proto_depIdxs = []int32{
 	8,  // 3: wingsv.headpanel.v1.LiveUpdate.node:type_name -> wingsv.headpanel.v1.NodeCounters
 	11, // 4: wingsv.headpanel.v1.ListNodesResponse.nodes:type_name -> wingsv.headpanel.v1.NodeSummary
 	8,  // 5: wingsv.headpanel.v1.NodeSummary.live:type_name -> wingsv.headpanel.v1.NodeCounters
-	5,  // 6: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
-	1,  // 7: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
-	9,  // 8: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
-	7,  // 9: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
-	14, // 10: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
-	16, // 11: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
-	12, // 12: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
-	18, // 13: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	4,  // 14: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 15: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	10, // 16: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 17: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	15, // 18: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	17, // 19: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	13, // 20: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	19, // 21: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	14, // [14:22] is the sub-list for method output_type
-	6,  // [6:14] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	22, // 6: wingsv.headpanel.v1.FleetSettings.xray:type_name -> wingsv.headpanel.v1.BuildChoice
+	22, // 7: wingsv.headpanel.v1.FleetSettings.vktp:type_name -> wingsv.headpanel.v1.BuildChoice
+	5,  // 8: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
+	1,  // 9: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
+	9,  // 10: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
+	7,  // 11: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
+	14, // 12: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
+	16, // 13: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
+	12, // 14: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
+	18, // 15: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
+	20, // 16: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
+	21, // 17: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
+	23, // 18: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
+	4,  // 19: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 20: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	10, // 21: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 22: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	15, // 23: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	17, // 24: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	13, // 25: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	19, // 26: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	21, // 27: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	21, // 28: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 29: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	19, // [19:30] is the sub-list for method output_type
+	8,  // [8:19] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_headpanel_proto_init() }
@@ -1592,7 +1941,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   19,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

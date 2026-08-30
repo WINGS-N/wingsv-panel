@@ -101,6 +101,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.
 	mux.HandleFunc("/api/admin/invites", h.requireAuth(h.handleInvites))
+	mux.HandleFunc("/api/admin/fleet", h.requireAuth(h.handleFleetSettings))
+	mux.HandleFunc("/api/admin/fleet/releases", h.requireAuth(h.handleFleetReleases))
+	mux.HandleFunc("/api/admin/fleet/restart", h.requireAuth(h.handleFleetRestart))
 	mux.HandleFunc("/api/admin/federation/summary", h.requireAuth(h.handleFederationSummary))
 	mux.HandleFunc("/api/admin/federation/enroll-token", h.requireAuth(h.handleFederationEnrollToken))
 	mux.HandleFunc("/api/admin/federation/nodes/", h.requireAuth(h.handleFederationNodeState))

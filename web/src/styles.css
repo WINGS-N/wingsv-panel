@@ -374,6 +374,28 @@
     max-width: 720px;
   }
 
+  .fleet-select {
+    @apply block w-full rounded-xl bg-transparent px-3 py-2 font-samsung text-[15px] text-wings-text outline-none;
+    border: 1px solid theme('colors.wings.inputLine');
+    min-height: 48px;
+  }
+
+  .fleet-toggles {
+    @apply flex flex-col gap-3;
+  }
+
+  .fleet-toggle {
+    @apply flex items-start gap-3 rounded-[20px] border border-wings-border bg-wings-surface p-4;
+  }
+
+  .fleet-toggle-name {
+    @apply block text-[15px] text-wings-text;
+  }
+
+  .fleet-toggle-hint {
+    @apply mt-0.5 block text-[13px] text-wings-muted;
+  }
+
   .federation-live-head {
     @apply flex flex-wrap items-center gap-3;
   }
