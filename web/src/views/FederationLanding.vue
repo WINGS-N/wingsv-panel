@@ -38,7 +38,7 @@
         </div>
 
         <div class="landing-hero-art" aria-hidden="true">
-          <img src="/img/oneui/network.svg" alt="" class="landing-hero-illustration" />
+          <img src="/img/oneui/sharing.svg" alt="" class="landing-hero-illustration" />
         </div>
       </div>
     </section>
