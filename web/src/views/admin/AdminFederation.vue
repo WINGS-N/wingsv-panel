@@ -86,7 +86,9 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
             <span class="truncate text-[17px]">{{ node.hostname || node.id.slice(0, 8) }}</span>
-            <span class="admin-pill" :class="node.state === 'active' ? 'is-online' : 'is-offline'">
+            <!-- Точка перед подписью: состояние читается раньше, чем текст -->
+            <span class="admin-pill" :class="stateClass(node.state)">
+              <span class="state-dot" :class="dotClass(node.state)" aria-hidden="true"></span>
               {{ stateLabel(node.state) }}
             </span>
           </div>
@@ -273,10 +275,24 @@ function budgetPct(node) {
   return Math.min(100, Math.round((Number(node.used_bytes) / limit) * 100));
 }
 
+// Цвет несёт то же, что и слово: зелёная - нода раздаётся людям, красная -
+// снята и никого не обслуживает, жёлтая - дорабатывает уже выданное
+function stateClass(state) {
+  if (state === 'active') return 'is-online';
+  if (state === 'draining') return 'is-info';
+  return 'is-offline';
+}
+
+function dotClass(state) {
+  if (state === 'active') return 'is-live';
+  if (state === 'draining') return 'is-draining';
+  return 'is-down';
+}
+
 function stateLabel(state) {
   switch (state) {
     case 'active':
-      return 'в ротации';
+      return 'в выдаче';
     case 'draining':
       return 'выводится';
     case 'parked':

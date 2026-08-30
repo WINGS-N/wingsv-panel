@@ -14,7 +14,23 @@
 
     <main class="login-main">
       <section class="login-card surface-card">
-        <h1 class="login-headline">
+        <!-- Пришли по приглашению - это первое, что видно. Без карточки
+             страница выглядит как обычная регистрация, и человек не понимает,
+             куда и по чьей ссылке попал -->
+        <div v-if="inviter.loaded && inviter.valid" class="invite-hero">
+          <img :src="inviterAvatar" alt="" class="invite-avatar" aria-hidden="true" />
+          <p class="invite-kicker">Вас пригласил</p>
+          <p class="invite-name">{{ inviter.username || 'администратор' }}</p>
+          <p class="invite-sub">
+            Аккаунты здесь заводят только по приглашению.
+            <template v-if="inviter.remaining > 1"> По этому коду осталось мест: {{ inviter.remaining }}.</template>
+          </p>
+        </div>
+        <p v-else-if="inviter.loaded && !inviter.valid" class="state-error">
+          {{ inviter.reason || 'Приглашение недействительно' }}
+        </p>
+
+        <h1 v-if="!inviter.valid" class="login-headline">
           <span>Создайте аккаунт.</span>
           <span>Одна учётная запись —</span>
           <span>контроль над несколькими устройствами.</span>
@@ -76,7 +92,14 @@
             Создать по Matrix ID
           </SamsungButton>
 
-          <router-link class="login-back-link" :to="{ name: 'login' }"> Уже есть аккаунт — войти </router-link>
+          <!-- Код уезжает вместе с переходом: приглашают и тех, у кого аккаунт уже
+               есть, - им он привяжет пригласившего вместо создания нового -->
+          <router-link
+            class="login-back-link"
+            :to="{ name: 'login', query: inviteToken ? { invite: inviteToken } : {} }"
+          >
+            Уже есть аккаунт — войти
+          </router-link>
         </form>
       </section>
     </main>
@@ -100,11 +123,39 @@ const router = useRouter();
 const username = ref('');
 const password = ref('');
 const passwordConfirm = ref('');
-const inviteToken = ref('');
+const inviteToken = ref(new URLSearchParams(window.location.search).get('invite') || '');
+const inviter = reactive({
+  loaded: false,
+  valid: false,
+  username: '',
+  avatar_version: 0,
+  admin_id: 0,
+  reason: '',
+  remaining: 0,
+});
+
+const inviterAvatar = computed(() =>
+  inviter.avatar_version
+    ? `/api/admin/avatars/${inviter.admin_id}.png?v=${inviter.avatar_version}`
+    : '/img/avatar-default.png',
+);
+
+async function loadInviter() {
+  if (!inviteToken.value) return;
+  try {
+    const res = await fetch(`/api/invite?invite=${encodeURIComponent(inviteToken.value)}`);
+    if (!res.ok) return;
+    Object.assign(inviter, await res.json(), { loaded: true });
+  } catch {
+    // Приглашение не удалось проверить - форма всё равно работает
+  }
+}
 const matrix = reactive({ enabled: false, homeserver: '' });
 
 // Код приглашения уходит в start, а не в callback: обратно провайдер вернёт
 // только state и code, и без этого зарегистрировать первого посетителя нечем
+onMounted(loadInviter);
+
 onMounted(async () => {
   try {
     const res = await fetch('/api/oidc/status', { credentials: 'include' });

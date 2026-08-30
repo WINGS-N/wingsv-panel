@@ -20,7 +20,21 @@
           </option>
         </select>
       </label>
-      <OneuiInput v-model.trim="fleet.reality_dest" label="REALITY dest" placeholder="www.microsoft.com:443" />
+      <!-- При автовыборе поле прячется: голова держит dest сама и перепишет
+           всё, что сюда вписали, - показывать редактируемое поле значит врать -->
+      <OneuiInput
+        v-if="!fleet.auto_dest"
+        v-model.trim="fleet.reality_dest"
+        label="REALITY dest"
+        placeholder="www.microsoft.com:443"
+      />
+      <div v-else class="surface-inset">
+        <span class="section-kicker">REALITY dest</span>
+        <p class="fed-step-copy mt-2">
+          Выбирает голова: <span class="admin-mono">{{ fleet.reality_dest || 'подбирается' }}</span
+          >. Она перепроверяет его и меняет сама, когда тот перестаёт держать хендшейк.
+        </p>
+      </div>
       <OneuiInput v-model.number="fleet.tcp_port" label="Порт TCP" type="number" :min="1" :max="65535" />
       <OneuiInput v-model.number="fleet.xhttp_port" label="Порт XHTTP" type="number" :min="1" :max="65535" />
     </div>
@@ -48,7 +62,10 @@
         <OneuiSwitch v-model="fleet.auto_dest" />
         <span>
           <span class="fleet-toggle-name">Выбирать dest автоматически</span>
-          <span class="fleet-toggle-hint">Голова берёт проверенный из пула, если поле выше пустое.</span>
+          <span class="fleet-toggle-hint">
+            Голова сама держит живой dest: перепроверяет текущий и переносит флот на другой, когда прежний перестал
+            годиться. Выключите, чтобы вписать свой.
+          </span>
         </span>
       </label>
     </div>

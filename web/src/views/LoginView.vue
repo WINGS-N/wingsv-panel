@@ -117,7 +117,12 @@ onMounted(async () => {
 
 function signInWithMatrix() {
   const back = route.query.redirect || '/admin/clients';
-  window.location.href = `/api/oidc/start?return_to=${encodeURIComponent(back)}`;
+  // Код приглашения переносится и во вход: пригласить можно и того, у кого
+  // аккаунт уже есть - тогда он получает пригласившего, а не второй аккаунт
+  const params = new URLSearchParams({ return_to: back });
+  const invite = new URLSearchParams(window.location.search).get('invite');
+  if (invite) params.set('invite', invite);
+  window.location.href = `/api/oidc/start?${params.toString()}`;
 }
 
 async function onSubmit() {

@@ -71,6 +71,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/logout", h.handleLogout)
 	mux.HandleFunc("/api/admin/register", h.handleRegister)
 	mux.HandleFunc("/api/admin/registration/status", h.handleRegistrationStatus)
+	// Без сессии: страницу приглашения открывает тот, у кого аккаунта ещё нет
+	mux.HandleFunc("/api/invite", h.handleInviteLookup)
 	mux.HandleFunc("/api/admin/me", h.requireAuth(h.handleMe))
 	mux.HandleFunc("/api/admin/password", h.requireAuth(h.handleChangePassword))
 	mux.HandleFunc("/api/admin/clients", h.requireAuth(h.handleClients))

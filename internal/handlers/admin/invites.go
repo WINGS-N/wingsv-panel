@@ -139,3 +139,49 @@ func formatOptionalTime(t time.Time) string {
 	}
 	return t.Format(time.RFC3339)
 }
+
+// inviterView is who is doing the inviting, shown to the person opening the
+// link. Deliberately just a face and a name: an invite page is a greeting, not
+// a place to leak how much traffic somebody moved.
+type inviterView struct {
+	Username      string `json:"username"`
+	AvatarVersion int64  `json:"avatar_version"`
+	AdminID       int64  `json:"admin_id"`
+	Valid         bool   `json:"valid"`
+	Reason        string `json:"reason,omitempty"`
+	Remaining     int64  `json:"remaining"`
+}
+
+// handleInviteLookup answers "who invited me, and does this code still work".
+//
+// Open without a session on purpose - it is read by somebody who has no account
+// yet. It never says whether a token merely exists: an expired code and a
+// made-up one both come back as invalid, so the endpoint cannot be used to mine
+// for live invites.
+func (h *Handler) handleInviteLookup(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimSpace(r.URL.Query().Get("invite"))
+	if token == "" {
+		writeError(w, http.StatusBadRequest, "missing invite")
+		return
+	}
+	invite, err := h.store.FindInvite(token)
+	if err != nil {
+		writeJSON(w, http.StatusOK, inviterView{Valid: false, Reason: "код не найден или уже недействителен"})
+		return
+	}
+	if invite.UseCount >= invite.MaxUses {
+		writeJSON(w, http.StatusOK, inviterView{Valid: false, Reason: "по этому коду уже зарегистрировались"})
+		return
+	}
+	if !invite.ExpiresAt.IsZero() && invite.ExpiresAt.UnixMilli() > 0 && time.Now().After(invite.ExpiresAt) {
+		writeJSON(w, http.StatusOK, inviterView{Valid: false, Reason: "срок действия кода истёк"})
+		return
+	}
+	view := inviterView{Valid: true, Remaining: invite.MaxUses - invite.UseCount}
+	if admin, err := h.store.FindAdminByID(invite.CreatedByAdminID); err == nil {
+		view.Username = admin.Username
+		view.AvatarVersion = admin.AvatarVersion
+		view.AdminID = admin.ID
+	}
+	writeJSON(w, http.StatusOK, view)
+}

@@ -274,3 +274,26 @@ func (s *Store) RedeemInvite(token string, adminID int64) error {
 	}
 	return nil
 }
+
+// FindInvite reads one code. Used by the invite page, which has no session -
+// hence it returns the row and lets the caller decide what to reveal.
+func (s *Store) FindInvite(token string) (InviteToken, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return InviteToken{}, ErrNotFound
+	}
+	var r dbmodel.InviteToken
+	if err := s.gdb.First(&r, "token = ?", token).Error; err != nil {
+		return InviteToken{}, ErrNotFound
+	}
+	return InviteToken{
+		Token:            r.Token,
+		CreatedAt:        time.UnixMilli(r.CreatedAtUnix).UTC(),
+		ExpiresAt:        time.UnixMilli(r.ExpiresAt).UTC(),
+		UsedAt:           time.UnixMilli(r.UsedAt).UTC(),
+		UsedByAdminID:    derefInt64(r.UsedByAdminID),
+		CreatedByAdminID: derefInt64(r.CreatedByAdminID),
+		MaxUses:          r.MaxUses,
+		UseCount:         r.UseCount,
+	}, nil
+}

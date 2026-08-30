@@ -287,6 +287,30 @@
     @apply h-6 w-6 shrink-0;
   }
 
+  /* Карточка приглашения: лицо и имя того, кто зовёт, - это первое, что видно
+     на странице, иначе она неотличима от обычной регистрации */
+  .invite-hero {
+    @apply mb-6 flex flex-col items-center gap-1 text-center;
+  }
+
+  .invite-avatar {
+    @apply mb-2 h-20 w-20 rounded-full object-cover;
+    border: 2px solid theme('colors.wings.accent');
+    box-shadow: 0 0 0 6px rgba(18, 89, 209, 0.14);
+  }
+
+  .invite-kicker {
+    @apply text-[12px] font-bold uppercase tracking-[0.14em] text-wings-kicker;
+  }
+
+  .invite-name {
+    @apply font-sharp text-[26px] font-bold leading-tight text-wings-text;
+  }
+
+  .invite-sub {
+    @apply max-w-[44ch] text-[13px] leading-[1.5] text-wings-muted;
+  }
+
   .login-oidc-hint {
     @apply mt-2 text-center text-[12px] text-wings-kicker;
   }
@@ -469,6 +493,31 @@
 
   .federation-live-head {
     @apply flex flex-wrap items-center gap-3;
+  }
+
+  /* Точка состояния в пилюле. Живая пульсирует, снятая горит ровно: пульс
+     означает "прямо сейчас работает", а не "смотрите сюда" */
+  .state-dot {
+    @apply mr-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle;
+  }
+
+  .state-dot.is-live {
+    background: #6fe3a4;
+    animation: live-pulse 2s ease-out infinite;
+  }
+
+  .state-dot.is-draining {
+    background: #f2a93b;
+  }
+
+  .state-dot.is-down {
+    background: #ff7a8c;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .state-dot.is-live {
+      animation: none;
+    }
   }
 
   .live-dot {
@@ -2405,6 +2454,31 @@ body.theme-light::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Точка состояния в пилюле. Живая пульсирует, снятая горит ровно: пульс
+     означает "прямо сейчас работает", а не "смотрите сюда" */
+  .state-dot {
+    @apply mr-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full align-middle;
+  }
+
+  .state-dot.is-live {
+    background: #6fe3a4;
+    animation: live-pulse 2s ease-out infinite;
+  }
+
+  .state-dot.is-draining {
+    background: #f2a93b;
+  }
+
+  .state-dot.is-down {
+    background: #ff7a8c;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .state-dot.is-live {
+      animation: none;
+    }
+  }
+
   .live-dot {
     animation: none;
   }
