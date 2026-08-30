@@ -31,6 +31,12 @@ type Config struct {
 	TLSSelfSigned      bool
 	ProvisioningListen string
 	RelayToken         string
+	// FederationHead is the wingsvpn-federation head's panel-facing gRPC address.
+	// Empty keeps every federation surface off, which is the default.
+	FederationHead string
+	// FederationSecret keys that link. It is deliberately not the fleet secret
+	// every donated node holds: that would hand a donor the operator's view.
+	FederationSecret string
 
 	BootstrapAdminUsername string
 	BootstrapAdminPassword string
@@ -58,6 +64,8 @@ func Load() Config {
 		TLSSelfSigned:          parseBoolEnv("TLS_SELF_SIGNED", false),
 		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
 		RelayToken:             getEnv("RELAY_TOKEN", ""),
+		FederationHead:         getEnv("FEDERATION_HEAD", ""),
+		FederationSecret:       getEnv("FEDERATION_SECRET", ""),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),
 		BootstrapAdminPassword: getEnv("BOOTSTRAP_ADMIN_PASSWORD", "admin"),
 		SessionSecure:          parseBoolEnv("SESSION_SECURE", true),

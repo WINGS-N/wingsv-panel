@@ -1,0 +1,182 @@
+// Package fedclient is the panel's gRPC client to the federation head.
+//
+// The head is a separate process with its own database on purpose: it holds
+// hundreds of 1 Hz streams from third-party servers, and that surface has no
+// business sharing a process with admin sessions.
+package fedclient
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"sync"
+	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	"v.wingsnet.org/internal/gen/headpb"
+	"v.wingsnet.org/internal/tokenaead"
+)
+
+// ErrDisabled means no head is configured, which is the normal state until the
+// operator turns the federation on.
+var ErrDisabled = errors.New("fedclient: no federation head configured")
+
+// Client dials the head over tokenaead. Both ends are ours and both are new, so
+// this link derives with SHA-512 rather than the SHA-256 the deployed 3x-ui
+// nodes and relays are stuck with.
+type Client struct {
+	endpoint string
+	creds    credentials.TransportCredentials
+
+	mu   sync.Mutex
+	conn *grpc.ClientConn
+}
+
+// Option configures a Client.
+type Option func(*Client)
+
+// WithTransportCredentials pins the credentials, used by tests.
+func WithTransportCredentials(c credentials.TransportCredentials) Option {
+	return func(f *Client) { f.creds = c }
+}
+
+// New builds a client. An empty endpoint yields a client whose calls all report
+// ErrDisabled, so callers need no separate nil check.
+func New(endpoint, secret string, opts ...Option) *Client {
+	c := &Client{endpoint: strings.TrimSpace(endpoint)}
+	if secret != "" {
+		c.creds = tokenaead.ClientVariant(secret, tokenaead.SHA512)
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// Enabled reports whether a head is configured.
+func (c *Client) Enabled() bool { return c.endpoint != "" && c.creds != nil }
+
+func (c *Client) dial() (headpb.FederationHeadClient, error) {
+	if !c.Enabled() {
+		return nil, ErrDisabled
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.conn == nil {
+		conn, err := grpc.NewClient(c.endpoint, grpc.WithTransportCredentials(c.creds))
+		if err != nil {
+			return nil, err
+		}
+		c.conn = conn
+	}
+	return headpb.NewFederationHeadClient(c.conn), nil
+}
+
+// Close drops the connection.
+func (c *Client) Close() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.conn == nil {
+		return nil
+	}
+	err := c.conn.Close()
+	c.conn = nil
+	return err
+}
+
+// PublicCounters is the aggregate the landing page shows.
+func (c *Client) PublicCounters(ctx context.Context) (*headpb.PublicCounters, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.GetPublicCounters(ctx, &headpb.PublicCountersRequest{})
+}
+
+// ListNodes lists the fleet, or one donor's slice of it.
+func (c *Client) ListNodes(ctx context.Context, donorID string) (*headpb.ListNodesResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.ListNodes(ctx, &headpb.ListNodesRequest{DonorId: donorID})
+}
+
+// DonorSummary is what one donor may see about their own contribution.
+func (c *Client) DonorSummary(ctx context.Context, donorID string) (*headpb.DonorCounters, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.DonorSummary(ctx, &headpb.DonorSummaryRequest{DonorId: donorID})
+}
+
+// MintEnrollToken returns the string a donor pastes into the installer.
+func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.Duration) (*headpb.MintEnrollTokenResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.MintEnrollToken(ctx, &headpb.MintEnrollTokenRequest{
+		DonorId:    donorID,
+		TtlSeconds: uint32(ttl.Seconds()),
+	})
+}
+
+// SetNodeState is the manual override behind automatic rotation.
+func (c *Client) SetNodeState(ctx context.Context, nodeID, state, reason string) error {
+	client, err := c.dial()
+	if err != nil {
+		return err
+	}
+	_, err = client.SetNodeState(ctx, &headpb.SetNodeStateRequest{
+		NodeId: nodeID, State: state, Reason: reason,
+	})
+	return err
+}
+
+// retryDelay is how long the live loop waits before re-dialing a head that is
+// down. Long enough not to hammer it, short enough that the counter comes back
+// on its own after a head restart.
+const retryDelay = 5 * time.Second
+
+// StreamGlobal keeps a subscription open and calls onUpdate for every frame,
+// re-dialing until ctx ends. A head that is down must not take the panel with
+// it, so a failure here is a pause and never an error the caller has to handle.
+func (c *Client) StreamGlobal(ctx context.Context, onUpdate func(*headpb.LiveUpdate)) {
+	if !c.Enabled() {
+		return
+	}
+	for ctx.Err() == nil {
+		if err := c.streamOnce(ctx, onUpdate); err != nil && ctx.Err() == nil {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(retryDelay):
+			}
+		}
+	}
+}
+
+func (c *Client) streamOnce(ctx context.Context, onUpdate func(*headpb.LiveUpdate)) error {
+	client, err := c.dial()
+	if err != nil {
+		return err
+	}
+	stream, err := client.StreamLive(ctx)
+	if err != nil {
+		return err
+	}
+	if err := stream.Send(&headpb.LiveSubscribe{Scope: headpb.LiveScope_LIVE_SCOPE_GLOBAL}); err != nil {
+		return err
+	}
+	for {
+		update, err := stream.Recv()
+		if err != nil {
+			return err
+		}
+		onUpdate(update)
+	}
+}
