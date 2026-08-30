@@ -291,16 +291,116 @@
     @apply mt-2 text-center text-[12px] text-wings-kicker;
   }
 
-  .tree-root {
-    @apply flex flex-col gap-1;
-  }
-
-  .tree-node-row {
-    @apply flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors;
-  }
-
   .tree-node-row:hover {
     background: rgba(255, 255, 255, 0.03);
+  }
+
+  /* Дерево связей: аватар - узел, подпись под ним, а родство рисуется
+     линиями. Горизонтальный скролл обязателен - широкая ветвь иначе сжимает
+     аватары в кашу вместо того, чтобы уехать за край. */
+  .tree-root {
+    @apply mt-4 overflow-x-auto pb-2;
+  }
+
+  .tree-root ul {
+    @apply flex list-none justify-center gap-2 p-0;
+  }
+
+  .tree-item {
+    @apply relative flex flex-col items-center px-2 pt-6;
+  }
+
+  /* Стойка вверх к перекладине родителя */
+  .tree-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    height: 24px;
+    width: 1px;
+    background: theme('colors.wings.divider');
+  }
+
+  /* Перекладина между соседями: у крайних обрезается наполовину, поэтому у
+     первого она идёт вправо, у последнего влево, а у единственного её нет */
+  .tree-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: theme('colors.wings.divider');
+  }
+
+  .tree-item:first-child::after {
+    left: 50%;
+  }
+
+  .tree-item:last-child::after {
+    right: 50%;
+  }
+
+  .tree-item:only-child::after {
+    display: none;
+  }
+
+  .tree-root > ul > .tree-item {
+    @apply pt-0;
+  }
+
+  .tree-root > ul > .tree-item::before,
+  .tree-root > ul > .tree-item::after {
+    display: none;
+  }
+
+  .tree-children {
+    @apply relative mt-6;
+  }
+
+  /* Стойка вниз от родителя к перекладине его детей */
+  .tree-children::before {
+    content: '';
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    height: 24px;
+    width: 1px;
+    background: theme('colors.wings.divider');
+  }
+
+  .tree-person {
+    @apply flex w-24 flex-col items-center gap-1 text-center;
+  }
+
+  .tree-name {
+    @apply w-full truncate text-[13px] text-wings-text;
+  }
+
+  .tree-meta {
+    @apply text-[12px] text-wings-kicker;
+  }
+
+  .tree-tag {
+    @apply rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em];
+  }
+
+  .tree-tag.is-owner {
+    background: theme('colors.wings.badgeBg');
+    color: theme('colors.wings.badgeText');
+  }
+
+  .tree-tag.is-cut {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(252, 252, 252, 0.55);
+  }
+
+  .tree-card {
+    @apply mt-2 flex flex-col items-start gap-2 rounded-[18px] border border-wings-border bg-wings-surface p-3 text-[13px];
+    min-width: 220px;
+  }
+
+  .tree-card-rows {
+    @apply flex flex-col gap-1;
   }
 
   .tree-avatar-button {
@@ -308,8 +408,17 @@
   }
 
   .tree-avatar {
-    @apply h-11 w-11 rounded-full object-cover;
-    border: 1px solid theme('colors.wings.border');
+    @apply h-14 w-14 rounded-full object-cover transition-transform;
+    border: 2px solid theme('colors.wings.border');
+  }
+
+  .tree-avatar-button:hover .tree-avatar {
+    border-color: theme('colors.wings.accent');
+  }
+
+  .tree-avatar-button.is-open .tree-avatar {
+    border-color: theme('colors.wings.accent');
+    box-shadow: 0 0 0 4px rgba(18, 89, 209, 0.18);
   }
 
   .tree-avatar.is-small {
@@ -326,50 +435,6 @@
     background: theme('colors.wings.accent');
     color: #fff;
     border: 2px solid theme('colors.wings.card');
-  }
-
-  .tree-details {
-    @apply mb-1 ml-14 flex flex-wrap gap-x-4 gap-y-1 text-[13px];
-  }
-
-  .tree-detail {
-    @apply text-wings-text;
-  }
-
-  /* Вложенность рисуется линией, а не только отступом: на третьем уровне
-     отступы сами по себе перестают читаться */
-  .tree-children {
-    @apply ml-5 flex flex-col gap-1 pl-4;
-    border-left: 1px solid theme('colors.wings.divider');
-  }
-
-  .tree-loners {
-    @apply flex flex-wrap gap-2;
-  }
-
-  .tree-loner {
-    @apply inline-flex items-center gap-2 rounded-full border border-wings-border px-2 py-1 text-[13px];
-    background: theme('colors.wings.chip');
-  }
-
-  .tree-loner-name {
-    @apply text-wings-text;
-  }
-
-  .tree-loner-meta {
-    @apply text-wings-kicker;
-  }
-
-  .tree-loners-head {
-    @apply flex w-full items-center justify-between gap-3 text-left text-[15px];
-  }
-
-  .tree-chevron {
-    @apply h-5 w-5 shrink-0 text-wings-muted transition-transform;
-  }
-
-  .tree-chevron.is-open {
-    @apply rotate-90;
   }
 
   /* Поля формы в ряд, пока хватает ширины. Инпуты стоят инпутами, с подписью

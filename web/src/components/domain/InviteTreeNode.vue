@@ -1,11 +1,13 @@
 <template>
-  <div class="tree-node">
-    <div class="tree-node-row">
-      <!-- Аватар и есть кнопка раскрытия: у кого есть ветвь, у того на аватаре
-           счётчик, и нажимать хочется именно туда -->
+  <li class="tree-item">
+    <!-- Аватар и есть узел графа: имя под ним, связи рисуются линиями от
+         родителя, а подробности раскрываются по нажатию - в самом дереве им
+         места нет, а прятать их совсем значит гонять человека в аудит -->
+    <div class="tree-person">
       <button
         type="button"
         class="tree-avatar-button"
+        :class="{ 'is-open': open }"
         :aria-expanded="open"
         :title="member.username"
         @click="$emit('toggle', member.admin_id)"
@@ -13,24 +15,24 @@
         <img :src="avatar" alt="" class="tree-avatar" :class="{ 'is-cut': member.suspended || member.cut }" />
         <span v-if="children.length" class="tree-avatar-count">{{ children.length }}</span>
       </button>
+      <span class="tree-name">{{ member.username }}</span>
+      <span class="tree-meta">{{ bytes(member.own_bytes) }}</span>
+      <span v-if="member.role === 'owner'" class="tree-tag is-owner">владелец</span>
+      <span v-else-if="member.suspended" class="tree-tag is-cut">срезан</span>
+      <span v-else-if="member.cut" class="tree-tag is-cut">под срезом</span>
+    </div>
 
-      <div class="min-w-0 flex-1">
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="admin-mono text-[15px]">{{ member.username }}</span>
-          <span v-if="member.role === 'owner'" class="admin-pill is-info">владелец</span>
-          <span v-if="member.suspended" class="admin-pill is-offline">срезан</span>
-          <span v-else-if="member.cut" class="admin-pill is-offline">под срезом выше</span>
-        </div>
-        <span class="mt-0.5 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
-          <span class="inline-flex items-center gap-1">
-            <ArrowUpDown :size="13" aria-hidden="true" />{{ bytes(member.own_bytes) }}
-          </span>
-          <span v-if="member.subtree_admins" class="inline-flex items-center gap-1">
-            <Users :size="13" aria-hidden="true" />{{ member.subtree_admins }} · {{ bytes(member.subtree_bytes) }}
-          </span>
+    <div v-if="open" class="tree-card">
+      <div class="tree-card-rows">
+        <span><span class="admin-muted">пришёл</span> {{ short(member.created_at) }}</span>
+        <span v-if="member.subtree_admins">
+          <span class="admin-muted">в ветви</span> {{ member.subtree_admins }} чел.,
+          {{ bytes(member.subtree_bytes) }}
         </span>
+        <span v-if="member.reason"><span class="admin-muted">причина</span> {{ member.reason }}</span>
       </div>
-
+      <!-- Ветвь ветви режется так же, как ветвь: узел рекурсивный, поэтому
+           действие есть на каждом уровне -->
       <SamsungButton
         v-if="member.role !== 'owner' && !member.suspended"
         variant="ghost"
@@ -38,7 +40,7 @@
         @click="$emit('cut', member)"
       >
         <template #icon><Scissors class="button-icon" aria-hidden="true" /></template>
-        Срезать
+        Срезать ветвь
       </SamsungButton>
       <SamsungButton
         v-else-if="member.suspended"
@@ -51,21 +53,7 @@
       </SamsungButton>
     </div>
 
-    <!-- Подробности по нажатию на аватар: в строке им места нет, а прятать их
-         совсем - значит заставлять лезть в аудит -->
-    <div v-if="open" class="tree-details">
-      <span class="tree-detail"><span class="admin-muted">пришёл</span> {{ short(member.created_at) }} </span>
-      <span v-if="member.subtree_clients" class="tree-detail"
-        ><span class="admin-muted">клиентов в ветви</span> {{ member.subtree_clients }}
-      </span>
-      <span v-if="member.reason" class="tree-detail"
-        ><span class="admin-muted">причина</span> {{ member.reason }}
-      </span>
-    </div>
-
-    <!-- Ветвь ветви режется так же, как ветвь: узел рекурсивный, поэтому
-         кнопка есть на каждом уровне -->
-    <div v-if="open && children.length" class="tree-children">
+    <ul v-if="children.length" class="tree-children">
       <InviteTreeNode
         v-for="child in children"
         :key="child.admin_id"
@@ -77,13 +65,13 @@
         @cut="$emit('cut', $event)"
         @restore="$emit('restore', $event)"
       />
-    </div>
-  </div>
+    </ul>
+  </li>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { ArrowUpDown, RotateCcw, Scissors, Users } from 'lucide-vue-next';
+import { RotateCcw, Scissors } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import { formatBytes } from '@/utils/format';
 

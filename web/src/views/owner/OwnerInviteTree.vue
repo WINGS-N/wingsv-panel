@@ -7,21 +7,24 @@
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
 
-    <!-- Ветви и одиночки разделены нарочно. Пока никто никого не пригласил,
-         каждый администратор - сам себе корень, и список из полусотни корней
-         читается как свалка, а не как дерево. -->
-    <div v-if="roots.length" class="tree-root mt-4">
-      <InviteTreeNode
-        v-for="m in roots"
-        :key="m.admin_id"
-        :member="m"
-        :all="members"
-        :opened="opened"
-        :busy-i-d="busyID"
-        @toggle="toggle"
-        @cut="cut"
-        @restore="restore"
-      />
+    <!-- Дерево связей: аватар - узел, ник и трафик под ним, родство рисуется
+         линиями. В нём только те, кто кого-то пригласил или сам пришёл по
+         приглашению: администраторы, заведённые до дерева, к приглашениям
+         отношения не имеют. -->
+    <div v-if="roots.length" class="tree-root">
+      <ul>
+        <InviteTreeNode
+          v-for="m in roots"
+          :key="m.admin_id"
+          :member="m"
+          :all="members"
+          :opened="opened"
+          :busy-i-d="busyID"
+          @toggle="toggle"
+          @cut="cut"
+          @restore="restore"
+        />
+      </ul>
     </div>
 
     <p v-if="!roots.length && !loading" class="admin-muted mt-4">
