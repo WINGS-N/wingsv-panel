@@ -19,15 +19,17 @@
         <div class="landing-hero-text">
           <span class="fed-hero-kicker">
             <span class="live-dot" aria-hidden="true"></span>
-            <span>общий пул серверов</span>
+            <span>федерация <span class="wordmark-inline">WINGS V</span></span>
           </span>
           <h1 class="landing-hero-headline">
-            Поделись трафиком<br />
-            во благо народа
+            <!-- Точка в заголовке - живая: пул работает прямо сейчас, и это
+                 видно раньше, чем человек дочитает до цифр -->
+            Поделись трафиком<span class="live-dot headline-dot" aria-hidden="true"></span><br />
+            во благо народа.
           </h1>
           <p class="landing-hero-sub">
-            Свободный интернет не берётся из воздуха - его держат живые серверы живых людей. Отдайте своему серверу
-            месячный лимит, который не жалко, и им будут пользоваться те, кому платный VPN не по карману.
+            Свободный интернет не берётся из воздуха - его держат живые серверы живых людей. Отдайте часть трафика
+            своего сервера, столько, сколько не жалко, и им будут пользоваться те, кому платный VPN не по карману.
           </p>
           <div class="landing-hero-actions">
             <SamsungButton :to="{ name: 'login' }">Отдать сервер</SamsungButton>
@@ -36,7 +38,7 @@
         </div>
 
         <div class="landing-hero-art" aria-hidden="true">
-          <img src="/img/fed-donate.svg" alt="" class="landing-hero-illustration" />
+          <img src="/img/oneui/network.svg" alt="" class="landing-hero-illustration" />
         </div>
       </div>
     </section>
@@ -48,7 +50,7 @@
         <h2 class="hero-title">Как это работает</h2>
         <div class="fed-steps">
           <article class="fed-step">
-            <img src="/img/fed-donate.svg" alt="" class="fed-step-icon" aria-hidden="true" />
+            <img src="/img/icon-cloud-up.png" alt="" class="fed-step-icon" aria-hidden="true" />
             <h3 class="fed-step-title">Вы называете лимит</h3>
             <p class="fed-step-copy">
               Сколько трафика в месяц вы готовы отдать. Не гигабайтом больше: как только лимит выбран, нода сама выходит
@@ -119,15 +121,23 @@ import FederationCounters from '@/components/domain/FederationCounters.vue';
 </script>
 
 <style scoped>
+.headline-dot {
+  display: inline-block;
+  width: 0.22em;
+  height: 0.22em;
+  margin-left: 0.12em;
+  vertical-align: baseline;
+}
+
 .fed-hero-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
+  gap: 10px;
+  font-size: clamp(17px, 1.6vw, 20px);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(252, 252, 252, 0.72);
+  letter-spacing: 0.08em;
+  color: rgba(252, 252, 252, 0.86);
 }
 
 /* Wordmark набран другим шрифтом и своим трекингом, из-за чего на общей строке
