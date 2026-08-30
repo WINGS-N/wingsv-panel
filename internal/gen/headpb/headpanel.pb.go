@@ -1038,6 +1038,203 @@ func (x *MintEnrollTokenResponse) GetExpiresUnix() int64 {
 	return 0
 }
 
+type EnsureUserRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Opaque to the head. The panel's own identifier, never an address or a handle
+	UserId        string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnsureUserRequest) Reset() {
+	*x = EnsureUserRequest{}
+	mi := &file_headpanel_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnsureUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnsureUserRequest) ProtoMessage() {}
+
+func (x *EnsureUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnsureUserRequest.ProtoReflect.Descriptor instead.
+func (*EnsureUserRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *EnsureUserRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type UserAllocation struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The subscription URL the client fetches. Unguessable and unrelated to
+	// user_id, because it travels through screenshots and chat logs
+	SubscriptionUrl string `protobuf:"bytes,2,opt,name=subscription_url,json=subscriptionUrl,proto3" json:"subscription_url,omitempty"`
+	// How many nodes are serving this user. Deliberately not which ones: the panel
+	// has no business joining a user to a donor's machine
+	Nodes           uint32 `protobuf:"varint,3,opt,name=nodes,proto3" json:"nodes,omitempty"`
+	StickyUntilUnix int64  `protobuf:"varint,4,opt,name=sticky_until_unix,json=stickyUntilUnix,proto3" json:"sticky_until_unix,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UserAllocation) Reset() {
+	*x = UserAllocation{}
+	mi := &file_headpanel_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserAllocation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserAllocation) ProtoMessage() {}
+
+func (x *UserAllocation) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserAllocation.ProtoReflect.Descriptor instead.
+func (*UserAllocation) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *UserAllocation) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *UserAllocation) GetSubscriptionUrl() string {
+	if x != nil {
+		return x.SubscriptionUrl
+	}
+	return ""
+}
+
+func (x *UserAllocation) GetNodes() uint32 {
+	if x != nil {
+		return x.Nodes
+	}
+	return 0
+}
+
+func (x *UserAllocation) GetStickyUntilUnix() int64 {
+	if x != nil {
+		return x.StickyUntilUnix
+	}
+	return 0
+}
+
+type RevokeUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeUserRequest) Reset() {
+	*x = RevokeUserRequest{}
+	mi := &file_headpanel_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeUserRequest) ProtoMessage() {}
+
+func (x *RevokeUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeUserRequest.ProtoReflect.Descriptor instead.
+func (*RevokeUserRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RevokeUserRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type RevokeUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeUserResponse) Reset() {
+	*x = RevokeUserResponse{}
+	mi := &file_headpanel_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeUserResponse) ProtoMessage() {}
+
+func (x *RevokeUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeUserResponse.ProtoReflect.Descriptor instead.
+func (*RevokeUserResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{16}
+}
+
 type SetNodeStateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
@@ -1049,7 +1246,7 @@ type SetNodeStateRequest struct {
 
 func (x *SetNodeStateRequest) Reset() {
 	*x = SetNodeStateRequest{}
-	mi := &file_headpanel_proto_msgTypes[13]
+	mi := &file_headpanel_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1061,7 +1258,7 @@ func (x *SetNodeStateRequest) String() string {
 func (*SetNodeStateRequest) ProtoMessage() {}
 
 func (x *SetNodeStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[13]
+	mi := &file_headpanel_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1074,7 +1271,7 @@ func (x *SetNodeStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetNodeStateRequest.ProtoReflect.Descriptor instead.
 func (*SetNodeStateRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{13}
+	return file_headpanel_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SetNodeStateRequest) GetNodeId() string {
@@ -1106,7 +1303,7 @@ type SetNodeStateResponse struct {
 
 func (x *SetNodeStateResponse) Reset() {
 	*x = SetNodeStateResponse{}
-	mi := &file_headpanel_proto_msgTypes[14]
+	mi := &file_headpanel_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1118,7 +1315,7 @@ func (x *SetNodeStateResponse) String() string {
 func (*SetNodeStateResponse) ProtoMessage() {}
 
 func (x *SetNodeStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[14]
+	mi := &file_headpanel_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1131,7 +1328,7 @@ func (x *SetNodeStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetNodeStateResponse.ProtoReflect.Descriptor instead.
 func (*SetNodeStateResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{14}
+	return file_headpanel_proto_rawDescGZIP(), []int{18}
 }
 
 var File_headpanel_proto protoreflect.FileDescriptor
@@ -1224,7 +1421,17 @@ const file_headpanel_proto_rawDesc = "" +
 	"ttlSeconds\"_\n" +
 	"\x17MintEnrollTokenResponse\x12!\n" +
 	"\fenroll_token\x18\x01 \x01(\tR\venrollToken\x12!\n" +
-	"\fexpires_unix\x18\x02 \x01(\x03R\vexpiresUnix\"\\\n" +
+	"\fexpires_unix\x18\x02 \x01(\x03R\vexpiresUnix\",\n" +
+	"\x11EnsureUserRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x96\x01\n" +
+	"\x0eUserAllocation\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12)\n" +
+	"\x10subscription_url\x18\x02 \x01(\tR\x0fsubscriptionUrl\x12\x14\n" +
+	"\x05nodes\x18\x03 \x01(\rR\x05nodes\x12*\n" +
+	"\x11sticky_until_unix\x18\x04 \x01(\x03R\x0fstickyUntilUnix\",\n" +
+	"\x11RevokeUserRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x14\n" +
+	"\x12RevokeUserResponse\"\\\n" +
 	"\x13SetNodeStateRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x16\n" +
@@ -1234,13 +1441,17 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\xda\x04\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\x94\x06\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
 	"StreamLive\x12\".wingsv.headpanel.v1.LiveSubscribe\x1a\x1f.wingsv.headpanel.v1.LiveUpdate(\x010\x01\x12Z\n" +
 	"\tListNodes\x12%.wingsv.headpanel.v1.ListNodesRequest\x1a&.wingsv.headpanel.v1.ListNodesResponse\x12\\\n" +
-	"\fDonorSummary\x12(.wingsv.headpanel.v1.DonorSummaryRequest\x1a\".wingsv.headpanel.v1.DonorCounters\x12l\n" +
+	"\fDonorSummary\x12(.wingsv.headpanel.v1.DonorSummaryRequest\x1a\".wingsv.headpanel.v1.DonorCounters\x12Y\n" +
+	"\n" +
+	"EnsureUser\x12&.wingsv.headpanel.v1.EnsureUserRequest\x1a#.wingsv.headpanel.v1.UserAllocation\x12]\n" +
+	"\n" +
+	"RevokeUser\x12&.wingsv.headpanel.v1.RevokeUserRequest\x1a'.wingsv.headpanel.v1.RevokeUserResponse\x12l\n" +
 	"\x0fMintEnrollToken\x12+.wingsv.headpanel.v1.MintEnrollTokenRequest\x1a,.wingsv.headpanel.v1.MintEnrollTokenResponse\x12c\n" +
 	"\fSetNodeState\x12(.wingsv.headpanel.v1.SetNodeStateRequest\x1a).wingsv.headpanel.v1.SetNodeStateResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
 
@@ -1257,7 +1468,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                  // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),           // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -1273,8 +1484,12 @@ var file_headpanel_proto_goTypes = []any{
 	(*NodeSummary)(nil),             // 11: wingsv.headpanel.v1.NodeSummary
 	(*MintEnrollTokenRequest)(nil),  // 12: wingsv.headpanel.v1.MintEnrollTokenRequest
 	(*MintEnrollTokenResponse)(nil), // 13: wingsv.headpanel.v1.MintEnrollTokenResponse
-	(*SetNodeStateRequest)(nil),     // 14: wingsv.headpanel.v1.SetNodeStateRequest
-	(*SetNodeStateResponse)(nil),    // 15: wingsv.headpanel.v1.SetNodeStateResponse
+	(*EnsureUserRequest)(nil),       // 14: wingsv.headpanel.v1.EnsureUserRequest
+	(*UserAllocation)(nil),          // 15: wingsv.headpanel.v1.UserAllocation
+	(*RevokeUserRequest)(nil),       // 16: wingsv.headpanel.v1.RevokeUserRequest
+	(*RevokeUserResponse)(nil),      // 17: wingsv.headpanel.v1.RevokeUserResponse
+	(*SetNodeStateRequest)(nil),     // 18: wingsv.headpanel.v1.SetNodeStateRequest
+	(*SetNodeStateResponse)(nil),    // 19: wingsv.headpanel.v1.SetNodeStateResponse
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -1287,16 +1502,20 @@ var file_headpanel_proto_depIdxs = []int32{
 	1,  // 7: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
 	9,  // 8: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
 	7,  // 9: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
-	12, // 10: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
-	14, // 11: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	4,  // 12: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 13: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	10, // 14: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 15: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	13, // 16: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	15, // 17: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
+	14, // 10: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
+	16, // 11: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
+	12, // 12: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
+	18, // 13: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
+	4,  // 14: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 15: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	10, // 16: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 17: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	15, // 18: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	17, // 19: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	13, // 20: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	19, // 21: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	14, // [14:22] is the sub-list for method output_type
+	6,  // [6:14] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
 	6,  // [6:6] is the sub-list for extension extendee
 	0,  // [0:6] is the sub-list for field type_name
@@ -1313,7 +1532,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

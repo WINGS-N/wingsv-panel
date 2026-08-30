@@ -26,6 +26,8 @@ const (
 	FederationHead_StreamLive_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/StreamLive"
 	FederationHead_ListNodes_FullMethodName         = "/wingsv.headpanel.v1.FederationHead/ListNodes"
 	FederationHead_DonorSummary_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/DonorSummary"
+	FederationHead_EnsureUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/EnsureUser"
+	FederationHead_RevokeUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/RevokeUser"
 	FederationHead_MintEnrollToken_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/MintEnrollToken"
 	FederationHead_SetNodeState_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/SetNodeState"
 )
@@ -45,6 +47,11 @@ type FederationHeadClient interface {
 	// only: there is no RPC anywhere in this service that maps a node to a profile
 	// or to a user, and adding one would break the privacy invariant
 	DonorSummary(ctx context.Context, in *DonorSummaryRequest, opts ...grpc.CallOption) (*DonorCounters, error)
+	// Gives a free user nodes, or returns what they already have. Idempotent, so
+	// the panel can call it on every login without moving anybody
+	EnsureUser(ctx context.Context, in *EnsureUserRequest, opts ...grpc.CallOption) (*UserAllocation, error)
+	// Takes a user off every node. Used when the oracle quarantines somebody
+	RevokeUser(ctx context.Context, in *RevokeUserRequest, opts ...grpc.CallOption) (*RevokeUserResponse, error)
 	MintEnrollToken(ctx context.Context, in *MintEnrollTokenRequest, opts ...grpc.CallOption) (*MintEnrollTokenResponse, error)
 	SetNodeState(ctx context.Context, in *SetNodeStateRequest, opts ...grpc.CallOption) (*SetNodeStateResponse, error)
 }
@@ -100,6 +107,26 @@ func (c *federationHeadClient) DonorSummary(ctx context.Context, in *DonorSummar
 	return out, nil
 }
 
+func (c *federationHeadClient) EnsureUser(ctx context.Context, in *EnsureUserRequest, opts ...grpc.CallOption) (*UserAllocation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UserAllocation)
+	err := c.cc.Invoke(ctx, FederationHead_EnsureUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) RevokeUser(ctx context.Context, in *RevokeUserRequest, opts ...grpc.CallOption) (*RevokeUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeUserResponse)
+	err := c.cc.Invoke(ctx, FederationHead_RevokeUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *federationHeadClient) MintEnrollToken(ctx context.Context, in *MintEnrollTokenRequest, opts ...grpc.CallOption) (*MintEnrollTokenResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MintEnrollTokenResponse)
@@ -135,6 +162,11 @@ type FederationHeadServer interface {
 	// only: there is no RPC anywhere in this service that maps a node to a profile
 	// or to a user, and adding one would break the privacy invariant
 	DonorSummary(context.Context, *DonorSummaryRequest) (*DonorCounters, error)
+	// Gives a free user nodes, or returns what they already have. Idempotent, so
+	// the panel can call it on every login without moving anybody
+	EnsureUser(context.Context, *EnsureUserRequest) (*UserAllocation, error)
+	// Takes a user off every node. Used when the oracle quarantines somebody
+	RevokeUser(context.Context, *RevokeUserRequest) (*RevokeUserResponse, error)
 	MintEnrollToken(context.Context, *MintEnrollTokenRequest) (*MintEnrollTokenResponse, error)
 	SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
@@ -158,6 +190,12 @@ func (UnimplementedFederationHeadServer) ListNodes(context.Context, *ListNodesRe
 }
 func (UnimplementedFederationHeadServer) DonorSummary(context.Context, *DonorSummaryRequest) (*DonorCounters, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DonorSummary not implemented")
+}
+func (UnimplementedFederationHeadServer) EnsureUser(context.Context, *EnsureUserRequest) (*UserAllocation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnsureUser not implemented")
+}
+func (UnimplementedFederationHeadServer) RevokeUser(context.Context, *RevokeUserRequest) (*RevokeUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevokeUser not implemented")
 }
 func (UnimplementedFederationHeadServer) MintEnrollToken(context.Context, *MintEnrollTokenRequest) (*MintEnrollTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MintEnrollToken not implemented")
@@ -247,6 +285,42 @@ func _FederationHead_DonorSummary_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_EnsureUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnsureUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).EnsureUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_EnsureUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).EnsureUser(ctx, req.(*EnsureUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_RevokeUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).RevokeUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_RevokeUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).RevokeUser(ctx, req.(*RevokeUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FederationHead_MintEnrollToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MintEnrollTokenRequest)
 	if err := dec(in); err != nil {
@@ -301,6 +375,14 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DonorSummary",
 			Handler:    _FederationHead_DonorSummary_Handler,
+		},
+		{
+			MethodName: "EnsureUser",
+			Handler:    _FederationHead_EnsureUser_Handler,
+		},
+		{
+			MethodName: "RevokeUser",
+			Handler:    _FederationHead_RevokeUser_Handler,
 		},
 		{
 			MethodName: "MintEnrollToken",

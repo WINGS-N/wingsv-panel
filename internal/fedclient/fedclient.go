@@ -125,6 +125,26 @@ func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.D
 	})
 }
 
+// EnsureUser gives a free user nodes, or returns what they already have.
+// Idempotent, so it is safe to call on every login without moving anybody.
+func (c *Client) EnsureUser(ctx context.Context, userID string) (*headpb.UserAllocation, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.EnsureUser(ctx, &headpb.EnsureUserRequest{UserId: userID})
+}
+
+// RevokeUser takes a user off every node.
+func (c *Client) RevokeUser(ctx context.Context, userID string) error {
+	client, err := c.dial()
+	if err != nil {
+		return err
+	}
+	_, err = client.RevokeUser(ctx, &headpb.RevokeUserRequest{UserId: userID})
+	return err
+}
+
 // SetNodeState is the manual override behind automatic rotation.
 func (c *Client) SetNodeState(ctx context.Context, nodeID, state, reason string) error {
 	client, err := c.dial()

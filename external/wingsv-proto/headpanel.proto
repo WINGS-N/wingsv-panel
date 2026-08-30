@@ -18,6 +18,11 @@ service FederationHead {
   // only: there is no RPC anywhere in this service that maps a node to a profile
   // or to a user, and adding one would break the privacy invariant
   rpc DonorSummary(DonorSummaryRequest) returns (DonorCounters);
+  // Gives a free user nodes, or returns what they already have. Idempotent, so
+  // the panel can call it on every login without moving anybody
+  rpc EnsureUser(EnsureUserRequest) returns (UserAllocation);
+  // Takes a user off every node. Used when the oracle quarantines somebody
+  rpc RevokeUser(RevokeUserRequest) returns (RevokeUserResponse);
   rpc MintEnrollToken(MintEnrollTokenRequest) returns (MintEnrollTokenResponse);
   rpc SetNodeState(SetNodeStateRequest) returns (SetNodeStateResponse);
 }
@@ -133,6 +138,28 @@ message MintEnrollTokenResponse {
   string enroll_token = 1;
   int64 expires_unix = 2;
 }
+
+message EnsureUserRequest {
+  // Opaque to the head. The panel's own identifier, never an address or a handle
+  string user_id = 1;
+}
+
+message UserAllocation {
+  string user_id = 1;
+  // The subscription URL the client fetches. Unguessable and unrelated to
+  // user_id, because it travels through screenshots and chat logs
+  string subscription_url = 2;
+  // How many nodes are serving this user. Deliberately not which ones: the panel
+  // has no business joining a user to a donor's machine
+  uint32 nodes = 3;
+  int64 sticky_until_unix = 4;
+}
+
+message RevokeUserRequest {
+  string user_id = 1;
+}
+
+message RevokeUserResponse {}
 
 message SetNodeStateRequest {
   string node_id = 1;
