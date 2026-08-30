@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"v.wingsnet.org/internal/auth"
-	"v.wingsnet.org/internal/matrixauth"
+	"v.wingsnet.org/internal/oidcauth"
 	"v.wingsnet.org/internal/storage"
 )
 
@@ -18,23 +18,23 @@ import (
 // waiting on a redirect, and a hung homeserver must not hang the panel.
 const matrixTimeout = 10 * time.Second
 
-// handleMatrixStatus tells the login page whether to offer the button at all.
-func (h *Handler) handleMatrixStatus(w http.ResponseWriter, r *http.Request) {
+// handleOIDCStatus tells the login page whether to offer the button at all.
+func (h *Handler) handleOIDCStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"enabled":    h.matrix != nil && h.matrix.Enabled(),
+		"enabled":    h.oidc != nil && h.oidc.Enabled(),
 		"homeserver": h.cfg.MatrixHomeserver,
 	})
 }
 
-// handleMatrixLink reports and removes the attached account.
+// handleOIDCLink reports and removes the attached account.
 //
 // Removing is allowed only when a password still works, or an admin unlinks
 // themselves out of the panel entirely with no way back in.
-func (h *Handler) handleMatrixLink(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+func (h *Handler) handleOIDCLink(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	switch r.Method {
 	case http.MethodGet:
 		matrixID, err := h.store.MatrixIDFor(admin.ID)
@@ -43,7 +43,7 @@ func (h *Handler) handleMatrixLink(w http.ResponseWriter, r *http.Request, admin
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"enabled":    h.matrix != nil && h.matrix.Enabled(),
+			"enabled":    h.oidc != nil && h.oidc.Enabled(),
 			"homeserver": h.cfg.MatrixHomeserver,
 			"matrix_id":  matrixID,
 		})
@@ -62,9 +62,9 @@ func (h *Handler) handleMatrixLink(w http.ResponseWriter, r *http.Request, admin
 	}
 }
 
-// handleMatrixStart sends the browser off to the account service.
-func (h *Handler) handleMatrixStart(w http.ResponseWriter, r *http.Request) {
-	if h.matrix == nil || !h.matrix.Enabled() {
+// handleOIDCStart sends the browser off to the account service.
+func (h *Handler) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
+	if h.oidc == nil || !h.oidc.Enabled() {
 		writeError(w, http.StatusNotFound, "matrix login is not configured")
 		return
 	}
@@ -76,7 +76,7 @@ func (h *Handler) handleMatrixStart(w http.ResponseWriter, r *http.Request) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), matrixTimeout)
 	defer cancel()
-	target, err := h.matrix.Start(ctx, safeReturnTo(r.URL.Query().Get("return_to")), linkAdminID)
+	target, err := h.oidc.Start(ctx, safeReturnTo(r.URL.Query().Get("return_to")), linkAdminID)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "account service unreachable: "+err.Error())
 		return
@@ -84,29 +84,29 @@ func (h *Handler) handleMatrixStart(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
-// handleMatrixCallback finishes the login and drops the browser back in the panel.
-func (h *Handler) handleMatrixCallback(w http.ResponseWriter, r *http.Request) {
-	if h.matrix == nil || !h.matrix.Enabled() {
+// handleOIDCCallback finishes the login and drops the browser back in the panel.
+func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
+	if h.oidc == nil || !h.oidc.Enabled() {
 		writeError(w, http.StatusNotFound, "matrix login is not configured")
 		return
 	}
 	if reason := r.URL.Query().Get("error"); reason != "" {
-		h.matrixFail(w, r, reason)
+		h.oidcFail(w, r, reason)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), matrixTimeout)
 	defer cancel()
 
-	identity, returnTo, linkAdminID, err := h.matrix.Complete(ctx,
+	identity, returnTo, linkAdminID, err := h.oidc.Complete(ctx,
 		r.URL.Query().Get("state"), r.URL.Query().Get("code"))
 	if err != nil {
 		switch {
-		case errors.Is(err, matrixauth.ErrForeignHomeserver):
-			h.matrixFail(w, r, "foreign_homeserver")
-		case errors.Is(err, matrixauth.ErrUnknownState):
-			h.matrixFail(w, r, "expired")
+		case errors.Is(err, oidcauth.ErrForeignHomeserver):
+			h.oidcFail(w, r, "foreign_homeserver")
+		case errors.Is(err, oidcauth.ErrUnknownState):
+			h.oidcFail(w, r, "expired")
 		default:
-			h.matrixFail(w, r, "exchange_failed")
+			h.oidcFail(w, r, "exchange_failed")
 		}
 		return
 	}
@@ -115,10 +115,10 @@ func (h *Handler) handleMatrixCallback(w http.ResponseWriter, r *http.Request) {
 	if linkAdminID != 0 {
 		if err := h.store.LinkMatrixID(linkAdminID, identity.MatrixID, identity.Subject); err != nil {
 			if errors.Is(err, storage.ErrMatrixIDTaken) {
-				h.matrixFail(w, r, "already_linked")
+				h.oidcFail(w, r, "already_linked")
 				return
 			}
-			h.matrixFail(w, r, "link_failed")
+			h.oidcFail(w, r, "link_failed")
 			return
 		}
 		h.importAvatar(ctx, linkAdminID, identity.AvatarURL)
@@ -130,7 +130,7 @@ func (h *Handler) handleMatrixCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	knownBefore := h.matrixAccountKnown(identity.MatrixID)
+	knownBefore := h.oidcAccountKnown(identity.MatrixID)
 	admin, sess, err := h.auth.LoginWithMatrix(
 		identity.MatrixID, identity.Localpart, identity.Subject,
 		r.URL.Query().Get("invite"),
@@ -139,15 +139,15 @@ func (h *Handler) handleMatrixCallback(w http.ResponseWriter, r *http.Request) {
 		var suspended *auth.SuspendedError
 		switch {
 		case errors.As(err, &suspended):
-			h.matrixFail(w, r, "suspended")
+			h.oidcFail(w, r, "suspended")
 		case errors.Is(err, auth.ErrRegistrationClosed):
-			h.matrixFail(w, r, "registration_closed")
+			h.oidcFail(w, r, "registration_closed")
 		case errors.Is(err, auth.ErrRegistrationInvite):
-			h.matrixFail(w, r, "invite_required")
+			h.oidcFail(w, r, "invite_required")
 		case errors.Is(err, auth.ErrUsernameTaken):
-			h.matrixFail(w, r, "username_taken")
+			h.oidcFail(w, r, "username_taken")
 		default:
-			h.matrixFail(w, r, "login_failed")
+			h.oidcFail(w, r, "login_failed")
 		}
 		return
 	}
@@ -164,9 +164,9 @@ func (h *Handler) handleMatrixCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, redirectTarget(returnTo, "/admin/clients"), http.StatusFound)
 }
 
-// matrixFail sends the browser back with a reason the page can explain, rather
+// oidcFail sends the browser back with a reason the page can explain, rather
 // than dumping an OAuth error on somebody who only clicked a button.
-func (h *Handler) matrixFail(w http.ResponseWriter, r *http.Request, reason string) {
+func (h *Handler) oidcFail(w http.ResponseWriter, r *http.Request, reason string) {
 	http.Redirect(w, r, "/login?matrix_error="+url.QueryEscape(reason), http.StatusFound)
 }
 
@@ -189,7 +189,7 @@ func redirectTarget(returnTo, fallback string) string {
 
 // matrixAccountKnown reports whether this account already had an admin before
 // the login, which is what separates a first sign-in from a repeat one
-func (h *Handler) matrixAccountKnown(matrixID string) bool {
+func (h *Handler) oidcAccountKnown(matrixID string) bool {
 	_, err := h.store.FindAdminByMatrixID(matrixID)
 	return err == nil
 }

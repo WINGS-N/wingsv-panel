@@ -1,4 +1,4 @@
-package matrixauth
+package oidcauth
 
 import (
 	"errors"

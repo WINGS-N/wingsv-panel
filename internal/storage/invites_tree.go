@@ -24,6 +24,9 @@ type TreeMember struct {
 	Cut       bool
 	Reason    string
 	CreatedAt time.Time
+	// AvatarVersion нужен, чтобы дерево показывало лица, а не одинаковые
+	// заглушки: ноль означает, что аватар не загружали
+	AvatarVersion int64
 }
 
 // inviteEdges reads the whole edge set. The tree is small - one row per admin
@@ -78,13 +81,14 @@ func (s *Store) InviteTree() ([]TreeMember, error) {
 	out := make([]TreeMember, 0, len(admins))
 	for _, a := range admins {
 		member := TreeMember{
-			AdminID:   a.ID,
-			Username:  a.Username,
-			Role:      a.Role,
-			InvitedBy: parent[a.ID],
-			Suspended: suspended[a.ID].suspended,
-			Reason:    suspended[a.ID].reason,
-			CreatedAt: a.CreatedAt,
+			AdminID:       a.ID,
+			Username:      a.Username,
+			Role:          a.Role,
+			InvitedBy:     parent[a.ID],
+			Suspended:     suspended[a.ID].suspended,
+			Reason:        suspended[a.ID].reason,
+			CreatedAt:     a.CreatedAt,
+			AvatarVersion: a.AvatarVersion,
 		}
 		member.Depth, member.Cut = walkUp(a.ID, parent, suspended)
 		out = append(out, member)

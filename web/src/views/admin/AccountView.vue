@@ -83,7 +83,7 @@ onMounted(loadMatrix);
 
 async function loadMatrix() {
   try {
-    const res = await fetch('/api/admin/matrix/link', { credentials: 'include' });
+    const res = await fetch('/api/oidc/link', { credentials: 'include' });
     if (res.ok) Object.assign(matrix, await res.json());
   } catch {
     // No account service configured is a normal state.
@@ -91,14 +91,14 @@ async function loadMatrix() {
 }
 
 function linkMatrix() {
-  window.location.href = `/api/admin/matrix/start?return_to=${encodeURIComponent('/admin/account')}`;
+  window.location.href = `/api/oidc/start?return_to=${encodeURIComponent('/admin/account')}`;
 }
 
 async function unlinkMatrix() {
   matrixBusy.value = true;
   matrixError.value = '';
   try {
-    const res = await fetch('/api/admin/matrix/link', { method: 'DELETE', credentials: 'include' });
+    const res = await fetch('/api/oidc/link', { method: 'DELETE', credentials: 'include' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await loadMatrix();
   } catch (err) {

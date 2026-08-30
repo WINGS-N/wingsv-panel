@@ -107,7 +107,7 @@ const matrixError = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/admin/matrix/status', { credentials: 'include' });
+    const res = await fetch('/api/oidc/status', { credentials: 'include' });
     if (res.ok) Object.assign(matrix, await res.json());
   } catch {
     // No account service is a normal state, not something to shout about.
@@ -116,7 +116,7 @@ onMounted(async () => {
 
 function signInWithMatrix() {
   const back = route.query.redirect || '/admin/clients';
-  window.location.href = `/api/admin/matrix/start?return_to=${encodeURIComponent(back)}`;
+  window.location.href = `/api/oidc/start?return_to=${encodeURIComponent(back)}`;
 }
 
 async function onSubmit() {

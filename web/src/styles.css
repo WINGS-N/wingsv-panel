@@ -297,6 +297,87 @@
     @apply block h-full rounded-full bg-wings-accent;
   }
 
+  .tree-root {
+    @apply flex flex-col gap-1;
+  }
+
+  .tree-node-row {
+    @apply flex items-center gap-3 rounded-2xl px-2 py-2 transition-colors;
+  }
+
+  .tree-node-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .tree-avatar-button {
+    @apply relative shrink-0 rounded-full;
+  }
+
+  .tree-avatar {
+    @apply h-11 w-11 rounded-full object-cover;
+    border: 1px solid theme('colors.wings.border');
+  }
+
+  .tree-avatar.is-small {
+    @apply h-8 w-8;
+  }
+
+  /* Срезанная ветвь видна и без чтения подписи */
+  .tree-avatar.is-cut {
+    @apply opacity-40 grayscale;
+  }
+
+  .tree-avatar-count {
+    @apply absolute -bottom-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold;
+    background: theme('colors.wings.accent');
+    color: #fff;
+    border: 2px solid theme('colors.wings.card');
+  }
+
+  .tree-details {
+    @apply mb-1 ml-14 flex flex-wrap gap-x-4 gap-y-1 text-[13px];
+  }
+
+  .tree-detail {
+    @apply text-wings-text;
+  }
+
+  /* Вложенность рисуется линией, а не только отступом: на третьем уровне
+     отступы сами по себе перестают читаться */
+  .tree-children {
+    @apply ml-5 flex flex-col gap-1 pl-4;
+    border-left: 1px solid theme('colors.wings.divider');
+  }
+
+  .tree-loners {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .tree-loner {
+    @apply inline-flex items-center gap-2 rounded-full border border-wings-border px-2 py-1 text-[13px];
+    background: theme('colors.wings.chip');
+  }
+
+  .tree-loner-name {
+    @apply text-wings-text;
+  }
+
+  .tree-loner-meta {
+    @apply text-wings-kicker;
+  }
+
+  .tree-loners-head {
+    @apply flex w-full items-center justify-between gap-3 text-left text-[15px];
+  }
+
+  .tree-chevron {
+    @apply h-5 w-5 shrink-0 text-wings-muted transition-transform;
+  }
+
+  .tree-chevron.is-open {
+    @apply rotate-90;
+  }
+
   .federation-live-head {
     @apply flex flex-wrap items-center gap-3;
   }
@@ -2110,6 +2191,13 @@
 
   .stat-kicker-icon {
     @apply shrink-0;
+  }
+
+  /* Пара стрелок вплотную читается как одна двусторонняя, но каждая половина
+     своего цвета */
+  .stat-kicker-pair {
+    @apply inline-flex shrink-0 items-center;
+    gap: 1px;
   }
 
   .stat-value {

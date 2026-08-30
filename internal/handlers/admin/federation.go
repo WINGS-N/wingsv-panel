@@ -36,6 +36,8 @@ func (h *Handler) federationOn() bool {
 	return value == "1" || value == "true"
 }
 
+// federationSummaryView carries Error so a head that is down shows up as a
+// broken panel rather than a missing one
 type federationNodeView struct {
 	ID                  string  `json:"id"`
 	Hostname            string  `json:"hostname"`
@@ -67,6 +69,10 @@ type federationSummaryView struct {
 	DeclaredBudgetBytes uint64               `json:"declared_budget_bytes"`
 	UsedBytes           uint64               `json:"used_bytes"`
 	NodeList            []federationNodeView `json:"node_list"`
+	// Error непустой, когда федерация включена, но голова не отвечает. Раздел
+	// при этом остаётся на месте: перезапуск головы не должен выглядеть как
+	// отключение федерации
+	Error string `json:"error,omitempty"`
 }
 
 func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -84,12 +90,26 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 	donor := donorID(admin)
 	summary, err := h.fed.DonorSummary(ctx, donor)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
+		// Голова недоступна - это не повод убирать раздел из меню: федерация
+		// включена оператором, и её перезапуск не должен выглядеть как её
+		// отключение. Отдаём включённый раздел с пустыми цифрами и текстом
+		// ошибки, чтобы человек видел, что именно сломалось.
+		writeJSON(w, http.StatusOK, federationSummaryView{
+			Enabled: true,
+			Error:   "голова федерации недоступна: " + err.Error(),
+		})
 		return
 	}
 	nodes, err := h.fed.ListNodes(ctx, donor)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
+		// Голова недоступна - это не повод убирать раздел из меню: федерация
+		// включена оператором, и её перезапуск не должен выглядеть как её
+		// отключение. Отдаём включённый раздел с пустыми цифрами и текстом
+		// ошибки, чтобы человек видел, что именно сломалось.
+		writeJSON(w, http.StatusOK, federationSummaryView{
+			Enabled: true,
+			Error:   "голова федерации недоступна: " + err.Error(),
+		})
 		return
 	}
 

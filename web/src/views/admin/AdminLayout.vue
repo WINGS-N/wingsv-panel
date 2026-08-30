@@ -58,6 +58,10 @@
             <Share2 class="admin-nav-icon" aria-hidden="true" />
             <span>Федерация</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'admin-invites' }" active-class="is-active">
+            <UserPlus class="admin-nav-icon" aria-hidden="true" />
+            <span>Приглашения</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'admin-account' }" active-class="is-active">
             <UserCog class="admin-nav-icon" aria-hidden="true" />
             <span>Аккаунт</span>
@@ -86,7 +90,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Crown, LogOut, Server, Share2, SlidersHorizontal, UserCog, Users } from 'lucide-vue-next';
+import { Crown, LogOut, Server, Share2, SlidersHorizontal, UserCog, UserPlus, Users } from 'lucide-vue-next';
 import { authState, isOwner, logout, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 

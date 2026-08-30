@@ -47,7 +47,10 @@
       </div>
       <div class="stat">
         <span class="stat-kicker">
-          <CalendarRange :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          <span class="stat-kicker-pair" aria-hidden="true">
+            <ArrowUp :size="14" :style="{ color: FLOW_UP }" />
+            <ArrowDown :size="14" :style="{ color: FLOW_DOWN }" />
+          </span>
           Передано
         </span>
         <span class="stat-value">{{ formatBytes(live.up_bytes + live.down_bytes) }}</span>
@@ -55,7 +58,12 @@
       </div>
       <div class="stat">
         <span class="stat-kicker">
-          <ArrowUpDown :size="14" class="stat-kicker-icon" aria-hidden="true" />
+          <!-- Две иконки вместо одной двусторонней: у направлений разные цвета,
+               а одну стрелку в два цвета не покрасить -->
+          <span class="stat-kicker-pair" aria-hidden="true">
+            <ArrowUp :size="14" :style="{ color: FLOW_UP }" />
+            <ArrowDown :size="14" :style="{ color: FLOW_DOWN }" />
+          </span>
           Всего за всё время
         </span>
         <span class="stat-value">{{ formatBytes(live.lifetime_bytes) }}</span>
@@ -67,7 +75,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarRange, Server, Users } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, Server, Users } from 'lucide-vue-next';
 
 // Тот же цветовой код направления, что в приложении: приём зелёный, отдача синяя
 const FLOW_DOWN = '#15b76f';

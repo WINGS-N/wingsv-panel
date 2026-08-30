@@ -22,6 +22,8 @@ type treeMemberView struct {
 	Cut       bool   `json:"cut"`
 	Reason    string `json:"reason"`
 	CreatedAt int64  `json:"created_at"`
+	// AvatarVersion: 0 - аватар не загружали, показываем заглушку
+	AvatarVersion int64 `json:"avatar_version"`
 	// Usage is monitoring only. A subtree total never cuts anybody off: a
 	// personal limit does that, and holding somebody responsible for what people
 	// they invited a year ago are doing is not a rule anybody could live with.
@@ -55,15 +57,16 @@ func (h *Handler) handleInviteTree(w http.ResponseWriter, r *http.Request, _ sto
 	out := make([]treeMemberView, 0, len(members))
 	for _, m := range members {
 		out = append(out, treeMemberView{
-			AdminID:   m.AdminID,
-			Username:  m.Username,
-			Role:      m.Role,
-			Depth:     m.Depth,
-			InvitedBy: m.InvitedBy,
-			Suspended: m.Suspended,
-			Cut:       m.Cut,
-			Reason:    m.Reason,
-			CreatedAt: m.CreatedAt.Unix(),
+			AdminID:       m.AdminID,
+			Username:      m.Username,
+			Role:          m.Role,
+			Depth:         m.Depth,
+			InvitedBy:     m.InvitedBy,
+			Suspended:     m.Suspended,
+			Cut:           m.Cut,
+			Reason:        m.Reason,
+			CreatedAt:     m.CreatedAt.Unix(),
+			AvatarVersion: m.AvatarVersion,
 
 			OwnBytes:       usage[m.AdminID].OwnBytes,
 			SubtreeBytes:   usage[m.AdminID].SubtreeBytes,

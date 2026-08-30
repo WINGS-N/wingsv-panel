@@ -11,6 +11,7 @@ import AdminAccount from './views/admin/AccountView.vue';
 import AdminMasterSettings from './views/admin/MasterSettings.vue';
 import AdminNodes from './views/admin/AdminNodes.vue';
 import AdminFederation from '@/views/admin/AdminFederation.vue';
+import AdminInvites from '@/views/admin/AdminInvites.vue';
 import WgPeers from './views/shared/WgPeers.vue';
 import NodeDetail from './views/shared/NodeDetail.vue';
 import OwnerLayout from './views/owner/OwnerLayout.vue';
@@ -45,6 +46,7 @@ const router = createRouter({
         { path: 'master', component: AdminMasterSettings, name: 'admin-master' },
         { path: 'nodes', component: AdminNodes, name: 'admin-nodes' },
         { path: 'federation', component: AdminFederation, name: 'admin-federation' },
+        { path: 'invites', component: AdminInvites, name: 'admin-invites' },
         {
           path: 'nodes/:id',
           component: NodeDetail,

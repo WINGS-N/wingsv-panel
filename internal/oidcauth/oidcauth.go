@@ -5,7 +5,7 @@
 // tree only resists sybils because an identity costs something, and accepting
 // logins from any homeserver on the internet would let anybody mint as many
 // identities as they felt like on a server they run themselves.
-package matrixauth
+package oidcauth
 
 import (
 	"context"

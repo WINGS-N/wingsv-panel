@@ -38,10 +38,10 @@ type Config struct {
 	// issuer is what keeps identities to our homeserver: an identity minted
 	// anywhere else costs nothing, and the invite tree only works because one
 	// costs something.
-	MatrixIssuer       string
-	MatrixHomeserver   string
-	MatrixClientID     string
-	MatrixClientSecret string
+	OIDCIssuer       string
+	MatrixHomeserver string
+	OIDCClientID     string
+	OIDCClientSecret string
 
 	// FederationSecret keys that link. It is deliberately not the fleet secret
 	// every donated node holds: that would hand a donor the operator's view.
@@ -73,10 +73,10 @@ func Load() Config {
 		TLSSelfSigned:          parseBoolEnv("TLS_SELF_SIGNED", false),
 		ProvisioningListen:     getEnv("PROVISIONING_LISTEN", ""),
 		RelayToken:             getEnv("RELAY_TOKEN", ""),
-		MatrixIssuer:           strings.TrimRight(getEnv("MATRIX_ISSUER", ""), "/"),
+		OIDCIssuer:             strings.TrimRight(getEnv("OIDC_ISSUER", ""), "/"),
 		MatrixHomeserver:       getEnv("MATRIX_HOMESERVER", ""),
-		MatrixClientID:         getEnv("MATRIX_CLIENT_ID", ""),
-		MatrixClientSecret:     getEnv("MATRIX_CLIENT_SECRET", ""),
+		OIDCClientID:           getEnv("OIDC_CLIENT_ID", ""),
+		OIDCClientSecret:       getEnv("OIDC_CLIENT_SECRET", ""),
 		FederationHead:         getEnv("FEDERATION_HEAD", ""),
 		FederationSecret:       getEnv("FEDERATION_SECRET", ""),
 		BootstrapAdminUsername: getEnv("BOOTSTRAP_ADMIN_USERNAME", "admin"),

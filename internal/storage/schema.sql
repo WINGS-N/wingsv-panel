@@ -147,7 +147,11 @@ CREATE TABLE IF NOT EXISTS invite_tokens (
     expires_at INTEGER NOT NULL DEFAULT 0,
     used_at INTEGER NOT NULL DEFAULT 0,
     used_by_admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL,
-    created_by_admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL
+    created_by_admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL,
+    -- Сколько человек может зарегистрироваться по коду. Лимит не рекурсивный:
+    -- он про тех, кто пришёл по самому коду, а не про их приглашённых.
+    max_uses INTEGER NOT NULL DEFAULT 1,
+    use_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_invite_tokens_created_at ON invite_tokens(created_at DESC);

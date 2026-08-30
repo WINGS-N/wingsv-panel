@@ -194,6 +194,15 @@ type InviteToken struct {
 	UsedAt           int64  `gorm:"column:used_at;not null;default:0"`
 	UsedByAdminID    *int64 `gorm:"column:used_by_admin_id"`
 	CreatedByAdminID *int64 `gorm:"column:created_by_admin_id"`
+	// MaxUses - сколько человек может зарегистрироваться по этому коду. 1 это
+	// обычный одноразовый инвайт; больше - код на группу.
+	//
+	// Лимит НЕ рекурсивный: он ограничивает только тех, кто пришёл по самому
+	// коду, а сколько людей приведут они дальше - их дело и их собственные коды.
+	MaxUses int64 `gorm:"column:max_uses;not null;default:1"`
+	// UseCount растёт при каждом погашении. UsedAt остаётся временем ПЕРВОГО
+	// использования, чтобы старые записи читались как раньше.
+	UseCount int64 `gorm:"column:use_count;not null;default:0"`
 }
 
 func (InviteToken) TableName() string { return "invite_tokens" }

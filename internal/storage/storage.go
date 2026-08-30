@@ -158,6 +158,8 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE clients ADD COLUMN sync_mode TEXT NOT NULL DEFAULT 'always'`,
 		`ALTER TABLE clients ADD COLUMN periodic_interval_minutes INTEGER NOT NULL DEFAULT 30`,
 		`ALTER TABLE admins ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'`,
+		`ALTER TABLE invite_tokens ADD COLUMN max_uses INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE invite_tokens ADD COLUMN use_count INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE admins ADD COLUMN last_login_at INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE admins ADD COLUMN avatar_mime TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE admins ADD COLUMN avatar_png BLOB`,
@@ -189,6 +191,12 @@ func applySchema(db *sql.DB, driver Driver) error {
 				return fmt.Errorf("storage: %s: %w", alter, err)
 			}
 		}
+	}
+	// Инвайты, погашенные до появления счётчика, надо отметить потраченными.
+	// Иначе миграция воскрешает их: use_count у них 0, max_uses по умолчанию 1,
+	// и код, которым уже воспользовались, снова становится годным.
+	if _, err := db.Exec(`UPDATE invite_tokens SET use_count = 1 WHERE used_at > 0 AND use_count = 0`); err != nil {
+		return fmt.Errorf("storage: backfill invite use_count: %w", err)
 	}
 	return nil
 }

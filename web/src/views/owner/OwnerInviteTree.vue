@@ -7,43 +7,49 @@
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
 
-    <div class="actions-row mt-4">
-      <SamsungButton variant="ghost" :busy="loading" @click="load">Обновить</SamsungButton>
+    <!-- Ветви и одиночки разделены нарочно. Пока никто никого не пригласил,
+         каждый администратор - сам себе корень, и список из полусотни корней
+         читается как свалка, а не как дерево. -->
+    <div v-if="roots.length" class="tree-root mt-4">
+      <InviteTreeNode
+        v-for="m in roots"
+        :key="m.admin_id"
+        :member="m"
+        :all="members"
+        :opened="opened"
+        :busy-i-d="busyID"
+        @toggle="toggle"
+        @cut="cut"
+        @restore="restore"
+      />
     </div>
 
-    <ul v-if="ordered.length" class="admin-list mt-4">
-      <li v-for="m in ordered" :key="m.admin_id" class="admin-list-item">
-        <div class="admin-list-row">
-          <div class="admin-list-text" :style="{ paddingLeft: `${m.depth * 18}px` }">
-            <span class="admin-mono">{{ m.username }}</span>
-            <span v-if="m.role === 'owner'" class="admin-muted">owner</span>
-            <span v-if="m.suspended" class="state-error">срезан{{ m.reason ? `: ${m.reason}` : '' }}</span>
-            <span v-else-if="m.cut" class="admin-muted">под срезом выше</span>
-            <span v-else class="admin-muted">активен</span>
-            <span class="admin-muted">
-              {{ bytes(m.own_bytes) }}
-              <template v-if="m.subtree_admins">
-                · ветвь {{ bytes(m.subtree_bytes) }} ({{ m.subtree_admins }} чел., {{ m.subtree_clients }} клиентов)
-              </template>
-            </span>
-          </div>
-          <div class="admin-list-actions">
-            <SamsungButton
-              v-if="m.role !== 'owner' && !m.suspended"
-              variant="ghost"
-              :busy="busyID === m.admin_id"
-              @click="cut(m)"
-            >
-              Срезать ветвь
-            </SamsungButton>
-            <SamsungButton v-else-if="m.suspended" variant="ghost" :busy="busyID === m.admin_id" @click="restore(m)">
-              Вернуть
-            </SamsungButton>
-          </div>
-        </div>
-      </li>
-    </ul>
-    <p v-else-if="!loading" class="admin-muted mt-4">Пока никого.</p>
+    <div v-if="loners.length" class="surface-inset mt-4">
+      <button type="button" class="tree-loners-head" @click="showLoners = !showLoners">
+        <span>
+          Зарегистрированы напрямую: <strong>{{ loners.length }}</strong>
+        </span>
+        <ChevronRight class="tree-chevron" :class="{ 'is-open': showLoners }" aria-hidden="true" />
+      </button>
+      <p class="fed-step-copy">Их никто не приглашал - они завелись до дерева либо по прямой регистрации.</p>
+      <div v-if="showLoners" class="tree-loners mt-3">
+        <span v-for="m in loners" :key="m.admin_id" class="tree-loner" :title="m.username">
+          <img
+            :src="
+              m.avatar_version
+                ? `/api/admin/avatars/${m.admin_id}.png?v=${m.avatar_version}`
+                : '/img/avatar-default.png'
+            "
+            alt=""
+            class="tree-avatar is-small"
+          />
+          <span class="tree-loner-name">{{ m.username }}</span>
+          <span class="tree-loner-meta">{{ bytes(m.own_bytes) }}</span>
+        </span>
+      </div>
+    </div>
+
+    <p v-if="!roots.length && !loners.length && !loading" class="admin-muted mt-4">Пока никого.</p>
 
     <SamsungModal v-model="showCut" title="Срезать ветвь">
       <p class="body-copy">
@@ -61,12 +67,22 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { ChevronRight } from 'lucide-vue-next';
+import InviteTreeNode from '@/components/domain/InviteTreeNode.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungModal from '@/components/layout/SamsungModal.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import { formatBytes } from '@/utils/format';
 
 const members = ref([]);
+const showLoners = ref(false);
+// Раскрытые ветви. Пусто по умолчанию: дерево на полсотни человек, развёрнутое
+// целиком, читается не лучше исходной свалки.
+const opened = ref({});
+
+function toggle(adminID) {
+  opened.value = { ...opened.value, [adminID]: !opened.value[adminID] };
+}
 const loading = ref(false);
 const loadError = ref('');
 const busyID = ref(0);
@@ -76,6 +92,23 @@ const reason = ref('');
 
 // Depth-first, so a branch reads as a branch rather than as a flat list sorted
 // by whatever the database felt like returning.
+// Ветвь - это тот, кого пригласили, или тот, кто пригласил сам. Всё остальное
+// одиночки: пока приглашений нет, каждый администратор формально корень, и
+// показывать полсотни таких корней деревом бессмысленно.
+const branches = computed(() => {
+  const hasChildren = new Set(members.value.map((m) => m.invited_by).filter(Boolean));
+  return ordered.value.filter((m) => m.invited_by || hasChildren.has(m.admin_id));
+});
+
+// Дерево рисуется от корней вниз рекурсивным узлом, поэтому здесь только те,
+// у кого нет пригласившего
+const roots = computed(() => branches.value.filter((m) => !m.invited_by));
+
+const loners = computed(() => {
+  const inBranch = new Set(branches.value.map((m) => m.admin_id));
+  return ordered.value.filter((m) => !inBranch.has(m.admin_id));
+});
+
 const ordered = computed(() => {
   const byParent = new Map();
   for (const m of members.value) {
