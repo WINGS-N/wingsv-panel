@@ -28,24 +28,6 @@
         label="REALITY dest"
         placeholder="www.microsoft.com:443"
       />
-      <div v-else class="surface-inset">
-        <span class="section-kicker">REALITY dest</span>
-        <p class="fed-step-copy mt-2">
-          Голова держит пул проверенных целей<template v-if="fleet.dest_pool_size">
-            - сейчас в нём {{ fleet.dest_pool_size }}</template
-          >, и каждая нода берёт из него свою. Общая на весь флот означала бы, что одно правило у цензора роняет всех
-          разом. Цели перепроверяются, переставшие держать хендшейк заменяются.
-        </p>
-      </div>
-
-      <div class="surface-inset">
-        <span class="section-kicker">Порты</span>
-        <p class="fed-step-copy mt-2">
-          Подбирает сама нода: 443, если может его занять, иначе порт, выведенный из её отпечатка. Ходовые альтернативы
-          вроде 8443 и 2053 есть в каждой методичке по обходу и режутся одним правилом, поэтому их тут нет. Порты видно
-          в списке нод ниже.
-        </p>
-      </div>
     </div>
 
     <div class="fleet-toggles mt-4">
@@ -72,8 +54,10 @@
         <span>
           <span class="fleet-toggle-name">Выбирать dest автоматически</span>
           <span class="fleet-toggle-hint">
-            Голова сама держит живой dest: перепроверяет текущий и переносит флот на другой, когда прежний перестал
-            годиться. Выключите, чтобы вписать свой.
+            Каждая нода берёт свою цель из пула проверенных<template v-if="fleet.dest_pool_size">
+              - сейчас в нём {{ fleet.dest_pool_size }}</template
+            >; общая на весь флот означала бы, что одно правило у цензора роняет всех разом. Выключите, чтобы вписать
+            свой.
           </span>
         </span>
       </label>
