@@ -8,7 +8,7 @@
       <router-link class="samsung-topbar-brand" to="/">
         <span class="wordmark-inline">WINGS V</span>
         <span class="samsung-topbar-divider">|</span>
-        <span class="samsung-topbar-tag">Control Panel</span>
+        <span class="samsung-topbar-tag">{{ inviteToken ? 'Federation' : 'Control Panel' }}</span>
       </router-link>
     </header>
 
@@ -17,18 +17,7 @@
         <!-- Пришли по приглашению - это первое, что видно. Без карточки
              страница выглядит как обычная регистрация, и человек не понимает,
              куда и по чьей ссылке попал -->
-        <div v-if="inviter.loaded && inviter.valid" class="invite-hero">
-          <img :src="inviterAvatar" alt="" class="invite-avatar" aria-hidden="true" />
-          <p class="invite-kicker">Вас пригласил</p>
-          <p class="invite-name">{{ inviter.username || 'администратор' }}</p>
-          <p class="invite-sub">
-            Аккаунты здесь заводят только по приглашению.
-            <template v-if="inviter.remaining > 1"> По этому коду осталось мест: {{ inviter.remaining }}.</template>
-          </p>
-        </div>
-        <p v-else-if="inviter.loaded && !inviter.valid" class="state-error">
-          {{ inviter.reason || 'Приглашение недействительно' }}
-        </p>
+        <InviteHero :token="inviteToken" @loaded="onInviter" />
 
         <h1 v-if="!inviter.valid" class="login-headline">
           <span>Создайте аккаунт.</span>
@@ -118,6 +107,7 @@ import { UserPlus } from 'lucide-vue-next';
 import { register, registrationState } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import InviteHero from '@/components/domain/InviteHero.vue';
 
 const router = useRouter();
 const username = ref('');
@@ -134,28 +124,16 @@ const inviter = reactive({
   remaining: 0,
 });
 
-const inviterAvatar = computed(() =>
-  inviter.avatar_version
-    ? `/api/admin/avatars/${inviter.admin_id}.png?v=${inviter.avatar_version}`
-    : '/img/avatar-default.png',
-);
-
-async function loadInviter() {
-  if (!inviteToken.value) return;
-  try {
-    const res = await fetch(`/api/invite?invite=${encodeURIComponent(inviteToken.value)}`);
-    if (!res.ok) return;
-    Object.assign(inviter, await res.json(), { loaded: true });
-  } catch {
-    // Приглашение не удалось проверить - форма всё равно работает
-  }
+function onInviter(info) {
+  inviter.loaded = true;
+  inviter.valid = Boolean(info.valid);
+  inviter.username = info.username || '';
 }
+
 const matrix = reactive({ enabled: false, homeserver: '' });
 
 // Код приглашения уходит в start, а не в callback: обратно провайдер вернёт
 // только state и code, и без этого зарегистрировать первого посетителя нечем
-onMounted(loadInviter);
-
 onMounted(async () => {
   try {
     const res = await fetch('/api/oidc/status', { credentials: 'include' });

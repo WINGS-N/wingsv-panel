@@ -15,6 +15,9 @@
       <div class="form-grid mt-3">
         <OneuiInput v-model.trim="redeemCode" label="Код приглашения" placeholder="например, 9f3a1c" />
       </div>
+      <!-- Кто пригласил, видно до применения: код - это чужая ссылка, и человек
+           должен понимать, в чьё дерево встаёт -->
+      <InviteHero :token="redeemCode" class="mt-3" />
       <div class="actions-row">
         <SamsungButton :busy="redeeming" @click="redeem">
           <template #icon><Ticket class="button-icon" aria-hidden="true" /></template>
@@ -74,6 +77,7 @@ import { CalendarRange, Plus, Ticket, Trash2, Users } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
+import InviteHero from '@/components/domain/InviteHero.vue';
 
 const invites = ref([]);
 const loading = ref(false);

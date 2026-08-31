@@ -9,12 +9,14 @@
       <router-link class="samsung-topbar-brand" to="/">
         <span class="wordmark-inline">WINGS V</span>
         <span class="samsung-topbar-divider">|</span>
-        <span class="samsung-topbar-tag">Control Panel</span>
+        <span class="samsung-topbar-tag">{{ inviteToken ? 'Federation' : 'Control Panel' }}</span>
       </router-link>
     </header>
 
     <main class="login-main">
       <section class="login-card surface-card">
+        <InviteHero :token="inviteToken" />
+
         <h1 class="login-headline">
           <span>Один аккаунт.</span>
           <span>Любое устройство.</span>
@@ -66,6 +68,8 @@
 </template>
 
 <script setup>
+import InviteHero from '@/components/domain/InviteHero.vue';
+
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { LogIn } from 'lucide-vue-next';
@@ -76,6 +80,7 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 const router = useRouter();
 
 const route = useRoute();
+const inviteToken = ref(new URLSearchParams(window.location.search).get('invite') || '');
 const username = ref('');
 const password = ref('');
 const error = ref('');
@@ -120,7 +125,7 @@ function signInWithMatrix() {
   // Код приглашения переносится и во вход: пригласить можно и того, у кого
   // аккаунт уже есть - тогда он получает пригласившего, а не второй аккаунт
   const params = new URLSearchParams({ return_to: back });
-  const invite = new URLSearchParams(window.location.search).get('invite');
+  const invite = inviteToken.value;
   if (invite) params.set('invite', invite);
   window.location.href = `/api/oidc/start?${params.toString()}`;
 }

@@ -1,6 +1,6 @@
 <template>
   <div class="admin-shell">
-    <PublicTopbar />
+    <PublicTopbar tag="Federation" />
     <main class="admin-main">
       <section class="surface-card">
         <div class="federation-live-head">
