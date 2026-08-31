@@ -19,6 +19,21 @@ import (
 	"v.wingsnet.org/internal/tokenaead"
 )
 
+// retryPolicy повторяет вызовы, упавшие на недоступности головы
+const retryPolicy = `{
+  "methodConfig": [{
+    "name": [{"service": "wingsv.headpanel.v1.FederationHead"}],
+    "waitForReady": true,
+    "retryPolicy": {
+      "MaxAttempts": 4,
+      "InitialBackoff": "0.2s",
+      "MaxBackoff": "2s",
+      "BackoffMultiplier": 2.0,
+      "RetryableStatusCodes": ["UNAVAILABLE"]
+    }
+  }]
+}`
+
 // ErrDisabled means no head is configured, which is the normal state until the
 // operator turns the federation on.
 var ErrDisabled = errors.New("fedclient: no federation head configured")
@@ -65,7 +80,12 @@ func (c *Client) dial() (headpb.FederationHeadClient, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.conn == nil {
-		conn, err := grpc.NewClient(c.endpoint, grpc.WithTransportCredentials(c.creds))
+		// Голова переезжает между репликами, и на время переключения вызов
+		// упирается в отказ соединения. Это не поломка федерации, а секунда
+		// выката, поэтому повтор берёт на себя транспорт, а не каждый хендлер
+		conn, err := grpc.NewClient(c.endpoint,
+			grpc.WithTransportCredentials(c.creds),
+			grpc.WithDefaultServiceConfig(retryPolicy))
 		if err != nil {
 			return nil, err
 		}

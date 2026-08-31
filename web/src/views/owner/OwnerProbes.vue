@@ -2,7 +2,13 @@
   <section class="surface-card">
     <div class="federation-live-head">
       <h2 class="section-title">Точки наблюдения</h2>
-      <span class="live-dot" role="status" aria-label="Данные обновляются" title="Данные обновляются"></span>
+      <span
+        class="live-dot"
+        :class="{ 'is-dead': !anyOnline }"
+        role="status"
+        :aria-label="anyOnline ? 'Есть точки на связи' : 'Ни одна точка не отвечает'"
+        :title="anyOnline ? 'Есть точки на связи' : 'Ни одна точка не отвечает'"
+      ></span>
     </div>
     <p class="body-copy body-copy-wide">
       Зонды стоят внутри страны и меряют ноды так, как до них дотягивается обычный пользователь: не пингом, а
@@ -91,7 +97,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Activity, Building2, Clock, Gauge, Handshake, MapPin, Play, Radar, Timer } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import { formatBytes } from '@/utils/format';
@@ -101,6 +107,7 @@ const vantages = ref([]);
 const measurements = ref([]);
 const loadError = ref('');
 const running = ref(false);
+const anyOnline = computed(() => vantages.value.some((v) => v.online));
 const runNote = ref('');
 let timer = null;
 

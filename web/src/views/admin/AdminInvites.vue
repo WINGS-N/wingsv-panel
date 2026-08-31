@@ -8,6 +8,22 @@
     <p v-if="loadError" class="state-error mt-3">{{ loadError }}</p>
     <p v-if="!mayInvite && blockReason" class="state-hint">{{ blockReason }}</p>
 
+    <!-- Код можно ввести и после регистрации: аккаунт, заведённый раньше
+         приглашения, иначе остаётся вне дерева навсегда -->
+    <div v-if="!mayInvite" class="entry-card mt-4">
+      <p class="body-copy">Вас кто-то пригласил? Введите код - он поставит вас в дерево и откроет приглашения.</p>
+      <div class="form-grid mt-3">
+        <OneuiInput v-model.trim="redeemCode" label="Код приглашения" placeholder="например, 9f3a1c" />
+      </div>
+      <div class="actions-row">
+        <SamsungButton :busy="redeeming" @click="redeem">
+          <template #icon><Ticket class="button-icon" aria-hidden="true" /></template>
+          Применить код
+        </SamsungButton>
+      </div>
+      <p v-if="redeemError" class="state-error">{{ redeemError }}</p>
+    </div>
+
     <!-- Поля стоят полями, а не втиснуты в строку рядом с кнопкой: подпись над
          вводом и кнопка снизу - то, как выглядит любая форма в этой панели -->
     <div v-if="mayInvite" class="form-grid mt-5">
@@ -50,7 +66,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { CalendarRange, Plus, Users } from 'lucide-vue-next';
+import { CalendarRange, Plus, Ticket, Users } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
@@ -63,6 +79,9 @@ const maxUses = ref(1);
 const ttlHours = ref(0);
 const mayInvite = ref(true);
 const blockReason = ref('');
+const redeemCode = ref('');
+const redeeming = ref(false);
+const redeemError = ref('');
 
 onMounted(load);
 
@@ -80,6 +99,26 @@ async function load() {
     loadError.value = String(err.message || err);
   } finally {
     loading.value = false;
+  }
+}
+
+async function redeem() {
+  redeeming.value = true;
+  redeemError.value = '';
+  try {
+    const res = await fetch('/api/admin/invites/redeem', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: redeemCode.value }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    redeemCode.value = '';
+    await load();
+  } catch (err) {
+    redeemError.value = String(err.message || err);
+  } finally {
+    redeeming.value = false;
   }
 }
 

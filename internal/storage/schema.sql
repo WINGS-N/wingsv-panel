@@ -157,6 +157,18 @@ CREATE TABLE IF NOT EXISTS invite_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_invite_tokens_created_at ON invite_tokens(created_at DESC);
 
+-- Кто по какому коду пришёл. Отдельной таблицей, потому что код бывает
+-- многоразовым: одно поле used_by_admin_id вмещает только первого, и остальные
+-- выпадали бы из дерева.
+CREATE TABLE IF NOT EXISTS invite_redemptions (
+    token TEXT NOT NULL,
+    admin_id INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (token, admin_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invite_redemptions_admin ON invite_redemptions(admin_id);
+
 -- What a member of the invite tree moved, and what everybody below them moved.
 -- Recomputed by a periodic job, never joined on the fly. Monitoring only.
 CREATE TABLE IF NOT EXISTS admin_traffic_rollup (

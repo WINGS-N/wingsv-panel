@@ -38,13 +38,25 @@ func (s *Store) inviteEdges() (map[int64]int64, error) {
 		UsedByAdminID    *int64
 	}
 	var rows []edge
-	err := s.gdb.Model(&dbmodel.InviteToken{}).
-		Where("used_by_admin_id IS NOT NULL AND created_by_admin_id IS NOT NULL").
-		Select("created_by_admin_id", "used_by_admin_id").
+	// Рёбра берём из погашений: у многоразового кода приглашённых несколько, и
+	// поле в самом коде вмещает только первого
+	err := s.gdb.Table("invite_redemptions AS r").
+		Joins("JOIN invite_tokens AS t ON t.token = r.token").
+		Where("t.created_by_admin_id IS NOT NULL").
+		Select("t.created_by_admin_id AS created_by_admin_id, r.admin_id AS used_by_admin_id").
 		Find(&rows).Error
 	if err != nil {
 		return nil, err
 	}
+	var legacy []edge
+	err = s.gdb.Model(&dbmodel.InviteToken{}).
+		Where("used_by_admin_id IS NOT NULL AND created_by_admin_id IS NOT NULL").
+		Select("created_by_admin_id", "used_by_admin_id").
+		Find(&legacy).Error
+	if err != nil {
+		return nil, err
+	}
+	rows = append(rows, legacy...)
 	parent := make(map[int64]int64, len(rows))
 	for _, r := range rows {
 		child, by := derefInt64(r.UsedByAdminID), derefInt64(r.CreatedByAdminID)

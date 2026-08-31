@@ -1035,6 +1035,11 @@
     @apply bg-white/5;
   }
 
+  .live-dot.is-dead {
+    background: theme('colors.wings.danger');
+    animation: none;
+  }
+
   .probe-icon {
     @apply h-9 w-9 shrink-0 object-contain;
   }

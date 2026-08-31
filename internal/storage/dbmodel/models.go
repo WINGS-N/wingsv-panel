@@ -411,3 +411,13 @@ func All() []any {
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(All()...)
 }
+
+// InviteRedemption - один погашенный код одним аккаунтом
+type InviteRedemption struct {
+	Token         string `gorm:"column:token;primaryKey"`
+	AdminID       int64  `gorm:"column:admin_id;primaryKey"`
+	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
+}
+
+// TableName задаёт имя таблицы
+func (InviteRedemption) TableName() string { return "invite_redemptions" }

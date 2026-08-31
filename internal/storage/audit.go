@@ -272,7 +272,27 @@ func (s *Store) RedeemInvite(token string, adminID int64) error {
 	if res.RowsAffected == 0 {
 		return ErrNotFound
 	}
+	// Ребро дерева пишем отдельно: у многоразового кода приглашённых несколько,
+	// а поле в самом коде вмещает одного
+	_ = s.gdb.Create(&dbmodel.InviteRedemption{
+		Token: token, AdminID: adminID, CreatedAtUnix: now,
+	}).Error
 	return nil
+}
+
+// RedeemedInvite сообщает, пришёл ли аккаунт по приглашению
+func (s *Store) RedeemedInvite(adminID int64) (bool, error) {
+	var count int64
+	err := s.gdb.Model(&dbmodel.InviteRedemption{}).Where("admin_id = ?", adminID).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	if count > 0 {
+		return true, nil
+	}
+	// Коды, погашенные до появления таблицы
+	err = s.gdb.Model(&dbmodel.InviteToken{}).Where("used_by_admin_id = ?", adminID).Count(&count).Error
+	return count > 0, err
 }
 
 // FindInvite reads one code. Used by the invite page, which has no session -

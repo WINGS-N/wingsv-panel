@@ -120,6 +120,11 @@ func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 	if admin.Role == storage.RoleOwner {
 		return nil
 	}
+	// Пришедший по коду уже часть дерева, и за него отвечает пригласивший.
+	// Донорский порог нужен только тому, кто входит в дерево корнем
+	if redeemed, err := h.store.RedeemedInvite(admin.ID); err == nil && redeemed {
+		return nil
+	}
 	if !h.federationOn() {
 		return errors.New("приглашать могут участники федерации, а она сейчас выключена")
 	}
@@ -224,4 +229,49 @@ func (h *Handler) handleInviteLookup(w http.ResponseWriter, r *http.Request) {
 		view.AdminID = admin.ID
 	}
 	writeJSON(w, http.StatusOK, view)
+}
+
+// handleRedeemInvite привязывает уже заведённый аккаунт к дереву по коду.
+//
+// Экран регистрации спрашивает код только у новичка, а аккаунт, заведённый
+// раньше приглашения, иначе остаётся вне дерева навсегда
+func (h *Handler) handleRedeemInvite(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad request body")
+		return
+	}
+	token := strings.TrimSpace(req.Token)
+	if token == "" {
+		writeError(w, http.StatusBadRequest, "введите код приглашения")
+		return
+	}
+	if redeemed, err := h.store.RedeemedInvite(admin.ID); err == nil && redeemed {
+		writeError(w, http.StatusConflict, "вы уже в дереве приглашений")
+		return
+	}
+	invite, err := h.store.FindInvite(token)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "код не найден")
+		return
+	}
+	if invite.CreatedByAdminID == admin.ID {
+		writeError(w, http.StatusForbidden, "своим же кодом в дерево не встают")
+		return
+	}
+	if err := h.store.RedeemInvite(token, admin.ID); err != nil {
+		writeError(w, http.StatusForbidden, "код исчерпан или просрочен")
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: admin.ID, ActorUsername: admin.Username,
+		Action: "admin.invite_redeemed", TargetType: "invite", TargetID: token,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
