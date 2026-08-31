@@ -20,10 +20,13 @@ type Admin struct {
 	PasswordHash       string
 	MustChangePassword bool
 	Role               string
-	LastLoginAt        time.Time
-	AvatarVersion      int64
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	// PanelAccess - открыта ли админ-панель. Личный доступ к VPN есть у любого
+	// аккаунта, панель к нему добавляется отдельно
+	PanelAccess   bool
+	LastLoginAt   time.Time
+	AvatarVersion int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 var ErrNotFound = errors.New("storage: not found")
@@ -36,6 +39,7 @@ func toStorageAdmin(m dbmodel.Admin) Admin {
 		PasswordHash:       m.PasswordHash,
 		MustChangePassword: m.MustChangePassword != 0,
 		Role:               m.Role,
+		PanelAccess:        m.PanelAccess != 0,
 		LastLoginAt:        time.UnixMilli(m.LastLoginAt).UTC(),
 		AvatarVersion:      m.AvatarVersion,
 		CreatedAt:          time.UnixMilli(m.CreatedAtUnix).UTC(),
@@ -48,6 +52,12 @@ func toStorageAdmin(m dbmodel.Admin) Admin {
 }
 
 func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role string) (Admin, error) {
+	return s.CreateAccount(username, passwordHash, mustChange, role, true)
+}
+
+// CreateAccount заводит аккаунт с явно указанным доступом в панель. Пришедший по
+// приглашению получает личный доступ к VPN, но не панель: её выдаёт владелец
+func (s *Store) CreateAccount(username, passwordHash string, mustChange bool, role string, panelAccess bool) (Admin, error) {
 	if role == "" {
 		role = RoleAdmin
 	}
@@ -57,6 +67,7 @@ func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role
 		PasswordHash:       passwordHash,
 		MustChangePassword: int64(boolToInt(mustChange)),
 		Role:               role,
+		PanelAccess:        int64(boolToInt(panelAccess)),
 		CreatedAtUnix:      now,
 		UpdatedAtUnix:      now,
 	}
@@ -213,4 +224,13 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// SetPanelAccess открывает или закрывает аккаунту админ-панель
+func (s *Store) SetPanelAccess(id int64, allowed bool) error {
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).
+		Updates(map[string]any{
+			"panel_access":    boolToInt(allowed),
+			"updated_at": time.Now().UTC().UnixMilli(),
+		}).Error
 }

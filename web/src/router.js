@@ -19,6 +19,7 @@ import OwnerOverview from './views/owner/OwnerOverview.vue';
 import OwnerNodes from './views/owner/OwnerNodes.vue';
 import OwnerAdmins from './views/owner/OwnerAdmins.vue';
 import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
+import CabinetView from '@/views/CabinetView.vue';
 import OwnerOracle from '@/views/owner/OwnerOracle.vue';
 import OwnerProbes from '@/views/owner/OwnerProbes.vue';
 import OwnerFleet from '@/views/owner/OwnerFleet.vue';
@@ -30,6 +31,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: LandingView, name: 'landing' },
+    { path: '/me', component: CabinetView, name: 'cabinet' },
     { path: '/federation', component: FederationLanding, name: 'federation-landing' },
     { path: '/login', component: LoginView, name: 'login' },
     { path: '/register', component: RegisterView, name: 'register' },
@@ -95,6 +97,15 @@ const router = createRouter({
   ],
 });
 
+// Владелец панель не теряет никогда, поэтому его роль важнее флага
+function hasPanel(admin) {
+  return Boolean(admin && (admin.panel_access || admin.role === 'owner'));
+}
+
+function homeFor(admin) {
+  return hasPanel(admin) ? '/admin/clients' : '/me';
+}
+
 let sessionProbed = false;
 
 router.beforeEach(async (to) => {
@@ -108,7 +119,7 @@ router.beforeEach(async (to) => {
     await refreshSession();
     sessionProbed = true;
   }
-  if (to.path.startsWith('/admin') || to.path.startsWith('/owner')) {
+  if (to.path.startsWith('/admin') || to.path.startsWith('/owner') || to.name === 'cabinet') {
     if (!authState.value.admin) {
       await refreshSession();
     }
@@ -116,15 +127,20 @@ router.beforeEach(async (to) => {
       return { path: '/login', query: { redirect: to.fullPath } };
     }
   }
+  // Аккаунт без доступа в панель - обычный участник: ему свой кабинет, а не
+  // чужие ноды и клиенты
+  if (to.path.startsWith('/admin') && authState.value.admin && !hasPanel(authState.value.admin)) {
+    return { path: '/me' };
+  }
   if (to.path.startsWith('/owner') && authState.value.admin?.role !== 'owner') {
-    return { path: '/admin/clients' };
+    return { path: homeFor(authState.value.admin) };
   }
   if (to.name === 'login' && authState.value.admin) {
-    return { path: '/admin/clients' };
+    return { path: homeFor(authState.value.admin) };
   }
   if (to.name === 'register') {
     if (authState.value.admin) {
-      return { path: '/admin/clients' };
+      return { path: homeFor(authState.value.admin) };
     }
     if (registrationState.value.mode === 'closed') {
       return { path: '/login' };

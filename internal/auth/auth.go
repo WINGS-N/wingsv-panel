@@ -230,7 +230,9 @@ func (s *Service) Register(username, password, inviteToken string) (storage.Admi
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
-	admin, err := s.store.CreateAdmin(username, hash, false, storage.RoleAdmin)
+	// Пришедший по приглашению получает личный доступ к VPN, но не панель:
+	// панель добавляет владелец отдельно
+	admin, err := s.store.CreateAccount(username, hash, false, storage.RoleAdmin, false)
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
@@ -418,7 +420,7 @@ func (s *Service) LoginWithMatrix(matrixID, localpart, subject, inviteToken stri
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
-	created, err := s.store.CreateAdmin(username, hash, false, storage.RoleAdmin)
+	created, err := s.store.CreateAccount(username, hash, false, storage.RoleAdmin, false)
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}

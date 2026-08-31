@@ -13,6 +13,7 @@ type Admin struct {
 	PasswordHash       string `gorm:"column:password_hash;not null"`
 	MustChangePassword int64  `gorm:"column:must_change_password;not null;default:0"`
 	Role               string `gorm:"column:role;not null;default:'admin'"`
+	PanelAccess        int64  `gorm:"column:panel_access;not null;default:1"`
 	LastLoginAt        int64  `gorm:"column:last_login_at;not null;default:0"`
 	AvatarMime         string `gorm:"column:avatar_mime;not null;default:''"`
 	AvatarPNG          []byte `gorm:"column:avatar_png"`

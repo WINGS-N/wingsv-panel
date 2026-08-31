@@ -176,6 +176,10 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE admins ADD COLUMN suspended_by_root INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE admins ADD COLUMN matrix_id TEXT`,
 		`ALTER TABLE admins ADD COLUMN matrix_subject TEXT NOT NULL DEFAULT ''`,
+		// Доступ в админ-панель отделён от аккаунта: личный доступ к VPN есть у
+		// каждого, а панель открывается отдельно. Существующие аккаунты
+		// заводились админами, поэтому единица по умолчанию
+		`ALTER TABLE admins ADD COLUMN panel_access INTEGER NOT NULL DEFAULT 1`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_matrix_id ON admins(matrix_id) WHERE matrix_id IS NOT NULL`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE server_nodes ADD COLUMN grpc_token TEXT NOT NULL DEFAULT ''`,

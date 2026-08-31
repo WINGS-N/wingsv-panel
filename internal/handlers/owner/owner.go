@@ -217,6 +217,8 @@ func (h *Handler) handleAdminByID(w http.ResponseWriter, r *http.Request, owner 
 		h.respondDeleteAdmin(w, r, owner, id)
 	case subpath == "password/reset" && r.Method == http.MethodPost:
 		h.respondResetPassword(w, r, owner, id)
+	case subpath == "panel-access" && r.Method == http.MethodPut:
+		h.respondPanelAccess(w, r, owner, id)
 	default:
 		writeError(w, http.StatusNotFound, "unknown route")
 	}
@@ -620,4 +622,38 @@ func clientIP(r *http.Request) string {
 		return host
 	}
 	return r.RemoteAddr
+}
+
+// respondPanelAccess открывает или закрывает аккаунту админ-панель. Личный
+// доступ к VPN этим не трогается: он есть у любого аккаунта
+func (h *Handler) respondPanelAccess(w http.ResponseWriter, r *http.Request, owner storage.Admin, id int64) {
+	target, err := h.store.FindAdminByID(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "admin not found")
+		return
+	}
+	if target.Role == storage.RoleOwner {
+		writeError(w, http.StatusForbidden, "у владельца панель не отбирается")
+		return
+	}
+	var req struct {
+		Allowed bool `json:"allowed"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad request body")
+		return
+	}
+	if err := h.store.SetPanelAccess(id, req.Allowed); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	action := "owner.panel_access_revoked"
+	if req.Allowed {
+		action = "owner.panel_access_granted"
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: owner.ID, ActorUsername: owner.Username,
+		Action: action, TargetType: "admin", TargetID: strconv.FormatInt(id, 10),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"panel_access": req.Allowed})
 }

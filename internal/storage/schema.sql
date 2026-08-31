@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS admins (
     password_hash TEXT NOT NULL,
     must_change_password INTEGER NOT NULL DEFAULT 0,
     role TEXT NOT NULL DEFAULT 'admin',
+    panel_access INTEGER NOT NULL DEFAULT 1,
     last_login_at INTEGER NOT NULL DEFAULT 0,
     avatar_mime TEXT NOT NULL DEFAULT '',
     avatar_png BLOB,

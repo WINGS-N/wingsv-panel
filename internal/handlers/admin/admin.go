@@ -75,21 +75,24 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/invite", h.handleInviteLookup)
 	mux.HandleFunc("/api/admin/me", h.requireAuth(h.handleMe))
 	mux.HandleFunc("/api/admin/password", h.requireAuth(h.handleChangePassword))
-	mux.HandleFunc("/api/admin/clients", h.requireAuth(h.handleClients))
-	mux.HandleFunc("/api/admin/clients/", h.requireAuth(h.handleClientByID))
-	mux.HandleFunc("/api/admin/link/decode", h.requireAuth(h.handleDecodeLink))
-	mux.HandleFunc("/api/admin/stats/traffic", h.requireAuth(h.handleStatsTraffic))
-	mux.HandleFunc("/api/admin/stats/flows", h.requireAuth(h.handleStatsFlows))
-	mux.HandleFunc("/api/admin/stats/flowhistory", h.requireAuth(h.handleStatsFlowHistory))
-	mux.HandleFunc("/api/admin/stats/xrayflows", h.requireAuth(h.handleStatsXrayFlows))
-	mux.HandleFunc("/api/admin/stats/connections", h.requireAuth(h.handleStatsConnections))
-	mux.HandleFunc("/api/admin/nodes", h.requireAuth(h.handleNodes))
-	mux.HandleFunc("/api/admin/nodes/", h.requireAuth(h.handleNodeByID))
-	mux.HandleFunc("/api/admin/wgpeers", h.requireAuth(h.handleWGPeers))
-	mux.HandleFunc("/api/admin/wgpeers/", h.requireAuth(h.handleWGPeerByID))
-	mux.HandleFunc("/api/admin/vk-links", h.requireAuth(h.handleVKLinks))
+	mux.HandleFunc("/api/admin/clients", h.requirePanel(h.handleClients))
+	mux.HandleFunc("/api/admin/clients/", h.requirePanel(h.handleClientByID))
+	mux.HandleFunc("/api/admin/link/decode", h.requirePanel(h.handleDecodeLink))
+	mux.HandleFunc("/api/admin/stats/traffic", h.requirePanel(h.handleStatsTraffic))
+	mux.HandleFunc("/api/admin/stats/flows", h.requirePanel(h.handleStatsFlows))
+	mux.HandleFunc("/api/admin/stats/flowhistory", h.requirePanel(h.handleStatsFlowHistory))
+	mux.HandleFunc("/api/admin/stats/xrayflows", h.requirePanel(h.handleStatsXrayFlows))
+	mux.HandleFunc("/api/admin/stats/connections", h.requirePanel(h.handleStatsConnections))
+	mux.HandleFunc("/api/admin/nodes", h.requirePanel(h.handleNodes))
+	mux.HandleFunc("/api/admin/nodes/", h.requirePanel(h.handleNodeByID))
+	mux.HandleFunc("/api/admin/wgpeers", h.requirePanel(h.handleWGPeers))
+	mux.HandleFunc("/api/admin/wgpeers/", h.requirePanel(h.handleWGPeerByID))
+	mux.HandleFunc("/api/admin/vk-links", h.requirePanel(h.handleVKLinks))
 	mux.HandleFunc("/api/admin/avatars/", h.handleAvatar)
 	mux.HandleFunc("/api/admin/me/avatar", h.requireAuth(h.handleMyAvatar))
+	// Кабинет участника: собственный доступ есть у любого аккаунта, включая
+	// администратора - одно другого не отменяет
+	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
 	// Не под /api/admin: этим входом пользуются не только администраторы.
 	// Бесплатный пользователь федерации заходит тем же WINGS V ID, и путь,
 	// названный админским, пришлось бы ломать ровно в тот день, когда до этого
@@ -102,18 +105,18 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Приглашать может любой администратор: дерево инвайтов и есть цена входа,
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.
-	mux.HandleFunc("/api/admin/invites", h.requireAuth(h.handleInvites))
-	mux.HandleFunc("/api/admin/fleet", h.requireAuth(h.handleFleetSettings))
-	mux.HandleFunc("/api/admin/fleet/nodes", h.requireAuth(h.handleFleetNodes))
-	mux.HandleFunc("/api/admin/fleet/releases", h.requireAuth(h.handleFleetReleases))
-	mux.HandleFunc("/api/admin/fleet/restart", h.requireAuth(h.handleFleetRestart))
-	mux.HandleFunc("/api/admin/federation/summary", h.requireAuth(h.handleFederationSummary))
-	mux.HandleFunc("/api/admin/federation/enroll-token", h.requireAuth(h.handleFederationEnrollToken))
-	mux.HandleFunc("/api/admin/federation/live", h.requireAuth(h.handleFederationLive))
-	mux.HandleFunc("/api/admin/federation/nodes/", h.requireAuth(h.handleFederationNodeState))
-	mux.HandleFunc("/api/admin/master/config", h.requireAuth(h.handleMasterConfig))
-	mux.HandleFunc("/api/admin/master/config/apply", h.requireAuth(h.handleMasterConfigApply))
-	mux.HandleFunc("/api/admin/master/config/seed", h.requireAuth(h.handleMasterConfigSeed))
+	mux.HandleFunc("/api/admin/invites", h.requirePanel(h.handleInvites))
+	mux.HandleFunc("/api/admin/fleet", h.requirePanel(h.handleFleetSettings))
+	mux.HandleFunc("/api/admin/fleet/nodes", h.requirePanel(h.handleFleetNodes))
+	mux.HandleFunc("/api/admin/fleet/releases", h.requirePanel(h.handleFleetReleases))
+	mux.HandleFunc("/api/admin/fleet/restart", h.requirePanel(h.handleFleetRestart))
+	mux.HandleFunc("/api/admin/federation/summary", h.requirePanel(h.handleFederationSummary))
+	mux.HandleFunc("/api/admin/federation/enroll-token", h.requirePanel(h.handleFederationEnrollToken))
+	mux.HandleFunc("/api/admin/federation/live", h.requirePanel(h.handleFederationLive))
+	mux.HandleFunc("/api/admin/federation/nodes/", h.requirePanel(h.handleFederationNodeState))
+	mux.HandleFunc("/api/admin/master/config", h.requirePanel(h.handleMasterConfig))
+	mux.HandleFunc("/api/admin/master/config/apply", h.requirePanel(h.handleMasterConfigApply))
+	mux.HandleFunc("/api/admin/master/config/seed", h.requirePanel(h.handleMasterConfigSeed))
 }
 
 type loginRequest struct {
@@ -247,6 +250,7 @@ func adminMePayload(admin storage.Admin) map[string]any {
 		"username":             admin.Username,
 		"must_change_password": admin.MustChangePassword,
 		"role":                 admin.Role,
+		"panel_access":         admin.PanelAccess || admin.Role == storage.RoleOwner,
 		"avatar_version":       admin.AvatarVersion,
 		"created_at":           admin.CreatedAt.Format(timeRFC3339),
 	}
@@ -405,6 +409,19 @@ func (h *Handler) requireAuth(next authedHandler) http.HandlerFunc {
 		}
 		next(w, r, admin)
 	}
+}
+
+// requirePanel пускает только тех, кому открыта админ-панель. Аккаунт без неё -
+// обычный участник: у него есть свой доступ к VPN и свой кабинет, но чужими
+// нодами и клиентами он не распоряжается
+func (h *Handler) requirePanel(next authedHandler) http.HandlerFunc {
+	return h.requireAuth(func(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+		if !admin.PanelAccess && admin.Role != storage.RoleOwner {
+			writeError(w, http.StatusForbidden, "админ-панель для этого аккаунта закрыта")
+			return
+		}
+		next(w, r, admin)
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

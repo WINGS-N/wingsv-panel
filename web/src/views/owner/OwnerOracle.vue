@@ -63,7 +63,7 @@
   </section>
 
   <section v-if="enabled" class="surface-card mt-6">
-    <h2 class="section-title">Кого он смотрит</h2>
+    <h2 class="section-title">Наблюдаемые</h2>
     <p v-if="!overview.subjects.length" class="state-hint">Пока ни на кого ничего нет.</p>
     <div v-else class="fed-node-list mt-4">
       <div v-for="s in overview.subjects" :key="s.subject_id" class="fed-node-row is-tappable" @click="open(s)">
