@@ -117,8 +117,16 @@
     aspect-ratio: 1 / 1;
   }
 
+  /* На узком экране рядом с аватаром остаётся только он сам: логин там
+     повторяет то, что и так видно по картинке, и отъедает место у навигации */
   .public-account-name {
-    @apply max-w-[14ch] truncate;
+    @apply hidden max-w-[14ch] truncate;
+  }
+
+  @media (min-width: 640px) {
+    .public-account-name {
+      @apply inline;
+    }
   }
 
   .public-nav-link {
