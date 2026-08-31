@@ -33,6 +33,16 @@
             <OneuiInput v-model="password" label="Пароль" type="password" autocomplete="current-password" />
           </div>
 
+          <!-- Поле кода появляется, только когда панель его спросила -->
+          <div v-if="needsTotp" class="input-field">
+            <OneuiInput
+              v-model.trim="totpCode"
+              label="Код из аутентификатора"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+            />
+          </div>
+
           <p v-if="error" class="state-error">{{ error }}</p>
 
           <SamsungButton class="login-submit" type="submit" :busy="busy" :disabled="!username || !password">
@@ -80,6 +90,8 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 const router = useRouter();
 
 const route = useRoute();
+const needsTotp = ref(false);
+const totpCode = ref('');
 const inviteToken = ref(new URLSearchParams(window.location.search).get('invite') || '');
 const username = ref('');
 const password = ref('');
@@ -135,10 +147,16 @@ async function onSubmit() {
   busy.value = true;
   error.value = '';
   try {
-    await login(username.value.trim().toLowerCase(), password.value);
+    await login(username.value.trim().toLowerCase(), password.value, totpCode.value);
     const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients';
     router.push(target);
   } catch (err) {
+    if (err.totpRequired) {
+      needsTotp.value = true;
+      error.value = totpCode.value ? 'Код не подошёл' : '';
+      totpCode.value = '';
+      return;
+    }
     error.value = err.message || 'Не удалось войти';
   } finally {
     busy.value = false;

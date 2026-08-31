@@ -49,15 +49,22 @@ export async function refreshRegistrationStatus() {
   }
 }
 
-export async function login(username, password) {
+export async function login(username, password, code) {
   const res = await fetch('/api/admin/login', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, code }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
+    // Второй фактор - не отказ, а следующий шаг: экран входа показывает поле
+    // кода вместо ошибки
+    if (data.totp_required) {
+      const needsCode = new Error(data.message || 'нужен код');
+      needsCode.totpRequired = true;
+      throw needsCode;
+    }
     throw new Error(data.message || 'login failed');
   }
   const data = await res.json();

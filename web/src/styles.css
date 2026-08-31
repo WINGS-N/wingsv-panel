@@ -1052,6 +1052,15 @@
     @apply text-[12px] text-wings-kicker;
   }
 
+  .totp-qr {
+    @apply mt-3 h-52 w-52 rounded-[20px] bg-white p-3;
+  }
+
+  .backup-codes {
+    @apply grid gap-2 text-[15px];
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
   .probe-icon {
     @apply h-9 w-9 shrink-0 object-contain;
   }

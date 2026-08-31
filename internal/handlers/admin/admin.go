@@ -97,6 +97,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// администратора - одно другого не отменяет
 	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
 	mux.HandleFunc("/api/admin/me/totp", h.requireAuth(h.handleTOTP))
+	mux.HandleFunc("/api/admin/me/totp/qr", h.requireAuth(h.handleTOTPQR))
 	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,
 	// приложение меняет его на токен устройства и дальше ходит только по нему
 	mux.HandleFunc("/app/link", h.requireAuth(h.handleAppLink))

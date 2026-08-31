@@ -50,6 +50,51 @@
       </div>
     </form>
 
+    <h2 class="admin-section-subtitle mt-6">Второй фактор</h2>
+    <p class="admin-muted">
+      Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении. Пароль сам по себе
+      входом перестаёт быть.
+    </p>
+    <p v-if="totpError" class="state-error mt-2">{{ totpError }}</p>
+
+    <div v-if="totp.enabled" class="actions-row mt-3">
+      <span class="admin-pill is-online">включён</span>
+      <span class="admin-muted">резервных кодов осталось: {{ totp.backup_codes }}</span>
+      <SamsungButton variant="ghost" :busy="totpBusy" @click="disableTotp">Отключить</SamsungButton>
+    </div>
+
+    <template v-else-if="totpSetup.otpauth">
+      <p class="body-copy mt-3">
+        Отсканируйте код приложением-аутентификатором и введите шесть цифр, которые оно покажет.
+      </p>
+      <img v-if="totpQr" :src="totpQr" alt="QR второго фактора" class="totp-qr" />
+      <p class="admin-mono admin-muted">{{ totpSetup.secret }}</p>
+      <div class="form-grid mt-3">
+        <OneuiInput v-model.trim="totpCode" label="Код из приложения" inputmode="numeric" maxlength="6" />
+      </div>
+      <div class="actions-row">
+        <SamsungButton :busy="totpBusy" @click="confirmTotp">Подтвердить</SamsungButton>
+        <SamsungButton variant="ghost" @click="totpSetup.otpauth = ''">Отмена</SamsungButton>
+      </div>
+    </template>
+
+    <div v-else class="actions-row mt-3">
+      <SamsungButton :busy="totpBusy" @click="startTotp">
+        <template #icon><ShieldCheck class="button-icon" aria-hidden="true" /></template>
+        Включить
+      </SamsungButton>
+    </div>
+
+    <!-- Коды показываются один раз: панель их не хранит в открытом виде -->
+    <div v-if="backupCodes.length" class="entry-card mt-4">
+      <p class="body-copy">
+        Сохраните резервные коды. Каждый работает один раз и нужен, когда телефона с аутентификатором нет под рукой.
+      </p>
+      <ul class="backup-codes mt-3">
+        <li v-for="code in backupCodes" :key="code" class="admin-mono">{{ code }}</li>
+      </ul>
+    </div>
+
     <template v-if="matrix.enabled">
       <h2 class="admin-section-subtitle mt-5">Matrix</h2>
       <p class="admin-muted">
@@ -71,14 +116,27 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { Camera, KeyRound, Trash2 } from 'lucide-vue-next';
+import { Camera, KeyRound, ShieldCheck, Trash2 } from 'lucide-vue-next';
 import { authState, changePassword, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
+const totp = reactive({ enabled: false, pending: false, backup_codes: 0 });
+const totpSetup = reactive({ secret: '', otpauth: '' });
+const totpCode = ref('');
+const totpBusy = ref(false);
+const totpError = ref('');
+const backupCodes = ref([]);
+// Картинку рисует панель по своему же секрету: принимать её содержимое
+// параметром значило бы рисовать чужой QR по чужой просьбе
+const totpQr = computed(() => (totpSetup.otpauth ? `/api/admin/me/totp/qr?v=${totpVersion.value}` : ''));
+const totpVersion = ref(0);
+
 const matrix = reactive({ enabled: false, homeserver: '', matrix_id: '' });
 const matrixBusy = ref(false);
 const matrixError = ref('');
+
+onMounted(loadTotp);
 
 onMounted(loadMatrix);
 

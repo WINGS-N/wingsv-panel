@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	qrcode "github.com/skip2/go-qrcode"
 
 	"v.wingsnet.org/internal/storage"
 )
@@ -16,6 +19,34 @@ import (
 // backupCodeCount - сколько резервных кодов выдаётся за раз. Потерянный телефон
 // не должен превращаться в потерянный аккаунт
 const backupCodeCount = 10
+
+// handleTOTPQR рисует QR по секрету этого же аккаунта
+func (h *Handler) handleTOTPQR(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	state, err := h.store.TOTPFor(admin.ID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "второй фактор не настраивался")
+		return
+	}
+	key, err := otp.NewKeyFromURL(otpauthURL(admin.Username, state.Secret))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	png, err := qrcode.Encode(key.URL(), qrcode.Medium, 512)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "no-store, private")
+	_, _ = w.Write(png)
+}
+
+// otpauthURL собирает ссылку, которую понимают аутентификаторы
+func otpauthURL(username, secret string) string {
+	return fmt.Sprintf("otpauth://totp/WINGS%%20V:%s?secret=%s&issuer=WINGS%%20V&algorithm=SHA1&digits=6&period=30",
+		url.PathEscape(username), secret)
+}
 
 // handleTOTP управляет вторым фактором своего аккаунта
 func (h *Handler) handleTOTP(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
