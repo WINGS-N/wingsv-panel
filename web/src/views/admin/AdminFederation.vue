@@ -111,6 +111,12 @@
             <span class="inline-flex items-center gap-1">
               <Users :size="13" aria-hidden="true" />{{ node.sessions }}
             </span>
+            <span v-if="node.xray_version" class="inline-flex items-center gap-1" title="Сборка Xray на ноде">
+              <Boxes :size="13" aria-hidden="true" />{{ node.xray_version }}
+            </span>
+            <span v-if="node.vktp_version" class="inline-flex items-center gap-1" title="Сборка релея на ноде">
+              <Radio :size="13" aria-hidden="true" />{{ node.vktp_version }}
+            </span>
             <span class="inline-flex items-center gap-1">
               <ArrowUp :size="13" :style="{ color: FLOW_UP }" aria-hidden="true" />{{ bytes(node.used_bytes) }}
               <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
@@ -153,6 +159,8 @@ import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import {
   ArrowDown,
   ArrowUp,
+  Boxes,
+  Radio,
   CalendarRange,
   PauseCircle,
   Pencil,

@@ -48,6 +48,8 @@ type federationNodeView struct {
 	Reason              string  `json:"reason"`
 	Online              bool    `json:"online"`
 	AesNi               bool    `json:"aes_ni"`
+	XrayVersion         string  `json:"xray_version"`
+	VktpVersion         string  `json:"vktp_version"`
 	DeclaredBudgetBytes uint64  `json:"declared_budget_bytes"`
 	UsedBytes           uint64  `json:"used_bytes"`
 	JoinedUnix          int64   `json:"joined_unix"`
@@ -152,6 +154,8 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 			Reason:              n.GetReason(),
 			Online:              n.GetOnline(),
 			AesNi:               n.GetAesNi(),
+			XrayVersion:         n.GetXrayVersion(),
+			VktpVersion:         n.GetVktpVersion(),
 			DeclaredBudgetBytes: n.GetDeclaredBudgetBytes(),
 			UsedBytes:           n.GetUsedBytes(),
 			JoinedUnix:          n.GetJoinedUnix(),

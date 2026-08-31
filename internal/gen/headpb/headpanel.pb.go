@@ -993,8 +993,11 @@ type NodeSummary struct {
 	JoinedUnix          int64         `protobuf:"varint,11,opt,name=joined_unix,json=joinedUnix,proto3" json:"joined_unix,omitempty"`
 	LastSeenUnix        int64         `protobuf:"varint,12,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
 	Live                *NodeCounters `protobuf:"bytes,13,opt,name=live,proto3" json:"live,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Сборки, которые нода несёт на самом деле
+	XrayVersion   string `protobuf:"bytes,22,opt,name=xray_version,json=xrayVersion,proto3" json:"xray_version,omitempty"`
+	VktpVersion   string `protobuf:"bytes,23,opt,name=vktp_version,json=vktpVersion,proto3" json:"vktp_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NodeSummary) Reset() {
@@ -1130,6 +1133,20 @@ func (x *NodeSummary) GetLive() *NodeCounters {
 		return x.Live
 	}
 	return nil
+}
+
+func (x *NodeSummary) GetXrayVersion() string {
+	if x != nil {
+		return x.XrayVersion
+	}
+	return ""
+}
+
+func (x *NodeSummary) GetVktpVersion() string {
+	if x != nil {
+		return x.VktpVersion
+	}
+	return ""
 }
 
 type MintEnrollTokenRequest struct {
@@ -3011,7 +3028,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x10ListNodesRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\"K\n" +
 	"\x11ListNodesResponse\x126\n" +
-	"\x05nodes\x18\x01 \x03(\v2 .wingsv.headpanel.v1.NodeSummaryR\x05nodes\"\xe7\x03\n" +
+	"\x05nodes\x18\x01 \x03(\v2 .wingsv.headpanel.v1.NodeSummaryR\x05nodes\"\xad\x04\n" +
 	"\vNodeSummary\x12#\n" +
 	"\roffered_ports\x18\x14 \x03(\rR\fofferedPorts\x12!\n" +
 	"\freality_dest\x18\x15 \x01(\tR\vrealityDest\x12\x17\n" +
@@ -3030,7 +3047,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"\vjoined_unix\x18\v \x01(\x03R\n" +
 	"joinedUnix\x12$\n" +
 	"\x0elast_seen_unix\x18\f \x01(\x03R\flastSeenUnix\x125\n" +
-	"\x04live\x18\r \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04live\"h\n" +
+	"\x04live\x18\r \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04live\x12!\n" +
+	"\fxray_version\x18\x16 \x01(\tR\vxrayVersion\x12!\n" +
+	"\fvktp_version\x18\x17 \x01(\tR\vvktpVersion\"h\n" +
 	"\x16MintEnrollTokenRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\rR\n" +

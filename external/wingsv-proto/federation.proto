@@ -289,6 +289,10 @@ message Heartbeat {
   string vktp_state = 9;
   uint64 iface_rx_bytes = 10;
   uint64 iface_tx_bytes = 11;
+  // Версии живут здесь, а не только в hello: hello уходит раньше, чем ядро и
+  // релей поднялись, и голова видела бы пустые строки до переподключения
+  string xray_version = 12;
+  string vktp_version = 13;
 }
 
 message InboundSample {

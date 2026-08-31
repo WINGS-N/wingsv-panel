@@ -180,6 +180,9 @@ message NodeSummary {
   int64 joined_unix = 11;
   int64 last_seen_unix = 12;
   NodeCounters live = 13;
+  // Сборки, которые нода несёт на самом деле
+  string xray_version = 22;
+  string vktp_version = 23;
 }
 
 message MintEnrollTokenRequest {
