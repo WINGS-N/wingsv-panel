@@ -3,6 +3,7 @@ package owner
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,7 +52,8 @@ func (h *Handler) handleProbes(w http.ResponseWriter, r *http.Request, _ storage
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), headTimeout)
 	defer cancel()
-	got, err := h.fed.ProbeReports(ctx)
+	limit, offset := pageParams(r, 25)
+	got, err := h.fed.ProbeReports(ctx, limit, offset)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
 		return
@@ -77,6 +79,7 @@ func (h *Handler) handleProbes(w http.ResponseWriter, r *http.Request, _ storage
 		"enabled":      true,
 		"vantages":     vantages,
 		"measurements": measurements,
+		"total":        got.GetTotal(),
 	})
 }
 
@@ -114,7 +117,8 @@ func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage
 	if raw := r.URL.Query().Get("ids"); raw != "" {
 		ids = strings.Split(raw, ",")
 	}
-	got, err := h.fed.OracleOverview(ctx, 20, ids...)
+	limit, offset := pageParams(r, 20)
+	got, err := h.fed.OracleOverview(ctx, limit, offset, ids...)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
 		return
@@ -143,6 +147,7 @@ func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage
 		"quarantined":   got.GetQuarantined(),
 		"subjects":      subjects,
 		"signals":       signals,
+		"total":         got.GetTotal(),
 		"scorer":        got.GetScorer(),
 		"shadow_scorer": got.GetShadowScorer(),
 	})
@@ -210,4 +215,20 @@ func (h *Handler) handleRunProbes(w http.ResponseWriter, r *http.Request, _ stor
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"probes": woken})
+}
+
+// pageParams читает страницу из запроса
+func pageParams(r *http.Request, fallback uint32) (limit, offset uint32) {
+	limit = fallback
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 500 {
+			limit = uint32(n)
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			offset = uint32(n)
+		}
+	}
+	return limit, offset
 }

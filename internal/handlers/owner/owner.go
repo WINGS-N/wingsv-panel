@@ -324,7 +324,8 @@ func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ sto
 	for _, a := range admins {
 		briefByID[a.ID] = adminBrief{name: a.Username, avatarVer: a.AvatarVersion}
 	}
-	clients, err := h.store.ListAllClients()
+	limit, offset := pageParams(r, 50)
+	clients, total, err := h.store.PageAllClients(int(limit), int(offset))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -352,7 +353,7 @@ func (h *Handler) handleAllClients(w http.ResponseWriter, r *http.Request, _ sto
 		}
 		out = append(out, view)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"clients": out})
+	writeJSON(w, http.StatusOK, map[string]any{"clients": out, "total": total})
 }
 
 // ===== /api/owner/audit =====
@@ -377,12 +378,22 @@ func (h *Handler) handleAudit(w http.ResponseWriter, r *http.Request, _ storage.
 			filter.Limit = n
 		}
 	}
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			filter.Offset = n
+		}
+	}
 	if v := q.Get("since"); v != "" {
 		if ts, err := time.Parse(time.RFC3339, v); err == nil {
 			filter.Since = ts
 		}
 	}
 	entries, err := h.store.ListAudit(filter)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	total, err := h.store.CountAudit(filter)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -401,7 +412,7 @@ func (h *Handler) handleAudit(w http.ResponseWriter, r *http.Request, _ storage.
 			"ip":             e.IP,
 		})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"entries": out})
+	writeJSON(w, http.StatusOK, map[string]any{"entries": out, "total": total})
 }
 
 // ===== /api/owner/stats =====

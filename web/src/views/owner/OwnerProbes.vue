@@ -62,7 +62,7 @@
       По каждому адресу и транспорту отдельно: TCP и XHTTP режут независимо, и выдавать стоит только то, что работает.
     </p>
     <div class="fed-node-list mt-4">
-      <div v-for="m in measurements" :key="m.node_id + m.address + m.transport" class="fed-node-row">
+      <div v-for="m in pagedMeasurements" :key="m.node_id + m.address + m.transport" class="fed-node-row">
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
             <span class="truncate text-[17px]">{{ m.hostname || m.node_id.slice(0, 8) }}</span>
@@ -93,6 +93,7 @@
         </div>
       </div>
     </div>
+    <SamsungPager v-model:page="page" :total="measurements.length" :per-page="perPage" />
   </section>
 </template>
 
@@ -100,6 +101,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Activity, Building2, Clock, Gauge, Handshake, MapPin, Play, Radar, Timer } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungPager from '@/components/controls/SamsungPager.vue';
 import { formatBytes } from '@/utils/format';
 
 const enabled = ref(false);
@@ -108,6 +110,9 @@ const measurements = ref([]);
 const loadError = ref('');
 const running = ref(false);
 const anyOnline = computed(() => vantages.value.some((v) => v.online));
+const page = ref(1);
+const perPage = 25;
+const pagedMeasurements = computed(() => measurements.value.slice((page.value - 1) * perPage, page.value * perPage));
 const runNote = ref('');
 let timer = null;
 

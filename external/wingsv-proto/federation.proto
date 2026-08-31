@@ -1,0 +1,533 @@
+// Agent to head. Two RPCs on purpose: Join uses the enroll token, Session uses
+// the node secret. Extra unary RPCs would be extra failure modes behind NAT
+syntax = "proto3";
+
+package wingsv.federation.v1;
+
+option go_package = "wingsnet.org/federation/gen/fedpb;fedpb";
+
+service Federation {
+  rpc Join(JoinRequest) returns (JoinResponse);
+  rpc Session(stream AgentFrame) returns (stream HeadFrame);
+  // Vantage point inside the censored network. A node can be healthy from the
+  // head's network and unusable from where the users are
+  rpc ProbeSession(stream ProbeFrame) returns (stream ProbeTask);
+}
+
+// Nodes are often shaped rather than blocked, so a handshake check says "fine"
+// while the user gets kilobytes per second. Hence throughput, not just success
+message ProbeReport {
+  string node_id = 1;
+  // Which address was measured: a node often has several and only some work
+  string address = 11;
+  // tcp and xhttp are blocked independently, so the head hands out only the one
+  // that works rather than dropping the node
+  string transport = 2;
+  bool handshake_ok = 3;
+  uint32 handshake_ms = 4;
+  uint64 download_bps = 5;
+  uint64 upload_bps = 6;
+  uint32 rtt_ms = 7;
+  double loss_pct = 8;
+  int64 measured_unix = 9;
+  string error = 10;
+}
+
+message ProbeHello {
+  string probe_id = 1;
+  string region = 2;
+  string isp = 3;
+  string asn = 4;
+  string agent_version = 5;
+}
+
+message ProbeFrame {
+  oneof frame {
+    ProbeHello hello = 1;
+    ProbeReport report = 2;
+    Heartbeat heartbeat = 3;
+  }
+}
+
+// The head mints a throwaway profile per probe, so no real user identity lands
+// on a vantage point.
+//
+// Xray only: probing VKTP would measure VK's relays, not the donated node
+message ProbeTarget {
+  string node_id = 1;
+  string transport = 2;
+  string host = 3;
+  uint32 port = 4;
+  string uuid = 5;
+  string flow = 6;
+  string reality_public_key = 7;
+  string server_name = 8;
+  string short_id = 9;
+  string xhttp_path = 10;
+  uint32 download_bytes = 11;
+  // What to fetch through the tunnel. The head owns it so the whole probe fleet
+  // can be moved off a target that starts rate-limiting, without touching a
+  // single vantage point
+  string download_url = 12;
+  // Post-quantum verify half, when the node reported one. A probe that omits it
+  // against a node that requires it measures a failure that is not there
+  string mldsa65_verify = 13;
+}
+
+message ProbeTask {
+  repeated ProbeTarget targets = 1;
+  uint32 interval_seconds = 2;
+}
+
+// Three sources speak about an address and only the last settles it: the node
+// reports its interfaces, the head observes the source it connected from (which
+// the node cannot forge), and a probe proves traffic actually flows
+message NodeAddress {
+  string address = 1;
+  // IPv6 is a bonus, never a substitute: most users reach us over IPv4 only, so
+  // a node with no verified IPv4 counts as unreachable no matter its score
+  bool ipv6 = 2;
+  // source records who claims this address: "reported" from the agent's own
+  // interfaces, "observed" from the head seeing the connection arrive, or
+  // "configured" when an operator pinned it by hand
+  string source = 3;
+  int64 first_seen_unix = 4;
+}
+
+// Sent whenever the set changes, not only at enrollment: a vanished address must
+// be retired fast, a new one probed before anybody gets it
+message AddressReport {
+  repeated NodeAddress addresses = 1;
+}
+
+// Self-reported and therefore untrusted; the head verifies before rotation
+message NodePassport {
+  string hostname = 1;
+  // A set, because providers move servers between addresses and often leave the
+  // old one in place. Every entry is a candidate until verified
+  repeated NodeAddress addresses = 2;
+  reserved 3;
+  string arch = 4;
+  string os = 5;
+  string kernel = 6;
+  uint32 cpu_cores = 7;
+  uint64 mem_bytes = 8;
+  uint32 nic_speed_mbps = 9;
+  string agent_version = 10;
+  bool has_root = 11;
+  bool kernel_wg_available = 12;
+  // Picks the WRAP cipher the head puts in the profile. A hint carried in
+  // config, not a handshake negotiation: without AES-NI, ChaCha20 wins
+  bool aes_ni = 13;
+  // Declared by the operator at enrollment, never looked up: the head has no ASN
+  // database. Used only to keep a user's two nodes off one provider, so a wrong
+  // value costs its own donor a little diversity and nobody else anything
+  string asn = 14;
+  string country = 15;
+}
+
+message JoinRequest {
+  string enroll_token = 1;
+  // Derived on the machine so a re-enrolled node is recognised as the same one
+  string node_fingerprint = 2;
+  NodePassport passport = 3;
+  uint64 declared_monthly_budget_bytes = 4;
+  // Нода стоит за прокси, который терминирует 443 и отдаёт адрес клиента
+  // заголовком PROXY protocol. Так живут ноды в нашем кластере, где 443 держит
+  // ingress; на донорской VPS этого нет и не нужно.
+  bool behind_proxy = 30;
+  // Порт прокси, куда стучится клиент. Уходит в выданные ссылки вместо того,
+  // что слушает Xray
+  uint32 public_port = 31;
+  repeated uint32 offered_ports = 5;
+  string donor_hint = 6;
+}
+
+message JoinResponse {
+  string node_id = 1;
+  string node_secret = 2;
+  string head_endpoint = 3;
+  NodeConfig initial_config = 4;
+  uint32 heartbeat_interval_ms = 5;
+  uint32 stats_interval_ms = 6;
+  // The head owns the candidate list, the agent owns the verdict: a target fast
+  // from one country can be censored from another
+  repeated string reality_candidates = 7;
+  string error = 8;
+}
+
+// Public halves only. The private key stays on the node, or one compromised
+// donor burns the whole fleet's inbound identity
+message RealityIdentity {
+  repeated string server_names = 1;
+  string dest = 2;
+  uint32 xver = 3;
+  repeated string short_ids = 4;
+  // Which uTLS fingerprint clients should impersonate. A client-side hint the
+  // head owns, so the whole fleet can be moved off a fingerprint that starts
+  // getting flagged without touching a single node
+  string fingerprint = 5;
+  // post_quantum turns on ML-DSA-65 signing of the borrowed certificate.
+  //
+  // Off by default, and that is deliberate. REALITY has to hide its response
+  // inside the TLS handshake it borrows from dest, and the ML-DSA-65 signature
+  // is large enough that many otherwise fine dests cannot fit it: the handshake
+  // then fails with a negative padding and every node goes dark while every
+  // health check still reports green. Turn it on only with a dest measured to
+  // carry it - www.cloudflare.com cannot, dl.google.com can
+  bool post_quantum = 6;
+}
+
+message XhttpSpec {
+  string path = 1;
+  string mode = 2;
+  string host = 3;
+  uint32 sc_max_each_post_bytes = 4;
+  uint32 x_padding_bytes = 5;
+}
+
+message InboundSpec {
+  // Инбаунд стоит за прокси, который отдаёт настоящий адрес клиента заголовком
+  // PROXY protocol. Без этого Xray видит адрес прокси, и GetStatsOnlineIpList
+  // перестаёт отличать одного клиента от сорока - антиабуз не падает, он
+  // молча замолкает.
+  bool accept_proxy_protocol = 20;
+  // Порт, который видит клиент. Отличается от port, когда инбаунд стоит за
+  // прокси: слушает он локальный, а в ссылку должен идти тот, куда клиент
+  // реально стучится - иначе выданные ссылки ведут в никуда.
+  uint32 public_port = 21;
+  string tag = 1;
+  string protocol = 2;
+  string listen = 3;
+  uint32 port = 4;
+  // Reality rides in per-inbound stream settings, so both share one identity
+  string network = 5;
+  XhttpSpec xhttp = 6;
+  // Vision on tcp, empty on xhttp. VLESS rejects a vision account whose client
+  // sent an empty flow, so one client entry cannot serve both inbounds
+  string flow = 7;
+  bool reality = 8;
+  string decryption = 9;
+}
+
+message VKTPSpec {
+  bool enabled = 1;
+  uint32 listen_port = 2;
+  string wrap_mode = 3;
+  string wrap_cipher = 4;
+  string wg_tunnel_cidr = 5;
+  uint32 wg_listen_port = 6;
+}
+
+message RoutingPolicy {
+  repeated string blocked_geosite = 1;
+  repeated uint32 blocked_ports = 2;
+  bool block_bittorrent = 3;
+  bool block_private = 4;
+}
+
+message SniffPolicy {
+  bool enabled = 1;
+  repeated string dest_override = 2;
+}
+
+message LimitsSpec {
+  uint32 max_sessions = 1;
+  uint64 rate_bytes_per_sec = 2;
+}
+
+message NodeConfig {
+  uint64 version = 1;
+  RealityIdentity reality = 2;
+  repeated InboundSpec inbounds = 3;
+  VKTPSpec vktp = 4;
+  RoutingPolicy routing = 5;
+  SniffPolicy sniff = 6;
+  LimitsSpec limits = 7;
+  // Какие сборки нести. Приезжают в конфиге, а не задаются флагом на ноде:
+  // версия - решение оператора для всего флота, и донор не должен ходить на свой
+  // сервер, чтобы её сменить.
+  BinarySpec xray_build = 8;
+  BinarySpec vktp_build = 9;
+  // Ставить новую сборку самому, как только она приехала в конфиге. Выключено -
+  // нода сообщает о расхождении и ждёт явной команды: перезапуск Xray рвёт живые
+  // соединения, и на чужом сервере это решение не наше.
+  bool auto_upgrade = 10;
+}
+
+// BinarySpec - что качать и чем проверить. Хеш обязателен: без него нода
+// выполняет всё, что отдал сервер раздачи.
+message BinarySpec {
+  string version = 1;
+  string url = 2;
+  string sha512 = 3;
+}
+
+message Hello {
+  string node_id = 1;
+  // Changes on restart, telling the head the counters went back to zero. Without
+  // it a reboot silently refunds the traffic the donor already spent
+  string boot_id = 2;
+  string agent_version = 3;
+  string xray_version = 4;
+  string vktp_version = 5;
+  uint64 config_version = 6;
+  // Паспорт переезжает вместе с нодой: провайдер меняет адрес и не убирает
+  // старый, а зачисление случается один раз за всю жизнь ноды
+  NodePassport passport = 7;
+}
+
+message Heartbeat {
+  int64 unix_ms = 1;
+  double cpu_pct = 2;
+  double load1 = 3;
+  uint64 mem_used_bytes = 4;
+  uint64 mem_total_bytes = 5;
+  uint64 disk_free_bytes = 6;
+  uint64 uptime_seconds = 7;
+  string xray_state = 8;
+  string vktp_state = 9;
+  uint64 iface_rx_bytes = 10;
+  uint64 iface_tx_bytes = 11;
+}
+
+message InboundSample {
+  string tag = 1;
+  uint64 up_bytes = 2;
+  uint64 down_bytes = 3;
+  uint32 sessions = 4;
+}
+
+// Cumulative, never deltas: the head derives rates, so a dropped sample is free
+message StatsSample {
+  int64 unix_ms = 1;
+  uint64 seq = 2;
+  string boot_id = 3;
+  uint64 total_up_bytes = 4;
+  uint64 total_down_bytes = 5;
+  uint32 active_sessions = 6;
+  uint32 active_streams = 7;
+  repeated InboundSample inbounds = 8;
+  // Трафик наших собственных замеров. Он входит в total_* и в общую статистику,
+  // но из бюджета донора вычитается: это наша проверка, а не его пользователи
+  uint64 probe_bytes = 9;
+}
+
+message ProfileDeltaSample {
+  string profile_id = 1;
+  uint64 up_delta_bytes = 2;
+  uint64 down_delta_bytes = 3;
+  int64 last_seen_ms = 4;
+}
+
+message ProfileSample {
+  repeated ProfileDeltaSample profiles = 1;
+}
+
+message BudgetReport {
+  int64 period_start_unix = 1;
+  uint64 used_bytes_this_period = 2;
+  uint64 declared_budget_bytes = 3;
+  uint64 remaining_bytes = 4;
+  int64 projected_exhaustion_unix = 5;
+}
+
+message ProbeResult {
+  string target = 1;
+  // feasible is the cheap TLS-level verdict: worth trying, nothing more
+  bool feasible = 2;
+  bool tls13 = 3;
+  bool h2 = 4;
+  bool x25519 = 5;
+  bool cert_valid = 6;
+  uint32 latency_ms = 7;
+  // server_names are the certificate's SANs. One host yields a pool: the cert on
+  // music.yandex.ru also covers the .uz and .kz names, and each is a usable SNI
+  repeated string server_names = 8;
+  string error = 9;
+  // reality_ok and post_quantum_ok come from an actual REALITY handshake, not
+  // from inspecting the TLS response. Nothing inspectable predicts either one:
+  // a 4605-byte handshake carries ML-DSA-65 while a 3888-byte one does not, and
+  // a 9895-byte one fails even plain
+  bool reality_ok = 10;
+  bool post_quantum_ok = 11;
+  // handshake_bytes is what the dest sent back, kept for diagnosis rather than
+  // for deciding anything
+  uint32 handshake_bytes = 12;
+}
+
+message ConfigAck {
+  uint64 config_version = 1;
+  bool ok = 2;
+  string error = 3;
+  int64 applied_unix = 4;
+  repeated string effective_inbounds = 5;
+  // reality_public_key and mldsa65_verify are the public halves of the keypair
+  // the node generated locally; the head needs them only to build share links
+  string reality_public_key = 6;
+  string mldsa65_verify = 7;
+  repeated ProbeResult probe_results = 8;
+}
+
+// A class, never a destination: the agent classifies locally
+enum AbuseKind {
+  ABUSE_KIND_UNSPECIFIED = 0;
+  ABUSE_KIND_ADS = 1;
+  ABUSE_KIND_MALWARE = 2;
+  ABUSE_KIND_TORRENT = 3;
+  ABUSE_KIND_MAIL_PORT = 4;
+  ABUSE_KIND_PORT_SCAN = 5;
+  ABUSE_KIND_HIGH_FANOUT = 6;
+  ABUSE_KIND_UPLOAD_HEAVY = 7;
+  // Профиль работает одновременно из мест, между которыми сотни километров.
+  // Считает нода: count - расстояние в сотнях километров, сами адреса и города
+  // остаются на ней и голове не отправляются
+  ABUSE_KIND_GEO_SPREAD = 8;
+}
+
+message AbuseSignal {
+  string profile_id = 1;
+  AbuseKind kind = 2;
+  double weight = 3;
+  uint32 count = 4;
+  uint32 window_seconds = 5;
+}
+
+// A receipt is the client's signed statement of what it actually received. The
+// node cannot forge one, so this is the only volume number worth paying on.
+//
+// Counted as tunnel payload, never interface bytes: an interface counter drags
+// in local DNS, keepalives and tunnel overhead, and the two sides would never
+// reconcile because they would be counting different things
+message TrafficReceipt {
+  string client_id = 1;
+  string node_id = 2;
+  // Which path carried the bytes: "xray" or "vktp". A donor can serve both and
+  // they are metered differently, so a receipt that does not say is unusable
+  string transport = 9;
+  int64 window_start_unix = 3;
+  int64 window_end_unix = 4;
+  uint64 payload_up_bytes = 5;
+  uint64 payload_down_bytes = 6;
+  // nonce stops a node replaying one receipt for several windows
+  string nonce = 7;
+  // Ed25519 over the canonical encoding, keyed by the client's registered key
+  bytes signature = 8;
+}
+
+message ReceiptBatch {
+  repeated TrafficReceipt receipts = 1;
+}
+
+message Alarm {
+  string level = 1;
+  string code = 2;
+  string message = 3;
+}
+
+message AgentFrame {
+  oneof frame {
+    Hello hello = 1;
+    Heartbeat heartbeat = 2;
+    StatsSample stats = 3;
+    ProfileSample profiles = 4;
+    BudgetReport budget = 5;
+    ConfigAck config_ack = 6;
+    AbuseSignal abuse = 7;
+    Alarm alarm = 8;
+    AddressReport addresses = 9;
+    ReceiptBatch receipts = 10;
+    // Sent when a scan finishes, which is minutes after the config was applied:
+    // spinning a real handshake per candidate cannot block the ack
+    RealityScan reality_scan = 11;
+  }
+}
+
+// RealityScan reports which dests this node verified. Nodes disagree - a dest
+// reachable from Frankfurt can be censored from another network - so the head
+// wants several nodes' verdicts before moving the fleet
+message RealityScan {
+  repeated ProbeResult results = 1;
+  int64 completed_unix = 2;
+}
+
+message ProfileSpec {
+  // Federation profiles are metered: they are issued to free users running our
+  // own app, which signs traffic receipts. Everything else on the node - an
+  // admin's paying clients on vanilla v2rayNG, nekoray and the rest - is never
+  // metered, never asked for a receipt and never scored. Those clients cannot
+  // sign anything and must keep working untouched
+  bool metered = 6;
+  string profile_id = 1;
+  string uuid = 2;
+  string email = 3;
+  // One entry per inbound, because vision cannot be shared across both
+  string inbound_tag = 4;
+  string flow = 5;
+}
+
+message ProfileDelta {
+  repeated ProfileSpec add = 1;
+  repeated string remove_profile_ids = 2;
+  // replace makes add authoritative: anything the node holds that is not listed
+  // is dropped. Sent when a node reconnects, because a removal issued while it
+  // was down is simply lost - and a node that comes back still serving somebody
+  // who was moved off it is a profile nobody is accounting for
+  bool replace = 3;
+}
+
+enum RotationState {
+  ROTATION_STATE_UNSPECIFIED = 0;
+  ROTATION_STATE_ACTIVE = 1;
+  ROTATION_STATE_DRAINING = 2;
+  ROTATION_STATE_PARKED = 3;
+  ROTATION_STATE_QUARANTINED = 4;
+}
+
+message RotationCommand {
+  RotationState state = 1;
+  string reason = 2;
+  int64 resume_after_unix = 3;
+}
+
+message BudgetUpdate {
+  uint64 declared_budget_bytes = 1;
+  int64 period_start_unix = 2;
+}
+
+message Ping {
+  uint64 nonce = 1;
+}
+
+// Defined so the wire never breaks for it, deliberately not implemented: a bad
+// auto-upgrade bricks servers belonging to other people
+message UpgradeCommand {
+  string component = 1;
+  string version = 2;
+  string url = 3;
+  string sha512 = 4;
+  // Перезапустить компонент, ничего не скачивая. Так оператор чинит зависший
+  // Xray, не трогая версию.
+  bool restart_only = 5;
+}
+
+message Ack {
+  uint64 seq = 1;
+}
+
+message SecretRotate {
+  string new_secret = 1;
+}
+
+message HeadFrame {
+  oneof frame {
+    NodeConfig config_push = 1;
+    ProfileDelta profile_delta = 2;
+    RotationCommand rotation = 3;
+    BudgetUpdate budget = 4;
+    Ping ping = 5;
+    UpgradeCommand upgrade = 6;
+    Ack ack = 7;
+    SecretRotate secret_rotate = 8;
+  }
+}

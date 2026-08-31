@@ -10,6 +10,8 @@
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
     <SamsungSectionLoader v-else-if="loading && !entries.length" />
 
+    <SamsungPager v-model:page="page" :total="total" :per-page="perPage" />
+
     <ul v-if="entries.length" class="admin-list mt-4">
       <li v-for="e in entries" :key="e.id" class="session-row">
         <div>
@@ -26,13 +28,17 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import SamsungPager from '@/components/controls/SamsungPager.vue';
+import { onMounted, ref, watch } from 'vue';
 import { RefreshCw } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 
 const entries = ref([]);
+const total = ref(0);
+const page = ref(1);
+const perPage = 50;
 const loading = ref(false);
 const loadError = ref('');
 
@@ -40,10 +46,13 @@ async function load() {
   loading.value = true;
   loadError.value = '';
   try {
-    const res = await fetch('/api/owner/audit?limit=200', { credentials: 'include' });
+    const res = await fetch(`/api/owner/audit?limit=${perPage}&offset=${(page.value - 1) * perPage}`, {
+      credentials: 'include',
+    });
     if (!res.ok) throw new Error(await res.text());
     const body = await res.json();
     entries.value = body.entries || [];
+    total.value = Number(body.total || 0);
   } catch (err) {
     loadError.value = err.message;
   } finally {
@@ -61,4 +70,5 @@ function formatTs(iso) {
 }
 
 onMounted(load);
+watch(page, load);
 </script>

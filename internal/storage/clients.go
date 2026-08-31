@@ -195,19 +195,40 @@ func (s *Store) FindClientByID(id string) (Client, error) {
 }
 
 func (s *Store) ListClientsByOwner(ownerAdminID int64) ([]Client, error) {
-	var ms []dbmodel.Client
-	if err := s.gdb.Where("owner_admin_id = ?", ownerAdminID).Order("created_at DESC").Find(&ms).Error; err != nil {
-		return nil, err
-	}
-	return mapStorageClients(ms), nil
+	clients, _, err := s.PageClientsByOwner(ownerAdminID, 0, 0)
+	return clients, err
+}
+
+// PageClientsByOwner отдаёт страницу вместе с общим числом. Нулевой limit
+// означает всё, как раньше: не каждому вызову нужна страница
+func (s *Store) PageClientsByOwner(ownerAdminID int64, limit, offset int) ([]Client, int64, error) {
+	return s.pageClients(s.gdb.Where("owner_admin_id = ?", ownerAdminID), limit, offset)
 }
 
 func (s *Store) ListAllClients() ([]Client, error) {
-	var ms []dbmodel.Client
-	if err := s.gdb.Order("created_at DESC").Find(&ms).Error; err != nil {
-		return nil, err
+	clients, _, err := s.PageAllClients(0, 0)
+	return clients, err
+}
+
+// PageAllClients - то же для всей платформы
+func (s *Store) PageAllClients(limit, offset int) ([]Client, int64, error) {
+	return s.pageClients(s.gdb.Session(&gorm.Session{}), limit, offset)
+}
+
+func (s *Store) pageClients(q *gorm.DB, limit, offset int) ([]Client, int64, error) {
+	var total int64
+	if err := q.Model(&dbmodel.Client{}).Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return mapStorageClients(ms), nil
+	q = q.Model(&dbmodel.Client{}).Order("created_at DESC")
+	if limit > 0 {
+		q = q.Limit(limit).Offset(offset)
+	}
+	var ms []dbmodel.Client
+	if err := q.Find(&ms).Error; err != nil {
+		return nil, 0, err
+	}
+	return mapStorageClients(ms), total, nil
 }
 
 func mapStorageClients(ms []dbmodel.Client) []Client {

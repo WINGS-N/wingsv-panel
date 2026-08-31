@@ -218,6 +218,9 @@ type GlobalCounters struct {
 	// Since the federation started, not since this period or this process.
 	// Survives a restart, and a node leaving does not take its share away with it
 	LifetimeBytes uint64 `protobuf:"varint,9,opt,name=lifetime_bytes,json=lifetimeBytes,proto3" json:"lifetime_bytes,omitempty"`
+	// С начала текущего периода бюджета. Считается от сохранённой отметки, а не
+	// от счётчиков в памяти, поэтому переживает выкат головы
+	PeriodBytes   uint64 `protobuf:"varint,10,opt,name=period_bytes,json=periodBytes,proto3" json:"period_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -311,6 +314,13 @@ func (x *GlobalCounters) GetDownRateBps() float64 {
 func (x *GlobalCounters) GetLifetimeBytes() uint64 {
 	if x != nil {
 		return x.LifetimeBytes
+	}
+	return 0
+}
+
+func (x *GlobalCounters) GetPeriodBytes() uint64 {
+	if x != nil {
+		return x.PeriodBytes
 	}
 	return 0
 }
@@ -1983,7 +1993,11 @@ func (x *SetNodeBudgetResponse) GetUsedBytes() uint64 {
 }
 
 type ProbeReportsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Страница замеров. Их число растёт как ноды на адреса и транспорты, и
+	// отдавать всё разом значит гонять по сети список, который никто не читает
+	Limit         uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        uint32 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2016,6 +2030,20 @@ func (x *ProbeReportsRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ProbeReportsRequest.ProtoReflect.Descriptor instead.
 func (*ProbeReportsRequest) Descriptor() ([]byte, []int) {
 	return file_headpanel_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ProbeReportsRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ProbeReportsRequest) GetOffset() uint32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
 }
 
 type RunProbesRequest struct {
@@ -2325,9 +2353,11 @@ func (x *ProbeMeasurement) GetAtUnix() int64 {
 }
 
 type ProbeReportsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Vantages      []*ProbeVantage        `protobuf:"bytes,1,rep,name=vantages,proto3" json:"vantages,omitempty"`
-	Measurements  []*ProbeMeasurement    `protobuf:"bytes,2,rep,name=measurements,proto3" json:"measurements,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Vantages     []*ProbeVantage        `protobuf:"bytes,1,rep,name=vantages,proto3" json:"vantages,omitempty"`
+	Measurements []*ProbeMeasurement    `protobuf:"bytes,2,rep,name=measurements,proto3" json:"measurements,omitempty"`
+	// Всего замеров под запрос, до нарезки на страницу
+	Total         uint32 `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2376,10 +2406,18 @@ func (x *ProbeReportsResponse) GetMeasurements() []*ProbeMeasurement {
 	return nil
 }
 
+func (x *ProbeReportsResponse) GetTotal() uint32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 type OracleOverviewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Сколько подозреваемых вернуть, 0 - двадцать
-	Limit uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Limit  uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset uint32 `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
 	// Когда список задан, отдаются вердикты только по нему. Так панель считает
 	// ветку инвайт-дерева: голова про дерево не знает и знать не должна
 	SubjectIds    []string `protobuf:"bytes,2,rep,name=subject_ids,json=subjectIds,proto3" json:"subject_ids,omitempty"`
@@ -2420,6 +2458,13 @@ func (*OracleOverviewRequest) Descriptor() ([]byte, []int) {
 func (x *OracleOverviewRequest) GetLimit() uint32 {
 	if x != nil {
 		return x.Limit
+	}
+	return 0
+}
+
+func (x *OracleOverviewRequest) GetOffset() uint32 {
+	if x != nil {
+		return x.Offset
 	}
 	return 0
 }
@@ -2770,12 +2815,15 @@ func (x *OracleSubject) GetShadowConfidence() int32 {
 }
 
 type OracleOverviewResponse struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Watched     uint32                 `protobuf:"varint,1,opt,name=watched,proto3" json:"watched,omitempty"`
-	Full        uint32                 `protobuf:"varint,2,opt,name=full,proto3" json:"full,omitempty"`
-	Reduced     uint32                 `protobuf:"varint,3,opt,name=reduced,proto3" json:"reduced,omitempty"`
-	Quarantined uint32                 `protobuf:"varint,4,opt,name=quarantined,proto3" json:"quarantined,omitempty"`
-	Subjects    []*OracleSubject       `protobuf:"bytes,5,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Всего наблюдаемых, до нарезки на страницу
+	Total       uint32           `protobuf:"varint,10,opt,name=total,proto3" json:"total,omitempty"`
+	Offset      uint32           `protobuf:"varint,11,opt,name=offset,proto3" json:"offset,omitempty"`
+	Watched     uint32           `protobuf:"varint,1,opt,name=watched,proto3" json:"watched,omitempty"`
+	Full        uint32           `protobuf:"varint,2,opt,name=full,proto3" json:"full,omitempty"`
+	Reduced     uint32           `protobuf:"varint,3,opt,name=reduced,proto3" json:"reduced,omitempty"`
+	Quarantined uint32           `protobuf:"varint,4,opt,name=quarantined,proto3" json:"quarantined,omitempty"`
+	Subjects    []*OracleSubject `protobuf:"bytes,5,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	// Сигналы за сутки по классам
 	Signals       []*OracleClass `protobuf:"bytes,6,rep,name=signals,proto3" json:"signals,omitempty"`
 	Scorer        string         `protobuf:"bytes,7,opt,name=scorer,proto3" json:"scorer,omitempty"`
@@ -2812,6 +2860,20 @@ func (x *OracleOverviewResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use OracleOverviewResponse.ProtoReflect.Descriptor instead.
 func (*OracleOverviewResponse) Descriptor() ([]byte, []int) {
 	return file_headpanel_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *OracleOverviewResponse) GetTotal() uint32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *OracleOverviewResponse) GetOffset() uint32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
 }
 
 func (x *OracleOverviewResponse) GetWatched() uint32 {
@@ -2884,7 +2946,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\aunix_ms\x18\x01 \x01(\x03R\x06unixMs\x12;\n" +
 	"\x06global\x18\x02 \x01(\v2#.wingsv.headpanel.v1.GlobalCountersR\x06global\x128\n" +
 	"\x05donor\x18\x03 \x01(\v2\".wingsv.headpanel.v1.DonorCountersR\x05donor\x125\n" +
-	"\x04node\x18\x04 \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04node\"\xaf\x02\n" +
+	"\x04node\x18\x04 \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04node\"\xd2\x02\n" +
 	"\x0eGlobalCounters\x12\x1f\n" +
 	"\vnodes_total\x18\x01 \x01(\rR\n" +
 	"nodesTotal\x12!\n" +
@@ -2896,7 +2958,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"down_bytes\x18\x06 \x01(\x04R\tdownBytes\x12\x1e\n" +
 	"\vup_rate_bps\x18\a \x01(\x01R\tupRateBps\x12\"\n" +
 	"\rdown_rate_bps\x18\b \x01(\x01R\vdownRateBps\x12%\n" +
-	"\x0elifetime_bytes\x18\t \x01(\x04R\rlifetimeBytes\"\x95\x02\n" +
+	"\x0elifetime_bytes\x18\t \x01(\x04R\rlifetimeBytes\x12!\n" +
+	"\fperiod_bytes\x18\n" +
+	" \x01(\x04R\vperiodBytes\"\x95\x02\n" +
 	"\x0ePublicCounters\x12\x17\n" +
 	"\aunix_ms\x18\x01 \x01(\x03R\x06unixMs\x12!\n" +
 	"\fnodes_online\x18\x02 \x01(\rR\vnodesOnline\x12!\n" +
@@ -3021,8 +3085,10 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x15SetNodeBudgetResponse\x122\n" +
 	"\x15declared_budget_bytes\x18\x01 \x01(\x04R\x13declaredBudgetBytes\x12\x1d\n" +
 	"\n" +
-	"used_bytes\x18\x02 \x01(\x04R\tusedBytes\"\x15\n" +
-	"\x13ProbeReportsRequest\"\x12\n" +
+	"used_bytes\x18\x02 \x01(\x04R\tusedBytes\"C\n" +
+	"\x13ProbeReportsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\rR\x06offset\"\x12\n" +
 	"\x10RunProbesRequest\"+\n" +
 	"\x11RunProbesResponse\x12\x16\n" +
 	"\x06probes\x18\x01 \x01(\rR\x06probes\"\xe1\x01\n" +
@@ -3047,12 +3113,14 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x05error\x18\t \x01(\tR\x05error\x12\x19\n" +
 	"\bprobe_id\x18\n" +
 	" \x01(\tR\aprobeId\x12\x17\n" +
-	"\aat_unix\x18\v \x01(\x03R\x06atUnix\"\xa0\x01\n" +
+	"\aat_unix\x18\v \x01(\x03R\x06atUnix\"\xb6\x01\n" +
 	"\x14ProbeReportsResponse\x12=\n" +
 	"\bvantages\x18\x01 \x03(\v2!.wingsv.headpanel.v1.ProbeVantageR\bvantages\x12I\n" +
-	"\fmeasurements\x18\x02 \x03(\v2%.wingsv.headpanel.v1.ProbeMeasurementR\fmeasurements\"N\n" +
+	"\fmeasurements\x18\x02 \x03(\v2%.wingsv.headpanel.v1.ProbeMeasurementR\fmeasurements\x12\x14\n" +
+	"\x05total\x18\x03 \x01(\rR\x05total\"f\n" +
 	"\x15OracleOverviewRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x1f\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\rR\x06offset\x12\x1f\n" +
 	"\vsubject_ids\x18\x02 \x03(\tR\n" +
 	"subjectIds\"5\n" +
 	"\x14OracleSubjectRequest\x12\x1d\n" +
@@ -3083,8 +3151,11 @@ const file_headpanel_proto_rawDesc = "" +
 	"\aclasses\x18\x06 \x03(\v2 .wingsv.headpanel.v1.OracleClassR\aclasses\x12\x1f\n" +
 	"\vshadow_band\x18\a \x01(\tR\n" +
 	"shadowBand\x12+\n" +
-	"\x11shadow_confidence\x18\b \x01(\x05R\x10shadowConfidence\"\xbb\x02\n" +
-	"\x16OracleOverviewResponse\x12\x18\n" +
+	"\x11shadow_confidence\x18\b \x01(\x05R\x10shadowConfidence\"\xe9\x02\n" +
+	"\x16OracleOverviewResponse\x12\x14\n" +
+	"\x05total\x18\n" +
+	" \x01(\rR\x05total\x12\x16\n" +
+	"\x06offset\x18\v \x01(\rR\x06offset\x12\x18\n" +
 	"\awatched\x18\x01 \x01(\rR\awatched\x12\x12\n" +
 	"\x04full\x18\x02 \x01(\rR\x04full\x12\x18\n" +
 	"\areduced\x18\x03 \x01(\rR\areduced\x12 \n" +

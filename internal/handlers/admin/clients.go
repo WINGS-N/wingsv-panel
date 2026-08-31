@@ -184,7 +184,8 @@ func syncModeToProto(value string) wingsvpb.GuardianSyncMode {
 func (h *Handler) handleClients(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	switch r.Method {
 	case http.MethodGet:
-		clients, err := h.store.ListClientsByOwner(admin.ID)
+		limit, offset := pageParams(r, 50)
+		clients, total, err := h.store.PageClientsByOwner(admin.ID, limit, offset)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -210,7 +211,7 @@ func (h *Handler) handleClients(w http.ResponseWriter, r *http.Request, admin st
 			}
 			out = append(out, view)
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"clients": out})
+		writeJSON(w, http.StatusOK, map[string]any{"clients": out, "total": total})
 	case http.MethodPost:
 		h.handleCreateClient(w, r, admin)
 	default:
@@ -1479,4 +1480,21 @@ func (h *Handler) respondRefreshInstalledApps(w http.ResponseWriter, client stor
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"id": id})
+}
+
+// pageParams читает страницу из запроса. Нулевой limit в ответе означает
+// "всё", поэтому нижняя граница здесь единица
+func pageParams(r *http.Request, fallback int) (limit, offset int) {
+	limit = fallback
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+	if v := r.URL.Query().Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			offset = n
+		}
+	}
+	return limit, offset
 }

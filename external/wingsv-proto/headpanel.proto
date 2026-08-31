@@ -84,6 +84,9 @@ message GlobalCounters {
   // Since the federation started, not since this period or this process.
   // Survives a restart, and a node leaving does not take its share away with it
   uint64 lifetime_bytes = 9;
+  // С начала текущего периода бюджета. Считается от сохранённой отметки, а не
+  // от счётчиков в памяти, поэтому переживает выкат головы
+  uint64 period_bytes = 10;
 }
 
 // PublicCounters is what the landing page shows. No node ids, no donor ids, no
@@ -289,7 +292,12 @@ message SetNodeBudgetResponse {
   uint64 used_bytes = 2;
 }
 
-message ProbeReportsRequest {}
+message ProbeReportsRequest {
+  // Страница замеров. Их число растёт как ноды на адреса и транспорты, и
+  // отдавать всё разом значит гонять по сети список, который никто не читает
+  uint32 limit = 1;
+  uint32 offset = 2;
+}
 
 message RunProbesRequest {}
 
@@ -327,11 +335,14 @@ message ProbeMeasurement {
 message ProbeReportsResponse {
   repeated ProbeVantage vantages = 1;
   repeated ProbeMeasurement measurements = 2;
+  // Всего замеров под запрос, до нарезки на страницу
+  uint32 total = 3;
 }
 
 message OracleOverviewRequest {
   // Сколько подозреваемых вернуть, 0 - двадцать
   uint32 limit = 1;
+  uint32 offset = 3;
   // Когда список задан, отдаются вердикты только по нему. Так панель считает
   // ветку инвайт-дерева: голова про дерево не знает и знать не должна
   repeated string subject_ids = 2;
@@ -378,6 +389,9 @@ message OracleSubject {
 }
 
 message OracleOverviewResponse {
+  // Всего наблюдаемых, до нарезки на страницу
+  uint32 total = 10;
+  uint32 offset = 11;
   uint32 watched = 1;
   uint32 full = 2;
   uint32 reduced = 3;

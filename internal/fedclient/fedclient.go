@@ -212,21 +212,23 @@ func (c *Client) DonorHistory(ctx context.Context, donorID string, months uint32
 }
 
 // ProbeReports - то, что намеряли точки наблюдения
-func (c *Client) ProbeReports(ctx context.Context) (*headpb.ProbeReportsResponse, error) {
+func (c *Client) ProbeReports(ctx context.Context, limit, offset uint32) (*headpb.ProbeReportsResponse, error) {
 	client, err := c.dial()
 	if err != nil {
 		return nil, err
 	}
-	return client.ProbeReports(ctx, &headpb.ProbeReportsRequest{})
+	return client.ProbeReports(ctx, &headpb.ProbeReportsRequest{Limit: limit, Offset: offset})
 }
 
 // OracleOverview - текущее состояние судьи
-func (c *Client) OracleOverview(ctx context.Context, limit uint32, subjectIDs ...string) (*headpb.OracleOverviewResponse, error) {
+func (c *Client) OracleOverview(ctx context.Context, limit, offset uint32, subjectIDs ...string) (*headpb.OracleOverviewResponse, error) {
 	client, err := c.dial()
 	if err != nil {
 		return nil, err
 	}
-	return client.OracleOverview(ctx, &headpb.OracleOverviewRequest{Limit: limit, SubjectIds: subjectIDs})
+	return client.OracleOverview(ctx, &headpb.OracleOverviewRequest{
+		Limit: limit, Offset: offset, SubjectIds: subjectIDs,
+	})
 }
 
 // RunProbes просит точки наблюдения замерить прямо сейчас

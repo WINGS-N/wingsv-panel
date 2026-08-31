@@ -66,7 +66,7 @@
     <h2 class="section-title">Наблюдаемые</h2>
     <p v-if="!overview.subjects.length" class="state-hint">Пока ни на кого ничего нет.</p>
     <div v-else class="fed-node-list mt-4">
-      <div v-for="s in overview.subjects" :key="s.subject_id" class="fed-node-row is-tappable" @click="open(s)">
+      <div v-for="s in pagedSubjects" :key="s.subject_id" class="fed-node-row is-tappable" @click="open(s)">
         <img :src="bandIcon(s.band)" alt="" class="probe-icon" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
@@ -91,6 +91,13 @@
       </div>
     </div>
   </section>
+
+  <SamsungPager
+    v-if="enabled && overview.subjects.length"
+    v-model:page="page"
+    :total="overview.subjects.length"
+    :per-page="perPage"
+  />
 
   <section v-if="detail" class="surface-card mt-6">
     <div class="federation-live-head">
@@ -120,15 +127,19 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungPager from '@/components/controls/SamsungPager.vue';
 
 const enabled = ref(false);
 const scorer = ref('');
 const loadError = ref('');
 const detail = ref(null);
 const overview = reactive({ watched: 0, full: 0, reduced: 0, quarantined: 0, subjects: [], signals: [] });
+const page = ref(1);
+const perPage = 20;
+const pagedSubjects = computed(() => overview.subjects.slice((page.value - 1) * perPage, page.value * perPage));
 let timer = null;
 
 // Классы приходят с головы машинными именами: показывать их человеку незачем

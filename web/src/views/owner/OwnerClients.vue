@@ -47,7 +47,8 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import SamsungPager from '@/components/controls/SamsungPager.vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { avatarUrlFor } from '@/stores/auth.js';
 import SamsungCard from '@/components/layout/SamsungCard.vue';
@@ -60,15 +61,21 @@ function ownerAvatarUrl(client) {
 
 const router = useRouter();
 const clients = ref([]);
+const total = ref(0);
+const page = ref(1);
+const perPage = 50;
 const loaded = ref(false);
 const loadError = ref('');
 
 async function load() {
   try {
-    const res = await fetch('/api/owner/clients', { credentials: 'include' });
+    const res = await fetch(`/api/owner/clients?limit=${perPage}&offset=${(page.value - 1) * perPage}`, {
+      credentials: 'include',
+    });
     if (!res.ok) throw new Error(await res.text());
     const body = await res.json();
     clients.value = body.clients || [];
+    total.value = Number(body.total || 0);
   } catch (err) {
     loadError.value = err.message;
   } finally {

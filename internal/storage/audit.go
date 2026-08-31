@@ -40,6 +40,7 @@ type AuditFilter struct {
 	Since        time.Time
 	Until        time.Time
 	Limit        int
+	Offset       int
 }
 
 func (s *Store) AppendAudit(entry AuditEntry) error {
@@ -76,11 +77,15 @@ func derefInt64(p *int64) int64 {
 	return *p
 }
 
-func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
-	limit := filter.Limit
-	if limit <= 0 || limit > 500 {
-		limit = 100
-	}
+// CountAudit - сколько записей под фильтр: без общего числа пагинация не знает,
+// сколько всего страниц
+func (s *Store) CountAudit(filter AuditFilter) (int64, error) {
+	var count int64
+	err := s.auditQuery(filter).Count(&count).Error
+	return count, err
+}
+
+func (s *Store) auditQuery(filter AuditFilter) *gorm.DB {
 	q := s.gdb.Model(&dbmodel.AuditLog{})
 	if filter.ActorAdminID > 0 {
 		q = q.Where("actor_admin_id = ?", filter.ActorAdminID)
@@ -94,8 +99,17 @@ func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
 	if !filter.Until.IsZero() {
 		q = q.Where("ts <= ?", filter.Until.UTC().UnixMilli())
 	}
+	return q
+}
+
+func (s *Store) ListAudit(filter AuditFilter) ([]AuditEntry, error) {
+	limit := filter.Limit
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	q := s.auditQuery(filter)
 	var rows []dbmodel.AuditLog
-	if err := q.Order("ts DESC").Limit(limit).Find(&rows).Error; err != nil {
+	if err := q.Order("ts DESC").Limit(limit).Offset(filter.Offset).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	var out []AuditEntry

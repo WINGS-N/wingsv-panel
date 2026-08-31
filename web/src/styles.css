@@ -1040,6 +1040,18 @@
     animation: none;
   }
 
+  .pager {
+    @apply mt-4 flex flex-wrap items-center justify-between gap-3;
+  }
+
+  .pager-state {
+    @apply flex flex-col text-[13px] text-wings-muted;
+  }
+
+  .pager-page {
+    @apply text-[12px] text-wings-kicker;
+  }
+
   .probe-icon {
     @apply h-9 w-9 shrink-0 object-contain;
   }
