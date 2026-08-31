@@ -74,6 +74,9 @@ CREATE TABLE IF NOT EXISTS clients (
     created_at INTEGER NOT NULL,
     last_seen_at INTEGER NOT NULL DEFAULT 0,
     online INTEGER NOT NULL DEFAULT 0,
+    -- Адрес, с которого пришло соединение. Единственная цифра о клиенте,
+    -- которую он не может выдумать: всё остальное он присылает сам
+    last_peer_ip TEXT NOT NULL DEFAULT '',
     log_runtime_enabled INTEGER NOT NULL DEFAULT 1,
     log_proxy_enabled INTEGER NOT NULL DEFAULT 1,
     log_xray_enabled INTEGER NOT NULL DEFAULT 0,

@@ -116,7 +116,7 @@ func (s *GRPCService) Session(stream grpc.BidiStreamingServer[guardianpb.Frame, 
 	log.Printf("guardian: grpc session up client=%s device=%s app=%s",
 		client.ID, hello.GetDeviceModel(), hello.GetAppVersion())
 
-	h.markOnline(client, hello)
+	h.markOnline(stream.Context(), client, hello)
 	h.hub.AttachClient(client.ID, sess)
 	defer func() {
 		h.hub.DetachClient(client.ID, sess)
@@ -163,7 +163,7 @@ func (s *GRPCService) Sync(ctx context.Context, req *guardianpb.SyncRequest) (*g
 	// A one-shot sync is not a live channel, so presence blips rather than sticking
 	// online: the device is reachable at this instant and offline again right after.
 	// The write also refreshes last_seen_at and the device info.
-	h.markOnline(client, hello)
+	h.markOnline(ctx, client, hello)
 	defer h.markOffline(client)
 
 	sink := &collectingSink{}

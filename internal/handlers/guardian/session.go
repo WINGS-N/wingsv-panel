@@ -1,7 +1,11 @@
 package guardian
 
 import (
+	"context"
+	"net"
+
 	"crypto/subtle"
+	"google.golang.org/grpc/peer"
 	"log"
 	"strings"
 	"time"
@@ -56,13 +60,14 @@ func hwidMatches(client storage.Client, hello *guardianpb.ClientHello) bool {
 	return subtle.ConstantTimeCompare([]byte(bound), []byte(presented)) == 1
 }
 
-func (h *Handler) markOnline(client storage.Client, hello *guardianpb.ClientHello) {
+func (h *Handler) markOnline(ctx context.Context, client storage.Client, hello *guardianpb.ClientHello) {
 	dev := storage.ClientDeviceInfo{
 		HWID:        hello.GetHwid(),
 		DeviceName:  hello.GetDeviceName(),
 		DeviceModel: hello.GetDeviceModel(),
 		OSVersion:   hello.GetOsVersion(),
 		AppVersion:  hello.GetAppVersion(),
+		PeerIP:      peerIP(ctx),
 	}
 	_ = h.store.UpdateClientPresence(client.ID, true, &dev)
 	h.hub.FanoutToAdmin(client.OwnerAdminID, guardianhub.AdminEvent{
@@ -240,4 +245,19 @@ func (h *Handler) storeInstalledApps(client storage.Client, apps *guardianpb.Ins
 		})
 	}
 	_ = h.store.UpsertPackageMetadata(metas)
+}
+
+// peerIP - адрес соединения. При работающем туннеле он показывает точку выхода,
+// а не дом клиента, и это тоже полезно: расхождение с самоотчётом само по себе
+// сигнал
+func peerIP(ctx context.Context) string {
+	info, ok := peer.FromContext(ctx)
+	if !ok || info.Addr == nil {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(info.Addr.String())
+	if err != nil {
+		return info.Addr.String()
+	}
+	return host
 }

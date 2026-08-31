@@ -63,6 +63,7 @@ type clientView struct {
 	DeviceModel             string `json:"device_model"`
 	OSVersion               string `json:"os_version"`
 	AppVersion              string `json:"app_version"`
+	LastPeerIP              string `json:"last_peer_ip"`
 	CreatedAt               string `json:"created_at"`
 	LastSeenAt              string `json:"last_seen_at"`
 	Online                  bool   `json:"online"`
@@ -96,6 +97,7 @@ func toClientView(c storage.Client) clientView {
 		DeviceModel:             c.DeviceModel,
 		OSVersion:               c.OSVersion,
 		AppVersion:              c.AppVersion,
+		LastPeerIP:              c.LastPeerIP,
 		CreatedAt:               c.CreatedAt.Format(time.RFC3339),
 		LastSeenAt:              c.LastSeenAt.Format(time.RFC3339),
 		Online:                  c.Online,

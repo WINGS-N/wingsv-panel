@@ -21,6 +21,7 @@ type Client struct {
 	DeviceModel             string
 	OSVersion               string
 	AppVersion              string
+	LastPeerIP              string
 	CreatedAt               time.Time
 	LastSeenAt              time.Time
 	Online                  bool
@@ -50,6 +51,7 @@ func toStorageClient(m dbmodel.Client) Client {
 		DeviceModel:             m.DeviceModel,
 		OSVersion:               m.OSVersion,
 		AppVersion:              m.AppVersion,
+		LastPeerIP:              m.LastPeerIP,
 		CreatedAt:               time.UnixMilli(m.CreatedAtUnix).UTC(),
 		LastSeenAt:              time.UnixMilli(m.LastSeenAt).UTC(),
 		Online:                  m.Online != 0,
@@ -277,6 +279,9 @@ func (s *Store) UpdateClientPresence(id string, online bool, devInfo *ClientDevi
 		updates["device_model"] = devInfo.DeviceModel
 		updates["os_version"] = devInfo.OSVersion
 		updates["app_version"] = devInfo.AppVersion
+		if devInfo.PeerIP != "" {
+			updates["last_peer_ip"] = devInfo.PeerIP
+		}
 	}
 	return s.gdb.Model(&dbmodel.Client{}).Where("id = ?", id).Updates(updates).Error
 }
@@ -287,6 +292,9 @@ type ClientDeviceInfo struct {
 	DeviceModel string
 	OSVersion   string
 	AppVersion  string
+	// PeerIP - адрес, с которого пришло соединение. В отличие от всего
+	// остального его присылает не клиент, а сама сеть
+	PeerIP string
 }
 
 func (s *Store) UpdateClientLogControl(id string, ownerAdminID int64, runtime, proxy, xray bool) error {

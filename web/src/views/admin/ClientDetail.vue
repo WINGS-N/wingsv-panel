@@ -21,6 +21,12 @@
               <span>{{ detail.client?.device_model || '—' }}</span>
               <span>·</span>
               <span>WINGS V {{ detail.client?.app_version || '—' }}</span>
+              <span v-if="detail.client?.last_peer_ip">·</span>
+              <!-- Адрес соединения: единственная цифра, которую устройство не
+                   присылает само -->
+              <span v-if="detail.client?.last_peer_ip" :title="'Адрес последнего подключения'">
+                {{ detail.client.last_peer_ip }}
+              </span>
               <span v-if="detail.client?.created_at">·</span>
               <span v-if="detail.client?.created_at">Добавлен {{ formatDate(detail.client.created_at) }}</span>
             </div>

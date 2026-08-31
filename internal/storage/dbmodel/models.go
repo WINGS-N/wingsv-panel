@@ -60,6 +60,7 @@ type Client struct {
 	CreatedAtUnix           int64  `gorm:"column:created_at;not null"`
 	LastSeenAt              int64  `gorm:"column:last_seen_at;not null;default:0"`
 	Online                  int64  `gorm:"column:online;not null;default:0"`
+	LastPeerIP              string `gorm:"column:last_peer_ip;not null;default:''"`
 	LogRuntimeEnabled       int64  `gorm:"column:log_runtime_enabled;not null;default:1"`
 	LogProxyEnabled         int64  `gorm:"column:log_proxy_enabled;not null;default:1"`
 	LogXrayEnabled          int64  `gorm:"column:log_xray_enabled;not null;default:0"`
