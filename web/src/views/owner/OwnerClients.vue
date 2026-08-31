@@ -42,7 +42,10 @@
         </tr>
       </tbody>
     </table>
+
     <p v-else-if="loaded" class="admin-muted mt-4">Клиентов пока нет.</p>
+
+    <SamsungPager v-model:page="page" :total="total" :per-page="perPage" />
   </SamsungCard>
 </template>
 
@@ -95,6 +98,8 @@ function formatTs(iso) {
     return iso;
   }
 }
+
+watch(page, load);
 
 onMounted(load);
 </script>

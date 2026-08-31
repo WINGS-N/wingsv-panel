@@ -404,6 +404,7 @@ func All() []any {
 		&PeerTraffic{},
 		&NodeTrafficTotal{},
 		&ClientTraffic{},
+		&InviteRedemption{},
 	}
 }
 

@@ -411,7 +411,6 @@
 </template>
 
 <script setup>
-import SamsungPager from '@/components/controls/SamsungPager.vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, Check, ChevronLeft, ChevronRight, Gauge, Plus, RotateCcw, Trash2, X } from 'lucide-vue-next';
@@ -464,9 +463,6 @@ function trafficPercent(client) {
 
 const router = useRouter();
 const clients = ref([]);
-const total = ref(0);
-const page = ref(1);
-const perPage = 50;
 const loading = ref(false);
 const loadError = ref('');
 const tableSection = ref(null);
@@ -626,13 +622,10 @@ async function loadClients() {
   loading.value = true;
   loadError.value = '';
   try {
-    const res = await fetch(`/api/admin/clients?limit=${perPage}&offset=${(page.value - 1) * perPage}`, {
-      credentials: 'include',
-    });
+    const res = await fetch('/api/admin/clients', { credentials: 'include' });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     clients.value = data.clients || [];
-    total.value = Number(data.total || 0);
   } catch (err) {
     loadError.value = err.message || 'Не удалось загрузить список';
   } finally {

@@ -58,6 +58,10 @@
           </span>
           <CopyableLink :value="it.link" class="mt-2" />
         </div>
+        <SamsungButton variant="ghost" :busy="revoking === it.token" @click="revoke(it)">
+          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+          Отозвать
+        </SamsungButton>
       </div>
     </div>
     <p v-else-if="!loading" class="admin-muted mt-4">Вы пока никого не приглашали.</p>
@@ -66,7 +70,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { CalendarRange, Plus, Ticket, Users } from 'lucide-vue-next';
+import { CalendarRange, Plus, Ticket, Trash2, Users } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
@@ -82,6 +86,7 @@ const blockReason = ref('');
 const redeemCode = ref('');
 const redeeming = ref(false);
 const redeemError = ref('');
+const revoking = ref('');
 
 onMounted(load);
 
@@ -99,6 +104,24 @@ async function load() {
     loadError.value = String(err.message || err);
   } finally {
     loading.value = false;
+  }
+}
+
+// Отзыв бьёт только по будущим регистрациям: те, кто уже пришёл, остаются в
+// дереве, и обрезать ветку - отдельное право владельца
+async function revoke(invite) {
+  revoking.value = invite.token;
+  try {
+    const res = await fetch(`/api/admin/invites/${encodeURIComponent(invite.token)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    await load();
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  } finally {
+    revoking.value = '';
   }
 }
 

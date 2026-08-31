@@ -230,7 +230,7 @@ func boolToInt(b bool) int {
 func (s *Store) SetPanelAccess(id int64, allowed bool) error {
 	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).
 		Updates(map[string]any{
-			"panel_access":    boolToInt(allowed),
-			"updated_at": time.Now().UTC().UnixMilli(),
+			"panel_access": boolToInt(allowed),
+			"updated_at":   time.Now().UTC().UnixMilli(),
 		}).Error
 }

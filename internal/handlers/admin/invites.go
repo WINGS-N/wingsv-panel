@@ -275,3 +275,35 @@ func (h *Handler) handleRedeemInvite(w http.ResponseWriter, r *http.Request, adm
 	})
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
+
+// handleInviteByToken отзывает собственный код. Чужой не трогается: срезать
+// ветку целиком - право владельца, а это всего лишь отмена своей выдачи
+func (h *Handler) handleInviteByToken(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if r.Method != http.MethodDelete {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	token := strings.TrimPrefix(r.URL.Path, "/api/admin/invites/")
+	if token == "" || strings.Contains(token, "/") {
+		writeError(w, http.StatusBadRequest, "не указан код")
+		return
+	}
+	invite, err := h.store.FindInvite(token)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "код не найден")
+		return
+	}
+	if invite.CreatedByAdminID != admin.ID && admin.Role != storage.RoleOwner {
+		writeError(w, http.StatusForbidden, "это не ваш код")
+		return
+	}
+	if err := h.store.DeleteInvite(token); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: admin.ID, ActorUsername: admin.Username,
+		Action: "admin.invite_revoked", TargetType: "invite", TargetID: token,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}

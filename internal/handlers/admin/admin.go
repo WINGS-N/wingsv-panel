@@ -108,6 +108,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/invites", h.requirePanel(h.handleInvites))
 	// Код вводит любой аккаунт: он ставит человека в дерево, а не открывает панель
 	mux.HandleFunc("/api/admin/invites/redeem", h.requireAuth(h.handleRedeemInvite))
+	mux.HandleFunc("/api/admin/invites/", h.requirePanel(h.handleInviteByToken))
 	mux.HandleFunc("/api/admin/fleet", h.requirePanel(h.handleFleetSettings))
 	mux.HandleFunc("/api/admin/fleet/nodes", h.requirePanel(h.handleFleetNodes))
 	mux.HandleFunc("/api/admin/fleet/releases", h.requirePanel(h.handleFleetReleases))
