@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -29,6 +30,10 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
+	if err := h.mayUseFederation(ctx, admin); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
 	got, err := h.fed.EnsureUser(ctx, federationUserID(admin))
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
@@ -55,4 +60,24 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// mayUseFederation решает, кому вообще положен бесплатный доступ.
+//
+// Дерево - это и есть цена входа: аккаунт, которого никто не приглашал и
+// который ничего не отдал, в федерации не участвует
+func (h *Handler) mayUseFederation(ctx context.Context, admin storage.Admin) error {
+	if admin.Role == storage.RoleOwner {
+		return nil
+	}
+	if redeemed, err := h.store.RedeemedInvite(admin.ID); err == nil && redeemed {
+		return nil
+	}
+	// Донор - корень собственной ветки: его никто не приглашал, но он отдал
+	// сервер, и это тот же вклад
+	summary, err := h.fed.DonorSummary(ctx, donorID(admin))
+	if err == nil && summary.GetNodes() > 0 {
+		return nil
+	}
+	return errors.New("бесплатный доступ выдаётся по приглашению: введите код на экране приглашений")
 }

@@ -168,3 +168,33 @@ func TestParseConfigTypeTitles(t *testing.T) {
 		})
 	}
 }
+
+// Основной формат обязан читаться обратно, а старый - продолжать работать:
+// ссылки, выданные вчера, никуда не делись
+func TestBothLinkFormatsRoundTrip(t *testing.T) {
+	config := &wingsvpb.Config{
+		Ver:  1,
+		Type: wingsvpb.ConfigType_CONFIG_TYPE_XRAY,
+		Xray: &wingsvpb.Xray{Profiles: []*wingsvpb.VlessProfile{{Id: "p1", Title: "узел", RawLink: "vless://x@1.2.3.4:443#p1"}}},
+	}
+	brotliLink, err := BuildWingsLink(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deflateLink, err := BuildWingsLinkDeflate(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(brotliLink) >= len(deflateLink) {
+		t.Errorf("brotli не короче: %d против %d", len(brotliLink), len(deflateLink))
+	}
+	for _, link := range []string{brotliLink, deflateLink} {
+		got, err := ParseWingsConfig(link)
+		if err != nil {
+			t.Fatalf("ссылка не разобралась: %v", err)
+		}
+		if len(got.GetXray().GetProfiles()) != 1 || got.GetXray().GetProfiles()[0].GetRawLink() != "vless://x@1.2.3.4:443#p1" {
+			t.Errorf("конфиг не совпал: %+v", got)
+		}
+	}
+}

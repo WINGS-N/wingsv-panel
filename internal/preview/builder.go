@@ -2,9 +2,11 @@ package preview
 
 import (
 	"bytes"
+
 	"compress/zlib"
 	"encoding/base64"
 	"errors"
+	"github.com/andybalholm/brotli"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -30,10 +32,7 @@ func ParseWingsConfig(raw string) (*wingsvpb.Config, error) {
 	if len(decoded) == 0 {
 		return nil, errors.New("empty payload")
 	}
-	if decoded[0] != FormatProtobufDeflate {
-		return nil, errors.New("unsupported payload format")
-	}
-	inflated, err := inflatePayload(decoded[1:])
+	inflated, err := decompressPayload(decoded)
 	if err != nil {
 		return nil, err
 	}
@@ -44,10 +43,34 @@ func ParseWingsConfig(raw string) (*wingsvpb.Config, error) {
 	return out, nil
 }
 
-// BuildWingsLink serialises the given Config into a wingsv:// link using the
-// same format the WINGS V client emits: [0x12] + zlib(proto bytes), base64-url
-// encoded, prefixed with "wingsv://".
+// brotliQuality - пятый уровень. Одиннадцатый на этих данных даёт те же байты
+// за время в полсотни раз большее: словарь кончается на первых сотнях байт
+const brotliQuality = 5
+
+// BuildWingsLink собирает ссылку wingsv:// в основном формате: байт 0x13,
+// дальше protobuf, сжатый brotli, всё в base64url
 func BuildWingsLink(config *wingsvpb.Config) (string, error) {
+	raw, err := proto.Marshal(config)
+	if err != nil {
+		return "", err
+	}
+	var compressed bytes.Buffer
+	w := brotli.NewWriterLevel(&compressed, brotliQuality)
+	if _, err := w.Write(raw); err != nil {
+		_ = w.Close()
+		return "", err
+	}
+	if err := w.Close(); err != nil {
+		return "", err
+	}
+	payload := append([]byte{FormatProtobufBrotli}, compressed.Bytes()...)
+	encoded := base64.RawURLEncoding.EncodeToString(payload)
+	return SchemePrefix + encoded, nil
+}
+
+// BuildWingsLinkDeflate собирает ссылку в старом формате. Нужен там, где на той
+// стороне заведомо старая сборка приложения
+func BuildWingsLinkDeflate(config *wingsvpb.Config) (string, error) {
 	raw, err := proto.Marshal(config)
 	if err != nil {
 		return "", err

@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"google.golang.org/protobuf/proto"
 
 	"v.wingsnet.org/internal/gen/wingsvpb"
@@ -19,6 +20,9 @@ import (
 const (
 	SchemePrefix          = "wingsv://"
 	FormatProtobufDeflate = 0x12
+	// FormatProtobufBrotli - основной формат. Ссылка на четверть короче, а
+	// разница для QR-кода это версия ниже и заметно крупнее модули
+	FormatProtobufBrotli = 0x13
 )
 
 type Preview struct {
@@ -137,11 +141,7 @@ func parseWings(raw string) (*Preview, error) {
 	if len(decoded) == 0 {
 		return nil, errors.New("empty payload")
 	}
-	if decoded[0] != FormatProtobufDeflate {
-		return nil, errors.New("unsupported payload format")
-	}
-
-	protobufPayload, err := inflatePayload(decoded[1:])
+	protobufPayload, err := decompressPayload(decoded)
 	if err != nil {
 		return nil, err
 	}
@@ -151,6 +151,18 @@ func parseWings(raw string) (*Preview, error) {
 		return nil, err
 	}
 	return buildPreview(raw, config), nil
+}
+
+// decompressPayload разбирает оба формата: старый zlib и основной brotli
+func decompressPayload(decoded []byte) ([]byte, error) {
+	switch decoded[0] {
+	case FormatProtobufBrotli:
+		return io.ReadAll(brotli.NewReader(bytes.NewReader(decoded[1:])))
+	case FormatProtobufDeflate:
+		return inflatePayload(decoded[1:])
+	default:
+		return nil, errors.New("unsupported payload format")
+	}
 }
 
 func inflatePayload(payload []byte) ([]byte, error) {

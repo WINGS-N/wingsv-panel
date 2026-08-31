@@ -88,6 +88,20 @@
       />
     </div>
 
+    <h3 class="admin-section-subtitle mt-6">Формат ссылок</h3>
+    <div class="mt-2">
+      <OneuiRadioGroup
+        :model-value="linkFormat"
+        :options="linkFormatOptions"
+        variant="pill"
+        @update:model-value="setLinkFormat"
+      />
+      <p class="admin-muted mt-2">
+        Brotli короче на четверть - QR получается крупнее и читается быстрее. Сборки приложения, вышедшие до его
+        появления, такую ссылку не прочитают: для них есть старый формат.
+      </p>
+    </div>
+
     <h3 class="admin-section-subtitle mt-6">Внешние gRPC администраторов</h3>
     <div class="keyval mt-2">
       <span class="keyval-label">
@@ -224,6 +238,11 @@ const adminsLoaded = ref(false);
 const invites = ref([]);
 const loadError = ref('');
 const allowAdminGRPC = ref(false);
+const linkFormat = ref('brotli');
+const linkFormatOptions = [
+  { value: 'brotli', label: 'Brotli (основной)' },
+  { value: 'deflate', label: 'Старый deflate' },
+];
 const showCreate = ref(false);
 const newUsername = ref('');
 const newPassword = ref('');
@@ -402,8 +421,26 @@ async function loadSettings() {
     if (res.ok) {
       const body = await res.json();
       allowAdminGRPC.value = !!body.allow_admin_grpc;
+      linkFormat.value = body.link_format || 'brotli';
     }
   } catch {}
+}
+
+async function setLinkFormat(value) {
+  const previous = linkFormat.value;
+  linkFormat.value = value;
+  try {
+    const res = await fetch('/api/owner/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ link_format: value }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+  } catch (err) {
+    linkFormat.value = previous;
+    loadError.value = String(err.message || err);
+  }
 }
 
 async function setAllowAdminGRPC(value) {

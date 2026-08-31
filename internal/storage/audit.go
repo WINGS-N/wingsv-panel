@@ -20,6 +20,13 @@ const (
 	// and the sections behind it are not rendered at all rather than rendered
 	// disabled: a deployment that never opted in has nothing to reason about.
 	SettingFederationEnabled = "federation_enabled"
+
+	// SettingLinkFormat выбирает, чем сжимать ссылки: brotli короче на четверть,
+	// но сборки приложения до его появления такую ссылку не прочитают
+	SettingLinkFormat = "link_format"
+	// LinkFormatBrotli и LinkFormatDeflate - значения этой настройки
+	LinkFormatBrotli  = "brotli"
+	LinkFormatDeflate = "deflate"
 )
 
 type AuditEntry struct {

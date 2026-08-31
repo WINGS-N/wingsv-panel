@@ -454,7 +454,8 @@ func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request, _ storage.
 type settingsRequest struct {
 	RegistrationMode string `json:"registration_mode"`
 	// Pointer so an omitted field leaves the current value untouched.
-	AllowAdminGRPC *bool `json:"allow_admin_grpc"`
+	AllowAdminGRPC *bool  `json:"allow_admin_grpc"`
+	LinkFormat     string `json:"link_format"`
 }
 
 func (h *Handler) settingsPayload() (map[string]any, error) {
@@ -466,9 +467,14 @@ func (h *Handler) settingsPayload() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	linkFormat, err := h.store.GetPlatformSetting(storage.SettingLinkFormat, storage.LinkFormatBrotli)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"registration_mode": mode,
 		"allow_admin_grpc":  allowGRPC == "true",
+		"link_format":       linkFormat,
 	}, nil
 }
 
@@ -501,6 +507,20 @@ func (h *Handler) handleSettings(w http.ResponseWriter, r *http.Request, owner s
 			_ = h.store.AppendAudit(storage.AuditEntry{
 				ActorAdminID: owner.ID, ActorUsername: owner.Username,
 				Action: "owner.registration_mode_changed", Message: mode, IP: clientIP(r),
+			})
+		}
+		if format := strings.TrimSpace(req.LinkFormat); format != "" {
+			if format != storage.LinkFormatBrotli && format != storage.LinkFormatDeflate {
+				writeError(w, http.StatusBadRequest, "unknown link_format")
+				return
+			}
+			if err := h.store.SetPlatformSetting(storage.SettingLinkFormat, format); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			_ = h.store.AppendAudit(storage.AuditEntry{
+				ActorAdminID: owner.ID, ActorUsername: owner.Username,
+				Action: "owner.link_format_changed", Message: format, IP: clientIP(r),
 			})
 		}
 		if req.AllowAdminGRPC != nil {

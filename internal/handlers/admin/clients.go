@@ -542,12 +542,26 @@ func (h *Handler) buildClientLink(
 			AdminAvatarVersion:      admin.AvatarVersion,
 			ServerCaPinsSha512_256:  h.caPins,
 		}
-		return preview.BuildWingsLink(cfg)
+		return h.buildLink(cfg)
 	}
 	if cfg.Turn == nil {
 		return "", errors.New("register a vk-turn relay to issue a profile link without remote control")
 	}
 	cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_VK_TURN_PROFILE
+	return h.buildLink(cfg)
+}
+
+// buildLink собирает ссылку тем форматом, который выбрал владелец. Ссылку
+// зачисления сканирует устройство, чью версию никто не знает, поэтому рубильник
+// отката к старому формату остаётся
+func (h *Handler) buildLink(cfg *wingsvpb.Config) (string, error) {
+	if h.store == nil {
+		return preview.BuildWingsLink(cfg)
+	}
+	if format, err := h.store.GetPlatformSetting(storage.SettingLinkFormat, storage.LinkFormatBrotli); err == nil &&
+		format == storage.LinkFormatDeflate {
+		return preview.BuildWingsLinkDeflate(cfg)
+	}
 	return preview.BuildWingsLink(cfg)
 }
 
