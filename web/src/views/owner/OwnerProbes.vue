@@ -153,8 +153,10 @@ async function runNow() {
   }
 }
 
-function speed(bps) {
-  return `${formatBytes(Number(bps) / 8)}/s`;
+// Голова присылает байты в секунду; Mbit/s рядом, потому что каналы меряют в них
+function speed(bytesPerSecond) {
+  const bytes = Number(bytesPerSecond) || 0;
+  return `${formatBytes(bytes)}/s (${((bytes * 8) / 1e6).toFixed(1)} Mbit/s)`;
 }
 
 function ago(unix) {
