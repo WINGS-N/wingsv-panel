@@ -6,8 +6,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"google.golang.org/protobuf/proto"
+
+	"v.wingsnet.org/internal/gen/wingsvpb"
+	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/storage"
 )
+
+// federationSubscriptionTitle - как подписка называется в приложении
+const federationSubscriptionTitle = "WINGS Federation"
 
 // federationUserID - как участник называется голове федерации. Никакого имени,
 // почты или адреса: голова про человека не знает ничего и знать не должна
@@ -59,7 +66,35 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 			"classes":    classes,
 		}
 	}
+	// Ссылка для приложения: оно понимает wingsv:// и заводит подписку само,
+	// без ручного копирования адреса
+	if link, err := federationImportLink(got.GetSubscriptionUrl()); err == nil {
+		out["import_link"] = link
+	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// federationImportLink собирает ссылку, по которой приложение заводит подписку
+// федерации у себя
+func federationImportLink(subscriptionURL string) (string, error) {
+	if subscriptionURL == "" {
+		return "", errors.New("нет подписки")
+	}
+	cfg := &wingsvpb.Config{
+		Ver:  1,
+		Type: wingsvpb.ConfigType_CONFIG_TYPE_XRAY,
+		Xray: &wingsvpb.Xray{
+			MergeOnly: proto.Bool(true),
+			Subscriptions: []*wingsvpb.Subscription{{
+				Id:         "wings-federation",
+				Title:      federationSubscriptionTitle,
+				Url:        subscriptionURL,
+				FormatHint: "auto",
+				AutoUpdate: proto.Bool(true),
+			}},
+		},
+	}
+	return preview.BuildWingsLink(cfg)
 }
 
 // mayUseFederation решает, кому вообще положен бесплатный доступ.

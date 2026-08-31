@@ -405,6 +405,7 @@ func All() []any {
 		&NodeTrafficTotal{},
 		&ClientTraffic{},
 		&InviteRedemption{},
+		&AppSession{},
 	}
 }
 
@@ -422,3 +423,17 @@ type InviteRedemption struct {
 
 // TableName задаёт имя таблицы
 func (InviteRedemption) TableName() string { return "invite_redemptions" }
+
+// AppSession - сессия приложения на одном устройстве
+type AppSession struct {
+	ID            string `gorm:"column:id;primaryKey"`
+	AdminID       int64  `gorm:"column:admin_id;index;not null"`
+	TokenHash     string `gorm:"column:token_hash;uniqueIndex;not null"`
+	DeviceName    string `gorm:"column:device_name;not null;default:''"`
+	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
+	LastSeenAt    int64  `gorm:"column:last_seen_at;not null;default:0"`
+	ExpiresAt     int64  `gorm:"column:expires_at;not null"`
+}
+
+// TableName задаёт имя таблицы
+func (AppSession) TableName() string { return "app_sessions" }

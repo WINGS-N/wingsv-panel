@@ -34,8 +34,17 @@
         </div>
 
         <div v-if="enabled && access.subscription_url" class="entry-card mt-4">
-          <p class="body-copy">Ссылка на подписку. Вставьте её в приложение - оно само заберёт серверы и обновит их.</p>
-          <CopyableLink :value="access.subscription_url" class="mt-3" />
+          <p class="body-copy">
+            Откройте на телефоне с установленным WINGS V - подписка заведётся сама и будет обновляться.
+          </p>
+          <div class="actions-row">
+            <SamsungButton v-if="access.import_link" @click="openInApp">
+              <template #icon><Smartphone class="button-icon" aria-hidden="true" /></template>
+              Добавить в приложение
+            </SamsungButton>
+          </div>
+          <p class="admin-muted mt-3">Или вставьте ссылку вручную:</p>
+          <CopyableLink :value="access.subscription_url" class="mt-2" />
         </div>
       </section>
 
@@ -60,7 +69,8 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { Server } from 'lucide-vue-next';
+import { Server, Smartphone } from 'lucide-vue-next';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 import PublicTopbar from '@/components/layout/PublicTopbar.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 
@@ -77,7 +87,7 @@ const CLASS_LABELS = {
 
 const enabled = ref(false);
 const loadError = ref('');
-const access = reactive({ nodes: 0, subscription_url: '', sticky_until: 0 });
+const access = reactive({ nodes: 0, subscription_url: '', sticky_until: 0, import_link: '' });
 const trustRaw = ref(null);
 const trust = computed(() => trustRaw.value);
 
@@ -92,11 +102,18 @@ async function load() {
     access.nodes = data.nodes || 0;
     access.subscription_url = data.subscription_url || '';
     access.sticky_until = data.sticky_until || 0;
+    access.import_link = data.import_link || '';
     trustRaw.value = data.trust ? { ...data.trust, classes: data.trust.classes || [] } : null;
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
   }
+}
+
+// Ссылка открывается своей схемой: приложение перехватывает её и заводит
+// подписку, а браузер остаётся на месте
+function openInApp() {
+  window.location.href = access.import_link;
 }
 
 function classLabel(kind) {

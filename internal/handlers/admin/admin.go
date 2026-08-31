@@ -33,6 +33,8 @@ type Handler struct {
 	// fed talks to the federation head. Nil-safe: a deployment with no head
 	// configured simply has no federation surface
 	fed *fedclient.Client
+	// appCodes - одноразовые коды, которыми приложение забирает свой токен
+	appCodes *appCodes
 	// oidc is the deployment's own account service. Nil-safe: without one the
 	// panel simply never offers the button
 	oidc *oidcauth.Client
@@ -43,8 +45,9 @@ type Handler struct {
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
 	h := &Handler{
 		cfg: cfg, store: store, auth: authSvc, hub: hub,
-		xui: xuiclient.New(),
-		fed: fedclient.New(cfg.FederationHead, cfg.FederationSecret),
+		xui:      xuiclient.New(),
+		fed:      fedclient.New(cfg.FederationHead, cfg.FederationSecret),
+		appCodes: newAppCodes(),
 		oidc: oidcauth.New(oidcauth.Config{
 			Issuer:       cfg.OIDCIssuer,
 			Homeserver:   cfg.MatrixHomeserver,
@@ -93,6 +96,14 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Кабинет участника: собственный доступ есть у любого аккаунта, включая
 	// администратора - одно другого не отменяет
 	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
+	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,
+	// приложение меняет его на токен устройства и дальше ходит только по нему
+	mux.HandleFunc("/app/link", h.requireAuth(h.handleAppLink))
+	mux.HandleFunc("/api/app/login", h.handleAppLogin)
+	mux.HandleFunc("/api/app/session", h.handleAppSession)
+	mux.HandleFunc("/api/app/me", h.requireApp(h.handleAppMe))
+	mux.HandleFunc("/api/app/access", h.requireApp(h.handleMyAccess))
+	mux.HandleFunc("/api/app/logout", h.requireApp(h.handleAppLogout))
 	// Не под /api/admin: этим входом пользуются не только администраторы.
 	// Бесплатный пользователь федерации заходит тем же WINGS V ID, и путь,
 	// названный админским, пришлось бы ломать ровно в тот день, когда до этого

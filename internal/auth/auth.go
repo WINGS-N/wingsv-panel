@@ -140,6 +140,26 @@ func (s *Service) Login(username, password string) (storage.Admin, storage.Admin
 	return admin, sess, nil
 }
 
+// VerifyCredentials проверяет логин с паролем, не заводя браузерной сессии.
+// Нужен приложению: оно держит свой токен устройства, а cookie ему некуда класть
+func (s *Service) VerifyCredentials(username, password string) (storage.Admin, error) {
+	admin, err := s.store.FindAdminByUsername(NormalizeUsername(username))
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return storage.Admin{}, ErrInvalidCredentials
+		}
+		return storage.Admin{}, err
+	}
+	if !VerifyPassword(admin.PasswordHash, password) {
+		return storage.Admin{}, ErrInvalidCredentials
+	}
+	if suspended, reason, err := s.store.IsSuspended(admin.ID); err == nil && suspended {
+		return storage.Admin{}, &SuspendedError{Reason: reason}
+	}
+	_ = s.store.MarkAdminLogin(admin.ID)
+	return admin, nil
+}
+
 func (s *Service) Logout(sessionID string) error {
 	if sessionID == "" {
 		return nil
