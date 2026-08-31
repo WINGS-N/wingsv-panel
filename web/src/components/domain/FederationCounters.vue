@@ -32,18 +32,18 @@
       <div class="stat">
         <span class="stat-kicker">
           <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
-          Отдача
+          Downlink
         </span>
-        <span class="stat-value">{{ formatRate(live.up_rate_bps) }}</span>
+        <span class="stat-value">{{ formatRate(live.down_rate_bps) }}</span>
         <span class="stat-meta">с нод федерации</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
           <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
-          Приём
+          Uplink
         </span>
-        <span class="stat-value">{{ formatRate(live.down_rate_bps) }}</span>
-        <span class="stat-meta">на устройства</span>
+        <span class="stat-value">{{ formatRate(live.up_rate_bps) }}</span>
+        <span class="stat-meta">на ноды федерации</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
@@ -67,7 +67,7 @@
           Всего за всё время
         </span>
         <span class="stat-value">{{ formatBytes(live.lifetime_bytes) }}</span>
-        <span class="stat-meta">с самого запуска федерации</span>
+        <span class="stat-meta">с запуска федерации</span>
       </div>
     </div>
   </section>

@@ -209,6 +209,15 @@ func (c *Client) OracleOverview(ctx context.Context, limit uint32) (*headpb.Orac
 	return client.OracleOverview(ctx, &headpb.OracleOverviewRequest{Limit: limit})
 }
 
+// OracleSubject - вердикт и сырые сигналы по одному профилю
+func (c *Client) OracleSubject(ctx context.Context, subjectID string) (*headpb.OracleSubjectResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.OracleSubject(ctx, &headpb.OracleSubjectRequest{SubjectId: subjectID})
+}
+
 // retryDelay is how long the live loop waits before re-dialing a head that is
 // down. Long enough not to hammer it, short enough that the counter comes back
 // on its own after a head restart.

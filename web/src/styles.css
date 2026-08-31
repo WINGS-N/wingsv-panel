@@ -1023,6 +1023,22 @@
     @apply text-[13px] text-wings-muted;
   }
 
+  .stat-kicker-img {
+    @apply h-4 w-4 object-contain;
+  }
+
+  .fed-node-row.is-tappable {
+    @apply cursor-pointer transition-colors;
+  }
+
+  .fed-node-row.is-tappable:hover {
+    @apply bg-white/5;
+  }
+
+  .probe-icon {
+    @apply h-9 w-9 shrink-0 object-contain;
+  }
+
   .fed-months {
     @apply flex flex-col gap-3;
   }

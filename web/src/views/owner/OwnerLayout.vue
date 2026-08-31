@@ -58,6 +58,14 @@
             <Smartphone class="admin-nav-icon" aria-hidden="true" />
             <span>Все клиенты</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-probes' }" active-class="is-active">
+            <Radar class="admin-nav-icon" aria-hidden="true" />
+            <span>Зонды</span>
+          </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-oracle' }" active-class="is-active">
+            <ShieldCheck class="admin-nav-icon" aria-hidden="true" />
+            <span>Oracle</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-audit' }" active-class="is-active">
             <ClipboardList class="admin-nav-icon" aria-hidden="true" />
             <span>Аудит</span>
@@ -86,7 +94,9 @@ import {
   LayoutDashboard,
   LogOut,
   Network,
+  Radar,
   Server,
+  ShieldCheck,
   Smartphone,
   UsersRound,
 } from 'lucide-vue-next';

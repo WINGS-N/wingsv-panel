@@ -34,18 +34,18 @@
       <div class="stat">
         <span class="stat-kicker">
           <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
-          Отдача
+          Downlink
         </span>
-        <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.up_rate_bps) }}</span>
+        <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.down_rate_bps) }}</span>
         <span class="stat-meta">с ваших нод</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
           <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
-          Приём
+          Uplink
         </span>
-        <span class="stat-value"><span class="traffic-rx">↓</span> {{ rate(summary.down_rate_bps) }}</span>
-        <span class="stat-meta">на устройства</span>
+        <span class="stat-value"><span class="traffic-rx">↓</span> {{ rate(summary.up_rate_bps) }}</span>
+        <span class="stat-meta">на ваши ноды</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">

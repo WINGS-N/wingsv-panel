@@ -19,6 +19,8 @@ import OwnerOverview from './views/owner/OwnerOverview.vue';
 import OwnerNodes from './views/owner/OwnerNodes.vue';
 import OwnerAdmins from './views/owner/OwnerAdmins.vue';
 import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
+import OwnerOracle from '@/views/owner/OwnerOracle.vue';
+import OwnerProbes from '@/views/owner/OwnerProbes.vue';
 import OwnerFleet from '@/views/owner/OwnerFleet.vue';
 import OwnerClients from './views/owner/OwnerClients.vue';
 import OwnerAudit from './views/owner/OwnerAudit.vue';
@@ -85,6 +87,8 @@ const router = createRouter({
         { path: 'invite-tree', component: OwnerInviteTree, name: 'owner-invite-tree' },
         { path: 'fleet', component: OwnerFleet, name: 'owner-fleet' },
         { path: 'clients', component: OwnerClients, name: 'owner-clients' },
+        { path: 'probes', component: OwnerProbes, name: 'owner-probes' },
+        { path: 'oracle', component: OwnerOracle, name: 'owner-oracle' },
         { path: 'audit', component: OwnerAudit, name: 'owner-audit' },
       ],
     },

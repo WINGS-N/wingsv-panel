@@ -142,3 +142,47 @@ func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage
 		"shadow_scorer": got.GetShadowScorer(),
 	})
 }
+
+// handleOracleSubject отвечает на вопрос "за что" по одному субъекту
+func (h *Handler) handleOracleSubject(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if h.fed == nil || !h.fed.Enabled() {
+		writeError(w, http.StatusNotFound, "федерация выключена")
+		return
+	}
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "не указан профиль")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), headTimeout)
+	defer cancel()
+	got, err := h.fed.OracleSubject(ctx, id)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
+		return
+	}
+	signals := make([]map[string]any, 0, len(got.GetSignals()))
+	for _, sig := range got.GetSignals() {
+		signals = append(signals, map[string]any{
+			"kind": sig.GetKind(), "count": sig.GetCount(),
+			"at_unix": sig.GetAtUnix(), "node_id": sig.GetNodeId(),
+		})
+	}
+	s := got.GetSubject()
+	classes := make([]oracleClassView, 0, len(s.GetClasses()))
+	for _, c := range s.GetClasses() {
+		classes = append(classes, oracleClassView{Kind: c.GetKind(), Count: c.GetCount(), Weight: c.GetWeight()})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"subject": oracleSubjectView{
+			SubjectID: s.GetSubjectId(), Confidence: s.GetConfidence(), Band: s.GetBand(),
+			Scorer: s.GetScorer(), AtUnix: s.GetAtUnix(), Classes: classes,
+			ShadowBand: s.GetShadowBand(), ShadowConfidence: s.GetShadowConfidence(),
+		},
+		"signals": signals,
+	})
+}
