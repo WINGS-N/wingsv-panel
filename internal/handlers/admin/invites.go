@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"v.wingsnet.org/internal/auth"
+	"v.wingsnet.org/internal/gen/headpb"
 	"v.wingsnet.org/internal/storage"
 )
 
@@ -17,9 +18,14 @@ import (
 // leaked code is a contained problem rather than an open door.
 const maxInviteUses = 50
 
-// minDonatedBytes is the traffic a donor has to have actually carried before
-// they may invite. A node that is merely registered proves nothing
-const minDonatedBytes = 1 << 30
+// Порог для приглашающего: сколько обещано, сколько реально прокачано и сколько
+// нода прожила в федерации. Обещание проверяется вместе с расходом - иначе
+// хватило бы объявить терабайт и не отдать ничего
+const (
+	minPledgedBytes = 5 << 30
+	minDonatedBytes = 1 << 30
+	minNodeAge      = 72 * time.Hour
+)
 
 type inviteView struct {
 	Token     string `json:"token"`
@@ -104,12 +110,12 @@ func (h *Handler) handleInvites(w http.ResponseWriter, r *http.Request, admin st
 
 // mayInvite decides who gets to grow the tree.
 //
-// The owner always may. Everybody else has to have carried real traffic first:
-// a pledge costs nothing to make on an account that exists only to grow a
-// branch, so the stake is the traffic, not the promise.
+// Порог намеренно выше, чем "у меня есть сервер": обещание ничего не стоит, а
+// домашний компьютер, поднятый на вечер ради инвайта, отсеивается стажем и
+// реально прокачанным трафиком.
 //
-// A head that cannot be reached is a refusal, not a pass. Failing open here
-// would hand out the one privilege the whole anti-abuse design rests on.
+// Недоступная голова - это отказ, а не пропуск: иначе привилегия, на которой
+// держится вся защита от ферм, раздаётся при первом же сбое сети.
 func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 	if admin.Role == storage.RoleOwner {
 		return nil
@@ -119,17 +125,40 @@ func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
-	summary, err := h.fed.DonorSummary(ctx, donorID(admin))
+	donor := donorID(admin)
+	summary, err := h.fed.DonorSummary(ctx, donor)
 	if err != nil {
 		return errors.New("не удалось проверить участие в федерации: " + err.Error())
 	}
 	if summary.GetNodes() == 0 {
 		return errors.New("приглашать могут те, кто отдал в федерацию хотя бы один сервер")
 	}
+	if summary.GetDeclaredBudgetBytes() < minPledgedBytes {
+		return errors.New("обещанного трафика мало: приглашения открываются от 5 GB в месяц")
+	}
 	if summary.GetUsedBytes() < minDonatedBytes {
-		return errors.New("сервер отдан, но через него ещё никто не прошёл: приглашения открываются после первого гигабайта")
+		return errors.New("сервер отдан, но через него ещё почти никто не прошёл: нужен хотя бы 1 GB реально отданного трафика")
+	}
+	nodes, err := h.fed.ListNodes(ctx, donor)
+	if err != nil {
+		return errors.New("не удалось проверить участие в федерации: " + err.Error())
+	}
+	if !hasSeasonedNode(nodes.GetNodes()) {
+		return errors.New("сервер слишком свежий: нужна нода, которая держится в федерации хотя бы 3 дня и сейчас на связи")
 	}
 	return nil
+}
+
+// hasSeasonedNode ищет ноду со стажем, которая сейчас на связи. Стаж и есть
+// проверка аптайма: нода, отваливающаяся каждый день, не наберёт его
+func hasSeasonedNode(nodes []*headpb.NodeSummary) bool {
+	cutoff := time.Now().Add(-minNodeAge).Unix()
+	for _, n := range nodes {
+		if n.GetOnline() && n.GetJoinedUnix() > 0 && n.GetJoinedUnix() <= cutoff {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handler) inviteView(it storage.InviteToken) inviteView {
