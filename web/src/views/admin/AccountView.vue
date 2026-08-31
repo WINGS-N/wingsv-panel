@@ -1,37 +1,36 @@
 <template>
   <section class="admin-card">
-    <h1 class="admin-card-title">Аккаунт администратора</h1>
-    <p class="admin-muted">
-      Имя пользователя: <strong>{{ admin?.username || '—' }}</strong>
-    </p>
-
-    <h2 class="admin-section-subtitle mt-5">Аватар</h2>
-    <div class="avatar-row">
-      <span class="avatar-preview" aria-hidden="true">
+    <!-- Шапка как в аккаунте телефона: аватар слева, имя рядом, загрузка под
+         ним. Раздельные секции "Аватар" и "Имя" разносили одно и то же -->
+    <div class="account-hero">
+      <span class="account-hero-avatar" aria-hidden="true">
         <img :src="myAvatarUrl" alt="" />
       </span>
-      <div class="avatar-actions">
-        <input
-          ref="fileInput"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          class="hidden"
-          @change="onFilePicked"
-        />
-        <SamsungButton variant="secondary" :busy="avatarBusy" @click="fileInput?.click()">
-          <template #icon><Camera class="button-icon" aria-hidden="true" /></template>
-          {{ avatarBusy ? 'Загружаем...' : 'Загрузить' }}
-        </SamsungButton>
-        <SamsungButton v-if="hasCustomAvatar" variant="secondary" :disabled="avatarBusy" @click="removeAvatar">
-          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          Сбросить
-        </SamsungButton>
+      <div class="account-hero-text">
+        <h1 class="admin-card-title">{{ admin?.username || 'Аккаунт' }}</h1>
+        <p class="admin-muted">{{ roleLabel }}</p>
+        <div class="avatar-actions mt-2">
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            class="hidden"
+            @change="onFilePicked"
+          />
+          <SamsungButton variant="secondary" :busy="avatarBusy" @click="fileInput?.click()">
+            <template #icon><Camera class="button-icon" aria-hidden="true" /></template>
+            {{ avatarBusy ? 'Загружаем...' : 'Сменить фото' }}
+          </SamsungButton>
+          <SamsungButton v-if="hasCustomAvatar" variant="secondary" :disabled="avatarBusy" @click="removeAvatar">
+            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+            Сбросить
+          </SamsungButton>
+        </div>
+        <p v-if="avatarError" class="admin-error mt-2">{{ avatarError }}</p>
       </div>
     </div>
-    <p v-if="avatarError" class="admin-error mt-2">{{ avatarError }}</p>
-    <p class="admin-muted mt-2">PNG / JPEG / WebP, до 2 MB.</p>
 
-    <h2 class="admin-section-subtitle mt-6">Сменить пароль</h2>
+    <h2 class="admin-section-subtitle mt-6">Пароль</h2>
     <form class="admin-account-form" @submit.prevent="onSubmit">
       <OneuiInput v-model="oldPassword" label="Текущий пароль" type="password" autocomplete="current-password" />
       <div class="mt-3">
@@ -131,6 +130,12 @@ const backupCodes = ref([]);
 // параметром значило бы рисовать чужой QR по чужой просьбе
 const totpQr = computed(() => (totpSetup.otpauth ? `/api/admin/me/totp/qr?v=${totpVersion.value}` : ''));
 const totpVersion = ref(0);
+
+// Роль показывается словами: "owner" в интерфейсе ничего не объясняет
+const roleLabel = computed(() => {
+  if (admin.value?.role === 'owner') return 'Владелец платформы';
+  return admin.value?.panel_access ? 'Администратор' : 'Участник федерации';
+});
 
 const matrix = reactive({ enabled: false, homeserver: '', matrix_id: '' });
 const matrixBusy = ref(false);

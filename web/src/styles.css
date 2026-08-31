@@ -1060,6 +1060,22 @@
     @apply mt-3 flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-relaxed text-wings-muted;
   }
 
+  .account-hero {
+    @apply flex flex-wrap items-start gap-4;
+  }
+
+  .account-hero-avatar {
+    @apply h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/5;
+  }
+
+  .account-hero-avatar img {
+    @apply h-full w-full object-cover;
+  }
+
+  .account-hero-text {
+    @apply min-w-0 flex-1;
+  }
+
   .totp-qr {
     @apply mt-3 h-52 w-52 rounded-[20px] bg-white p-3;
   }
