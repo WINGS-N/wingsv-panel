@@ -132,3 +132,20 @@ func TestAppLogoutRevokesTheDevice(t *testing.T) {
 		t.Fatalf("отозванный токен всё ещё работает: %d", after.Code)
 	}
 }
+
+// requireAuthFor подставляет уже известный аккаунт: тесты проверяют сами
+// обработчики, а не разбор сессии
+func (h *Handler) requireAuthFor(admin storage.Admin, next authedHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		next(w, r, admin)
+	}
+}
+
+func putJSON(t *testing.T, fn http.HandlerFunc, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	raw, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPut, path, bytes.NewReader(raw))
+	rec := httptest.NewRecorder()
+	fn(rec, req)
+	return rec
+}
