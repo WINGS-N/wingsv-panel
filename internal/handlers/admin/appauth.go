@@ -114,6 +114,7 @@ func (h *Handler) handleAppLogin(w http.ResponseWriter, r *http.Request) {
 		Username   string `json:"username"`
 		Password   string `json:"password"`
 		DeviceName string `json:"device_name"`
+		Code       string `json:"code"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "bad request body")
@@ -127,6 +128,12 @@ func (h *Handler) handleAppLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeError(w, http.StatusUnauthorized, "неверный логин или пароль")
+		return
+	}
+	if !h.verifySecondFactor(admin, req.Code) {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{
+			"error": true, "totp_required": true, "message": "нужен код второго фактора",
+		})
 		return
 	}
 	h.issueAppSession(w, r, admin, req.DeviceName)

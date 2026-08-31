@@ -39,6 +39,25 @@ CREATE TABLE IF NOT EXISTS app_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_app_sessions_admin_id ON app_sessions(admin_id);
+
+-- Второй фактор. Секрет хранится как есть: TOTP проверяется сравнением кодов,
+-- и хеш тут не поможет - для проверки нужен сам секрет. Строка появляется при
+-- начале настройки и становится рабочей только после подтверждения кодом.
+CREATE TABLE IF NOT EXISTS admin_totp (
+    admin_id INTEGER PRIMARY KEY REFERENCES admins(id) ON DELETE CASCADE,
+    secret TEXT NOT NULL,
+    confirmed_at INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+-- Резервные коды на случай потерянного телефона. Хранятся хешами и сгорают
+-- поштучно при использовании.
+CREATE TABLE IF NOT EXISTS admin_totp_backup (
+    admin_id INTEGER NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+    code_hash TEXT NOT NULL,
+    used_at INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (admin_id, code_hash)
+);
 CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires_at ON admin_sessions(expires_at);
 
 CREATE TABLE IF NOT EXISTS clients (

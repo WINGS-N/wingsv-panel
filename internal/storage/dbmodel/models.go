@@ -406,6 +406,8 @@ func All() []any {
 		&ClientTraffic{},
 		&InviteRedemption{},
 		&AppSession{},
+		&AdminTOTP{},
+		&AdminTOTPBackup{},
 	}
 }
 
@@ -437,3 +439,24 @@ type AppSession struct {
 
 // TableName задаёт имя таблицы
 func (AppSession) TableName() string { return "app_sessions" }
+
+// AdminTOTP - второй фактор аккаунта
+type AdminTOTP struct {
+	AdminID       int64  `gorm:"column:admin_id;primaryKey"`
+	Secret        string `gorm:"column:secret;not null"`
+	ConfirmedAt   int64  `gorm:"column:confirmed_at;not null;default:0"`
+	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
+}
+
+// TableName задаёт имя таблицы
+func (AdminTOTP) TableName() string { return "admin_totp" }
+
+// AdminTOTPBackup - резервный код
+type AdminTOTPBackup struct {
+	AdminID  int64  `gorm:"column:admin_id;primaryKey"`
+	CodeHash string `gorm:"column:code_hash;primaryKey"`
+	UsedAt   int64  `gorm:"column:used_at;not null;default:0"`
+}
+
+// TableName задаёт имя таблицы
+func (AdminTOTPBackup) TableName() string { return "admin_totp_backup" }

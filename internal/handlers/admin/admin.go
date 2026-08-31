@@ -96,6 +96,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Кабинет участника: собственный доступ есть у любого аккаунта, включая
 	// администратора - одно другого не отменяет
 	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
+	mux.HandleFunc("/api/admin/me/totp", h.requireAuth(h.handleTOTP))
 	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,
 	// приложение меняет его на токен устройства и дальше ходит только по нему
 	mux.HandleFunc("/app/link", h.requireAuth(h.handleAppLink))
@@ -136,6 +137,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	// Code - код второго фактора или резервный код
+	Code string `json:"code"`
 }
 
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -147,6 +150,16 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid body")
 		return
+	}
+	// Второй фактор проверяется до выдачи сессии: пароль сам по себе входом уже
+	// не является
+	if checked, err := h.auth.VerifyCredentials(req.Username, req.Password); err == nil {
+		if !h.verifySecondFactor(checked, req.Code) {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{
+				"error": true, "totp_required": true, "message": "нужен код второго фактора",
+			})
+			return
+		}
 	}
 	admin, sess, err := h.auth.Login(req.Username, req.Password)
 	if err != nil {
