@@ -152,6 +152,12 @@ async function onSubmit() {
   try {
     await login(username.value.trim().toLowerCase(), password.value, totpCode.value);
     const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients';
+    // Возврат в приложение идёт мимо роутера: /app/link - серверный адрес,
+    // который отдаёт редирект на схему приложения, а не страницу панели
+    if (target.startsWith('/app/')) {
+      window.location.assign(target);
+      return;
+    }
     router.push(target);
   } catch (err) {
     if (err.totpRequired) {

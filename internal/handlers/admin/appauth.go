@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -60,9 +61,16 @@ func (a *appCodes) redeem(code string, now time.Time) (int64, bool) {
 	return entry.adminID, true
 }
 
-// handleAppLink выдаёт код уже вошедшему человеку и уводит его обратно в
-// приложение. Открывается в браузере, поэтому в адрес попадает только код
-func (h *Handler) handleAppLink(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+// handleAppLink выдаёт код вошедшему и уводит его обратно в приложение.
+//
+// Открывается прямо из приложения, поэтому сессии обычно ещё нет: вместо
+// отказа человек отправляется на экран входа, а оттуда возвращается сюда
+func (h *Handler) handleAppLink(w http.ResponseWriter, r *http.Request) {
+	admin, err := h.auth.Authenticate(r)
+	if err != nil {
+		http.Redirect(w, r, "/login?redirect="+url.QueryEscape("/app/link"), http.StatusFound)
+		return
+	}
 	code, err := auth.GenerateInviteToken()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

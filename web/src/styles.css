@@ -113,7 +113,8 @@
   }
 
   .public-avatar {
-    @apply h-10 w-10 rounded-full object-cover;
+    @apply h-10 w-10 shrink-0 rounded-full object-cover;
+    aspect-ratio: 1 / 1;
   }
 
   .public-account-name {
@@ -901,6 +902,7 @@
   }
 
   .admin-account-chip-avatar {
+    aspect-ratio: 1 / 1;
     @apply flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full text-[13px] font-bold text-white;
     background: linear-gradient(140deg, #1259d1 0%, #5db4ff 100%);
   }
@@ -1066,6 +1068,7 @@
 
   .account-hero-avatar {
     @apply h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/5;
+    aspect-ratio: 1 / 1;
   }
 
   .account-hero-avatar img {

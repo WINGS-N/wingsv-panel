@@ -98,17 +98,22 @@
           <span v-if="n.reason" class="mt-0.5 block truncate text-sm text-wings-muted">{{ n.reason }}</span>
           <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
             <span class="inline-flex items-center gap-1">
-              <ArrowUpDown :size="13" aria-hidden="true" />{{ bytes(n.used_bytes) }} из
+              <ArrowUpDown :size="13" class="shrink-0" aria-hidden="true" />{{ bytes(n.used_bytes) }} из
               {{ bytes(n.declared_budget_bytes) }}
             </span>
             <span v-if="n.offered_ports && n.offered_ports.length" class="inline-flex items-center gap-1">
-              <Plug :size="13" aria-hidden="true" />{{ n.offered_ports.join(' / ') }}
+              <Plug :size="13" class="shrink-0" aria-hidden="true" />{{ n.offered_ports.join(' / ') }}
             </span>
-            <span v-if="n.reality_dest" class="inline-flex items-center gap-1" title="Чью tls-личность заимствует">
-              <Fingerprint :size="13" aria-hidden="true" />{{ n.reality_dest }}
+            <span
+              v-if="n.reality_dest"
+              class="inline-flex min-w-0 max-w-full items-center gap-1"
+              title="Чью tls-личность заимствует"
+            >
+              <Fingerprint :size="13" class="shrink-0" aria-hidden="true" />
+              <span class="truncate">{{ n.reality_dest }}</span>
             </span>
             <span v-if="n.arch" class="inline-flex items-center gap-1">
-              <Cpu :size="13" aria-hidden="true" />{{ n.arch }}
+              <Cpu :size="13" class="shrink-0" aria-hidden="true" />{{ n.arch }}
             </span>
             <span class="admin-pill is-offline">{{ n.state }}</span>
           </span>
