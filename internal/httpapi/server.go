@@ -400,7 +400,11 @@ func cors(publicBaseURL string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		origin := strings.TrimSpace(request.Header.Get("Origin"))
 		if origin != "" {
-			if _, ok := allowedOrigins[origin]; ok {
+			// Шрифты забирает и страница подписки федерации, а она на своём
+			// домене. Статика публичная, поэтому открыта всем и без кук
+			if strings.HasPrefix(request.URL.Path, "/fonts/") {
+				writer.Header().Set("Access-Control-Allow-Origin", "*")
+			} else if _, ok := allowedOrigins[origin]; ok {
 				writer.Header().Set("Access-Control-Allow-Origin", origin)
 				writer.Header().Set("Vary", "Origin")
 				writer.Header().Set("Access-Control-Allow-Credentials", "true")
