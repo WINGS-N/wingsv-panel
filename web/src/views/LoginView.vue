@@ -44,6 +44,9 @@
           </div>
 
           <p v-if="error" class="state-error">{{ error }}</p>
+          <router-link v-if="matrix.enabled" class="login-link" :to="{ name: 'matrix-landing' }">
+            Что такое Matrix ID
+          </router-link>
 
           <SamsungButton class="login-submit" type="submit" :busy="busy" :disabled="!username || !password">
             <template #icon><LogIn class="button-icon" aria-hidden="true" /></template>

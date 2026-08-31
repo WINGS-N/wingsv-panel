@@ -1052,6 +1052,14 @@
     @apply text-[12px] text-wings-kicker;
   }
 
+  .login-link {
+    @apply mt-1 block text-center text-[14px] text-wings-accent;
+  }
+
+  .matrix-steps {
+    @apply mt-3 flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-relaxed text-wings-muted;
+  }
+
   .totp-qr {
     @apply mt-3 h-52 w-52 rounded-[20px] bg-white p-3;
   }

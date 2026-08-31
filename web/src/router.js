@@ -20,6 +20,7 @@ import OwnerNodes from './views/owner/OwnerNodes.vue';
 import OwnerAdmins from './views/owner/OwnerAdmins.vue';
 import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
 import CabinetView from '@/views/CabinetView.vue';
+import MatrixLanding from '@/views/MatrixLanding.vue';
 import OwnerOracle from '@/views/owner/OwnerOracle.vue';
 import OwnerProbes from '@/views/owner/OwnerProbes.vue';
 import OwnerFleet from '@/views/owner/OwnerFleet.vue';
@@ -32,6 +33,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: LandingView, name: 'landing' },
     { path: '/me', component: CabinetView, name: 'cabinet' },
+    { path: '/matrix', component: MatrixLanding, name: 'matrix-landing' },
     { path: '/federation', component: FederationLanding, name: 'federation-landing' },
     { path: '/login', component: LoginView, name: 'login' },
     { path: '/register', component: RegisterView, name: 'register' },
