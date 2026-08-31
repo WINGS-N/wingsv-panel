@@ -10,6 +10,13 @@
       люди - видно это только отсюда.
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
+    <div v-if="enabled" class="actions-row">
+      <SamsungButton :busy="running" @click="runNow">
+        <template #icon><Play class="button-icon" aria-hidden="true" /></template>
+        Замерить сейчас
+      </SamsungButton>
+      <span v-if="runNote" class="admin-muted self-center">{{ runNote }}</span>
+    </div>
     <p v-else-if="!enabled" class="state-hint">Федерация выключена.</p>
     <p v-else-if="!vantages.length" class="state-hint">Ни одна точка наблюдения ещё не выходила на связь.</p>
 
@@ -21,7 +28,7 @@
             <span class="truncate text-[17px]">{{ v.probe_id }}</span>
             <span class="admin-pill" :class="v.online ? 'is-online' : 'is-offline'">
               <span class="state-dot" :class="v.online ? 'is-live' : 'is-off'" aria-hidden="true"></span>
-              {{ v.online ? 'на связи' : 'молчит' }}
+              {{ v.online ? 'онлайн' : 'молчит' }}
             </span>
           </div>
           <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
@@ -85,13 +92,16 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { Activity, Building2, Clock, Gauge, Handshake, MapPin, Radar, Timer } from 'lucide-vue-next';
+import { Activity, Building2, Clock, Gauge, Handshake, MapPin, Play, Radar, Timer } from 'lucide-vue-next';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
 import { formatBytes } from '@/utils/format';
 
 const enabled = ref(false);
 const vantages = ref([]);
 const measurements = ref([]);
 const loadError = ref('');
+const running = ref(false);
+const runNote = ref('');
 let timer = null;
 
 onMounted(() => {
@@ -114,6 +124,25 @@ async function load() {
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
+  }
+}
+
+// Круг идёт раз в пять минут, и только что поднятую ноду иначе не проверить
+async function runNow() {
+  running.value = true;
+  runNote.value = '';
+  try {
+    const res = await fetch('/api/owner/federation/probes/run', { method: 'POST', credentials: 'include' });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    runNote.value = data.probes
+      ? `запущено на ${data.probes} точках, результат через минуту`
+      : 'ни одна точка не на связи';
+    loadError.value = '';
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  } finally {
+    running.value = false;
   }
 }
 

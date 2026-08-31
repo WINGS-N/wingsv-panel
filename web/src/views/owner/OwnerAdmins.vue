@@ -37,6 +37,9 @@
             <SamsungPill :variant="a.role === 'owner' ? 'online' : 'offline'">
               {{ a.role }}
             </SamsungPill>
+            <SamsungPill v-if="a.role !== 'owner'" :variant="a.panel_access ? 'info' : 'offline'" class="ml-2">
+              {{ a.panel_access ? 'панель' : 'участник' }}
+            </SamsungPill>
           </td>
           <td data-label="Клиентов">{{ a.clients_total }}</td>
           <td data-label="Online">{{ a.clients_online }}</td>
@@ -49,6 +52,16 @@
               @click="openReset(a)"
             >
               <KeyRound class="h-4 w-4" aria-hidden="true" />
+            </SamsungIconButton>
+            <SamsungIconButton
+              v-if="a.role !== 'owner'"
+              :title="a.panel_access ? 'Закрыть админ-панель' : 'Открыть админ-панель'"
+              :aria-label="`Доступ в панель для ${a.username}`"
+              :busy="accessId === a.id"
+              @click="togglePanel(a)"
+            >
+              <ShieldCheck v-if="a.panel_access" class="h-4 w-4" aria-hidden="true" />
+              <ShieldOff v-else class="h-4 w-4" aria-hidden="true" />
             </SamsungIconButton>
             <SamsungIconButton
               v-if="a.role !== 'owner'"
@@ -183,7 +196,18 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { Clock, Copy, Eye, KeyRound, Plus, Trash2, X, Infinity as InfinityIcon } from 'lucide-vue-next';
+import {
+  Clock,
+  Copy,
+  Eye,
+  KeyRound,
+  Plus,
+  ShieldCheck,
+  ShieldOff,
+  Trash2,
+  X,
+  Infinity as InfinityIcon,
+} from 'lucide-vue-next';
 import { registrationState, refreshRegistrationStatus, avatarUrlFor } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import OneuiRadioGroup from '@/components/controls/OneuiRadioGroup.vue';
@@ -210,6 +234,7 @@ const resetPassword = ref('');
 const resetting = ref(false);
 const resetError = ref('');
 const confirmDelete = ref(null);
+const accessId = ref(0);
 const deletingId = ref(0);
 const deleteError = ref('');
 
@@ -285,6 +310,26 @@ async function onCreateAdmin() {
     createError.value = err.message;
   } finally {
     creating.value = false;
+  }
+}
+
+// Панель открывается и закрывается отдельно от аккаунта: личный доступ к VPN
+// остаётся в любом случае
+async function togglePanel(admin) {
+  accessId.value = admin.id;
+  try {
+    const res = await fetch(`/api/owner/admins/${admin.id}/panel-access`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allowed: !admin.panel_access }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    admin.panel_access = !admin.panel_access;
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  } finally {
+    accessId.value = 0;
   }
 }
 

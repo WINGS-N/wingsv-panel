@@ -3,6 +3,7 @@ package owner
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"v.wingsnet.org/internal/storage"
@@ -109,7 +110,11 @@ func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), headTimeout)
 	defer cancel()
-	got, err := h.fed.OracleOverview(ctx, 20)
+	var ids []string
+	if raw := r.URL.Query().Get("ids"); raw != "" {
+		ids = strings.Split(raw, ",")
+	}
+	got, err := h.fed.OracleOverview(ctx, 20, ids...)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
 		return
@@ -185,4 +190,24 @@ func (h *Handler) handleOracleSubject(w http.ResponseWriter, r *http.Request, _ 
 		},
 		"signals": signals,
 	})
+}
+
+// handleRunProbes запускает круг замеров вручную
+func (h *Handler) handleRunProbes(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if h.fed == nil || !h.fed.Enabled() {
+		writeError(w, http.StatusNotFound, "федерация выключена")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), headTimeout)
+	defer cancel()
+	woken, err := h.fed.RunProbes(ctx)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"probes": woken})
 }

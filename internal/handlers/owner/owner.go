@@ -54,6 +54,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/invites", h.requireOwner(h.handleInvites))
 	mux.HandleFunc("/api/owner/invites/", h.requireOwner(h.handleInviteByToken))
 	mux.HandleFunc("/api/owner/federation/probes", h.requireOwner(h.handleProbes))
+	mux.HandleFunc("/api/owner/federation/probes/run", h.requireOwner(h.handleRunProbes))
 	mux.HandleFunc("/api/owner/federation/oracle", h.requireOwner(h.handleOracle))
 	mux.HandleFunc("/api/owner/federation/oracle/subject", h.requireOwner(h.handleOracleSubject))
 	mux.HandleFunc("/api/owner/invite-tree", h.requireOwner(h.handleInviteTree))
@@ -102,6 +103,7 @@ type adminView struct {
 	ID                 int64  `json:"id"`
 	Username           string `json:"username"`
 	Role               string `json:"role"`
+	PanelAccess        bool   `json:"panel_access"`
 	MustChangePassword bool   `json:"must_change_password"`
 	LastLoginAt        string `json:"last_login_at"`
 	CreatedAt          string `json:"created_at"`
@@ -122,6 +124,7 @@ func (h *Handler) respondListAdmins(w http.ResponseWriter) {
 			ID:                 a.ID,
 			Username:           a.Username,
 			Role:               a.Role,
+			PanelAccess:        a.PanelAccess || a.Role == storage.RoleOwner,
 			MustChangePassword: a.MustChangePassword,
 			LastLoginAt:        formatTS(a.LastLoginAt),
 			CreatedAt:          formatTS(a.CreatedAt),

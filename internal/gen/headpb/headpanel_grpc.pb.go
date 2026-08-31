@@ -36,6 +36,7 @@ const (
 	FederationHead_SetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetFleetSettings"
 	FederationHead_RestartComponent_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/RestartComponent"
 	FederationHead_ProbeReports_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/ProbeReports"
+	FederationHead_RunProbes_FullMethodName         = "/wingsv.headpanel.v1.FederationHead/RunProbes"
 	FederationHead_OracleOverview_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/OracleOverview"
 	FederationHead_OracleSubject_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/OracleSubject"
 )
@@ -78,6 +79,9 @@ type FederationHeadClient interface {
 	// Что намеряли точки наблюдения внутри цензурируемой сети. Единственный
 	// источник правды о том, работает ли нода там, где сидят люди.
 	ProbeReports(ctx context.Context, in *ProbeReportsRequest, opts ...grpc.CallOption) (*ProbeReportsResponse, error)
+	// Замерить прямо сейчас, не дожидаясь круга. Круг идёт раз в пять минут, и
+	// проверить только что поднятую ноду иначе нечем.
+	RunProbes(ctx context.Context, in *RunProbesRequest, opts ...grpc.CallOption) (*RunProbesResponse, error)
 	// Состояние Oracle: кого он смотрит, что решил и на основании чего.
 	OracleOverview(ctx context.Context, in *OracleOverviewRequest, opts ...grpc.CallOption) (*OracleOverviewResponse, error)
 	// Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
@@ -236,6 +240,16 @@ func (c *federationHeadClient) ProbeReports(ctx context.Context, in *ProbeReport
 	return out, nil
 }
 
+func (c *federationHeadClient) RunProbes(ctx context.Context, in *RunProbesRequest, opts ...grpc.CallOption) (*RunProbesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunProbesResponse)
+	err := c.cc.Invoke(ctx, FederationHead_RunProbes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *federationHeadClient) OracleOverview(ctx context.Context, in *OracleOverviewRequest, opts ...grpc.CallOption) (*OracleOverviewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(OracleOverviewResponse)
@@ -294,6 +308,9 @@ type FederationHeadServer interface {
 	// Что намеряли точки наблюдения внутри цензурируемой сети. Единственный
 	// источник правды о том, работает ли нода там, где сидят люди.
 	ProbeReports(context.Context, *ProbeReportsRequest) (*ProbeReportsResponse, error)
+	// Замерить прямо сейчас, не дожидаясь круга. Круг идёт раз в пять минут, и
+	// проверить только что поднятую ноду иначе нечем.
+	RunProbes(context.Context, *RunProbesRequest) (*RunProbesResponse, error)
 	// Состояние Oracle: кого он смотрит, что решил и на основании чего.
 	OracleOverview(context.Context, *OracleOverviewRequest) (*OracleOverviewResponse, error)
 	// Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
@@ -350,6 +367,9 @@ func (UnimplementedFederationHeadServer) RestartComponent(context.Context, *Rest
 }
 func (UnimplementedFederationHeadServer) ProbeReports(context.Context, *ProbeReportsRequest) (*ProbeReportsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProbeReports not implemented")
+}
+func (UnimplementedFederationHeadServer) RunProbes(context.Context, *RunProbesRequest) (*RunProbesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunProbes not implemented")
 }
 func (UnimplementedFederationHeadServer) OracleOverview(context.Context, *OracleOverviewRequest) (*OracleOverviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OracleOverview not implemented")
@@ -619,6 +639,24 @@ func _FederationHead_ProbeReports_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_RunProbes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunProbesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).RunProbes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_RunProbes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).RunProbes(ctx, req.(*RunProbesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FederationHead_OracleOverview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(OracleOverviewRequest)
 	if err := dec(in); err != nil {
@@ -713,6 +751,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProbeReports",
 			Handler:    _FederationHead_ProbeReports_Handler,
+		},
+		{
+			MethodName: "RunProbes",
+			Handler:    _FederationHead_RunProbes_Handler,
 		},
 		{
 			MethodName: "OracleOverview",

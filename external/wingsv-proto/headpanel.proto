@@ -41,6 +41,9 @@ service FederationHead {
   // Что намеряли точки наблюдения внутри цензурируемой сети. Единственный
   // источник правды о том, работает ли нода там, где сидят люди.
   rpc ProbeReports(ProbeReportsRequest) returns (ProbeReportsResponse);
+  // Замерить прямо сейчас, не дожидаясь круга. Круг идёт раз в пять минут, и
+  // проверить только что поднятую ноду иначе нечем.
+  rpc RunProbes(RunProbesRequest) returns (RunProbesResponse);
   // Состояние Oracle: кого он смотрит, что решил и на основании чего.
   rpc OracleOverview(OracleOverviewRequest) returns (OracleOverviewResponse);
   // Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
@@ -287,6 +290,12 @@ message SetNodeBudgetResponse {
 }
 
 message ProbeReportsRequest {}
+
+message RunProbesRequest {}
+
+message RunProbesResponse {
+  uint32 probes = 1;
+}
 
 // ProbeVantage - одна точка наблюдения, как она себя представила
 message ProbeVantage {

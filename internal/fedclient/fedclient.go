@@ -201,12 +201,25 @@ func (c *Client) ProbeReports(ctx context.Context) (*headpb.ProbeReportsResponse
 }
 
 // OracleOverview - текущее состояние судьи
-func (c *Client) OracleOverview(ctx context.Context, limit uint32) (*headpb.OracleOverviewResponse, error) {
+func (c *Client) OracleOverview(ctx context.Context, limit uint32, subjectIDs ...string) (*headpb.OracleOverviewResponse, error) {
 	client, err := c.dial()
 	if err != nil {
 		return nil, err
 	}
-	return client.OracleOverview(ctx, &headpb.OracleOverviewRequest{Limit: limit})
+	return client.OracleOverview(ctx, &headpb.OracleOverviewRequest{Limit: limit, SubjectIds: subjectIDs})
+}
+
+// RunProbes просит точки наблюдения замерить прямо сейчас
+func (c *Client) RunProbes(ctx context.Context) (uint32, error) {
+	client, err := c.dial()
+	if err != nil {
+		return 0, err
+	}
+	got, err := client.RunProbes(ctx, &headpb.RunProbesRequest{})
+	if err != nil {
+		return 0, err
+	}
+	return got.GetProbes(), nil
 }
 
 // OracleSubject - вердикт и сырые сигналы по одному профилю
