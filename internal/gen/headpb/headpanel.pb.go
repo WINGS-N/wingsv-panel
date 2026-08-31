@@ -660,9 +660,9 @@ func (x *DonorHistoryRequest) GetMonths() uint32 {
 	return 0
 }
 
-// DonorMonth is one closed or running month of a donor's contribution. Month is
-// YYYY-MM in UTC: the head serves donors in every timezone, and a boundary that
-// moves with the reader would make two people see different totals.
+// DonorMonth - один месяц вклада донора, закрытый или текущий. Month в формате
+// YYYY-MM по UTC: граница, плывущая вместе с часовым поясом читателя, показала
+// бы двум людям разные суммы.
 type DonorMonth struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Month         string                 `protobuf:"bytes,1,opt,name=month,proto3" json:"month,omitempty"`
@@ -1982,6 +1982,814 @@ func (x *SetNodeBudgetResponse) GetUsedBytes() uint64 {
 	return 0
 }
 
+type ProbeReportsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProbeReportsRequest) Reset() {
+	*x = ProbeReportsRequest{}
+	mi := &file_headpanel_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProbeReportsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProbeReportsRequest) ProtoMessage() {}
+
+func (x *ProbeReportsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProbeReportsRequest.ProtoReflect.Descriptor instead.
+func (*ProbeReportsRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{29}
+}
+
+// ProbeVantage - одна точка наблюдения, как она себя представила
+type ProbeVantage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProbeId       string                 `protobuf:"bytes,1,opt,name=probe_id,json=probeId,proto3" json:"probe_id,omitempty"`
+	Region        string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`
+	Isp           string                 `protobuf:"bytes,3,opt,name=isp,proto3" json:"isp,omitempty"`
+	Asn           string                 `protobuf:"bytes,4,opt,name=asn,proto3" json:"asn,omitempty"`
+	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Online        bool                   `protobuf:"varint,6,opt,name=online,proto3" json:"online,omitempty"`
+	LastSeenUnix  int64                  `protobuf:"varint,7,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
+	Measurements  uint32                 `protobuf:"varint,8,opt,name=measurements,proto3" json:"measurements,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProbeVantage) Reset() {
+	*x = ProbeVantage{}
+	mi := &file_headpanel_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProbeVantage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProbeVantage) ProtoMessage() {}
+
+func (x *ProbeVantage) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProbeVantage.ProtoReflect.Descriptor instead.
+func (*ProbeVantage) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ProbeVantage) GetProbeId() string {
+	if x != nil {
+		return x.ProbeId
+	}
+	return ""
+}
+
+func (x *ProbeVantage) GetRegion() string {
+	if x != nil {
+		return x.Region
+	}
+	return ""
+}
+
+func (x *ProbeVantage) GetIsp() string {
+	if x != nil {
+		return x.Isp
+	}
+	return ""
+}
+
+func (x *ProbeVantage) GetAsn() string {
+	if x != nil {
+		return x.Asn
+	}
+	return ""
+}
+
+func (x *ProbeVantage) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *ProbeVantage) GetOnline() bool {
+	if x != nil {
+		return x.Online
+	}
+	return false
+}
+
+func (x *ProbeVantage) GetLastSeenUnix() int64 {
+	if x != nil {
+		return x.LastSeenUnix
+	}
+	return 0
+}
+
+func (x *ProbeVantage) GetMeasurements() uint32 {
+	if x != nil {
+		return x.Measurements
+	}
+	return 0
+}
+
+// ProbeMeasurement - один адрес одной ноды, померенный по одному транспорту
+type ProbeMeasurement struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Hostname      string                 `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	Address       string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	Transport     string                 `protobuf:"bytes,4,opt,name=transport,proto3" json:"transport,omitempty"`
+	Ok            bool                   `protobuf:"varint,5,opt,name=ok,proto3" json:"ok,omitempty"`
+	HandshakeMs   uint32                 `protobuf:"varint,6,opt,name=handshake_ms,json=handshakeMs,proto3" json:"handshake_ms,omitempty"`
+	RttMs         uint32                 `protobuf:"varint,7,opt,name=rtt_ms,json=rttMs,proto3" json:"rtt_ms,omitempty"`
+	DownloadBps   uint64                 `protobuf:"varint,8,opt,name=download_bps,json=downloadBps,proto3" json:"download_bps,omitempty"`
+	Error         string                 `protobuf:"bytes,9,opt,name=error,proto3" json:"error,omitempty"`
+	ProbeId       string                 `protobuf:"bytes,10,opt,name=probe_id,json=probeId,proto3" json:"probe_id,omitempty"`
+	AtUnix        int64                  `protobuf:"varint,11,opt,name=at_unix,json=atUnix,proto3" json:"at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProbeMeasurement) Reset() {
+	*x = ProbeMeasurement{}
+	mi := &file_headpanel_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProbeMeasurement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProbeMeasurement) ProtoMessage() {}
+
+func (x *ProbeMeasurement) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProbeMeasurement.ProtoReflect.Descriptor instead.
+func (*ProbeMeasurement) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ProbeMeasurement) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *ProbeMeasurement) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *ProbeMeasurement) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *ProbeMeasurement) GetTransport() string {
+	if x != nil {
+		return x.Transport
+	}
+	return ""
+}
+
+func (x *ProbeMeasurement) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+func (x *ProbeMeasurement) GetHandshakeMs() uint32 {
+	if x != nil {
+		return x.HandshakeMs
+	}
+	return 0
+}
+
+func (x *ProbeMeasurement) GetRttMs() uint32 {
+	if x != nil {
+		return x.RttMs
+	}
+	return 0
+}
+
+func (x *ProbeMeasurement) GetDownloadBps() uint64 {
+	if x != nil {
+		return x.DownloadBps
+	}
+	return 0
+}
+
+func (x *ProbeMeasurement) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *ProbeMeasurement) GetProbeId() string {
+	if x != nil {
+		return x.ProbeId
+	}
+	return ""
+}
+
+func (x *ProbeMeasurement) GetAtUnix() int64 {
+	if x != nil {
+		return x.AtUnix
+	}
+	return 0
+}
+
+type ProbeReportsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Vantages      []*ProbeVantage        `protobuf:"bytes,1,rep,name=vantages,proto3" json:"vantages,omitempty"`
+	Measurements  []*ProbeMeasurement    `protobuf:"bytes,2,rep,name=measurements,proto3" json:"measurements,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProbeReportsResponse) Reset() {
+	*x = ProbeReportsResponse{}
+	mi := &file_headpanel_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProbeReportsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProbeReportsResponse) ProtoMessage() {}
+
+func (x *ProbeReportsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProbeReportsResponse.ProtoReflect.Descriptor instead.
+func (*ProbeReportsResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ProbeReportsResponse) GetVantages() []*ProbeVantage {
+	if x != nil {
+		return x.Vantages
+	}
+	return nil
+}
+
+func (x *ProbeReportsResponse) GetMeasurements() []*ProbeMeasurement {
+	if x != nil {
+		return x.Measurements
+	}
+	return nil
+}
+
+type OracleOverviewRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Сколько подозреваемых вернуть, 0 - двадцать
+	Limit uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Когда список задан, отдаются вердикты только по нему. Так панель считает
+	// ветку инвайт-дерева: голова про дерево не знает и знать не должна
+	SubjectIds    []string `protobuf:"bytes,2,rep,name=subject_ids,json=subjectIds,proto3" json:"subject_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleOverviewRequest) Reset() {
+	*x = OracleOverviewRequest{}
+	mi := &file_headpanel_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleOverviewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleOverviewRequest) ProtoMessage() {}
+
+func (x *OracleOverviewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleOverviewRequest.ProtoReflect.Descriptor instead.
+func (*OracleOverviewRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *OracleOverviewRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *OracleOverviewRequest) GetSubjectIds() []string {
+	if x != nil {
+		return x.SubjectIds
+	}
+	return nil
+}
+
+type OracleSubjectRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubjectId     string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleSubjectRequest) Reset() {
+	*x = OracleSubjectRequest{}
+	mi := &file_headpanel_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleSubjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleSubjectRequest) ProtoMessage() {}
+
+func (x *OracleSubjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleSubjectRequest.ProtoReflect.Descriptor instead.
+func (*OracleSubjectRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *OracleSubjectRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+// OracleSignal - сырое наблюдение, которое хранится ради ответа на вопрос
+// "за что"
+type OracleSignal struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Count         uint32                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	AtUnix        int64                  `protobuf:"varint,3,opt,name=at_unix,json=atUnix,proto3" json:"at_unix,omitempty"`
+	NodeId        string                 `protobuf:"bytes,4,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	WindowSeconds uint32                 `protobuf:"varint,5,opt,name=window_seconds,json=windowSeconds,proto3" json:"window_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleSignal) Reset() {
+	*x = OracleSignal{}
+	mi := &file_headpanel_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleSignal) ProtoMessage() {}
+
+func (x *OracleSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleSignal.ProtoReflect.Descriptor instead.
+func (*OracleSignal) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *OracleSignal) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *OracleSignal) GetCount() uint32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *OracleSignal) GetAtUnix() int64 {
+	if x != nil {
+		return x.AtUnix
+	}
+	return 0
+}
+
+func (x *OracleSignal) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *OracleSignal) GetWindowSeconds() uint32 {
+	if x != nil {
+		return x.WindowSeconds
+	}
+	return 0
+}
+
+type OracleSubjectResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subject       *OracleSubject         `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
+	Signals       []*OracleSignal        `protobuf:"bytes,2,rep,name=signals,proto3" json:"signals,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleSubjectResponse) Reset() {
+	*x = OracleSubjectResponse{}
+	mi := &file_headpanel_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleSubjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleSubjectResponse) ProtoMessage() {}
+
+func (x *OracleSubjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleSubjectResponse.ProtoReflect.Descriptor instead.
+func (*OracleSubjectResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *OracleSubjectResponse) GetSubject() *OracleSubject {
+	if x != nil {
+		return x.Subject
+	}
+	return nil
+}
+
+func (x *OracleSubjectResponse) GetSignals() []*OracleSignal {
+	if x != nil {
+		return x.Signals
+	}
+	return nil
+}
+
+// OracleClass - один класс сигнала и во что он обошёлся субъекту
+type OracleClass struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Count         uint32                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Weight        float64                `protobuf:"fixed64,3,opt,name=weight,proto3" json:"weight,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleClass) Reset() {
+	*x = OracleClass{}
+	mi := &file_headpanel_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleClass) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleClass) ProtoMessage() {}
+
+func (x *OracleClass) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleClass.ProtoReflect.Descriptor instead.
+func (*OracleClass) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *OracleClass) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *OracleClass) GetCount() uint32 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+func (x *OracleClass) GetWeight() float64 {
+	if x != nil {
+		return x.Weight
+	}
+	return 0
+}
+
+// OracleSubject - вердикт вместе с тем, что к нему привело. Субъект тут
+// профиль, а не человек: у головы нет ни имени, ни почты, ни адреса
+type OracleSubject struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	SubjectId  string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	Confidence int32                  `protobuf:"varint,2,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	Band       string                 `protobuf:"bytes,3,opt,name=band,proto3" json:"band,omitempty"`
+	Scorer     string                 `protobuf:"bytes,4,opt,name=scorer,proto3" json:"scorer,omitempty"`
+	AtUnix     int64                  `protobuf:"varint,5,opt,name=at_unix,json=atUnix,proto3" json:"at_unix,omitempty"`
+	Classes    []*OracleClass         `protobuf:"bytes,6,rep,name=classes,proto3" json:"classes,omitempty"`
+	// Теневой скорер считает параллельно и ничего не решает
+	ShadowBand       string `protobuf:"bytes,7,opt,name=shadow_band,json=shadowBand,proto3" json:"shadow_band,omitempty"`
+	ShadowConfidence int32  `protobuf:"varint,8,opt,name=shadow_confidence,json=shadowConfidence,proto3" json:"shadow_confidence,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *OracleSubject) Reset() {
+	*x = OracleSubject{}
+	mi := &file_headpanel_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleSubject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleSubject) ProtoMessage() {}
+
+func (x *OracleSubject) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleSubject.ProtoReflect.Descriptor instead.
+func (*OracleSubject) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *OracleSubject) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *OracleSubject) GetConfidence() int32 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+func (x *OracleSubject) GetBand() string {
+	if x != nil {
+		return x.Band
+	}
+	return ""
+}
+
+func (x *OracleSubject) GetScorer() string {
+	if x != nil {
+		return x.Scorer
+	}
+	return ""
+}
+
+func (x *OracleSubject) GetAtUnix() int64 {
+	if x != nil {
+		return x.AtUnix
+	}
+	return 0
+}
+
+func (x *OracleSubject) GetClasses() []*OracleClass {
+	if x != nil {
+		return x.Classes
+	}
+	return nil
+}
+
+func (x *OracleSubject) GetShadowBand() string {
+	if x != nil {
+		return x.ShadowBand
+	}
+	return ""
+}
+
+func (x *OracleSubject) GetShadowConfidence() int32 {
+	if x != nil {
+		return x.ShadowConfidence
+	}
+	return 0
+}
+
+type OracleOverviewResponse struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Watched     uint32                 `protobuf:"varint,1,opt,name=watched,proto3" json:"watched,omitempty"`
+	Full        uint32                 `protobuf:"varint,2,opt,name=full,proto3" json:"full,omitempty"`
+	Reduced     uint32                 `protobuf:"varint,3,opt,name=reduced,proto3" json:"reduced,omitempty"`
+	Quarantined uint32                 `protobuf:"varint,4,opt,name=quarantined,proto3" json:"quarantined,omitempty"`
+	Subjects    []*OracleSubject       `protobuf:"bytes,5,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	// Сигналы за сутки по классам
+	Signals       []*OracleClass `protobuf:"bytes,6,rep,name=signals,proto3" json:"signals,omitempty"`
+	Scorer        string         `protobuf:"bytes,7,opt,name=scorer,proto3" json:"scorer,omitempty"`
+	ShadowScorer  string         `protobuf:"bytes,8,opt,name=shadow_scorer,json=shadowScorer,proto3" json:"shadow_scorer,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleOverviewResponse) Reset() {
+	*x = OracleOverviewResponse{}
+	mi := &file_headpanel_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleOverviewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleOverviewResponse) ProtoMessage() {}
+
+func (x *OracleOverviewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleOverviewResponse.ProtoReflect.Descriptor instead.
+func (*OracleOverviewResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *OracleOverviewResponse) GetWatched() uint32 {
+	if x != nil {
+		return x.Watched
+	}
+	return 0
+}
+
+func (x *OracleOverviewResponse) GetFull() uint32 {
+	if x != nil {
+		return x.Full
+	}
+	return 0
+}
+
+func (x *OracleOverviewResponse) GetReduced() uint32 {
+	if x != nil {
+		return x.Reduced
+	}
+	return 0
+}
+
+func (x *OracleOverviewResponse) GetQuarantined() uint32 {
+	if x != nil {
+		return x.Quarantined
+	}
+	return 0
+}
+
+func (x *OracleOverviewResponse) GetSubjects() []*OracleSubject {
+	if x != nil {
+		return x.Subjects
+	}
+	return nil
+}
+
+func (x *OracleOverviewResponse) GetSignals() []*OracleClass {
+	if x != nil {
+		return x.Signals
+	}
+	return nil
+}
+
+func (x *OracleOverviewResponse) GetScorer() string {
+	if x != nil {
+		return x.Scorer
+	}
+	return ""
+}
+
+func (x *OracleOverviewResponse) GetShadowScorer() string {
+	if x != nil {
+		return x.ShadowScorer
+	}
+	return ""
+}
+
 var File_headpanel_proto protoreflect.FileDescriptor
 
 const file_headpanel_proto_rawDesc = "" +
@@ -2133,13 +2941,80 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x15SetNodeBudgetResponse\x122\n" +
 	"\x15declared_budget_bytes\x18\x01 \x01(\x04R\x13declaredBudgetBytes\x12\x1d\n" +
 	"\n" +
-	"used_bytes\x18\x02 \x01(\x04R\tusedBytes*i\n" +
+	"used_bytes\x18\x02 \x01(\x04R\tusedBytes\"\x15\n" +
+	"\x13ProbeReportsRequest\"\xe1\x01\n" +
+	"\fProbeVantage\x12\x19\n" +
+	"\bprobe_id\x18\x01 \x01(\tR\aprobeId\x12\x16\n" +
+	"\x06region\x18\x02 \x01(\tR\x06region\x12\x10\n" +
+	"\x03isp\x18\x03 \x01(\tR\x03isp\x12\x10\n" +
+	"\x03asn\x18\x04 \x01(\tR\x03asn\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12\x16\n" +
+	"\x06online\x18\x06 \x01(\bR\x06online\x12$\n" +
+	"\x0elast_seen_unix\x18\a \x01(\x03R\flastSeenUnix\x12\"\n" +
+	"\fmeasurements\x18\b \x01(\rR\fmeasurements\"\xb6\x02\n" +
+	"\x10ProbeMeasurement\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1a\n" +
+	"\bhostname\x18\x02 \x01(\tR\bhostname\x12\x18\n" +
+	"\aaddress\x18\x03 \x01(\tR\aaddress\x12\x1c\n" +
+	"\ttransport\x18\x04 \x01(\tR\ttransport\x12\x0e\n" +
+	"\x02ok\x18\x05 \x01(\bR\x02ok\x12!\n" +
+	"\fhandshake_ms\x18\x06 \x01(\rR\vhandshakeMs\x12\x15\n" +
+	"\x06rtt_ms\x18\a \x01(\rR\x05rttMs\x12!\n" +
+	"\fdownload_bps\x18\b \x01(\x04R\vdownloadBps\x12\x14\n" +
+	"\x05error\x18\t \x01(\tR\x05error\x12\x19\n" +
+	"\bprobe_id\x18\n" +
+	" \x01(\tR\aprobeId\x12\x17\n" +
+	"\aat_unix\x18\v \x01(\x03R\x06atUnix\"\xa0\x01\n" +
+	"\x14ProbeReportsResponse\x12=\n" +
+	"\bvantages\x18\x01 \x03(\v2!.wingsv.headpanel.v1.ProbeVantageR\bvantages\x12I\n" +
+	"\fmeasurements\x18\x02 \x03(\v2%.wingsv.headpanel.v1.ProbeMeasurementR\fmeasurements\"N\n" +
+	"\x15OracleOverviewRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x1f\n" +
+	"\vsubject_ids\x18\x02 \x03(\tR\n" +
+	"subjectIds\"5\n" +
+	"\x14OracleSubjectRequest\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x01 \x01(\tR\tsubjectId\"\x91\x01\n" +
+	"\fOracleSignal\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\rR\x05count\x12\x17\n" +
+	"\aat_unix\x18\x03 \x01(\x03R\x06atUnix\x12\x17\n" +
+	"\anode_id\x18\x04 \x01(\tR\x06nodeId\x12%\n" +
+	"\x0ewindow_seconds\x18\x05 \x01(\rR\rwindowSeconds\"\x92\x01\n" +
+	"\x15OracleSubjectResponse\x12<\n" +
+	"\asubject\x18\x01 \x01(\v2\".wingsv.headpanel.v1.OracleSubjectR\asubject\x12;\n" +
+	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\"O\n" +
+	"\vOracleClass\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\rR\x05count\x12\x16\n" +
+	"\x06weight\x18\x03 \x01(\x01R\x06weight\"\x9d\x02\n" +
+	"\rOracleSubject\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x02 \x01(\x05R\n" +
+	"confidence\x12\x12\n" +
+	"\x04band\x18\x03 \x01(\tR\x04band\x12\x16\n" +
+	"\x06scorer\x18\x04 \x01(\tR\x06scorer\x12\x17\n" +
+	"\aat_unix\x18\x05 \x01(\x03R\x06atUnix\x12:\n" +
+	"\aclasses\x18\x06 \x03(\v2 .wingsv.headpanel.v1.OracleClassR\aclasses\x12\x1f\n" +
+	"\vshadow_band\x18\a \x01(\tR\n" +
+	"shadowBand\x12+\n" +
+	"\x11shadow_confidence\x18\b \x01(\x05R\x10shadowConfidence\"\xbb\x02\n" +
+	"\x16OracleOverviewResponse\x12\x18\n" +
+	"\awatched\x18\x01 \x01(\rR\awatched\x12\x12\n" +
+	"\x04full\x18\x02 \x01(\rR\x04full\x12\x18\n" +
+	"\areduced\x18\x03 \x01(\rR\areduced\x12 \n" +
+	"\vquarantined\x18\x04 \x01(\rR\vquarantined\x12>\n" +
+	"\bsubjects\x18\x05 \x03(\v2\".wingsv.headpanel.v1.OracleSubjectR\bsubjects\x12:\n" +
+	"\asignals\x18\x06 \x03(\v2 .wingsv.headpanel.v1.OracleClassR\asignals\x12\x16\n" +
+	"\x06scorer\x18\a \x01(\tR\x06scorer\x12#\n" +
+	"\rshadow_scorer\x18\b \x01(\tR\fshadowScorer*i\n" +
 	"\tLiveScope\x12\x1a\n" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\x91\n" +
-	"\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\xc9\f\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -2156,7 +3031,10 @@ const file_headpanel_proto_rawDesc = "" +
 	"\rSetNodeBudget\x12).wingsv.headpanel.v1.SetNodeBudgetRequest\x1a*.wingsv.headpanel.v1.SetNodeBudgetResponse\x12a\n" +
 	"\x10GetFleetSettings\x12).wingsv.headpanel.v1.FleetSettingsRequest\x1a\".wingsv.headpanel.v1.FleetSettings\x12Z\n" +
 	"\x10SetFleetSettings\x12\".wingsv.headpanel.v1.FleetSettings\x1a\".wingsv.headpanel.v1.FleetSettings\x12o\n" +
-	"\x10RestartComponent\x12,.wingsv.headpanel.v1.RestartComponentRequest\x1a-.wingsv.headpanel.v1.RestartComponentResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
+	"\x10RestartComponent\x12,.wingsv.headpanel.v1.RestartComponentRequest\x1a-.wingsv.headpanel.v1.RestartComponentResponse\x12c\n" +
+	"\fProbeReports\x12(.wingsv.headpanel.v1.ProbeReportsRequest\x1a).wingsv.headpanel.v1.ProbeReportsResponse\x12i\n" +
+	"\x0eOracleOverview\x12*.wingsv.headpanel.v1.OracleOverviewRequest\x1a+.wingsv.headpanel.v1.OracleOverviewResponse\x12f\n" +
+	"\rOracleSubject\x12).wingsv.headpanel.v1.OracleSubjectRequest\x1a*.wingsv.headpanel.v1.OracleSubjectResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
 
 var (
 	file_headpanel_proto_rawDescOnce sync.Once
@@ -2171,7 +3049,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -2203,6 +3081,17 @@ var file_headpanel_proto_goTypes = []any{
 	(*RestartComponentResponse)(nil), // 27: wingsv.headpanel.v1.RestartComponentResponse
 	(*SetNodeBudgetRequest)(nil),     // 28: wingsv.headpanel.v1.SetNodeBudgetRequest
 	(*SetNodeBudgetResponse)(nil),    // 29: wingsv.headpanel.v1.SetNodeBudgetResponse
+	(*ProbeReportsRequest)(nil),      // 30: wingsv.headpanel.v1.ProbeReportsRequest
+	(*ProbeVantage)(nil),             // 31: wingsv.headpanel.v1.ProbeVantage
+	(*ProbeMeasurement)(nil),         // 32: wingsv.headpanel.v1.ProbeMeasurement
+	(*ProbeReportsResponse)(nil),     // 33: wingsv.headpanel.v1.ProbeReportsResponse
+	(*OracleOverviewRequest)(nil),    // 34: wingsv.headpanel.v1.OracleOverviewRequest
+	(*OracleSubjectRequest)(nil),     // 35: wingsv.headpanel.v1.OracleSubjectRequest
+	(*OracleSignal)(nil),             // 36: wingsv.headpanel.v1.OracleSignal
+	(*OracleSubjectResponse)(nil),    // 37: wingsv.headpanel.v1.OracleSubjectResponse
+	(*OracleClass)(nil),              // 38: wingsv.headpanel.v1.OracleClass
+	(*OracleSubject)(nil),            // 39: wingsv.headpanel.v1.OracleSubject
+	(*OracleOverviewResponse)(nil),   // 40: wingsv.headpanel.v1.OracleOverviewResponse
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -2214,37 +3103,50 @@ var file_headpanel_proto_depIdxs = []int32{
 	11, // 6: wingsv.headpanel.v1.NodeSummary.live:type_name -> wingsv.headpanel.v1.NodeCounters
 	25, // 7: wingsv.headpanel.v1.FleetSettings.xray:type_name -> wingsv.headpanel.v1.BuildChoice
 	25, // 8: wingsv.headpanel.v1.FleetSettings.vktp:type_name -> wingsv.headpanel.v1.BuildChoice
-	5,  // 9: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
-	1,  // 10: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
-	12, // 11: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
-	7,  // 12: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
-	8,  // 13: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
-	17, // 14: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
-	19, // 15: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
-	15, // 16: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
-	21, // 17: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	28, // 18: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
-	23, // 19: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
-	24, // 20: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
-	26, // 21: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
-	4,  // 22: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 23: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	13, // 24: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 25: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	10, // 26: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
-	18, // 27: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	20, // 28: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	16, // 29: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	22, // 30: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	29, // 31: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
-	24, // 32: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	24, // 33: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	27, // 34: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
-	22, // [22:35] is the sub-list for method output_type
-	9,  // [9:22] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	31, // 9: wingsv.headpanel.v1.ProbeReportsResponse.vantages:type_name -> wingsv.headpanel.v1.ProbeVantage
+	32, // 10: wingsv.headpanel.v1.ProbeReportsResponse.measurements:type_name -> wingsv.headpanel.v1.ProbeMeasurement
+	39, // 11: wingsv.headpanel.v1.OracleSubjectResponse.subject:type_name -> wingsv.headpanel.v1.OracleSubject
+	36, // 12: wingsv.headpanel.v1.OracleSubjectResponse.signals:type_name -> wingsv.headpanel.v1.OracleSignal
+	38, // 13: wingsv.headpanel.v1.OracleSubject.classes:type_name -> wingsv.headpanel.v1.OracleClass
+	39, // 14: wingsv.headpanel.v1.OracleOverviewResponse.subjects:type_name -> wingsv.headpanel.v1.OracleSubject
+	38, // 15: wingsv.headpanel.v1.OracleOverviewResponse.signals:type_name -> wingsv.headpanel.v1.OracleClass
+	5,  // 16: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
+	1,  // 17: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
+	12, // 18: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
+	7,  // 19: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
+	8,  // 20: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
+	17, // 21: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
+	19, // 22: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
+	15, // 23: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
+	21, // 24: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
+	28, // 25: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
+	23, // 26: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
+	24, // 27: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
+	26, // 28: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
+	30, // 29: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
+	34, // 30: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
+	35, // 31: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
+	4,  // 32: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 33: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	13, // 34: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 35: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	10, // 36: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
+	18, // 37: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	20, // 38: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	16, // 39: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	22, // 40: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	29, // 41: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
+	24, // 42: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 43: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	27, // 44: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	33, // 45: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
+	40, // 46: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
+	37, // 47: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
+	32, // [32:48] is the sub-list for method output_type
+	16, // [16:32] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_headpanel_proto_init() }
@@ -2258,7 +3160,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   29,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

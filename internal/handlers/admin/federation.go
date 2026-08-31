@@ -57,7 +57,7 @@ type federationNodeView struct {
 	Sessions            uint32  `json:"sessions"`
 }
 
-// federationMonthView is one closed month of the donor's own contribution
+// federationMonthView - один закрытый месяц собственного вклада донора
 type federationMonthView struct {
 	Month string `json:"month"`
 	Bytes uint64 `json:"bytes"`
@@ -283,9 +283,9 @@ func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// handleFederationLive streams the asking donor's own counters. The admin
-// socket carries the fleet-wide figures, and those belong on the landing page,
-// not on a page titled "your nodes"
+// handleFederationLive отдаёт потоком собственные счётчики донора. Цифры всего
+// флота идут в общий admin-сокет, и им место на лендинге, а не на странице
+// "ваши ноды"
 func (h *Handler) handleFederationLive(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	if !h.federationOn() {
 		writeError(w, http.StatusNotFound, "federation is off")

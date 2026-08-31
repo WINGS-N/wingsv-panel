@@ -75,7 +75,7 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		authSvc:       authSvc,
 		adminH:        adminhandler.New(cfg, store, authSvc, hub),
 		guardianH:     guardianhandler.New(store, hub),
-		ownerH:        ownerhandler.New(store, authSvc, hub),
+		ownerH:        ownerhandler.New(store, authSvc, hub, fedclient.New(cfg.FederationHead, cfg.FederationSecret)),
 		apk:           newAPKCache(cfg.APKCacheDir, releaseClient, cfg.GitHubRepo, cfg.ReleaseAssetSuffix),
 		fedLive:       &federationLive{},
 		fedConfigured: cfg.FederationHead != "" && cfg.FederationSecret != "",

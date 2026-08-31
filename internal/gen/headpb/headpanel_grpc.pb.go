@@ -35,6 +35,9 @@ const (
 	FederationHead_GetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/GetFleetSettings"
 	FederationHead_SetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetFleetSettings"
 	FederationHead_RestartComponent_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/RestartComponent"
+	FederationHead_ProbeReports_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/ProbeReports"
+	FederationHead_OracleOverview_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/OracleOverview"
+	FederationHead_OracleSubject_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/OracleSubject"
 )
 
 // FederationHeadClient is the client API for FederationHead service.
@@ -72,6 +75,14 @@ type FederationHeadClient interface {
 	SetFleetSettings(ctx context.Context, in *FleetSettings, opts ...grpc.CallOption) (*FleetSettings, error)
 	// Перезапустить компонент. Пустой node_id - на всём флоте.
 	RestartComponent(ctx context.Context, in *RestartComponentRequest, opts ...grpc.CallOption) (*RestartComponentResponse, error)
+	// Что намеряли точки наблюдения внутри цензурируемой сети. Единственный
+	// источник правды о том, работает ли нода там, где сидят люди.
+	ProbeReports(ctx context.Context, in *ProbeReportsRequest, opts ...grpc.CallOption) (*ProbeReportsResponse, error)
+	// Состояние Oracle: кого он смотрит, что решил и на основании чего.
+	OracleOverview(ctx context.Context, in *OracleOverviewRequest, opts ...grpc.CallOption) (*OracleOverviewResponse, error)
+	// Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
+	// вопрос "за что", который иначе остаётся без ответа.
+	OracleSubject(ctx context.Context, in *OracleSubjectRequest, opts ...grpc.CallOption) (*OracleSubjectResponse, error)
 }
 
 type federationHeadClient struct {
@@ -215,6 +226,36 @@ func (c *federationHeadClient) RestartComponent(ctx context.Context, in *Restart
 	return out, nil
 }
 
+func (c *federationHeadClient) ProbeReports(ctx context.Context, in *ProbeReportsRequest, opts ...grpc.CallOption) (*ProbeReportsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProbeReportsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_ProbeReports_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) OracleOverview(ctx context.Context, in *OracleOverviewRequest, opts ...grpc.CallOption) (*OracleOverviewResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OracleOverviewResponse)
+	err := c.cc.Invoke(ctx, FederationHead_OracleOverview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) OracleSubject(ctx context.Context, in *OracleSubjectRequest, opts ...grpc.CallOption) (*OracleSubjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OracleSubjectResponse)
+	err := c.cc.Invoke(ctx, FederationHead_OracleSubject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationHeadServer is the server API for FederationHead service.
 // All implementations must embed UnimplementedFederationHeadServer
 // for forward compatibility.
@@ -250,6 +291,14 @@ type FederationHeadServer interface {
 	SetFleetSettings(context.Context, *FleetSettings) (*FleetSettings, error)
 	// Перезапустить компонент. Пустой node_id - на всём флоте.
 	RestartComponent(context.Context, *RestartComponentRequest) (*RestartComponentResponse, error)
+	// Что намеряли точки наблюдения внутри цензурируемой сети. Единственный
+	// источник правды о том, работает ли нода там, где сидят люди.
+	ProbeReports(context.Context, *ProbeReportsRequest) (*ProbeReportsResponse, error)
+	// Состояние Oracle: кого он смотрит, что решил и на основании чего.
+	OracleOverview(context.Context, *OracleOverviewRequest) (*OracleOverviewResponse, error)
+	// Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
+	// вопрос "за что", который иначе остаётся без ответа.
+	OracleSubject(context.Context, *OracleSubjectRequest) (*OracleSubjectResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
 }
 
@@ -298,6 +347,15 @@ func (UnimplementedFederationHeadServer) SetFleetSettings(context.Context, *Flee
 }
 func (UnimplementedFederationHeadServer) RestartComponent(context.Context, *RestartComponentRequest) (*RestartComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RestartComponent not implemented")
+}
+func (UnimplementedFederationHeadServer) ProbeReports(context.Context, *ProbeReportsRequest) (*ProbeReportsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProbeReports not implemented")
+}
+func (UnimplementedFederationHeadServer) OracleOverview(context.Context, *OracleOverviewRequest) (*OracleOverviewResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OracleOverview not implemented")
+}
+func (UnimplementedFederationHeadServer) OracleSubject(context.Context, *OracleSubjectRequest) (*OracleSubjectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OracleSubject not implemented")
 }
 func (UnimplementedFederationHeadServer) mustEmbedUnimplementedFederationHeadServer() {}
 func (UnimplementedFederationHeadServer) testEmbeddedByValue()                        {}
@@ -543,6 +601,60 @@ func _FederationHead_RestartComponent_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_ProbeReports_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProbeReportsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).ProbeReports(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_ProbeReports_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).ProbeReports(ctx, req.(*ProbeReportsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_OracleOverview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OracleOverviewRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).OracleOverview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_OracleOverview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).OracleOverview(ctx, req.(*OracleOverviewRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_OracleSubject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OracleSubjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).OracleSubject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_OracleSubject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).OracleSubject(ctx, req.(*OracleSubjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationHead_ServiceDesc is the grpc.ServiceDesc for FederationHead service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -597,6 +709,18 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RestartComponent",
 			Handler:    _FederationHead_RestartComponent_Handler,
+		},
+		{
+			MethodName: "ProbeReports",
+			Handler:    _FederationHead_ProbeReports_Handler,
+		},
+		{
+			MethodName: "OracleOverview",
+			Handler:    _FederationHead_OracleOverview_Handler,
+		},
+		{
+			MethodName: "OracleSubject",
+			Handler:    _FederationHead_OracleSubject_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

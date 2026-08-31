@@ -150,7 +150,7 @@ func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 }
 
 // hasSeasonedNode ищет ноду со стажем, которая сейчас на связи. Стаж и есть
-// проверка аптайма: нода, отваливающаяся каждый день, не наберёт его
+// проверка аптайма: нода, отваливающаяся каждый день, его не наберёт
 func hasSeasonedNode(nodes []*headpb.NodeSummary) bool {
 	cutoff := time.Now().Add(-minNodeAge).Unix()
 	for _, n := range nodes {

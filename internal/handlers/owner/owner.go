@@ -13,19 +13,23 @@ import (
 	"time"
 
 	"v.wingsnet.org/internal/auth"
+	"v.wingsnet.org/internal/fedclient"
 	"v.wingsnet.org/internal/guardianhub"
 	"v.wingsnet.org/internal/storage"
 )
 
 type Handler struct {
-	store     *storage.Store
-	auth      *auth.Service
-	hub       *guardianhub.Hub
+	store *storage.Store
+	auth  *auth.Service
+	hub   *guardianhub.Hub
+	// fed talks to the federation head. Nil-safe: без головы у панели просто нет
+	// федеративной поверхности
+	fed       *fedclient.Client
 	startedAt time.Time
 }
 
-func New(store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
-	return &Handler{store: store, auth: authSvc, hub: hub, startedAt: time.Now()}
+func New(store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub, fed *fedclient.Client) *Handler {
+	return &Handler{store: store, auth: authSvc, hub: hub, fed: fed, startedAt: time.Now()}
 }
 
 // Register binds /api/owner/* routes onto the provided mux. All routes are
@@ -49,6 +53,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/settings", h.requireOwner(h.handleSettings))
 	mux.HandleFunc("/api/owner/invites", h.requireOwner(h.handleInvites))
 	mux.HandleFunc("/api/owner/invites/", h.requireOwner(h.handleInviteByToken))
+	mux.HandleFunc("/api/owner/federation/probes", h.requireOwner(h.handleProbes))
+	mux.HandleFunc("/api/owner/federation/oracle", h.requireOwner(h.handleOracle))
 	mux.HandleFunc("/api/owner/invite-tree", h.requireOwner(h.handleInviteTree))
 	mux.HandleFunc("/api/owner/invite-tree/", h.requireOwner(h.handleInviteBranch))
 }

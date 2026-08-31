@@ -162,8 +162,8 @@ func (c *Client) SetNodeState(ctx context.Context, nodeID, state, reason string)
 	return err
 }
 
-// SetNodeBudget changes what the donor pledged for the month and returns the
-// budget the head settled on.
+// SetNodeBudget меняет обещанный на месяц бюджет и возвращает то, на чём
+// остановилась голова
 func (c *Client) SetNodeBudget(ctx context.Context, nodeID string, bytes uint64) (uint64, error) {
 	client, err := c.dial()
 	if err != nil {
@@ -178,7 +178,7 @@ func (c *Client) SetNodeBudget(ctx context.Context, nodeID string, bytes uint64)
 	return got.GetDeclaredBudgetBytes(), nil
 }
 
-// DonorHistory is the donor's contribution month by month
+// DonorHistory - вклад донора по месяцам
 func (c *Client) DonorHistory(ctx context.Context, donorID string, months uint32) ([]*headpb.DonorMonth, error) {
 	client, err := c.dial()
 	if err != nil {
@@ -189,6 +189,24 @@ func (c *Client) DonorHistory(ctx context.Context, donorID string, months uint32
 		return nil, err
 	}
 	return got.GetMonths(), nil
+}
+
+// ProbeReports - то, что намеряли точки наблюдения
+func (c *Client) ProbeReports(ctx context.Context) (*headpb.ProbeReportsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.ProbeReports(ctx, &headpb.ProbeReportsRequest{})
+}
+
+// OracleOverview - текущее состояние судьи
+func (c *Client) OracleOverview(ctx context.Context, limit uint32) (*headpb.OracleOverviewResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.OracleOverview(ctx, &headpb.OracleOverviewRequest{Limit: limit})
 }
 
 // retryDelay is how long the live loop waits before re-dialing a head that is
@@ -214,9 +232,8 @@ func (c *Client) StreamGlobal(ctx context.Context, onUpdate func(*headpb.LiveUpd
 	}
 }
 
-// StreamDonor is the same loop scoped to one donor. A donor watching their own
-// page must never be fed the fleet's numbers: they are a different, larger set
-// and reading them as one's own is simply wrong
+// StreamDonor - тот же цикл, суженный до одного донора. Показывать ему цифры
+// всего флота нельзя: это другой, больший набор, и читать его как свой неверно
 func (c *Client) StreamDonor(ctx context.Context, donorID string, onUpdate func(*headpb.LiveUpdate)) {
 	if !c.Enabled() {
 		return

@@ -38,6 +38,14 @@ service FederationHead {
   rpc SetFleetSettings(FleetSettings) returns (FleetSettings);
   // Перезапустить компонент. Пустой node_id - на всём флоте.
   rpc RestartComponent(RestartComponentRequest) returns (RestartComponentResponse);
+  // Что намеряли точки наблюдения внутри цензурируемой сети. Единственный
+  // источник правды о том, работает ли нода там, где сидят люди.
+  rpc ProbeReports(ProbeReportsRequest) returns (ProbeReportsResponse);
+  // Состояние Oracle: кого он смотрит, что решил и на основании чего.
+  rpc OracleOverview(OracleOverviewRequest) returns (OracleOverviewResponse);
+  // Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
+  // вопрос "за что", который иначе остаётся без ответа.
+  rpc OracleSubject(OracleSubjectRequest) returns (OracleSubjectResponse);
 }
 
 enum LiveScope {
@@ -114,9 +122,9 @@ message DonorHistoryRequest {
   uint32 months = 2;
 }
 
-// DonorMonth is one closed or running month of a donor's contribution. Month is
-// YYYY-MM in UTC: the head serves donors in every timezone, and a boundary that
-// moves with the reader would make two people see different totals.
+// DonorMonth - один месяц вклада донора, закрытый или текущий. Month в формате
+// YYYY-MM по UTC: граница, плывущая вместе с часовым поясом читателя, показала
+// бы двум людям разные суммы.
 message DonorMonth {
   string month = 1;
   uint64 bytes = 2;
@@ -276,4 +284,98 @@ message SetNodeBudgetRequest {
 message SetNodeBudgetResponse {
   uint64 declared_budget_bytes = 1;
   uint64 used_bytes = 2;
+}
+
+message ProbeReportsRequest {}
+
+// ProbeVantage - одна точка наблюдения, как она себя представила
+message ProbeVantage {
+  string probe_id = 1;
+  string region = 2;
+  string isp = 3;
+  string asn = 4;
+  string version = 5;
+  bool online = 6;
+  int64 last_seen_unix = 7;
+  uint32 measurements = 8;
+}
+
+// ProbeMeasurement - один адрес одной ноды, померенный по одному транспорту
+message ProbeMeasurement {
+  string node_id = 1;
+  string hostname = 2;
+  string address = 3;
+  string transport = 4;
+  bool ok = 5;
+  uint32 handshake_ms = 6;
+  uint32 rtt_ms = 7;
+  uint64 download_bps = 8;
+  string error = 9;
+  string probe_id = 10;
+  int64 at_unix = 11;
+}
+
+message ProbeReportsResponse {
+  repeated ProbeVantage vantages = 1;
+  repeated ProbeMeasurement measurements = 2;
+}
+
+message OracleOverviewRequest {
+  // Сколько подозреваемых вернуть, 0 - двадцать
+  uint32 limit = 1;
+  // Когда список задан, отдаются вердикты только по нему. Так панель считает
+  // ветку инвайт-дерева: голова про дерево не знает и знать не должна
+  repeated string subject_ids = 2;
+}
+
+message OracleSubjectRequest {
+  string subject_id = 1;
+}
+
+// OracleSignal - сырое наблюдение, которое хранится ради ответа на вопрос
+// "за что"
+message OracleSignal {
+  string kind = 1;
+  uint32 count = 2;
+  int64 at_unix = 3;
+  string node_id = 4;
+  uint32 window_seconds = 5;
+}
+
+message OracleSubjectResponse {
+  OracleSubject subject = 1;
+  repeated OracleSignal signals = 2;
+}
+
+// OracleClass - один класс сигнала и во что он обошёлся субъекту
+message OracleClass {
+  string kind = 1;
+  uint32 count = 2;
+  double weight = 3;
+}
+
+// OracleSubject - вердикт вместе с тем, что к нему привело. Субъект тут
+// профиль, а не человек: у головы нет ни имени, ни почты, ни адреса
+message OracleSubject {
+  string subject_id = 1;
+  int32 confidence = 2;
+  string band = 3;
+  string scorer = 4;
+  int64 at_unix = 5;
+  repeated OracleClass classes = 6;
+  // Теневой скорер считает параллельно и ничего не решает
+  string shadow_band = 7;
+  int32 shadow_confidence = 8;
+}
+
+message OracleOverviewResponse {
+  uint32 watched = 1;
+  uint32 full = 2;
+  uint32 reduced = 3;
+  uint32 quarantined = 4;
+  repeated OracleSubject subjects = 5;
+  // Сигналы за сутки по классам
+  repeated OracleClass signals = 6;
+  string scorer = 7;
+  string shadow_scorer = 8;
 }
