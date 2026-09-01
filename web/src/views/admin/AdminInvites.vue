@@ -2,8 +2,8 @@
   <section class="surface-card">
     <h2 class="section-title">Приглашения</h2>
     <p class="body-copy body-copy-wide">
-      Зарегистрироваться в панели можно только по коду. Один код можно выдать одному человеку или сразу нескольким -
-      счётчик ведётся по тем, кто пришёл именно по нему.
+      Зарегистрироваться можно только по коду. Один код можно выдать одному человеку или сразу нескольким - счётчик
+      ведётся по тем, кто пришёл именно по нему.
     </p>
     <p v-if="loadError" class="state-error mt-3">{{ loadError }}</p>
     <p v-if="!mayInvite && blockReason" class="state-hint">{{ blockReason }}</p>

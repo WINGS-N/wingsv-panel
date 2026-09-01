@@ -158,24 +158,7 @@ function bandLabel(band) {
   return band;
 }
 
-const router = useRouter();
-const passwords = reactive({ old: '', next: '', repeat: '' });
-const passwordBusy = ref(false);
-const passwordError = ref('');
-const passwordOk = ref(false);
-const passwordReady = computed(
-  () => passwords.old && passwords.next && passwords.next === passwords.repeat && !passwordBusy.value,
-);
-
-const panelBusy = ref(false);
-const panelError = ref('');
-const panelRequested = ref(false);
-
-const invites = reactive({ list: [], may_invite: false, reason: '' });
-const inviteBusy = ref(false);
-const inviteError = ref('');
-
-// Читается человеком, поэтому единицы английские, как везде в проекте
+// Единицы английские, как везде в проекте
 function formatBytes(value) {
   const bytes = Number(value || 0);
   if (bytes < 1024) return `${bytes} B`;
@@ -187,81 +170,6 @@ function formatBytes(value) {
     unit += 1;
   }
   return `${size.toFixed(1)} ${units[unit]}`;
-}
-
-function inviteLink(token) {
-  return `${window.location.origin}/register?invite=${token}`;
-}
-
-async function submitPassword() {
-  if (!passwordReady.value) return;
-  passwordBusy.value = true;
-  passwordError.value = '';
-  passwordOk.value = false;
-  try {
-    await changePassword(passwords.old, passwords.next);
-    passwordOk.value = true;
-    passwords.old = '';
-    passwords.next = '';
-    passwords.repeat = '';
-  } catch (err) {
-    passwordError.value = err.message || 'Не удалось сменить пароль';
-  } finally {
-    passwordBusy.value = false;
-  }
-}
-
-async function openPanel() {
-  panelBusy.value = true;
-  panelError.value = '';
-  try {
-    const res = await fetch('/api/admin/me/panel-access', { method: 'POST', credentials: 'include' });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.message || 'Не удалось открыть панель');
-    // Когда владелец включил модерацию, доступ не выдаётся сразу
-    panelRequested.value = Boolean(body.requested);
-    if (body.granted) {
-      await refreshSession();
-      router.push({ name: 'admin-clients' });
-    }
-  } catch (err) {
-    panelError.value = err.message;
-  } finally {
-    panelBusy.value = false;
-  }
-}
-
-async function loadInvites() {
-  try {
-    const res = await fetch('/api/admin/invites', { credentials: 'include' });
-    if (!res.ok) return;
-    const body = await res.json();
-    invites.list = body.invites || [];
-    invites.may_invite = Boolean(body.may_invite);
-    invites.reason = body.reason || '';
-  } catch {
-    // Список приглашений - не то, ради чего стоит ронять весь кабинет
-  }
-}
-
-async function createInvite() {
-  inviteBusy.value = true;
-  inviteError.value = '';
-  try {
-    const res = await fetch('/api/admin/invites', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.message || 'Не удалось создать код');
-    await loadInvites();
-  } catch (err) {
-    inviteError.value = err.message;
-  } finally {
-    inviteBusy.value = false;
-  }
 }
 
 function bandMeaning(band) {

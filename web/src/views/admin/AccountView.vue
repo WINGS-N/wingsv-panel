@@ -151,11 +151,23 @@
         <SamsungButton v-else @click="linkMatrix">Привязать аккаунт</SamsungButton>
       </div>
     </template>
+
+    <!-- Панель открывается самому, если владелец не включил модерацию -->
+    <template v-if="!hasPanel">
+      <h2 class="admin-section-subtitle mt-6">Управление клиентами</h2>
+      <p class="admin-muted">Своих клиентов заводят в админ-панели. Откройте её себе, когда понадобится.</p>
+      <p v-if="panelError" class="state-error mt-2">{{ panelError }}</p>
+      <p v-if="panelRequested" class="state-hint mt-2">Заявка отправлена, ждём решения владельца.</p>
+      <div v-else class="actions-row mt-3">
+        <SamsungButton :busy="panelBusy" @click="openPanel">Стать администратором</SamsungButton>
+      </div>
+    </template>
   </section>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { Camera, KeyRound, ShieldCheck, Trash2 } from 'lucide-vue-next';
 import { authState, changePassword, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
@@ -179,6 +191,35 @@ const roleLabel = computed(() => {
 });
 
 const matrix = reactive({ enabled: false, homeserver: '', matrix_id: '' });
+
+const panelBusy = ref(false);
+const panelError = ref('');
+const panelRequested = ref(false);
+const hasPanel = computed(() => Boolean(admin.value?.panel_access));
+
+onMounted(() => {
+  panelRequested.value = Boolean(admin.value?.panel_requested);
+});
+
+async function openPanel() {
+  panelBusy.value = true;
+  panelError.value = '';
+  try {
+    const res = await fetch('/api/admin/me/panel-access', { method: 'POST', credentials: 'include' });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || 'Не удалось открыть панель');
+    // Когда владелец включил модерацию, доступ не выдаётся сразу
+    panelRequested.value = Boolean(body.requested);
+    if (body.granted) {
+      await refreshSession();
+      router.push({ name: 'admin-clients' });
+    }
+  } catch (err) {
+    panelError.value = err.message;
+  } finally {
+    panelBusy.value = false;
+  }
+}
 const matrixBusy = ref(false);
 const matrixError = ref('');
 
@@ -311,6 +352,7 @@ async function unlinkMatrix() {
   }
 }
 
+const router = useRouter();
 const admin = computed(() => authState.value.admin);
 const oldPassword = ref('');
 const newPassword = ref('');
