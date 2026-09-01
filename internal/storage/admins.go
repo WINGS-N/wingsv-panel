@@ -22,11 +22,13 @@ type Admin struct {
 	Role               string
 	// PanelAccess - открыта ли админ-панель. Личный доступ к VPN есть у любого
 	// аккаунта, панель к нему добавляется отдельно
-	PanelAccess   bool
-	LastLoginAt   time.Time
-	AvatarVersion int64
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	PanelAccess bool
+	// PanelRequestedAt - когда попросил панель. Нулевое время - не просил
+	PanelRequestedAt time.Time
+	LastLoginAt      time.Time
+	AvatarVersion    int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 var ErrNotFound = errors.New("storage: not found")
@@ -45,10 +47,33 @@ func toStorageAdmin(m dbmodel.Admin) Admin {
 		CreatedAt:          time.UnixMilli(m.CreatedAtUnix).UTC(),
 		UpdatedAt:          time.UnixMilli(m.UpdatedAtUnix).UTC(),
 	}
+	if m.PanelRequestedAt > 0 {
+		a.PanelRequestedAt = time.UnixMilli(m.PanelRequestedAt).UTC()
+	}
 	if a.Role == "" {
 		a.Role = RoleAdmin
 	}
 	return a
+}
+
+// RequestPanelAccess отмечает, что участник просит открыть ему панель. Повторный
+// вызов не двигает отметку: очередь заявок должна идти по времени первой просьбы
+func (s *Store) RequestPanelAccess(id int64) error {
+	return s.gdb.Model(&dbmodel.Admin{}).
+		Where("id = ? AND panel_requested_at = 0", id).
+		Updates(map[string]any{
+			"panel_requested_at": time.Now().UTC().UnixMilli(),
+			"updated_at":         time.Now().UTC().UnixMilli(),
+		}).Error
+}
+
+// ClearPanelRequest снимает заявку - решение по ней принято
+func (s *Store) ClearPanelRequest(id int64) error {
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).
+		Updates(map[string]any{
+			"panel_requested_at": 0,
+			"updated_at":         time.Now().UTC().UnixMilli(),
+		}).Error
 }
 
 func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role string) (Admin, error) {

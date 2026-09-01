@@ -96,6 +96,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Кабинет участника: собственный доступ есть у любого аккаунта, включая
 	// администратора - одно другого не отменяет
 	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
+	mux.HandleFunc("/api/admin/me/panel-request", h.requireAuth(h.handlePanelRequest))
 	mux.HandleFunc("/api/admin/me/totp", h.requireAuth(h.handleTOTP))
 	mux.HandleFunc("/api/admin/me/totp/qr", h.requireAuth(h.handleTOTPQR))
 	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,
@@ -118,10 +119,12 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Приглашать может любой администратор: дерево инвайтов и есть цена входа,
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.
-	mux.HandleFunc("/api/admin/invites", h.requirePanel(h.handleInvites))
+	// Приглашения не про панель: кого пускать в дерево, решает mayInvite по
+	// вкладу в федерацию, а сам список и так только свой
+	mux.HandleFunc("/api/admin/invites", h.requireAuth(h.handleInvites))
 	// Код вводит любой аккаунт: он ставит человека в дерево, а не открывает панель
 	mux.HandleFunc("/api/admin/invites/redeem", h.requireAuth(h.handleRedeemInvite))
-	mux.HandleFunc("/api/admin/invites/", h.requirePanel(h.handleInviteByToken))
+	mux.HandleFunc("/api/admin/invites/", h.requireAuth(h.handleInviteByToken))
 	mux.HandleFunc("/api/admin/fleet", h.requirePanel(h.handleFleetSettings))
 	mux.HandleFunc("/api/admin/fleet/nodes", h.requirePanel(h.handleFleetNodes))
 	mux.HandleFunc("/api/admin/fleet/releases", h.requirePanel(h.handleFleetReleases))
@@ -281,6 +284,7 @@ func adminMePayload(admin storage.Admin) map[string]any {
 		"panel_access":         admin.PanelAccess || admin.Role == storage.RoleOwner,
 		"avatar_version":       admin.AvatarVersion,
 		"created_at":           admin.CreatedAt.Format(timeRFC3339),
+		"panel_requested":      !admin.PanelRequestedAt.IsZero(),
 	}
 }
 

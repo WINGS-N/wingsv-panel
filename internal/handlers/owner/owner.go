@@ -110,6 +110,8 @@ type adminView struct {
 	AvatarVersion      int64  `json:"avatar_version"`
 	ClientsTotal       int    `json:"clients_total"`
 	ClientsOnline      int    `json:"clients_online"`
+	// PanelRequested непустой, когда участник сам попросил панель
+	PanelRequested string `json:"panel_requested,omitempty"`
 }
 
 func (h *Handler) respondListAdmins(w http.ResponseWriter) {
@@ -129,6 +131,9 @@ func (h *Handler) respondListAdmins(w http.ResponseWriter) {
 			LastLoginAt:        formatTS(a.LastLoginAt),
 			CreatedAt:          formatTS(a.CreatedAt),
 			AvatarVersion:      a.AvatarVersion,
+		}
+		if !a.PanelRequestedAt.IsZero() {
+			view.PanelRequested = formatTS(a.PanelRequestedAt)
 		}
 		if cnt, err := h.store.CountClientsByOwner(a.ID); err == nil {
 			view.ClientsTotal = cnt.Total
@@ -681,6 +686,8 @@ func (h *Handler) respondPanelAccess(w http.ResponseWriter, r *http.Request, own
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Решение принято в любую сторону, и заявка больше не висит
+	_ = h.store.ClearPanelRequest(id)
 	action := "owner.panel_access_revoked"
 	if req.Allowed {
 		action = "owner.panel_access_granted"

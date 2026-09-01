@@ -22,6 +22,28 @@ func federationUserID(admin storage.Admin) string {
 	return "user-" + strconv.FormatInt(admin.ID, 10)
 }
 
+// handlePanelRequest - участник просит открыть ему админ-панель, чтобы вести
+// собственных клиентов. Решает владелец: сам себе панель никто не открывает
+func (h *Handler) handlePanelRequest(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if admin.PanelAccess || admin.Role == storage.RoleOwner {
+		writeError(w, http.StatusBadRequest, "панель у вас уже открыта")
+		return
+	}
+	if err := h.store.RequestPanelAccess(admin.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: admin.ID, ActorUsername: admin.Username,
+		Action: "admin.panel_requested", IP: clientIP(r),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"requested": true})
+}
+
 // handleMyAccess выдаёт участнику его собственный доступ.
 //
 // Вызов идемпотентен: голова возвращает уже выданное, если оно есть, поэтому
@@ -51,6 +73,7 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		"subscription_url": got.GetSubscriptionUrl(),
 		"nodes":            got.GetNodes(),
 		"nodes_entitled":   got.GetNodesEntitled(),
+		"used_bytes":       got.GetUsedBytes(),
 		"sticky_until":     got.GetStickyUntilUnix(),
 	}
 	// Уровень доверия объясняет, почему серверов столько, а не иначе. Голова без

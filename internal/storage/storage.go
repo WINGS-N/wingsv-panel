@@ -180,6 +180,8 @@ func applySchema(db *sql.DB, driver Driver) error {
 		// каждого, а панель открывается отдельно. Существующие аккаунты
 		// заводились админами, поэтому единица по умолчанию
 		`ALTER TABLE admins ADD COLUMN panel_access INTEGER NOT NULL DEFAULT 1`,
+		// Заявка участника на панель: ноль означает, что он не просил
+		`ALTER TABLE admins ADD COLUMN panel_requested_at INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE clients ADD COLUMN last_peer_ip TEXT NOT NULL DEFAULT ''`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_matrix_id ON admins(matrix_id) WHERE matrix_id IS NOT NULL`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,

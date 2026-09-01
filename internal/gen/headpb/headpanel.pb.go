@@ -1395,6 +1395,8 @@ type UserAllocation struct {
 	// флоте нечего выдать: две ноды одного донора падают вместе, и вторую такую
 	// не дают. Без этой цифры кабинет не может объяснить, почему сервер один
 	NodesEntitled uint32 `protobuf:"varint,5,opt,name=nodes_entitled,json=nodesEntitled,proto3" json:"nodes_entitled,omitempty"`
+	// Сколько пользователь пронёс за текущий период
+	UsedBytes     uint64 `protobuf:"varint,6,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1460,6 +1462,13 @@ func (x *UserAllocation) GetStickyUntilUnix() int64 {
 func (x *UserAllocation) GetNodesEntitled() uint32 {
 	if x != nil {
 		return x.NodesEntitled
+	}
+	return 0
+}
+
+func (x *UserAllocation) GetUsedBytes() uint64 {
+	if x != nil {
+		return x.UsedBytes
 	}
 	return 0
 }
@@ -3128,13 +3137,15 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0finstall_command\x18\x03 \x01(\tR\x0einstallCommand\x12\x12\n" +
 	"\x04uses\x18\x04 \x01(\rR\x04uses\",\n" +
 	"\x11EnsureUserRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xbd\x01\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xdc\x01\n" +
 	"\x0eUserAllocation\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12)\n" +
 	"\x10subscription_url\x18\x02 \x01(\tR\x0fsubscriptionUrl\x12\x14\n" +
 	"\x05nodes\x18\x03 \x01(\rR\x05nodes\x12*\n" +
 	"\x11sticky_until_unix\x18\x04 \x01(\x03R\x0fstickyUntilUnix\x12%\n" +
-	"\x0enodes_entitled\x18\x05 \x01(\rR\rnodesEntitled\",\n" +
+	"\x0enodes_entitled\x18\x05 \x01(\rR\rnodesEntitled\x12\x1d\n" +
+	"\n" +
+	"used_bytes\x18\x06 \x01(\x04R\tusedBytes\",\n" +
 	"\x11RevokeUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x14\n" +
 	"\x12RevokeUserResponse\"\\\n" +

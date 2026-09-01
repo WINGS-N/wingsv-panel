@@ -29,10 +29,13 @@ type Admin struct {
 	// in with a password. A pointer because the uniqueness has to allow many
 	// admins with no account at all, and only NULL does that - an empty string
 	// would collide with every other admin who never linked one.
-	MatrixID      *string `gorm:"column:matrix_id;uniqueIndex"`
-	MatrixSubject string  `gorm:"column:matrix_subject;not null;default:''"`
-	CreatedAtUnix int64   `gorm:"column:created_at;not null"`
-	UpdatedAtUnix int64   `gorm:"column:updated_at;not null"`
+	// PanelRequestedAt - когда участник попросил открыть ему админ-панель.
+	// Ноль означает, что он не просил: заявка снимается вместе с решением по ней
+	PanelRequestedAt int64   `gorm:"column:panel_requested_at;not null;default:0"`
+	MatrixID         *string `gorm:"column:matrix_id;uniqueIndex"`
+	MatrixSubject    string  `gorm:"column:matrix_subject;not null;default:''"`
+	CreatedAtUnix    int64   `gorm:"column:created_at;not null"`
+	UpdatedAtUnix    int64   `gorm:"column:updated_at;not null"`
 }
 
 func (Admin) TableName() string { return "admins" }
