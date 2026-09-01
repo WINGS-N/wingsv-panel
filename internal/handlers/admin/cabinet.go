@@ -95,6 +95,11 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		"nodes":            got.GetNodes(),
 		"nodes_entitled":   got.GetNodesEntitled(),
 		"used_bytes":       got.GetUsedBytes(),
+		"uplink_bps":       got.GetUplinkBps(),
+		"downlink_bps":     got.GetDownlinkBps(),
+		// Версия аватара нужна приложению: по ней оно понимает, что картинку в
+		// кэше пора выбросить
+		"avatar_version": admin.AvatarVersion,
 		"sticky_until":     got.GetStickyUntilUnix(),
 	}
 	// Уровень доверия объясняет, почему серверов столько, а не иначе. Голова без

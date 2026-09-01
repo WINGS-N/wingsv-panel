@@ -242,6 +242,9 @@ message UserAllocation {
   uint32 nodes_entitled = 5;
   // Сколько пользователь пронёс за текущий период
   uint64 used_bytes = 6;
+  // Потолки скорости, байт в секунду. Соразмерны оценке оракула
+  uint64 uplink_bps = 7;
+  uint64 downlink_bps = 8;
 }
 
 message RevokeUserRequest {

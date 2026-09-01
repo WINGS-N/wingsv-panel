@@ -25,8 +25,8 @@
           <Gauge :size="14" class="stat-kicker-icon" aria-hidden="true" />
           Скорость
         </span>
-        <span class="stat-value">без лимита</span>
-        <span class="stat-meta">упирается только в сам сервер</span>
+        <span class="stat-value">{{ speedLabel }}</span>
+        <span class="stat-meta">потолок вниз / вверх</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
@@ -101,6 +101,8 @@ const access = reactive({
   nodes: 0,
   nodes_entitled: 0,
   used_bytes: 0,
+  uplink_bps: 0,
+  downlink_bps: 0,
   subscription_url: '',
   sticky_until: 0,
   import_link: '',
@@ -129,6 +131,10 @@ async function load() {
     access.subscription_url = data.subscription_url || '';
     access.sticky_until = data.sticky_until || 0;
     access.import_link = data.import_link || '';
+    access.used_bytes = data.used_bytes || 0;
+    access.nodes_entitled = data.nodes_entitled || 0;
+    access.uplink_bps = data.uplink_bps || 0;
+    access.downlink_bps = data.downlink_bps || 0;
     trustRaw.value = data.trust ? { ...data.trust, classes: data.trust.classes || [] } : null;
     loadError.value = '';
   } catch (err) {
@@ -156,6 +162,20 @@ function bandLabel(band) {
   if (band === 'reduced') return 'урезанный доступ';
   if (band === 'quarantine') return 'карантин';
   return band;
+}
+
+// Потолок скорости соразмерен оценке доверия, а не полосе
+const speedLabel = computed(() => {
+  const down = Number(access.downlink_bps || 0);
+  const up = Number(access.uplink_bps || 0);
+  if (!down && !up) return 'без лимита';
+  return `${formatSpeed(down)} / ${formatSpeed(up)}`;
+});
+
+function formatSpeed(bps) {
+  if (!bps) return 'без лимита';
+  const mbits = (bps * 8) / 1000000;
+  return `${mbits >= 10 ? Math.round(mbits) : mbits.toFixed(1)} Mbit/s`;
 }
 
 // Единицы английские, как везде в проекте
