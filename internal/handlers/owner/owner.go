@@ -461,6 +461,7 @@ type settingsRequest struct {
 	// Pointer so an omitted field leaves the current value untouched.
 	AllowAdminGRPC *bool  `json:"allow_admin_grpc"`
 	LinkFormat     string `json:"link_format"`
+	PanelByRequest *bool  `json:"panel_by_request"`
 }
 
 func (h *Handler) settingsPayload() (map[string]any, error) {
@@ -476,10 +477,15 @@ func (h *Handler) settingsPayload() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	byRequest, err := h.store.GetPlatformSetting(storage.SettingPanelByRequest, "false")
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"registration_mode": mode,
 		"allow_admin_grpc":  allowGRPC == "true",
 		"link_format":       linkFormat,
+		"panel_by_request":  byRequest == "true",
 	}, nil
 }
 
@@ -540,6 +546,20 @@ func (h *Handler) handleSettings(w http.ResponseWriter, r *http.Request, owner s
 			_ = h.store.AppendAudit(storage.AuditEntry{
 				ActorAdminID: owner.ID, ActorUsername: owner.Username,
 				Action: "owner.allow_admin_grpc_changed", Message: value, IP: clientIP(r),
+			})
+		}
+		if req.PanelByRequest != nil {
+			value := "false"
+			if *req.PanelByRequest {
+				value = "true"
+			}
+			if err := h.store.SetPlatformSetting(storage.SettingPanelByRequest, value); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			_ = h.store.AppendAudit(storage.AuditEntry{
+				ActorAdminID: owner.ID, ActorUsername: owner.Username,
+				Action: "owner.panel_by_request_changed", Message: value, IP: clientIP(r),
 			})
 		}
 		payload, err := h.settingsPayload()

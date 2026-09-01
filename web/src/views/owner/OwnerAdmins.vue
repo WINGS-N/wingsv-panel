@@ -40,6 +40,9 @@
             <SamsungPill v-if="a.role !== 'owner'" :variant="a.panel_access ? 'info' : 'offline'" class="ml-2">
               {{ a.panel_access ? 'панель' : 'участник' }}
             </SamsungPill>
+            <SamsungPill v-if="a.panel_requested" variant="online" class="ml-2" title="Просит открыть админ-панель">
+              просит панель
+            </SamsungPill>
           </td>
           <td data-label="Клиентов">{{ a.clients_total }}</td>
           <td data-label="Online">{{ a.clients_online }}</td>
@@ -109,6 +112,16 @@
       </span>
       <span class="keyval-value">
         <OneuiSwitch :model-value="allowAdminGRPC" @update:model-value="setAllowAdminGRPC" />
+      </span>
+    </div>
+
+    <h3 class="admin-section-subtitle mt-6">Админ-панель участникам</h3>
+    <div class="keyval mt-2">
+      <span class="keyval-label">
+        Спрашивать вас, прежде чем участник откроет себе панель. Выключено - открывает сам
+      </span>
+      <span class="keyval-value">
+        <OneuiSwitch :model-value="panelByRequest" @update:model-value="setPanelByRequest" />
       </span>
     </div>
 
@@ -238,6 +251,7 @@ const adminsLoaded = ref(false);
 const invites = ref([]);
 const loadError = ref('');
 const allowAdminGRPC = ref(false);
+const panelByRequest = ref(false);
 const linkFormat = ref('brotli');
 const linkFormatOptions = [
   { value: 'brotli', label: 'Brotli (основной)' },
@@ -421,6 +435,7 @@ async function loadSettings() {
     if (res.ok) {
       const body = await res.json();
       allowAdminGRPC.value = !!body.allow_admin_grpc;
+      panelByRequest.value = !!body.panel_by_request;
       linkFormat.value = body.link_format || 'brotli';
     }
   } catch {}
@@ -453,6 +468,21 @@ async function setAllowAdminGRPC(value) {
     });
     if (!res.ok) throw new Error(await res.text());
     allowAdminGRPC.value = value;
+  } catch (err) {
+    loadError.value = err.message;
+  }
+}
+
+async function setPanelByRequest(value) {
+  try {
+    const res = await fetch('/api/owner/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ panel_by_request: value }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    panelByRequest.value = value;
   } catch (err) {
     loadError.value = err.message;
   }

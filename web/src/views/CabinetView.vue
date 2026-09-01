@@ -92,13 +92,11 @@
           </div>
         </template>
         <template v-else>
-          <p class="admin-muted">
-            Своих клиентов заводят в админ-панели. Она открывается по решению владельца платформы.
-          </p>
+          <p class="admin-muted">Своих клиентов заводят в админ-панели. Откройте её себе, когда понадобится.</p>
           <p v-if="panelError" class="state-error mt-2">{{ panelError }}</p>
           <p v-if="panelRequested" class="state-hint mt-2">Заявка отправлена, ждём решения владельца.</p>
           <div v-else class="actions-row mt-3">
-            <SamsungButton :busy="panelBusy" @click="requestPanel">Запросить доступ к панели</SamsungButton>
+            <SamsungButton :busy="panelBusy" @click="openPanel">Стать администратором</SamsungButton>
           </div>
         </template>
       </section>
@@ -142,6 +140,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ArrowDownUp, Gauge, Server, Smartphone } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import PublicTopbar from '@/components/layout/PublicTopbar.vue';
@@ -232,6 +231,7 @@ function bandLabel(band) {
   return band;
 }
 
+const router = useRouter();
 const passwords = reactive({ old: '', next: '', repeat: '' });
 const passwordBusy = ref(false);
 const passwordError = ref('');
@@ -284,14 +284,19 @@ async function submitPassword() {
   }
 }
 
-async function requestPanel() {
+async function openPanel() {
   panelBusy.value = true;
   panelError.value = '';
   try {
-    const res = await fetch('/api/admin/me/panel-request', { method: 'POST', credentials: 'include' });
+    const res = await fetch('/api/admin/me/panel-access', { method: 'POST', credentials: 'include' });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.message || 'Не удалось отправить заявку');
-    panelRequested.value = true;
+    if (!res.ok) throw new Error(body.message || 'Не удалось открыть панель');
+    // Когда владелец включил модерацию, доступ не выдаётся сразу
+    panelRequested.value = Boolean(body.requested);
+    if (body.granted) {
+      await refreshSession();
+      router.push({ name: 'admin-clients' });
+    }
   } catch (err) {
     panelError.value = err.message;
   } finally {

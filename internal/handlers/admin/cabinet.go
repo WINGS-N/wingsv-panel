@@ -22,9 +22,12 @@ func federationUserID(admin storage.Admin) string {
 	return "user-" + strconv.FormatInt(admin.ID, 10)
 }
 
-// handlePanelRequest - участник просит открыть ему админ-панель, чтобы вести
-// собственных клиентов. Решает владелец: сам себе панель никто не открывает
-func (h *Handler) handlePanelRequest(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+// handlePanelAccess открывает участнику админ-панель.
+//
+// По умолчанию разрешения ни у кого спрашивать не надо: тот, кто уже в дереве,
+// вправе вести собственных клиентов. Модерация включается настройкой платформы,
+// и тогда просьба уходит владельцу
+func (h *Handler) handlePanelAccess(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -33,15 +36,33 @@ func (h *Handler) handlePanelRequest(w http.ResponseWriter, r *http.Request, adm
 		writeError(w, http.StatusBadRequest, "панель у вас уже открыта")
 		return
 	}
-	if err := h.store.RequestPanelAccess(admin.ID); err != nil {
+	moderated, err := h.store.GetPlatformSetting(storage.SettingPanelByRequest, "false")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if moderated == "true" {
+		if err := h.store.RequestPanelAccess(admin.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		_ = h.store.AppendAudit(storage.AuditEntry{
+			ActorAdminID: admin.ID, ActorUsername: admin.Username,
+			Action: "admin.panel_requested", IP: clientIP(r),
+		})
+		writeJSON(w, http.StatusOK, map[string]any{"granted": false, "requested": true})
+		return
+	}
+	if err := h.store.SetPanelAccess(admin.ID, true); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.ClearPanelRequest(admin.ID)
 	_ = h.store.AppendAudit(storage.AuditEntry{
 		ActorAdminID: admin.ID, ActorUsername: admin.Username,
-		Action: "admin.panel_requested", IP: clientIP(r),
+		Action: "admin.panel_self_granted", IP: clientIP(r),
 	})
-	writeJSON(w, http.StatusOK, map[string]any{"requested": true})
+	writeJSON(w, http.StatusOK, map[string]any{"granted": true, "requested": false})
 }
 
 // handleMyAccess выдаёт участнику его собственный доступ.

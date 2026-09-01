@@ -96,7 +96,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Кабинет участника: собственный доступ есть у любого аккаунта, включая
 	// администратора - одно другого не отменяет
 	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
-	mux.HandleFunc("/api/admin/me/panel-request", h.requireAuth(h.handlePanelRequest))
+	mux.HandleFunc("/api/admin/me/panel-access", h.requireAuth(h.handlePanelAccess))
 	mux.HandleFunc("/api/admin/me/totp", h.requireAuth(h.handleTOTP))
 	mux.HandleFunc("/api/admin/me/totp/qr", h.requireAuth(h.handleTOTPQR))
 	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,

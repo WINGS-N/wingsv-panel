@@ -21,6 +21,11 @@ const (
 	// disabled: a deployment that never opted in has nothing to reason about.
 	SettingFederationEnabled = "federation_enabled"
 
+	// SettingPanelByRequest включает модерацию: панель тогда открывает владелец,
+	// а не сам участник. По умолчанию выключено - вести своих клиентов вправе
+	// каждый, кто уже в дереве
+	SettingPanelByRequest = "panel_by_request"
+
 	// SettingLinkFormat выбирает, чем сжимать ссылки: brotli короче на четверть,
 	// но сборки приложения до его появления такую ссылку не прочитают
 	SettingLinkFormat = "link_format"

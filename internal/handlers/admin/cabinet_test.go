@@ -4,69 +4,100 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"v.wingsnet.org/internal/storage"
 )
 
-// Участник просит панель сам, а решает владелец. Повторная просьба не двигает
-// отметку: очередь заявок идёт по времени первой
-func TestPanelRequestIsRecordedOnce(t *testing.T) {
-	h, admin := appHandler(t)
-	if err := h.store.SetPanelAccess(admin.ID, false); err != nil {
+func memberOf(t *testing.T, h *Handler, id int64) storage.Admin {
+	t.Helper()
+	if err := h.store.SetPanelAccess(id, false); err != nil {
 		t.Fatal(err)
 	}
-	member, err := h.store.FindAdminByID(admin.ID)
+	member, err := h.store.FindAdminByID(id)
 	if err != nil {
+		t.Fatal(err)
+	}
+	return member
+}
+
+// Разрешения на админку по умолчанию не спрашивают: кто уже в дереве, тот
+// вправе вести своих клиентов
+func TestPanelOpensItselfByDefault(t *testing.T) {
+	h, admin := appHandler(t)
+	member := memberOf(t, h, admin.ID)
+
+	res := postJSON(t, h.requireAuthFor(member, h.handlePanelAccess), "/api/admin/me/panel-access", nil, "")
+	if res.Code != http.StatusOK {
+		t.Fatalf("код = %d %s", res.Code, res.Body.String())
+	}
+	var body struct {
+		Granted   bool `json:"granted"`
+		Requested bool `json:"requested"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if !body.Granted || body.Requested {
+		t.Fatalf("granted=%v requested=%v, ждали выданный доступ", body.Granted, body.Requested)
+	}
+	after, err := h.store.FindAdminByID(member.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !after.PanelAccess {
+		t.Fatal("панель не открылась")
+	}
+}
+
+// С включённой модерацией просьба уходит владельцу, а панель остаётся закрытой
+func TestPanelGoesThroughTheOwnerWhenModerated(t *testing.T) {
+	h, admin := appHandler(t)
+	member := memberOf(t, h, admin.ID)
+	if err := h.store.SetPlatformSetting(storage.SettingPanelByRequest, "true"); err != nil {
 		t.Fatal(err)
 	}
 
-	res := postJSON(t, h.requireAuthFor(member, h.handlePanelRequest), "/api/admin/me/panel-request", nil, "")
+	res := postJSON(t, h.requireAuthFor(member, h.handlePanelAccess), "/api/admin/me/panel-access", nil, "")
 	if res.Code != http.StatusOK {
-		t.Fatalf("заявка: %d %s", res.Code, res.Body.String())
+		t.Fatalf("код = %d %s", res.Code, res.Body.String())
 	}
-	first, err := h.store.FindAdminByID(member.ID)
+	var body struct {
+		Granted   bool `json:"granted"`
+		Requested bool `json:"requested"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Granted || !body.Requested {
+		t.Fatalf("granted=%v requested=%v, ждали заявку", body.Granted, body.Requested)
+	}
+	after, err := h.store.FindAdminByID(member.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.PanelRequestedAt.IsZero() {
+	if after.PanelAccess {
+		t.Fatal("модерация не удержала панель закрытой")
+	}
+	if after.PanelRequestedAt.IsZero() {
 		t.Fatal("заявка не записалась")
 	}
 
-	postJSON(t, h.requireAuthFor(member, h.handlePanelRequest), "/api/admin/me/panel-request", nil, "")
+	// Повторная просьба не двигает отметку: очередь идёт по времени первой
+	postJSON(t, h.requireAuthFor(member, h.handlePanelAccess), "/api/admin/me/panel-access", nil, "")
 	again, err := h.store.FindAdminByID(member.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !again.PanelRequestedAt.Equal(first.PanelRequestedAt) {
+	if !again.PanelRequestedAt.Equal(after.PanelRequestedAt) {
 		t.Fatal("повторная просьба сдвинула отметку")
-	}
-
-	// Выданный доступ снимает заявку
-	if err := h.store.SetPanelAccess(member.ID, true); err != nil {
-		t.Fatal(err)
-	}
-	if err := h.store.ClearPanelRequest(member.ID); err != nil {
-		t.Fatal(err)
-	}
-	cleared, err := h.store.FindAdminByID(member.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !cleared.PanelRequestedAt.IsZero() {
-		t.Fatal("заявка пережила решение")
 	}
 }
 
 // У кого панель и так есть, просить нечего
-func TestPanelRequestRejectedWhenAlreadyGranted(t *testing.T) {
+func TestPanelAccessRejectedWhenAlreadyGranted(t *testing.T) {
 	h, admin := appHandler(t)
-	res := postJSON(t, h.requireAuthFor(admin, h.handlePanelRequest), "/api/admin/me/panel-request", nil, "")
+	res := postJSON(t, h.requireAuthFor(admin, h.handlePanelAccess), "/api/admin/me/panel-access", nil, "")
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("код = %d, want 400", res.Code)
-	}
-	var body struct {
-		Message string `json:"message"`
-	}
-	_ = json.Unmarshal(res.Body.Bytes(), &body)
-	if body.Message == "" {
-		t.Fatal("отказ без объяснения")
 	}
 }
