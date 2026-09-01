@@ -50,6 +50,7 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		"enabled":          true,
 		"subscription_url": got.GetSubscriptionUrl(),
 		"nodes":            got.GetNodes(),
+		"nodes_entitled":   got.GetNodesEntitled(),
 		"sticky_until":     got.GetStickyUntilUnix(),
 	}
 	// Уровень доверия объясняет, почему серверов столько, а не иначе. Голова без

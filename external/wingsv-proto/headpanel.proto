@@ -236,6 +236,10 @@ message UserAllocation {
   // has no business joining a user to a donor's machine
   uint32 nodes = 3;
   int64 sticky_until_unix = 4;
+  // Сколько нод полагается по уровню доверия. Отличается от nodes, когда во
+  // флоте нечего выдать: две ноды одного донора падают вместе, и вторую такую
+  // не дают. Без этой цифры кабинет не может объяснить, почему сервер один
+  uint32 nodes_entitled = 5;
 }
 
 message RevokeUserRequest {

@@ -1391,8 +1391,12 @@ type UserAllocation struct {
 	// has no business joining a user to a donor's machine
 	Nodes           uint32 `protobuf:"varint,3,opt,name=nodes,proto3" json:"nodes,omitempty"`
 	StickyUntilUnix int64  `protobuf:"varint,4,opt,name=sticky_until_unix,json=stickyUntilUnix,proto3" json:"sticky_until_unix,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Сколько нод полагается по уровню доверия. Отличается от nodes, когда во
+	// флоте нечего выдать: две ноды одного донора падают вместе, и вторую такую
+	// не дают. Без этой цифры кабинет не может объяснить, почему сервер один
+	NodesEntitled uint32 `protobuf:"varint,5,opt,name=nodes_entitled,json=nodesEntitled,proto3" json:"nodes_entitled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserAllocation) Reset() {
@@ -1449,6 +1453,13 @@ func (x *UserAllocation) GetNodes() uint32 {
 func (x *UserAllocation) GetStickyUntilUnix() int64 {
 	if x != nil {
 		return x.StickyUntilUnix
+	}
+	return 0
+}
+
+func (x *UserAllocation) GetNodesEntitled() uint32 {
+	if x != nil {
+		return x.NodesEntitled
 	}
 	return 0
 }
@@ -3117,12 +3128,13 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0finstall_command\x18\x03 \x01(\tR\x0einstallCommand\x12\x12\n" +
 	"\x04uses\x18\x04 \x01(\rR\x04uses\",\n" +
 	"\x11EnsureUserRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x96\x01\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xbd\x01\n" +
 	"\x0eUserAllocation\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12)\n" +
 	"\x10subscription_url\x18\x02 \x01(\tR\x0fsubscriptionUrl\x12\x14\n" +
 	"\x05nodes\x18\x03 \x01(\rR\x05nodes\x12*\n" +
-	"\x11sticky_until_unix\x18\x04 \x01(\x03R\x0fstickyUntilUnix\",\n" +
+	"\x11sticky_until_unix\x18\x04 \x01(\x03R\x0fstickyUntilUnix\x12%\n" +
+	"\x0enodes_entitled\x18\x05 \x01(\rR\rnodesEntitled\",\n" +
 	"\x11RevokeUserRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x14\n" +
 	"\x12RevokeUserResponse\"\\\n" +

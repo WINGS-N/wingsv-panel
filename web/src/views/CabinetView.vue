@@ -6,6 +6,9 @@
         <div class="federation-live-head">
           <h2 class="section-title">Мой доступ</h2>
           <span v-if="trust" class="admin-pill" :class="bandClass(trust.band)">{{ bandLabel(trust.band) }}</span>
+          <router-link v-if="hasPanel" class="cabinet-back" :to="{ name: 'admin-clients' }">
+            Вернуться в панель
+          </router-link>
         </div>
         <p class="body-copy body-copy-wide">
           Бесплатный доступ выдаётся из общего пула серверов, которые отдали администраторы. Сколько серверов
@@ -21,7 +24,15 @@
               Серверов
             </span>
             <span class="stat-value">{{ access.nodes }}</span>
-            <span class="stat-meta">выдано вам сейчас</span>
+            <span class="stat-meta">{{ nodesMeta }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-kicker">
+              <Gauge :size="14" class="stat-kicker-icon" aria-hidden="true" />
+              Скорость
+            </span>
+            <span class="stat-value">без лимита</span>
+            <span class="stat-meta">упирается только в сам сервер</span>
           </div>
           <div class="stat">
             <span class="stat-kicker">
@@ -69,10 +80,11 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { Server, Smartphone } from 'lucide-vue-next';
+import { Gauge, Server, Smartphone } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import PublicTopbar from '@/components/layout/PublicTopbar.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
+import { authState } from '@/stores/auth.js';
 
 const CLASS_LABELS = {
   high_fanout: 'много адресов сразу',
@@ -87,9 +99,20 @@ const CLASS_LABELS = {
 
 const enabled = ref(false);
 const loadError = ref('');
-const access = reactive({ nodes: 0, subscription_url: '', sticky_until: 0, import_link: '' });
+const access = reactive({ nodes: 0, nodes_entitled: 0, subscription_url: '', sticky_until: 0, import_link: '' });
 const trustRaw = ref(null);
 const trust = computed(() => trustRaw.value);
+// Админ попадает сюда из своей же панели, и ему нужен путь обратно
+const hasPanel = computed(() => Boolean(authState.value.admin?.panel_access));
+// Когда выдано меньше положенного, дело не в доверии: две ноды одного донора
+// падают вместе, поэтому вторую такую не дают
+const nodesMeta = computed(() => {
+  const entitled = Number(access.nodes_entitled || 0);
+  if (entitled > access.nodes) {
+    return `из ${entitled} по доверию - остальные пока некому отдать`;
+  }
+  return 'выдано вам сейчас';
+});
 
 onMounted(load);
 
@@ -144,3 +167,17 @@ function bandClass(band) {
   return 'is-offline';
 }
 </script>
+
+<style scoped>
+.cabinet-back {
+  margin-left: auto;
+  font-size: 14px;
+  color: rgba(252, 252, 252, 0.62);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cabinet-back:hover {
+  color: #fbfbfb;
+}
+</style>
