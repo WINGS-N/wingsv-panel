@@ -52,6 +52,7 @@ type federationNodeView struct {
 	VktpVersion         string  `json:"vktp_version"`
 	DeclaredBudgetBytes uint64  `json:"declared_budget_bytes"`
 	UsedBytes           uint64  `json:"used_bytes"`
+	ProbeBytes          uint64  `json:"probe_bytes"`
 	JoinedUnix          int64   `json:"joined_unix"`
 	LastSeenUnix        int64   `json:"last_seen_unix"`
 	UpRateBps           float64 `json:"up_rate_bps"`
@@ -69,17 +70,19 @@ type federationSummaryView struct {
 	Enabled bool `json:"enabled"`
 	// Aggregates only. There is deliberately no field here naming a profile or a
 	// user: a donor learns what their machines did, never who did it
-	Nodes               uint32                `json:"nodes"`
-	NodesOnline         uint32                `json:"nodes_online"`
-	Sessions            uint32                `json:"sessions"`
-	UpBytes             uint64                `json:"up_bytes"`
-	DownBytes           uint64                `json:"down_bytes"`
-	UpRateBps           float64               `json:"up_rate_bps"`
-	DownRateBps         float64               `json:"down_rate_bps"`
-	DeclaredBudgetBytes uint64                `json:"declared_budget_bytes"`
-	UsedBytes           uint64                `json:"used_bytes"`
-	NodeList            []federationNodeView  `json:"node_list"`
-	Months              []federationMonthView `json:"months"`
+	Nodes               uint32  `json:"nodes"`
+	NodesOnline         uint32  `json:"nodes_online"`
+	Sessions            uint32  `json:"sessions"`
+	UpBytes             uint64  `json:"up_bytes"`
+	DownBytes           uint64  `json:"down_bytes"`
+	UpRateBps           float64 `json:"up_rate_bps"`
+	DownRateBps         float64 `json:"down_rate_bps"`
+	DeclaredBudgetBytes uint64  `json:"declared_budget_bytes"`
+	UsedBytes           uint64  `json:"used_bytes"`
+	// ProbeBytes - часть UsedBytes, которую сожгли наши проверки
+	ProbeBytes uint64                `json:"probe_bytes"`
+	NodeList   []federationNodeView  `json:"node_list"`
+	Months     []federationMonthView `json:"months"`
 	// Error непустой, когда федерация включена, но голова не отвечает. Раздел
 	// при этом остаётся на месте: перезапуск головы не должен выглядеть как
 	// отключение федерации
@@ -135,6 +138,7 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 		DownRateBps:         summary.GetDownRateBps(),
 		DeclaredBudgetBytes: summary.GetDeclaredBudgetBytes(),
 		UsedBytes:           summary.GetUsedBytes(),
+		ProbeBytes:          summary.GetProbeBytes(),
 	}
 	// История - не повод завалить экран: голова без неё отдаёт Unimplemented,
 	// и раздел просто останется без графика
@@ -158,6 +162,7 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 			VktpVersion:         n.GetVktpVersion(),
 			DeclaredBudgetBytes: n.GetDeclaredBudgetBytes(),
 			UsedBytes:           n.GetUsedBytes(),
+			ProbeBytes:          n.GetProbeBytes(),
 			JoinedUnix:          n.GetJoinedUnix(),
 			LastSeenUnix:        n.GetLastSeenUnix(),
 			UpRateBps:           n.GetLive().GetUpRateBps(),

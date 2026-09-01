@@ -87,6 +87,9 @@ message GlobalCounters {
   // С начала текущего периода бюджета. Считается от сохранённой отметки, а не
   // от счётчиков в памяти, поэтому переживает выкат головы
   uint64 period_bytes = 10;
+  // Часть перенесённого, которую сожгли проверки зондов. Донору это считается
+  // как обычный трафик, но он вправе знать, сколько ушло на наши замеры
+  uint64 probe_bytes = 11;
 }
 
 // PublicCounters is what the landing page shows. No node ids, no donor ids, no
@@ -101,6 +104,8 @@ message PublicCounters {
   // Everything the federation has ever carried. The period figure resets and
   // makes the effort look smaller than it was; this one is the honest total
   uint64 lifetime_bytes = 7;
+  // Сколько из перенесённого ушло на проверки зондов
+  uint64 probe_bytes = 8;
 }
 
 message PublicCountersRequest {}
@@ -116,6 +121,8 @@ message DonorCounters {
   double down_rate_bps = 8;
   uint64 declared_budget_bytes = 9;
   uint64 used_bytes = 10;
+  // Сколько из used_bytes сожгли проверки зондов
+  uint64 probe_bytes = 11;
 }
 
 message DonorSummaryRequest {
@@ -150,6 +157,8 @@ message NodeCounters {
   uint64 used_bytes = 7;
   uint64 declared_budget_bytes = 8;
   int64 last_seen_unix = 9;
+  // Сколько из used_bytes сожгли проверки зондов
+  uint64 probe_bytes = 11;
   bool online = 10;
 }
 
@@ -183,6 +192,8 @@ message NodeSummary {
   // Сборки, которые нода несёт на самом деле
   string xray_version = 22;
   string vktp_version = 23;
+  // Сколько из used_bytes сожгли проверки зондов
+  uint64 probe_bytes = 24;
 }
 
 message MintEnrollTokenRequest {

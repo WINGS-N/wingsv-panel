@@ -54,7 +54,11 @@
           Передано
         </span>
         <span class="stat-value">{{ formatBytes(live.up_bytes + live.down_bytes) }}</span>
-        <span class="stat-meta">за текущий период</span>
+        <span class="stat-meta">
+          за текущий период<template v-if="live.probe_bytes">
+            &middot; из них проверочного трафика {{ formatBytes(live.probe_bytes) }}</template
+          >
+        </span>
       </div>
       <div class="stat">
         <span class="stat-kicker">

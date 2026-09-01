@@ -138,7 +138,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	// Code - код второго фактора или резервный код
+	// Code - код 2FA или резервный код
 	Code string `json:"code"`
 }
 
@@ -152,12 +152,12 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid body")
 		return
 	}
-	// Второй фактор проверяется до выдачи сессии: пароль сам по себе входом уже
+	// 2FA проверяется до выдачи сессии: пароль сам по себе входом уже
 	// не является
 	if checked, err := h.auth.VerifyCredentials(req.Username, req.Password); err == nil {
 		if !h.verifySecondFactor(checked, req.Code) {
 			writeJSON(w, http.StatusUnauthorized, map[string]any{
-				"error": true, "totp_required": true, "message": "нужен код второго фактора",
+				"error": true, "totp_required": true, "message": "нужен код 2FA",
 			})
 			return
 		}

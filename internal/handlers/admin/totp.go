@@ -24,7 +24,7 @@ const backupCodeCount = 10
 func (h *Handler) handleTOTPQR(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	state, err := h.store.TOTPFor(admin.ID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "второй фактор не настраивался")
+		writeError(w, http.StatusNotFound, "2FA не настраивалась")
 		return
 	}
 	key, err := otp.NewKeyFromURL(otpauthURL(admin.Username, state.Secret))
@@ -48,7 +48,7 @@ func otpauthURL(username, secret string) string {
 		url.PathEscape(username), secret)
 }
 
-// handleTOTP управляет вторым фактором своего аккаунта
+// handleTOTP управляет 2FA своего аккаунта
 func (h *Handler) handleTOTP(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	switch r.Method {
 	case http.MethodGet:
@@ -66,6 +66,8 @@ func (h *Handler) handleTOTP(w http.ResponseWriter, r *http.Request, admin stora
 		h.startTOTP(w, r, admin)
 	case http.MethodPut:
 		h.confirmTOTP(w, r, admin)
+	case http.MethodPatch:
+		h.reissueBackupCodes(w, r, admin)
 	case http.MethodDelete:
 		h.disableTOTP(w, r, admin)
 	default:
@@ -94,7 +96,7 @@ func (h *Handler) startTOTP(w http.ResponseWriter, r *http.Request, admin storag
 	})
 }
 
-// confirmTOTP включает второй фактор, когда код сошёлся, и выдаёт резервные коды
+// confirmTOTP включает 2FA, когда код сошёлся, и выдаёт резервные коды
 func (h *Handler) confirmTOTP(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	var req struct {
 		Code string `json:"code"`
@@ -105,7 +107,7 @@ func (h *Handler) confirmTOTP(w http.ResponseWriter, r *http.Request, admin stor
 	}
 	state, err := h.store.TOTPFor(admin.ID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "второй фактор не настраивался")
+		writeError(w, http.StatusNotFound, "2FA не настраивалась")
 		return
 	}
 	if !totp.Validate(strings.TrimSpace(req.Code), state.Secret) {
@@ -132,7 +134,43 @@ func (h *Handler) confirmTOTP(w http.ResponseWriter, r *http.Request, admin stor
 	writeJSON(w, http.StatusOK, map[string]any{"enabled": true, "backup_codes": codes})
 }
 
-// disableTOTP снимает второй фактор. Пароль спрашивается заново: снятие защиты
+// reissueBackupCodes выдаёт новый набор кодов восстановления взамен старого.
+// Пароль спрашивается по той же причине, что и при снятии 2FA: иначе с чужого
+// незалоченного телефона выписывается вечный обход второго фактора
+func (h *Handler) reissueBackupCodes(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad request body")
+		return
+	}
+	state, err := h.store.TOTPFor(admin.ID)
+	if err != nil || !state.Confirmed {
+		writeError(w, http.StatusNotFound, "2FA не включена")
+		return
+	}
+	if _, err := h.auth.VerifyCredentials(admin.Username, req.Password); err != nil {
+		writeError(w, http.StatusForbidden, "неверный пароль")
+		return
+	}
+	codes, err := generateBackupCodes()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := h.store.SetBackupCodes(admin.ID, codes); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: admin.ID, ActorUsername: admin.Username,
+		Action: "admin.backup_codes_reissued", IP: clientIP(r),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"backup_codes": codes})
+}
+
+// disableTOTP снимает 2FA. Пароль спрашивается заново: снятие защиты
 // не должно проходить с чужого незалоченного телефона
 func (h *Handler) disableTOTP(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	var req struct {

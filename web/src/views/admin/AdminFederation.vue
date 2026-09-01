@@ -53,7 +53,12 @@
           Отдано за период
         </span>
         <span class="stat-value">{{ bytes(summary.used_bytes) }}</span>
-        <span class="stat-meta">из {{ bytes(summary.declared_budget_bytes) }}</span>
+        <span class="stat-meta">
+          из {{ bytes(summary.declared_budget_bytes)
+          }}<template v-if="summary.probe_bytes">
+            &middot; из них проверочного трафика {{ bytes(summary.probe_bytes) }}</template
+          >
+        </span>
       </div>
     </div>
 
@@ -120,6 +125,13 @@
             <span class="inline-flex items-center gap-1">
               <ArrowUp :size="13" :style="{ color: FLOW_UP }" aria-hidden="true" />{{ bytes(node.used_bytes) }}
               <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
+              <span
+                v-if="node.probe_bytes"
+                class="text-wings-kicker"
+                title="Проверочный трафик наших зондов, он тоже идёт из вашего лимита"
+              >
+                &middot; проверки {{ bytes(node.probe_bytes) }}
+              </span>
               <button type="button" class="fed-node-edit" title="Изменить месячный лимит" @click="startBudget(node)">
                 <Pencil :size="13" aria-hidden="true" />
               </button>
@@ -197,6 +209,7 @@ const summary = reactive({
   up_rate_bps: 0,
   down_rate_bps: 0,
   used_bytes: 0,
+  probe_bytes: 0,
   declared_budget_bytes: 0,
   node_list: [],
   months: [],

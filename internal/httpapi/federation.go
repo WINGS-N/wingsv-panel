@@ -72,6 +72,8 @@ type publicStatsPayload struct {
 	// Everything the federation has ever carried. The figures above reset with
 	// the budget period, which makes the effort look smaller than it was
 	LifetimeBytes uint64 `json:"lifetime_bytes"`
+	// ProbeBytes - сколько из перенесённого ушло на проверки зондов
+	ProbeBytes uint64 `json:"probe_bytes"`
 }
 
 func publicStats(update *headpb.LiveUpdate) publicStatsPayload {
@@ -85,6 +87,7 @@ func publicStats(update *headpb.LiveUpdate) publicStatsPayload {
 		UpRateBps:     global.GetUpRateBps(),
 		DownRateBps:   global.GetDownRateBps(),
 		LifetimeBytes: global.GetLifetimeBytes(),
+		ProbeBytes:    global.GetProbeBytes(),
 	}
 }
 

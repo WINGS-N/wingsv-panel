@@ -49,24 +49,65 @@
       </div>
     </form>
 
-    <h2 class="admin-section-subtitle mt-6">Второй фактор</h2>
+    <h2 class="admin-section-subtitle mt-6">2FA</h2>
     <p class="admin-muted">
-      Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении. Пароль сам по себе
-      входом перестаёт быть.
+      Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении.
     </p>
     <p v-if="totpError" class="state-error mt-2">{{ totpError }}</p>
 
-    <div v-if="totp.enabled" class="actions-row mt-3">
-      <span class="admin-pill is-online">включён</span>
-      <span class="admin-muted">резервных кодов осталось: {{ totp.backup_codes }}</span>
-      <SamsungButton variant="ghost" :busy="totpBusy" @click="disableTotp">Отключить</SamsungButton>
+    <div v-if="totp.enabled">
+      <div class="actions-row mt-3">
+        <span class="admin-pill is-online">включён</span>
+        <span class="admin-muted">кодов восстановления осталось: {{ totp.backup_codes }}</span>
+        <SamsungButton v-if="!disarm.open && !reissue.open" variant="ghost" @click="reissue.open = true">
+          Новые коды восстановления
+        </SamsungButton>
+        <SamsungButton v-if="!disarm.open && !reissue.open" variant="ghost" @click="disarm.open = true">
+          Отключить
+        </SamsungButton>
+      </div>
+      <!-- Новый набор кодов обесценивает старый, поэтому тоже под паролем -->
+      <template v-if="reissue.open">
+        <div class="form-grid mt-3">
+          <OneuiInput
+            v-model="reissue.password"
+            label="Пароль от аккаунта"
+            type="password"
+            autocomplete="current-password"
+          />
+        </div>
+        <div class="actions-row">
+          <SamsungButton :busy="totpBusy" :disabled="!reissue.password" @click="reissueCodes">
+            Выпустить коды
+          </SamsungButton>
+          <SamsungButton variant="ghost" @click="closeReissue">Отмена</SamsungButton>
+        </div>
+      </template>
+
+      <!-- Снятие защиты подтверждается паролем, а не одним нажатием -->
+      <template v-if="disarm.open">
+        <div class="form-grid mt-3">
+          <OneuiInput
+            v-model="disarm.password"
+            label="Пароль от аккаунта"
+            type="password"
+            autocomplete="current-password"
+          />
+        </div>
+        <div class="actions-row">
+          <SamsungButton :busy="totpBusy" :disabled="!disarm.password" @click="disableTotp">
+            Отключить 2FA
+          </SamsungButton>
+          <SamsungButton variant="ghost" @click="closeDisarm">Отмена</SamsungButton>
+        </div>
+      </template>
     </div>
 
     <template v-else-if="totpSetup.otpauth">
       <p class="body-copy mt-3">
         Отсканируйте код приложением-аутентификатором и введите шесть цифр, которые оно покажет.
       </p>
-      <img v-if="totpQr" :src="totpQr" alt="QR второго фактора" class="totp-qr" />
+      <img v-if="totpQr" :src="totpQr" alt="QR для 2FA" class="totp-qr" />
       <p class="admin-mono admin-muted">{{ totpSetup.secret }}</p>
       <div class="form-grid mt-3">
         <OneuiInput v-model.trim="totpCode" label="Код из приложения" inputmode="numeric" maxlength="6" />
@@ -87,7 +128,8 @@
     <!-- Коды показываются один раз: панель их не хранит в открытом виде -->
     <div v-if="backupCodes.length" class="entry-card mt-4">
       <p class="body-copy">
-        Сохраните резервные коды. Каждый работает один раз и нужен, когда телефона с аутентификатором нет под рукой.
+        Сохраните коды восстановления. Каждый работает один раз и нужен, когда телефона с аутентификатором нет под
+        рукой.
       </p>
       <ul class="backup-codes mt-3">
         <li v-for="code in backupCodes" :key="code" class="admin-mono">{{ code }}</li>
@@ -98,8 +140,7 @@
       <h2 class="admin-section-subtitle mt-5">Matrix</h2>
       <p class="admin-muted">
         Вход через <strong>{{ matrix.homeserver }}</strong
-        >. Аватар придётся загрузить здесь: аккаунт-сервис его не хранит, а профиль Matrix отдаёт картинку только вместе
-        с доступом ко всей переписке — ради аватарки такое не берут.
+        >. Аватар загружается здесь.
       </p>
       <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
       <div class="actions-row mt-3">
@@ -141,7 +182,105 @@ const matrix = reactive({ enabled: false, homeserver: '', matrix_id: '' });
 const matrixBusy = ref(false);
 const matrixError = ref('');
 
+const disarm = reactive({ open: false, password: '' });
+const reissue = reactive({ open: false, password: '' });
+
 onMounted(loadTotp);
+
+async function loadTotp() {
+  try {
+    const res = await fetch('/api/admin/me/totp', { credentials: 'include' });
+    if (res.ok) Object.assign(totp, await res.json());
+  } catch {
+    // Панель недоступна - состояние 2FA просто не показываем
+  }
+}
+
+async function totpRequest(method, body) {
+  const res = await fetch('/api/admin/me/totp', {
+    method,
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Не удалось');
+  return data;
+}
+
+async function startTotp() {
+  totpBusy.value = true;
+  totpError.value = '';
+  try {
+    const data = await totpRequest('POST');
+    totpSetup.secret = data.secret || '';
+    totpSetup.otpauth = data.otpauth || '';
+    totpCode.value = '';
+    // QR рисует панель по своему секрету, и он только что сменился
+    totpVersion.value += 1;
+  } catch (err) {
+    totpError.value = err.message;
+  } finally {
+    totpBusy.value = false;
+  }
+}
+
+async function confirmTotp() {
+  totpBusy.value = true;
+  totpError.value = '';
+  try {
+    const data = await totpRequest('PUT', { code: totpCode.value });
+    backupCodes.value = data.backup_codes || [];
+    totpSetup.otpauth = '';
+    totpSetup.secret = '';
+    totpCode.value = '';
+    await loadTotp();
+  } catch (err) {
+    totpError.value = err.message;
+  } finally {
+    totpBusy.value = false;
+  }
+}
+
+async function disableTotp() {
+  totpBusy.value = true;
+  totpError.value = '';
+  try {
+    await totpRequest('DELETE', { password: disarm.password });
+    backupCodes.value = [];
+    closeDisarm();
+    await loadTotp();
+  } catch (err) {
+    totpError.value = err.message;
+  } finally {
+    totpBusy.value = false;
+  }
+}
+
+async function reissueCodes() {
+  totpBusy.value = true;
+  totpError.value = '';
+  try {
+    const data = await totpRequest('PATCH', { password: reissue.password });
+    backupCodes.value = data.backup_codes || [];
+    closeReissue();
+    await loadTotp();
+  } catch (err) {
+    totpError.value = err.message;
+  } finally {
+    totpBusy.value = false;
+  }
+}
+
+function closeReissue() {
+  reissue.open = false;
+  reissue.password = '';
+}
+
+function closeDisarm() {
+  disarm.open = false;
+  disarm.password = '';
+}
 
 onMounted(loadMatrix);
 
@@ -286,5 +425,24 @@ async function removeAvatar() {
 
 .hidden {
   display: none;
+}
+
+.totp-qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 16px 0 12px;
+  border-radius: 18px;
+  background: #fbfbfb;
+  padding: 10px;
+}
+
+.backup-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 </style>

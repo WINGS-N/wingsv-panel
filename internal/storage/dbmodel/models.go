@@ -441,7 +441,7 @@ type AppSession struct {
 // TableName задаёт имя таблицы
 func (AppSession) TableName() string { return "app_sessions" }
 
-// AdminTOTP - второй фактор аккаунта
+// AdminTOTP - 2FA аккаунта
 type AdminTOTP struct {
 	AdminID       int64  `gorm:"column:admin_id;primaryKey"`
 	Secret        string `gorm:"column:secret;not null"`

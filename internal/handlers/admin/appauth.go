@@ -140,7 +140,7 @@ func (h *Handler) handleAppLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if !h.verifySecondFactor(admin, req.Code) {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{
-			"error": true, "totp_required": true, "message": "нужен код второго фактора",
+			"error": true, "totp_required": true, "message": "нужен код 2FA",
 		})
 		return
 	}

@@ -12,7 +12,7 @@ import (
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
-// TOTPState - состояние второго фактора у аккаунта
+// TOTPState - состояние 2FA у аккаунта
 type TOTPState struct {
 	Secret    string
 	Confirmed bool
@@ -36,13 +36,13 @@ func (s *Store) StartTOTP(adminID int64, secret string) error {
 	}).Error
 }
 
-// ConfirmTOTP включает второй фактор
+// ConfirmTOTP включает 2FA
 func (s *Store) ConfirmTOTP(adminID int64) error {
 	return s.gdb.Model(&dbmodel.AdminTOTP{}).Where("admin_id = ?", adminID).
 		Update("confirmed_at", time.Now().UTC().UnixMilli()).Error
 }
 
-// TOTPFor читает состояние второго фактора
+// TOTPFor читает состояние 2FA
 func (s *Store) TOTPFor(adminID int64) (TOTPState, error) {
 	var row dbmodel.AdminTOTP
 	err := s.gdb.Where("admin_id = ?", adminID).First(&row).Error
@@ -55,7 +55,7 @@ func (s *Store) TOTPFor(adminID int64) (TOTPState, error) {
 	return TOTPState{Secret: row.Secret, Confirmed: row.ConfirmedAt > 0}, nil
 }
 
-// DisableTOTP снимает второй фактор вместе с резервными кодами
+// DisableTOTP снимает 2FA вместе с резервными кодами
 func (s *Store) DisableTOTP(adminID int64) error {
 	if err := s.gdb.Where("admin_id = ?", adminID).Delete(&dbmodel.AdminTOTP{}).Error; err != nil {
 		return err

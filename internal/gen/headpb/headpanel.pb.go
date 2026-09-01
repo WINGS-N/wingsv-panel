@@ -220,7 +220,10 @@ type GlobalCounters struct {
 	LifetimeBytes uint64 `protobuf:"varint,9,opt,name=lifetime_bytes,json=lifetimeBytes,proto3" json:"lifetime_bytes,omitempty"`
 	// С начала текущего периода бюджета. Считается от сохранённой отметки, а не
 	// от счётчиков в памяти, поэтому переживает выкат головы
-	PeriodBytes   uint64 `protobuf:"varint,10,opt,name=period_bytes,json=periodBytes,proto3" json:"period_bytes,omitempty"`
+	PeriodBytes uint64 `protobuf:"varint,10,opt,name=period_bytes,json=periodBytes,proto3" json:"period_bytes,omitempty"`
+	// Часть перенесённого, которую сожгли проверки зондов. Донору это считается
+	// как обычный трафик, но он вправе знать, сколько ушло на наши замеры
+	ProbeBytes    uint64 `protobuf:"varint,11,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -325,6 +328,13 @@ func (x *GlobalCounters) GetPeriodBytes() uint64 {
 	return 0
 }
 
+func (x *GlobalCounters) GetProbeBytes() uint64 {
+	if x != nil {
+		return x.ProbeBytes
+	}
+	return 0
+}
+
 // PublicCounters is what the landing page shows. No node ids, no donor ids, no
 // per-node breakdown: this is served without a session
 type PublicCounters struct {
@@ -338,6 +348,8 @@ type PublicCounters struct {
 	// Everything the federation has ever carried. The period figure resets and
 	// makes the effort look smaller than it was; this one is the honest total
 	LifetimeBytes uint64 `protobuf:"varint,7,opt,name=lifetime_bytes,json=lifetimeBytes,proto3" json:"lifetime_bytes,omitempty"`
+	// Сколько из перенесённого ушло на проверки зондов
+	ProbeBytes    uint64 `protobuf:"varint,8,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -421,6 +433,13 @@ func (x *PublicCounters) GetLifetimeBytes() uint64 {
 	return 0
 }
 
+func (x *PublicCounters) GetProbeBytes() uint64 {
+	if x != nil {
+		return x.ProbeBytes
+	}
+	return 0
+}
+
 type PublicCountersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -469,8 +488,10 @@ type DonorCounters struct {
 	DownRateBps         float64                `protobuf:"fixed64,8,opt,name=down_rate_bps,json=downRateBps,proto3" json:"down_rate_bps,omitempty"`
 	DeclaredBudgetBytes uint64                 `protobuf:"varint,9,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
 	UsedBytes           uint64                 `protobuf:"varint,10,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Сколько из used_bytes сожгли проверки зондов
+	ProbeBytes    uint64 `protobuf:"varint,11,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DonorCounters) Reset() {
@@ -569,6 +590,13 @@ func (x *DonorCounters) GetDeclaredBudgetBytes() uint64 {
 func (x *DonorCounters) GetUsedBytes() uint64 {
 	if x != nil {
 		return x.UsedBytes
+	}
+	return 0
+}
+
+func (x *DonorCounters) GetProbeBytes() uint64 {
+	if x != nil {
+		return x.ProbeBytes
 	}
 	return 0
 }
@@ -780,9 +808,11 @@ type NodeCounters struct {
 	UsedBytes           uint64                 `protobuf:"varint,7,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
 	DeclaredBudgetBytes uint64                 `protobuf:"varint,8,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
 	LastSeenUnix        int64                  `protobuf:"varint,9,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
-	Online              bool                   `protobuf:"varint,10,opt,name=online,proto3" json:"online,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Сколько из used_bytes сожгли проверки зондов
+	ProbeBytes    uint64 `protobuf:"varint,11,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
+	Online        bool   `protobuf:"varint,10,opt,name=online,proto3" json:"online,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *NodeCounters) Reset() {
@@ -874,6 +904,13 @@ func (x *NodeCounters) GetDeclaredBudgetBytes() uint64 {
 func (x *NodeCounters) GetLastSeenUnix() int64 {
 	if x != nil {
 		return x.LastSeenUnix
+	}
+	return 0
+}
+
+func (x *NodeCounters) GetProbeBytes() uint64 {
+	if x != nil {
+		return x.ProbeBytes
 	}
 	return 0
 }
@@ -994,8 +1031,10 @@ type NodeSummary struct {
 	LastSeenUnix        int64         `protobuf:"varint,12,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
 	Live                *NodeCounters `protobuf:"bytes,13,opt,name=live,proto3" json:"live,omitempty"`
 	// Сборки, которые нода несёт на самом деле
-	XrayVersion   string `protobuf:"bytes,22,opt,name=xray_version,json=xrayVersion,proto3" json:"xray_version,omitempty"`
-	VktpVersion   string `protobuf:"bytes,23,opt,name=vktp_version,json=vktpVersion,proto3" json:"vktp_version,omitempty"`
+	XrayVersion string `protobuf:"bytes,22,opt,name=xray_version,json=xrayVersion,proto3" json:"xray_version,omitempty"`
+	VktpVersion string `protobuf:"bytes,23,opt,name=vktp_version,json=vktpVersion,proto3" json:"vktp_version,omitempty"`
+	// Сколько из used_bytes сожгли проверки зондов
+	ProbeBytes    uint64 `protobuf:"varint,24,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1147,6 +1186,13 @@ func (x *NodeSummary) GetVktpVersion() string {
 		return x.VktpVersion
 	}
 	return ""
+}
+
+func (x *NodeSummary) GetProbeBytes() uint64 {
+	if x != nil {
+		return x.ProbeBytes
+	}
+	return 0
 }
 
 type MintEnrollTokenRequest struct {
@@ -2963,7 +3009,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\aunix_ms\x18\x01 \x01(\x03R\x06unixMs\x12;\n" +
 	"\x06global\x18\x02 \x01(\v2#.wingsv.headpanel.v1.GlobalCountersR\x06global\x128\n" +
 	"\x05donor\x18\x03 \x01(\v2\".wingsv.headpanel.v1.DonorCountersR\x05donor\x125\n" +
-	"\x04node\x18\x04 \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04node\"\xd2\x02\n" +
+	"\x04node\x18\x04 \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04node\"\xf3\x02\n" +
 	"\x0eGlobalCounters\x12\x1f\n" +
 	"\vnodes_total\x18\x01 \x01(\rR\n" +
 	"nodesTotal\x12!\n" +
@@ -2977,7 +3023,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"\rdown_rate_bps\x18\b \x01(\x01R\vdownRateBps\x12%\n" +
 	"\x0elifetime_bytes\x18\t \x01(\x04R\rlifetimeBytes\x12!\n" +
 	"\fperiod_bytes\x18\n" +
-	" \x01(\x04R\vperiodBytes\"\x95\x02\n" +
+	" \x01(\x04R\vperiodBytes\x12\x1f\n" +
+	"\vprobe_bytes\x18\v \x01(\x04R\n" +
+	"probeBytes\"\xb6\x02\n" +
 	"\x0ePublicCounters\x12\x17\n" +
 	"\aunix_ms\x18\x01 \x01(\x03R\x06unixMs\x12!\n" +
 	"\fnodes_online\x18\x02 \x01(\rR\vnodesOnline\x12!\n" +
@@ -2985,8 +3033,10 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x19donated_bytes_this_period\x18\x04 \x01(\x04R\x16donatedBytesThisPeriod\x12\x1e\n" +
 	"\vup_rate_bps\x18\x05 \x01(\x01R\tupRateBps\x12\"\n" +
 	"\rdown_rate_bps\x18\x06 \x01(\x01R\vdownRateBps\x12%\n" +
-	"\x0elifetime_bytes\x18\a \x01(\x04R\rlifetimeBytes\"\x17\n" +
-	"\x15PublicCountersRequest\"\xd0\x02\n" +
+	"\x0elifetime_bytes\x18\a \x01(\x04R\rlifetimeBytes\x12\x1f\n" +
+	"\vprobe_bytes\x18\b \x01(\x04R\n" +
+	"probeBytes\"\x17\n" +
+	"\x15PublicCountersRequest\"\xf1\x02\n" +
 	"\rDonorCounters\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x14\n" +
 	"\x05nodes\x18\x02 \x01(\rR\x05nodes\x12!\n" +
@@ -3000,7 +3050,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x15declared_budget_bytes\x18\t \x01(\x04R\x13declaredBudgetBytes\x12\x1d\n" +
 	"\n" +
 	"used_bytes\x18\n" +
-	" \x01(\x04R\tusedBytes\"0\n" +
+	" \x01(\x04R\tusedBytes\x12\x1f\n" +
+	"\vprobe_bytes\x18\v \x01(\x04R\n" +
+	"probeBytes\"0\n" +
 	"\x13DonorSummaryRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\"H\n" +
 	"\x13DonorHistoryRequest\x12\x19\n" +
@@ -3011,7 +3063,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x05month\x18\x01 \x01(\tR\x05month\x12\x14\n" +
 	"\x05bytes\x18\x02 \x01(\x04R\x05bytes\"O\n" +
 	"\x14DonorHistoryResponse\x127\n" +
-	"\x06months\x18\x01 \x03(\v2\x1f.wingsv.headpanel.v1.DonorMonthR\x06months\"\xc6\x02\n" +
+	"\x06months\x18\x01 \x03(\v2\x1f.wingsv.headpanel.v1.DonorMonthR\x06months\"\xe7\x02\n" +
 	"\fNodeCounters\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x16\n" +
@@ -3022,13 +3074,15 @@ const file_headpanel_proto_rawDesc = "" +
 	"\n" +
 	"used_bytes\x18\a \x01(\x04R\tusedBytes\x122\n" +
 	"\x15declared_budget_bytes\x18\b \x01(\x04R\x13declaredBudgetBytes\x12$\n" +
-	"\x0elast_seen_unix\x18\t \x01(\x03R\flastSeenUnix\x12\x16\n" +
+	"\x0elast_seen_unix\x18\t \x01(\x03R\flastSeenUnix\x12\x1f\n" +
+	"\vprobe_bytes\x18\v \x01(\x04R\n" +
+	"probeBytes\x12\x16\n" +
 	"\x06online\x18\n" +
 	" \x01(\bR\x06online\"-\n" +
 	"\x10ListNodesRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\"K\n" +
 	"\x11ListNodesResponse\x126\n" +
-	"\x05nodes\x18\x01 \x03(\v2 .wingsv.headpanel.v1.NodeSummaryR\x05nodes\"\xad\x04\n" +
+	"\x05nodes\x18\x01 \x03(\v2 .wingsv.headpanel.v1.NodeSummaryR\x05nodes\"\xce\x04\n" +
 	"\vNodeSummary\x12#\n" +
 	"\roffered_ports\x18\x14 \x03(\rR\fofferedPorts\x12!\n" +
 	"\freality_dest\x18\x15 \x01(\tR\vrealityDest\x12\x17\n" +
@@ -3049,7 +3103,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0elast_seen_unix\x18\f \x01(\x03R\flastSeenUnix\x125\n" +
 	"\x04live\x18\r \x01(\v2!.wingsv.headpanel.v1.NodeCountersR\x04live\x12!\n" +
 	"\fxray_version\x18\x16 \x01(\tR\vxrayVersion\x12!\n" +
-	"\fvktp_version\x18\x17 \x01(\tR\vvktpVersion\"h\n" +
+	"\fvktp_version\x18\x17 \x01(\tR\vvktpVersion\x12\x1f\n" +
+	"\vprobe_bytes\x18\x18 \x01(\x04R\n" +
+	"probeBytes\"h\n" +
 	"\x16MintEnrollTokenRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\rR\n" +
