@@ -58,7 +58,12 @@
             <Share2 class="admin-nav-icon" aria-hidden="true" />
             <span>Федерация</span>
           </router-link>
-          <router-link v-if="federationOn" class="admin-nav-link" :to="{ name: 'cabinet' }" active-class="is-active">
+          <router-link
+            v-if="federationOn"
+            class="admin-nav-link"
+            :to="{ name: 'cabinet-access' }"
+            active-class="is-active"
+          >
             <Ticket class="admin-nav-icon" aria-hidden="true" />
             <span>Мой доступ</span>
           </router-link>

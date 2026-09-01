@@ -19,7 +19,10 @@ import OwnerOverview from './views/owner/OwnerOverview.vue';
 import OwnerNodes from './views/owner/OwnerNodes.vue';
 import OwnerAdmins from './views/owner/OwnerAdmins.vue';
 import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
-import CabinetView from '@/views/CabinetView.vue';
+import CabinetLayout from '@/views/cabinet/CabinetLayout.vue';
+import CabinetAccess from '@/views/cabinet/CabinetAccess.vue';
+import CabinetAccount from '@/views/cabinet/CabinetAccount.vue';
+import CabinetInvites from '@/views/cabinet/CabinetInvites.vue';
 import MatrixLanding from '@/views/MatrixLanding.vue';
 import OwnerOracle from '@/views/owner/OwnerOracle.vue';
 import OwnerProbes from '@/views/owner/OwnerProbes.vue';
@@ -32,7 +35,15 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: LandingView, name: 'landing' },
-    { path: '/me', component: CabinetView, name: 'cabinet' },
+    {
+      path: '/me',
+      component: CabinetLayout,
+      children: [
+        { path: '', component: CabinetAccess, name: 'cabinet-access' },
+        { path: 'invites', component: CabinetInvites, name: 'cabinet-invites' },
+        { path: 'account', component: CabinetAccount, name: 'cabinet-account' },
+      ],
+    },
     { path: '/matrix', component: MatrixLanding, name: 'matrix-landing' },
     { path: '/federation', component: FederationLanding, name: 'federation-landing' },
     { path: '/login', component: LoginView, name: 'login' },
@@ -121,7 +132,7 @@ router.beforeEach(async (to) => {
     await refreshSession();
     sessionProbed = true;
   }
-  if (to.path.startsWith('/admin') || to.path.startsWith('/owner') || to.name === 'cabinet') {
+  if (to.path.startsWith('/admin') || to.path.startsWith('/owner') || to.path.startsWith('/me')) {
     if (!authState.value.admin) {
       await refreshSession();
     }
