@@ -103,7 +103,7 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		// Приложение по ним решает, показывать ли разделы панели
 		"panel_access": admin.PanelAccess || admin.Role == storage.RoleOwner,
 		"role":         admin.Role,
-		"sticky_until":     got.GetStickyUntilUnix(),
+		"sticky_until": got.GetStickyUntilUnix(),
 	}
 	// Уровень доверия объясняет, почему серверов столько, а не иначе. Голова без
 	// Oracle отвечает Unimplemented, и экран просто остаётся без этой части

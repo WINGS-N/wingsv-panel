@@ -12,10 +12,9 @@ export const selfProvisioning = computed(() => authState.value.admin?.self_provi
 
 export function avatarUrlFor(admin) {
   if (!admin || !admin.id) return '/img/avatar-default.png';
-  if (admin.avatar_version && admin.avatar_version > 0) {
-    return `/api/admin/avatars/${admin.id}.png?v=${admin.avatar_version}`;
-  }
-  return '/img/avatar-default.png';
+  // Заглушку с буквой рисует панель: у аккаунта без своей картинки она всё равно
+  // своя, а общий безликий силуэт не отличает один аккаунт от другого
+  return `/api/admin/avatars/${admin.id}.png?v=${admin.avatar_version || 0}`;
 }
 
 export const myAvatarUrl = computed(() => avatarUrlFor(authState.value.admin));

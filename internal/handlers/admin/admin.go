@@ -366,7 +366,21 @@ func (h *Handler) handleAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	mime, data, _, err := h.store.GetAdminAvatar(id)
 	if err != nil || len(data) == 0 {
-		http.NotFound(w, r)
+		// Своей картинки нет - отдаём кружок с буквой имени. На 404 каждый клиент
+		// лепил бы свою затычку, а их дохуя и все разные
+		admin, lookupErr := h.store.FindAdminByID(id)
+		if lookupErr != nil {
+			http.NotFound(w, r)
+			return
+		}
+		generated, drawErr := generatedAvatar(admin.Username)
+		if drawErr != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "private, max-age=86400")
+		_, _ = w.Write(generated)
 		return
 	}
 	if mime == "" {
