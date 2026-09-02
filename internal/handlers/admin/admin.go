@@ -115,6 +115,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/app/password", h.requireApp(h.handleChangePassword))
 	mux.HandleFunc("/api/app/avatar", h.requireApp(h.handleMyAvatar))
 	mux.HandleFunc("/api/app/invites", h.requireApp(h.handleAppInvites))
+	// Донорская часть админа: свои отданные серверы, их лимиты и токен подключения
+	mux.HandleFunc("/api/app/federation/summary", h.requireApp(h.handleFederationSummary))
+	mux.HandleFunc("/api/app/federation/enroll", h.requireApp(h.handleFederationEnrollToken))
+	mux.HandleFunc("/api/app/federation/nodes/", h.requireApp(h.handleFederationNodeState))
 	mux.HandleFunc("/api/app/invites/redeem", h.requireApp(h.handleRedeemInvite))
 	mux.HandleFunc("/api/app/logout", h.requireApp(h.handleAppLogout))
 	// Не под /api/admin: этим входом пользуются не только администраторы.

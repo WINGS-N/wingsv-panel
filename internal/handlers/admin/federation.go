@@ -231,7 +231,13 @@ func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusNotFound, "federation is off")
 		return
 	}
-	nodeID, action, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/api/admin/federation/nodes/"), "/")
+	// Один обработчик на два адреса: панель ходит сессией, телефон - токеном
+	// устройства, а делают они ровно одно и то же
+	path := r.URL.Path
+	for _, prefix := range []string{"/api/admin/federation/nodes/", "/api/app/federation/nodes/"} {
+		path = strings.TrimPrefix(path, prefix)
+	}
+	nodeID, action, _ := strings.Cut(path, "/")
 	if nodeID == "" {
 		writeError(w, http.StatusBadRequest, "missing node id")
 		return
