@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -16,6 +17,8 @@ type ClientConfig struct {
 	Revision      string
 	UpdatedAt     time.Time
 	ConfigVersion uint64
+	// TouchedFields - путь поля к версии, в которой его меняли
+	TouchedFields map[string]int64
 }
 
 // UpsertClientConfig сохраняет конфиг и инкрементирует config_version. Returned
@@ -58,7 +61,42 @@ func (s *Store) GetClientConfig(clientID string) (ClientConfig, error) {
 		Revision:      m.Revision,
 		UpdatedAt:     time.UnixMilli(m.UpdatedAtUnix).UTC(),
 		ConfigVersion: uint64(m.ConfigVersion),
+		TouchedFields: decodeTouched(m.TouchedFields),
 	}, nil
+}
+
+// decodeTouched читает отметки о правках. Битую карту не жалко: без неё
+// конфликтов просто не видно, а конфиг остаётся целым
+func decodeTouched(raw string) map[string]int64 {
+	if raw == "" {
+		return nil
+	}
+	out := map[string]int64{}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil
+	}
+	return out
+}
+
+// UpsertClientConfigPatched сохраняет конфиг и отмечает тронутые поля
+func (s *Store) UpsertClientConfigPatched(
+	clientID string,
+	configProto []byte,
+	revision string,
+	touched map[string]int64,
+) (uint64, error) {
+	version, err := s.UpsertClientConfig(clientID, configProto, revision)
+	if err != nil {
+		return 0, err
+	}
+	encoded, err := json.Marshal(touched)
+	if err != nil {
+		return version, err
+	}
+	err = s.gdb.Model(&dbmodel.ClientConfig{}).
+		Where("client_id = ?", clientID).
+		Update("touched_fields", string(encoded)).Error
+	return version, err
 }
 
 func (s *Store) UpsertClientReportedConfig(clientID string, configProto []byte) error {

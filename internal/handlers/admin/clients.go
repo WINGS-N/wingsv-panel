@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"v.wingsnet.org/internal/auth"
+	"v.wingsnet.org/internal/configpatch"
 	guardianpb "v.wingsnet.org/internal/gen/guardianpb"
 	wingsvpb "v.wingsnet.org/internal/gen/wingsvpb"
 	"v.wingsnet.org/internal/preview"
@@ -1142,6 +1143,12 @@ func (h *Handler) respondClientConfig(w http.ResponseWriter, clientID string) {
 type pushConfigRequest struct {
 	Config   json.RawMessage `json:"config"`
 	Revision string          `json:"revision"`
+	// Patch включает частичный режим: config несёт один раздел, и на устройство
+	// уезжает он же, а не конфиг целиком
+	Patch bool `json:"patch"`
+	// IfConfigVersion - версия, которую правил редактор. Не совпала с хранимой -
+	// значит кто-то сохранил раньше, и молча затирать его правки нельзя
+	IfConfigVersion int64 `json:"if_config_version"`
 	// Provision toggles the panel-managed self-provisioning VK-TURN profile. When
 	// non-nil it is applied server-side (the app never sees the client token):
 	// true injects/refreshes the managed profile, false strips it. Nil leaves the
@@ -1150,6 +1157,87 @@ type pushConfigRequest struct {
 	// VkTurnNodeID picks which registered vk-turn relay the managed profile points
 	// at. Empty keeps the endpoint the config already carries.
 	VkTurnNodeID string `json:"vk_turn_node_id"`
+}
+
+// respondPatchClientConfig применяет правку по полям.
+//
+// Целиком конфиг больше не гоняется: патч несёт только тронутое, конфликт
+// считается по тем же полям, а клиенту уезжает сам патч - применять куски он
+// умеет по presence
+func (h *Handler) respondPatchClientConfig(
+	w http.ResponseWriter,
+	r *http.Request,
+	admin storage.Admin,
+	client storage.Client,
+	patch *wingsvpb.Config,
+	req pushConfigRequest,
+) {
+	paths := configpatch.Paths(patch)
+	if len(paths) == 0 {
+		writeError(w, http.StatusBadRequest, "патч не меняет ни одного поля")
+		return
+	}
+
+	stored := &wingsvpb.Config{Ver: 1}
+	var storedVersion int64
+	var touched map[string]int64
+	if current, err := h.store.GetClientConfig(client.ID); err == nil {
+		if err := proto.Unmarshal(current.ConfigProto, stored); err != nil {
+			writeError(w, http.StatusInternalServerError, "хранимый конфиг не читается: "+err.Error())
+			return
+		}
+		storedVersion = int64(current.ConfigVersion)
+		touched = current.TouchedFields
+	}
+
+	// Спорят только те поля, которые правил кто-то ещё после того, как открыли
+	// редактор. Тронутое соседнее поле - не спор
+	if clash := configpatch.Conflicts(paths, touched, req.IfConfigVersion); len(clash) > 0 {
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error": true, "message": "эти поля успели поменять", "fields": clash,
+			"config_version": storedVersion,
+		})
+		return
+	}
+
+	merged, err := configpatch.Apply(stored, patch)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	blob, err := proto.Marshal(merged)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	revision := strings.TrimSpace(req.Revision)
+	if revision == "" {
+		revision = strconv.FormatInt(time.Now().UnixMilli(), 10)
+	}
+	version, err := h.store.UpsertClientConfigPatched(
+		client.ID, blob, revision, configpatch.Touch(touched, paths, storedVersion+1),
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Устройству едет патч, а не вся картина: остальное у него уже есть
+	patch.ConfigVersion = version
+	h.hub.SendToClient(client.ID, &guardianpb.Frame{
+		Payload: &guardianpb.Frame_ConfigPush{
+			ConfigPush: &guardianpb.ConfigPush{Config: patch, Revision: revision},
+		},
+	}, client.Online)
+	_ = h.store.AppendAudit(storage.AuditEntry{
+		ActorAdminID: admin.ID, ActorUsername: admin.Username,
+		Action: "client.config_patched", TargetType: "client", TargetID: client.ID,
+		Message: configpatch.Describe(paths), IP: clientIP(r),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok": true, "revision": revision, "online": client.Online,
+		"config_version": version, "fields": paths,
+	})
 }
 
 func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request, admin storage.Admin, client storage.Client) {
@@ -1161,6 +1249,10 @@ func (h *Handler) respondPushClientConfig(w http.ResponseWriter, r *http.Request
 	parsed := &wingsvpb.Config{}
 	if err := jsonToProto(req.Config, parsed); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid config json: "+err.Error())
+		return
+	}
+	if req.Patch {
+		h.respondPatchClientConfig(w, r, admin, client, parsed, req)
 		return
 	}
 	// Never let an admin push a Guardian credential block to a client; the

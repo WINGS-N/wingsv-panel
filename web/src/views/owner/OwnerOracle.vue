@@ -16,10 +16,10 @@
       <div class="stat">
         <span class="stat-kicker">
           <img src="/img/oneui/preferences-system-privacy.svg" alt="" class="stat-kicker-img" aria-hidden="true" />
-          Под наблюдением
+          Наблюдаемые обвиняемые
         </span>
         <span class="stat-value">{{ overview.watched }}</span>
-        <span class="stat-meta">профилей с историей</span>
+        <span class="stat-meta">из {{ overview.subjects_total }} с доступом</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
@@ -50,14 +50,20 @@
 
   <section v-if="enabled && overview.signals.length" class="surface-card mt-6">
     <h2 class="section-title">Сигналы за сутки</h2>
-    <p class="admin-muted mt-1">Класс поведения и сколько раз его видели. Что именно открывали, не знает никто.</p>
+    <p class="admin-muted mt-1">
+      На что уходит внимание оракула: доля класса среди всех сигналов и скольких профилей он касается. Что именно
+      открывали, не знает никто.
+    </p>
     <div class="fed-months mt-4">
       <div v-for="s in overview.signals" :key="s.kind" class="fed-month">
         <span class="fed-month-name">{{ classLabel(s.kind) }}</span>
         <span class="fed-month-track" aria-hidden="true">
-          <span class="fed-month-fill" :style="{ width: signalPct(s) + '%' }"></span>
+          <span class="fed-month-fill" :style="{ width: (s.share_pct || signalPct(s)) + '%' }"></span>
         </span>
-        <span class="fed-month-value">{{ s.count }}</span>
+        <span class="fed-month-value">
+          {{ Math.round(s.share_pct || 0) }}%
+          <span class="admin-muted">· {{ s.count }} у {{ s.subjects || 0 }}</span>
+        </span>
       </div>
     </div>
   </section>
@@ -136,7 +142,15 @@ const enabled = ref(false);
 const scorer = ref('');
 const loadError = ref('');
 const detail = ref(null);
-const overview = reactive({ watched: 0, full: 0, reduced: 0, quarantined: 0, subjects: [], signals: [] });
+const overview = reactive({
+  watched: 0,
+  subjects_total: 0,
+  full: 0,
+  reduced: 0,
+  quarantined: 0,
+  subjects: [],
+  signals: [],
+});
 const page = ref(1);
 const perPage = 20;
 const pagedSubjects = computed(() => overview.subjects.slice((page.value - 1) * perPage, page.value * perPage));
@@ -172,6 +186,7 @@ async function load() {
     scorer.value = data.scorer || '';
     Object.assign(overview, {
       watched: data.watched || 0,
+      subjects_total: data.subjects_total || 0,
       full: data.full || 0,
       reduced: data.reduced || 0,
       quarantined: data.quarantined || 0,

@@ -1199,6 +1199,10 @@ type MintEnrollTokenRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	DonorId    string                 `protobuf:"bytes,1,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
 	TtlSeconds uint32                 `protobuf:"varint,2,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	// Сколько гигабайт в месяц донор отдаёт с этой машины. Ноль означает общий
+	// потолок площадки: раньше он был единственным, и лимит приходилось править
+	// уже после того, как сервер зашёл
+	BudgetGb uint32 `protobuf:"varint,4,opt,name=budget_gb,json=budgetGb,proto3" json:"budget_gb,omitempty"`
 	// How many nodes may join on this one token. Zero and one both mean one.
 	//
 	// It exists for a donor bringing a fleet rather than a machine: a DaemonSet
@@ -1251,6 +1255,13 @@ func (x *MintEnrollTokenRequest) GetDonorId() string {
 func (x *MintEnrollTokenRequest) GetTtlSeconds() uint32 {
 	if x != nil {
 		return x.TtlSeconds
+	}
+	return 0
+}
+
+func (x *MintEnrollTokenRequest) GetBudgetGb() uint32 {
+	if x != nil {
+		return x.BudgetGb
 	}
 	return 0
 }
@@ -2752,10 +2763,14 @@ func (x *OracleSubjectResponse) GetSignals() []*OracleSignal {
 
 // OracleClass - один класс сигнала и во что он обошёлся субъекту
 type OracleClass struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	Count         uint32                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
-	Weight        float64                `protobuf:"fixed64,3,opt,name=weight,proto3" json:"weight,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Kind   string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Count  uint32                 `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
+	Weight float64                `protobuf:"fixed64,3,opt,name=weight,proto3" json:"weight,omitempty"`
+	// Доля этого класса среди всех сигналов за сутки, процентов
+	SharePct float64 `protobuf:"fixed64,4,opt,name=share_pct,json=sharePct,proto3" json:"share_pct,omitempty"`
+	// Сколько субъектов словили этот класс
+	Subjects      uint32 `protobuf:"varint,5,opt,name=subjects,proto3" json:"subjects,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2807,6 +2822,20 @@ func (x *OracleClass) GetCount() uint32 {
 func (x *OracleClass) GetWeight() float64 {
 	if x != nil {
 		return x.Weight
+	}
+	return 0
+}
+
+func (x *OracleClass) GetSharePct() float64 {
+	if x != nil {
+		return x.SharePct
+	}
+	return 0
+}
+
+func (x *OracleClass) GetSubjects() uint32 {
+	if x != nil {
+		return x.Subjects
 	}
 	return 0
 }
@@ -2917,13 +2946,18 @@ func (x *OracleSubject) GetShadowConfidence() int32 {
 type OracleOverviewResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Всего наблюдаемых, до нарезки на страницу
-	Total       uint32           `protobuf:"varint,10,opt,name=total,proto3" json:"total,omitempty"`
-	Offset      uint32           `protobuf:"varint,11,opt,name=offset,proto3" json:"offset,omitempty"`
-	Watched     uint32           `protobuf:"varint,1,opt,name=watched,proto3" json:"watched,omitempty"`
-	Full        uint32           `protobuf:"varint,2,opt,name=full,proto3" json:"full,omitempty"`
-	Reduced     uint32           `protobuf:"varint,3,opt,name=reduced,proto3" json:"reduced,omitempty"`
-	Quarantined uint32           `protobuf:"varint,4,opt,name=quarantined,proto3" json:"quarantined,omitempty"`
-	Subjects    []*OracleSubject `protobuf:"bytes,5,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	Total  uint32 `protobuf:"varint,10,opt,name=total,proto3" json:"total,omitempty"`
+	Offset uint32 `protobuf:"varint,11,opt,name=offset,proto3" json:"offset,omitempty"`
+	// Сколько субъектов под обвинением: на них есть сигналы. Полосы ниже считаются
+	// по всем, кому выдан доступ, а не только по обвиняемым - иначе спокойные
+	// пользователи в счётчиках не видны вовсе
+	Watched uint32 `protobuf:"varint,1,opt,name=watched,proto3" json:"watched,omitempty"`
+	// Всем, кому выдан доступ
+	SubjectsTotal uint32           `protobuf:"varint,12,opt,name=subjects_total,json=subjectsTotal,proto3" json:"subjects_total,omitempty"`
+	Full          uint32           `protobuf:"varint,2,opt,name=full,proto3" json:"full,omitempty"`
+	Reduced       uint32           `protobuf:"varint,3,opt,name=reduced,proto3" json:"reduced,omitempty"`
+	Quarantined   uint32           `protobuf:"varint,4,opt,name=quarantined,proto3" json:"quarantined,omitempty"`
+	Subjects      []*OracleSubject `protobuf:"bytes,5,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	// Сигналы за сутки по классам
 	Signals       []*OracleClass `protobuf:"bytes,6,rep,name=signals,proto3" json:"signals,omitempty"`
 	Scorer        string         `protobuf:"bytes,7,opt,name=scorer,proto3" json:"scorer,omitempty"`
@@ -2979,6 +3013,13 @@ func (x *OracleOverviewResponse) GetOffset() uint32 {
 func (x *OracleOverviewResponse) GetWatched() uint32 {
 	if x != nil {
 		return x.Watched
+	}
+	return 0
+}
+
+func (x *OracleOverviewResponse) GetSubjectsTotal() uint32 {
+	if x != nil {
+		return x.SubjectsTotal
 	}
 	return 0
 }
@@ -3142,11 +3183,12 @@ const file_headpanel_proto_rawDesc = "" +
 	"\fxray_version\x18\x16 \x01(\tR\vxrayVersion\x12!\n" +
 	"\fvktp_version\x18\x17 \x01(\tR\vvktpVersion\x12\x1f\n" +
 	"\vprobe_bytes\x18\x18 \x01(\x04R\n" +
-	"probeBytes\"h\n" +
+	"probeBytes\"\x85\x01\n" +
 	"\x16MintEnrollTokenRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x1f\n" +
 	"\vttl_seconds\x18\x02 \x01(\rR\n" +
-	"ttlSeconds\x12\x12\n" +
+	"ttlSeconds\x12\x1b\n" +
+	"\tbudget_gb\x18\x04 \x01(\rR\bbudgetGb\x12\x12\n" +
 	"\x04uses\x18\x03 \x01(\rR\x04uses\"\x9c\x01\n" +
 	"\x17MintEnrollTokenResponse\x12!\n" +
 	"\fenroll_token\x18\x01 \x01(\tR\venrollToken\x12!\n" +
@@ -3252,11 +3294,13 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0ewindow_seconds\x18\x05 \x01(\rR\rwindowSeconds\"\x92\x01\n" +
 	"\x15OracleSubjectResponse\x12<\n" +
 	"\asubject\x18\x01 \x01(\v2\".wingsv.headpanel.v1.OracleSubjectR\asubject\x12;\n" +
-	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\"O\n" +
+	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\"\x88\x01\n" +
 	"\vOracleClass\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\rR\x05count\x12\x16\n" +
-	"\x06weight\x18\x03 \x01(\x01R\x06weight\"\x9d\x02\n" +
+	"\x06weight\x18\x03 \x01(\x01R\x06weight\x12\x1b\n" +
+	"\tshare_pct\x18\x04 \x01(\x01R\bsharePct\x12\x1a\n" +
+	"\bsubjects\x18\x05 \x01(\rR\bsubjects\"\x9d\x02\n" +
 	"\rOracleSubject\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1e\n" +
@@ -3269,12 +3313,13 @@ const file_headpanel_proto_rawDesc = "" +
 	"\aclasses\x18\x06 \x03(\v2 .wingsv.headpanel.v1.OracleClassR\aclasses\x12\x1f\n" +
 	"\vshadow_band\x18\a \x01(\tR\n" +
 	"shadowBand\x12+\n" +
-	"\x11shadow_confidence\x18\b \x01(\x05R\x10shadowConfidence\"\xe9\x02\n" +
+	"\x11shadow_confidence\x18\b \x01(\x05R\x10shadowConfidence\"\x90\x03\n" +
 	"\x16OracleOverviewResponse\x12\x14\n" +
 	"\x05total\x18\n" +
 	" \x01(\rR\x05total\x12\x16\n" +
 	"\x06offset\x18\v \x01(\rR\x06offset\x12\x18\n" +
-	"\awatched\x18\x01 \x01(\rR\awatched\x12\x12\n" +
+	"\awatched\x18\x01 \x01(\rR\awatched\x12%\n" +
+	"\x0esubjects_total\x18\f \x01(\rR\rsubjectsTotal\x12\x12\n" +
 	"\x04full\x18\x02 \x01(\rR\x04full\x12\x18\n" +
 	"\areduced\x18\x03 \x01(\rR\areduced\x12 \n" +
 	"\vquarantined\x18\x04 \x01(\rR\vquarantined\x12>\n" +

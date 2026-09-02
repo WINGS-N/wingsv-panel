@@ -105,7 +105,8 @@ CREATE TABLE IF NOT EXISTS client_configs (
     config_proto BLOB NOT NULL,
     revision TEXT NOT NULL,
     updated_at INTEGER NOT NULL,
-    config_version INTEGER NOT NULL DEFAULT 0
+    config_version INTEGER NOT NULL DEFAULT 0,
+    touched_fields TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS client_reported_configs (

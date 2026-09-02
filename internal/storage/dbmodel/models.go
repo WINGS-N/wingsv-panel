@@ -124,6 +124,10 @@ type ClientConfig struct {
 	Revision      string `gorm:"column:revision;not null"`
 	UpdatedAtUnix int64  `gorm:"column:updated_at;not null"`
 	ConfigVersion int64  `gorm:"column:config_version;not null"`
+	// TouchedFields - когда какое поле правили в последний раз, путь к версии.
+	// По ней считается конфликт: правка соседнего поля никому не мешает, и
+	// гонять человека разбираться с ней незачем
+	TouchedFields string `gorm:"column:touched_fields;not null;default:''"`
 }
 
 func (ClientConfig) TableName() string { return "client_configs" }

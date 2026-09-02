@@ -199,6 +199,10 @@ message NodeSummary {
 message MintEnrollTokenRequest {
   string donor_id = 1;
   uint32 ttl_seconds = 2;
+  // Сколько гигабайт в месяц донор отдаёт с этой машины. Ноль означает общий
+  // потолок площадки: раньше он был единственным, и лимит приходилось править
+  // уже после того, как сервер зашёл
+  uint32 budget_gb = 4;
   // How many nodes may join on this one token. Zero and one both mean one.
   //
   // It exists for a donor bringing a fleet rather than a machine: a DaemonSet
@@ -395,6 +399,10 @@ message OracleClass {
   string kind = 1;
   uint32 count = 2;
   double weight = 3;
+  // Доля этого класса среди всех сигналов за сутки, процентов
+  double share_pct = 4;
+  // Сколько субъектов словили этот класс
+  uint32 subjects = 5;
 }
 
 // OracleSubject - вердикт вместе с тем, что к нему привело. Субъект тут
@@ -415,7 +423,12 @@ message OracleOverviewResponse {
   // Всего наблюдаемых, до нарезки на страницу
   uint32 total = 10;
   uint32 offset = 11;
+  // Сколько субъектов под обвинением: на них есть сигналы. Полосы ниже считаются
+  // по всем, кому выдан доступ, а не только по обвиняемым - иначе спокойные
+  // пользователи в счётчиках не видны вовсе
   uint32 watched = 1;
+  // Всем, кому выдан доступ
+  uint32 subjects_total = 12;
   uint32 full = 2;
   uint32 reduced = 3;
   uint32 quarantined = 4;

@@ -138,7 +138,13 @@ func (c *Client) DonorSummary(ctx context.Context, donorID string) (*headpb.Dono
 // uses is how many nodes may join on the one token. One is the ordinary case;
 // more is a donor enrolling a fleet from a single Secret, which is what a
 // Kubernetes DaemonSet does. The head caps it.
-func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.Duration, uses uint32) (*headpb.MintEnrollTokenResponse, error) {
+func (c *Client) MintEnrollToken(
+	ctx context.Context,
+	donorID string,
+	ttl time.Duration,
+	uses uint32,
+	budgetGB uint32,
+) (*headpb.MintEnrollTokenResponse, error) {
 	client, err := c.dial()
 	if err != nil {
 		return nil, err
@@ -147,6 +153,7 @@ func (c *Client) MintEnrollToken(ctx context.Context, donorID string, ttl time.D
 		DonorId:    donorID,
 		TtlSeconds: uint32(ttl.Seconds()),
 		Uses:       uses,
+		BudgetGb:   budgetGB,
 	})
 }
 

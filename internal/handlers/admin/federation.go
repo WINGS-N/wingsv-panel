@@ -196,13 +196,17 @@ func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Req
 	var req struct {
 		TTLMinutes int    `json:"ttl_minutes"`
 		Uses       uint32 `json:"uses"`
+		// BudgetGB - месячный потолок отдаваемой машины. Ноль оставляет общий
+		BudgetGB uint32 `json:"budget_gb"`
 	}
 	// An empty body is fine: the head applies its own default
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
-	got, err := h.fed.MintEnrollToken(ctx, donorID(admin), time.Duration(req.TTLMinutes)*time.Minute, req.Uses)
+	got, err := h.fed.MintEnrollToken(
+		ctx, donorID(admin), time.Duration(req.TTLMinutes)*time.Minute, req.Uses, req.BudgetGB,
+	)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
 		return

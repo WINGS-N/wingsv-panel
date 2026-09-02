@@ -64,6 +64,14 @@
 
     <div class="form-grid mt-5">
       <OneuiInput v-model.number="uses" label="Серверов на один токен" type="number" :min="1" :max="64" />
+      <OneuiInput
+        v-model.number="newNodeBudgetGb"
+        label="Отдаю в месяц, GB"
+        type="number"
+        :min="0"
+        :max="1048576"
+        placeholder="по умолчанию площадки"
+      />
     </div>
 
     <div class="actions-row">
@@ -196,6 +204,10 @@ const minting = ref(false);
 // Сколько серверов вступит по одному токену. Больше одного нужно там, где
 // ноды поднимаются из общего секрета - в кубере это DaemonSet.
 const uses = ref(1);
+// Потолок для новой машины. Ноль оставляет общий потолок площадки: донор не
+// всегда хочет его трогать
+const newNodeBudgetGb = ref(0);
+// Ноль оставляет общий потолок площадки: донор не всегда хочет его трогать
 const mintedUses = ref(1);
 const busyNode = ref('');
 const budgetFor = ref('');
@@ -268,7 +280,10 @@ async function mint() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uses: Math.max(1, Number(uses.value) || 1) }),
+      body: JSON.stringify({
+        uses: Math.max(1, Number(uses.value) || 1),
+        budget_gb: Math.max(0, Number(newNodeBudgetGb.value) || 0),
+      }),
     });
     if (!res.ok) throw new Error(await errorText(res));
     const got = await res.json();

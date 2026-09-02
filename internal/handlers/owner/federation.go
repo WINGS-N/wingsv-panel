@@ -87,6 +87,10 @@ type oracleClassView struct {
 	Kind   string  `json:"kind"`
 	Count  uint32  `json:"count"`
 	Weight float64 `json:"weight"`
+	// SharePct - доля класса среди всех сигналов, Subjects - скольких он касается.
+	// Голый счётчик не различает сотню срабатываний у одного и по одному у сотни
+	SharePct float64 `json:"share_pct"`
+	Subjects uint32  `json:"subjects"`
 }
 
 type oracleSubjectView struct {
@@ -137,19 +141,23 @@ func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage
 	}
 	signals := make([]oracleClassView, 0, len(got.GetSignals()))
 	for _, c := range got.GetSignals() {
-		signals = append(signals, oracleClassView{Kind: c.GetKind(), Count: c.GetCount(), Weight: c.GetWeight()})
+		signals = append(signals, oracleClassView{
+			Kind: c.GetKind(), Count: c.GetCount(), Weight: c.GetWeight(),
+			SharePct: c.GetSharePct(), Subjects: c.GetSubjects(),
+		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"enabled":       true,
-		"watched":       got.GetWatched(),
-		"full":          got.GetFull(),
-		"reduced":       got.GetReduced(),
-		"quarantined":   got.GetQuarantined(),
-		"subjects":      subjects,
-		"signals":       signals,
-		"total":         got.GetTotal(),
-		"scorer":        got.GetScorer(),
-		"shadow_scorer": got.GetShadowScorer(),
+		"enabled":        true,
+		"watched":        got.GetWatched(),
+		"subjects_total": got.GetSubjectsTotal(),
+		"full":           got.GetFull(),
+		"reduced":        got.GetReduced(),
+		"quarantined":    got.GetQuarantined(),
+		"subjects":       subjects,
+		"signals":        signals,
+		"total":          got.GetTotal(),
+		"scorer":         got.GetScorer(),
+		"shadow_scorer":  got.GetShadowScorer(),
 	})
 }
 
