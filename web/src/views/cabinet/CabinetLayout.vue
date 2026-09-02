@@ -41,10 +41,12 @@
             <UserCog class="admin-nav-icon" aria-hidden="true" />
             <span>Аккаунт</span>
           </router-link>
-          <router-link v-if="hasPanel" class="admin-nav-link" :to="{ name: 'admin-clients' }">
+          <!-- Панель открывается тем же нажатием: отдельного обряда для этого
+               не нужно, если владелец не включил модерацию -->
+          <a class="admin-nav-link" href="#" @click.prevent="openPanel">
             <SlidersHorizontal class="admin-nav-icon" aria-hidden="true" />
-            <span>Панель</span>
-          </router-link>
+            <span>{{ panelBusy ? 'Открываем...' : 'Панель' }}</span>
+          </a>
         </nav>
       </div>
     </header>
@@ -64,12 +66,37 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 
 const router = useRouter();
 const busy = ref(false);
+const panelBusy = ref(false);
 const admin = computed(() => authState.value.admin);
 const hasPanel = computed(() => Boolean(admin.value?.panel_access));
 
 onMounted(() => {
   if (!admin.value) refreshSession();
 });
+
+// Нажали "Панель": у кого она есть - просто переходим, остальным открываем
+async function openPanel() {
+  if (hasPanel.value) {
+    router.push({ name: 'admin-clients' });
+    return;
+  }
+  panelBusy.value = true;
+  try {
+    const res = await fetch('/api/admin/me/panel-access', { method: 'POST', credentials: 'include' });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || 'Не удалось открыть панель');
+    if (body.granted) {
+      await refreshSession();
+      router.push({ name: 'admin-clients' });
+      return;
+    }
+    router.push({ name: 'cabinet-account' });
+  } catch {
+    router.push({ name: 'cabinet-account' });
+  } finally {
+    panelBusy.value = false;
+  }
+}
 
 async function onLogout() {
   busy.value = true;

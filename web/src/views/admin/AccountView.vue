@@ -9,24 +9,26 @@
       <div class="account-hero-text">
         <h1 class="admin-card-title">{{ admin?.username || 'Аккаунт' }}</h1>
         <p class="admin-muted">{{ roleLabel }}</p>
-        <div class="avatar-actions mt-2">
-          <input
-            ref="fileInput"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            class="hidden"
-            @change="onFilePicked"
-          />
-          <SamsungButton variant="secondary" :busy="avatarBusy" @click="fileInput?.click()">
-            <template #icon><Camera class="button-icon" aria-hidden="true" /></template>
-            {{ avatarBusy ? 'Загружаем...' : 'Сменить фото' }}
-          </SamsungButton>
-          <SamsungButton v-if="hasCustomAvatar" variant="secondary" :disabled="avatarBusy" @click="removeAvatar">
-            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-            Сбросить
-          </SamsungButton>
-        </div>
         <p v-if="avatarError" class="admin-error mt-2">{{ avatarError }}</p>
+      </div>
+
+      <!-- Кнопки стоят в одной строке с именем, а не под ним со сдвигом -->
+      <div class="avatar-actions">
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="hidden"
+          @change="onFilePicked"
+        />
+        <SamsungButton variant="secondary" :busy="avatarBusy" @click="fileInput?.click()">
+          <template #icon><Camera class="button-icon" aria-hidden="true" /></template>
+          {{ avatarBusy ? 'Загружаем...' : 'Сменить фото' }}
+        </SamsungButton>
+        <SamsungButton v-if="hasCustomAvatar" variant="secondary" :disabled="avatarBusy" @click="removeAvatar">
+          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+          Сбросить
+        </SamsungButton>
       </div>
     </div>
 
@@ -463,6 +465,7 @@ async function removeAvatar() {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  margin-left: auto;
 }
 
 .hidden {

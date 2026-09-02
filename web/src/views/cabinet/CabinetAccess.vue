@@ -25,8 +25,11 @@
           <Gauge :size="14" class="stat-kicker-icon" aria-hidden="true" />
           Скорость
         </span>
-        <span class="stat-value">{{ speedLabel }}</span>
-        <span class="stat-meta">потолок вниз / вверх</span>
+        <span class="stat-value speed-pair">
+          <span class="traffic-rx" aria-hidden="true">&darr;</span>{{ formatSpeed(access.downlink_bps) }}
+          <span class="traffic-tx" aria-hidden="true">&uarr;</span>{{ formatSpeed(access.uplink_bps) }}
+        </span>
+        <span class="stat-meta">потолок по оценке доверия</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
@@ -165,13 +168,6 @@ function bandLabel(band) {
 }
 
 // Потолок скорости соразмерен оценке доверия, а не полосе
-const speedLabel = computed(() => {
-  const down = Number(access.downlink_bps || 0);
-  const up = Number(access.uplink_bps || 0);
-  if (!down && !up) return 'без лимита';
-  return `${formatSpeed(down)} / ${formatSpeed(up)}`;
-});
-
 function formatSpeed(bps) {
   if (!bps) return 'без лимита';
   const mbits = (bps * 8) / 1000000;
@@ -204,3 +200,17 @@ function bandClass(band) {
   return 'is-offline';
 }
 </script>
+
+<style scoped>
+.speed-pair {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.speed-pair .traffic-rx,
+.speed-pair .traffic-tx {
+  font-size: 0.85em;
+}
+</style>
