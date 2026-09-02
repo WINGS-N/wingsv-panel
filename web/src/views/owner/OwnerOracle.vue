@@ -105,43 +105,52 @@
     :per-page="perPage"
   />
 
-  <section v-if="detail" class="surface-card mt-6">
-    <div class="federation-live-head">
-      <h2 class="section-title">{{ detail.subject.subject_id }}</h2>
-      <SamsungButton variant="ghost" @click="detail = null">Закрыть</SamsungButton>
-    </div>
-    <p class="admin-muted mt-1">
-      Доверие {{ detail.subject.confidence }}, полоса {{ bandLabel(detail.subject.band) }}. Каждое наблюдение с временем
-      и нодой, на которой оно случилось.
-    </p>
-    <div v-if="detail.signals.length" class="fed-node-list mt-4">
-      <div v-for="(sig, i) in detail.signals" :key="i" class="fed-node-row">
-        <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-[15px]">{{ classLabel(sig.kind) }}</span>
-            <span class="admin-pill">{{ sig.count }}</span>
+  <SamsungModal :model-value="detailOpen" title="Профиль под наблюдением" @update:model-value="closeDetail">
+    <p class="admin-mono mt-1 break-all text-[14px]">{{ detailId }}</p>
+    <p v-if="detailError" class="state-error mt-3">{{ detailError }}</p>
+    <SamsungSectionLoader v-else-if="!detail" />
+    <template v-else>
+      <p class="admin-muted mt-2">
+        Доверие {{ detail.subject.confidence }}, полоса {{ bandLabel(detail.subject.band) }}. Каждое наблюдение с
+        временем и нодой, на которой оно случилось.
+      </p>
+      <div v-if="detail.signals.length" class="fed-node-list mt-4">
+        <div v-for="(sig, i) in detail.signals" :key="i" class="fed-node-row">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[15px]">{{ classLabel(sig.kind) }}</span>
+              <span class="admin-pill">{{ sig.count }}</span>
+            </div>
+            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
+              <span>{{ when(sig.at_unix) }}</span>
+              <span v-if="sig.node_id">нода {{ sig.node_id.slice(0, 8) }}</span>
+            </span>
           </div>
-          <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
-            <span>{{ when(sig.at_unix) }}</span>
-            <span v-if="sig.node_id">нода {{ sig.node_id.slice(0, 8) }}</span>
-          </span>
         </div>
       </div>
-    </div>
-    <p v-else class="state-hint">Сырых сигналов не осталось: их вес истёк.</p>
-  </section>
+      <p v-else class="state-hint mt-4">Сырых сигналов не осталось: их вес истёк.</p>
+    </template>
+    <template #actions>
+      <SamsungButton variant="secondary" @click="closeDetail">Закрыть</SamsungButton>
+    </template>
+  </SamsungModal>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
 import SamsungPager from '@/components/controls/SamsungPager.vue';
+import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
 
 const enabled = ref(false);
 const scorer = ref('');
 const loadError = ref('');
 const detail = ref(null);
+const detailOpen = ref(false);
+const detailId = ref('');
+const detailError = ref('');
 const overview = reactive({
   watched: 0,
   subjects_total: 0,
@@ -200,15 +209,27 @@ async function load() {
 }
 
 async function open(subject) {
+  detailOpen.value = true;
+  detailId.value = subject.subject_id;
+  detail.value = null;
+  detailError.value = '';
   try {
     const res = await fetch(`/api/owner/federation/oracle/subject?id=${encodeURIComponent(subject.subject_id)}`, {
       credentials: 'include',
     });
     if (!res.ok) throw new Error(await res.text());
-    detail.value = await res.json();
+    const data = await res.json();
+    // Пока ждали ответ, модалку могли закрыть или открыть другого
+    if (detailOpen.value && detailId.value === subject.subject_id) detail.value = data;
   } catch (err) {
-    loadError.value = String(err.message || err);
+    if (detailOpen.value && detailId.value === subject.subject_id) detailError.value = String(err.message || err);
   }
+}
+
+function closeDetail() {
+  detailOpen.value = false;
+  detail.value = null;
+  detailError.value = '';
 }
 
 function classLabel(kind) {
