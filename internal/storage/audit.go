@@ -191,7 +191,9 @@ func (s *Store) CreateInvite(token string, expiresAt time.Time, createdByAdminID
 // The limit is not recursive: it caps who joins on this code, not how many
 // people they go on to invite with codes of their own.
 func (s *Store) CreateInviteWithUses(token string, expiresAt time.Time, createdByAdminID int64, maxUses int64) (InviteToken, error) {
-	if maxUses < 1 {
+	// Ноль пропускается как есть: это код без потолка, а не забытый параметр.
+	// Отрицательное - уже мусор, и его равняем к одному
+	if maxUses < 0 {
 		maxUses = 1
 	}
 	now := time.Now().UTC().UnixMilli()
@@ -285,7 +287,10 @@ func (s *Store) RedeemInvite(token string, adminID int64) error {
 	}
 	now := time.Now().UTC().UnixMilli()
 	res := s.gdb.Model(&dbmodel.InviteToken{}).
-		Where("token = ? AND use_count < max_uses AND (expires_at = 0 OR expires_at > ?)", token, now).
+		// Ноль в max_uses - это код без потолка: такие выписывает приложение,
+		// потому что крутить счётчик человек в момент встречи не будет
+		Where("UPPER(token) = UPPER(?) AND (max_uses = 0 OR use_count < max_uses) AND (expires_at = 0 OR expires_at > ?)",
+			token, now).
 		Updates(map[string]any{
 			"use_count": gorm.Expr("use_count + 1"),
 			// UsedAt - время первого погашения, дальше не трогаем
