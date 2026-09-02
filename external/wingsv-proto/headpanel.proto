@@ -49,6 +49,8 @@ service FederationHead {
   // Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
   // вопрос "за что", который иначе остаётся без ответа.
   rpc OracleSubject(OracleSubjectRequest) returns (OracleSubjectResponse);
+  // Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
+  rpc OracleNodes(OracleNodesRequest) returns (OracleNodesResponse);
 }
 
 enum LiveScope {
@@ -403,6 +405,42 @@ message OracleSubjectResponse {
   OracleSubject subject = 1;
   repeated OracleSignal signals = 2;
   repeated OracleDomain domains = 3;
+}
+
+// OracleNode - доверие к ноде. Отдельная шкала от людской: у ноды другие грехи
+// и другие последствия
+message OracleNode {
+  string node_id = 1;
+  string hostname = 2;
+  string donor_id = 3;
+  int32 trust = 4;
+  // Suspect - новых юзеров не даём, Benched - вывели из выдачи совсем
+  bool suspect = 5;
+  bool benched = 6;
+  // Reasons - за что именно, чтобы донору было что предъявить
+  repeated OracleNodeReason reasons = 7;
+  // Probes - как нода выглядит из страны, Uptime - сколько держится
+  uint32 probe_ok = 8;
+  uint32 probe_failed = 9;
+  double uptime_pct = 10;
+  int64 last_seen_unix = 11;
+}
+
+message OracleNodeReason {
+  string reason = 1;
+  double weight = 2;
+}
+
+message OracleNodesRequest {
+  uint32 limit = 1;
+  uint32 offset = 2;
+}
+
+message OracleNodesResponse {
+  repeated OracleNode nodes = 1;
+  uint32 total = 2;
+  // Accused - скольким нодам есть что предъявить
+  uint32 accused = 3;
 }
 
 // OracleClass - один класс сигнала и во что он обошёлся субъекту

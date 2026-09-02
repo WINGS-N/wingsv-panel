@@ -57,6 +57,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/owner/federation/probes/run", h.requireOwner(h.handleRunProbes))
 	mux.HandleFunc("/api/owner/federation/oracle", h.requireOwner(h.handleOracle))
 	mux.HandleFunc("/api/owner/federation/oracle/subject", h.requireOwner(h.handleOracleSubject))
+	mux.HandleFunc("/api/owner/federation/oracle/nodes", h.requireOwner(h.handleOracleNodes))
 	mux.HandleFunc("/api/owner/invite-tree", h.requireOwner(h.handleInviteTree))
 	mux.HandleFunc("/api/owner/invite-tree/", h.requireOwner(h.handleInviteBranch))
 }

@@ -13,7 +13,18 @@
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
     <p v-else-if="!enabled" class="state-hint">Федерация выключена.</p>
 
-    <div v-if="enabled" class="admin-stats">
+    <div v-if="enabled" class="admin-tabs mt-4">
+      <button
+        v-for="item in tabs"
+        :key="item.id"
+        :class="['admin-tab', tab === item.id ? 'is-active' : '']"
+        @click="setTab(item.id)"
+      >
+        {{ item.label }}
+      </button>
+    </div>
+
+    <div v-if="enabled && tab === 'people'" class="admin-stats">
       <div class="stat">
         <span class="stat-kicker">
           <img src="/img/oneui/preferences-system-privacy.svg" alt="" class="stat-kicker-img" aria-hidden="true" />
@@ -49,7 +60,7 @@
     </div>
   </section>
 
-  <section v-if="enabled && overview.signals.length" class="surface-card mt-6">
+  <section v-if="enabled && tab === 'people' && overview.signals.length" class="surface-card mt-6">
     <h2 class="section-title">Сигналы за сутки</h2>
     <p class="admin-muted mt-1">
       На что уходит внимание оракула, доля класса среди всех сигналов и скольких профилей он касается. Сотня
@@ -69,7 +80,7 @@
     </div>
   </section>
 
-  <section v-if="enabled" class="surface-card mt-6">
+  <section v-if="enabled && tab === 'people'" class="surface-card mt-6">
     <h2 class="section-title">Наблюдаемые</h2>
     <p v-if="!overview.subjects.length" class="state-hint">Пока ни на кого ничего нет.</p>
     <div v-else class="fed-node-list mt-4">
@@ -101,11 +112,44 @@
   </section>
 
   <SamsungPager
-    v-if="enabled && overview.subjects.length"
+    v-if="enabled && tab === 'people' && overview.subjects.length"
     v-model:page="page"
     :total="overview.subjects.length"
     :per-page="perPage"
   />
+
+  <section v-if="enabled && tab === 'nodes'" class="surface-card mt-6">
+    <div class="federation-live-head">
+      <h2 class="section-title">Доверие к нодам</h2>
+      <span v-if="nodes.accused" class="admin-pill is-offline">обвиняемых: {{ nodes.accused }}</span>
+    </div>
+    <p class="admin-muted mt-1">
+      Судим обе стороны. Нода тоже может завысить трафик ради выплаты или светить зелёным здоровьем, не везя при этом
+      ничего. Цифры ноды сверяются с тем, что подписали клиенты.
+    </p>
+    <SamsungSectionLoader v-if="nodesLoading" />
+    <p v-else-if="!nodes.list.length" class="state-hint mt-4">Нод пока нет.</p>
+    <div v-else class="fed-node-list mt-4">
+      <div v-for="n in nodes.list" :key="n.node_id" class="fed-node-row">
+        <img :src="trustIcon(n)" alt="" class="probe-icon" aria-hidden="true" />
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="truncate text-[15px]">{{ n.hostname || n.node_id.slice(0, 12) }}</span>
+            <span class="admin-pill" :class="trustClass(n)">доверие {{ n.trust }}</span>
+            <span v-if="n.benched" class="admin-pill is-offline">выведена</span>
+            <span v-else-if="n.suspect" class="admin-pill is-info">под подозрением</span>
+          </div>
+          <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
+            <span>замеры {{ n.probe_ok }} на связи, {{ n.probe_failed }} мимо</span>
+            <span>аптайм {{ Math.round(n.uptime_pct || 0) }}%</span>
+            <span v-for="reason in n.reasons.slice(0, 3)" :key="reason.reason">
+              {{ reasonLabel(reason.reason) }} -{{ Math.round(reason.weight) }}
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <SamsungModal :model-value="detailOpen" title="Профиль под наблюдением" @update:model-value="closeDetail">
     <p v-if="detailName" class="mt-1 text-[16px]">{{ detailName }}</p>
@@ -184,6 +228,22 @@ const overview = reactive({
   subjects: [],
   signals: [],
 });
+// Ноды судим отдельной вкладкой: шкала у них своя и грехи свои
+const tabs = [
+  { id: 'people', label: 'Участники' },
+  { id: 'nodes', label: 'Ноды' },
+];
+const tab = ref('people');
+const nodesLoading = ref(false);
+const nodes = reactive({ list: [], accused: 0 });
+
+const NODE_REASONS = {
+  overclaim: 'завышенный трафик',
+  probe_fail: 'не пускает трафик из страны',
+  flapping: 'то есть, то нет',
+  profile_drop: 'не обслуживает профили',
+};
+
 const page = ref(1);
 const perPage = 20;
 const pagedSubjects = computed(() => overview.subjects.slice((page.value - 1) * perPage, page.value * perPage));
@@ -211,6 +271,45 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
 });
+
+function setTab(id) {
+  tab.value = id;
+  if (id === 'nodes' && !nodes.list.length) {
+    loadNodes();
+  }
+}
+
+async function loadNodes() {
+  nodesLoading.value = true;
+  try {
+    const res = await fetch('/api/owner/federation/oracle/nodes', { credentials: 'include' });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    nodes.list = data.nodes || [];
+    nodes.accused = data.accused || 0;
+    loadError.value = '';
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  } finally {
+    nodesLoading.value = false;
+  }
+}
+
+function reasonLabel(reason) {
+  return NODE_REASONS[reason] || reason;
+}
+
+function trustClass(node) {
+  if (node.benched) return 'is-offline';
+  if (node.suspect) return 'is-info';
+  return 'is-online';
+}
+
+function trustIcon(node) {
+  if (node.benched) return '/img/oneui/security-low.svg';
+  if (node.suspect) return '/img/oneui/security-medium.svg';
+  return '/img/oneui/security-high.svg';
+}
 
 async function load() {
   try {

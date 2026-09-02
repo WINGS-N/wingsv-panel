@@ -238,6 +238,16 @@ func (c *Client) OracleOverview(ctx context.Context, limit, offset uint32, subje
 	})
 }
 
+// OracleNodes отдаёт доверие к нодам. Судим обе стороны: врать о трафике ноде
+// выгоднее всех, а до сих пор она считалась честной по умолчанию
+func (c *Client) OracleNodes(ctx context.Context, limit, offset uint32) (*headpb.OracleNodesResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.OracleNodes(ctx, &headpb.OracleNodesRequest{Limit: limit, Offset: offset})
+}
+
 // RunProbes просит точки наблюдения замерить прямо сейчас
 func (c *Client) RunProbes(ctx context.Context) (uint32, error) {
 	client, err := c.dial()

@@ -2847,6 +2847,300 @@ func (x *OracleSubjectResponse) GetDomains() []*OracleDomain {
 	return nil
 }
 
+// OracleNode - доверие к ноде. Отдельная шкала от людской: у ноды другие грехи
+// и другие последствия
+type OracleNode struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	NodeId   string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Hostname string                 `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
+	DonorId  string                 `protobuf:"bytes,3,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
+	Trust    int32                  `protobuf:"varint,4,opt,name=trust,proto3" json:"trust,omitempty"`
+	// Suspect - новых юзеров не даём, Benched - вывели из выдачи совсем
+	Suspect bool `protobuf:"varint,5,opt,name=suspect,proto3" json:"suspect,omitempty"`
+	Benched bool `protobuf:"varint,6,opt,name=benched,proto3" json:"benched,omitempty"`
+	// Reasons - за что именно, чтобы донору было что предъявить
+	Reasons []*OracleNodeReason `protobuf:"bytes,7,rep,name=reasons,proto3" json:"reasons,omitempty"`
+	// Probes - как нода выглядит из страны, Uptime - сколько держится
+	ProbeOk       uint32  `protobuf:"varint,8,opt,name=probe_ok,json=probeOk,proto3" json:"probe_ok,omitempty"`
+	ProbeFailed   uint32  `protobuf:"varint,9,opt,name=probe_failed,json=probeFailed,proto3" json:"probe_failed,omitempty"`
+	UptimePct     float64 `protobuf:"fixed64,10,opt,name=uptime_pct,json=uptimePct,proto3" json:"uptime_pct,omitempty"`
+	LastSeenUnix  int64   `protobuf:"varint,11,opt,name=last_seen_unix,json=lastSeenUnix,proto3" json:"last_seen_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleNode) Reset() {
+	*x = OracleNode{}
+	mi := &file_headpanel_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleNode) ProtoMessage() {}
+
+func (x *OracleNode) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleNode.ProtoReflect.Descriptor instead.
+func (*OracleNode) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *OracleNode) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *OracleNode) GetHostname() string {
+	if x != nil {
+		return x.Hostname
+	}
+	return ""
+}
+
+func (x *OracleNode) GetDonorId() string {
+	if x != nil {
+		return x.DonorId
+	}
+	return ""
+}
+
+func (x *OracleNode) GetTrust() int32 {
+	if x != nil {
+		return x.Trust
+	}
+	return 0
+}
+
+func (x *OracleNode) GetSuspect() bool {
+	if x != nil {
+		return x.Suspect
+	}
+	return false
+}
+
+func (x *OracleNode) GetBenched() bool {
+	if x != nil {
+		return x.Benched
+	}
+	return false
+}
+
+func (x *OracleNode) GetReasons() []*OracleNodeReason {
+	if x != nil {
+		return x.Reasons
+	}
+	return nil
+}
+
+func (x *OracleNode) GetProbeOk() uint32 {
+	if x != nil {
+		return x.ProbeOk
+	}
+	return 0
+}
+
+func (x *OracleNode) GetProbeFailed() uint32 {
+	if x != nil {
+		return x.ProbeFailed
+	}
+	return 0
+}
+
+func (x *OracleNode) GetUptimePct() float64 {
+	if x != nil {
+		return x.UptimePct
+	}
+	return 0
+}
+
+func (x *OracleNode) GetLastSeenUnix() int64 {
+	if x != nil {
+		return x.LastSeenUnix
+	}
+	return 0
+}
+
+type OracleNodeReason struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reason        string                 `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	Weight        float64                `protobuf:"fixed64,2,opt,name=weight,proto3" json:"weight,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleNodeReason) Reset() {
+	*x = OracleNodeReason{}
+	mi := &file_headpanel_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleNodeReason) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleNodeReason) ProtoMessage() {}
+
+func (x *OracleNodeReason) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleNodeReason.ProtoReflect.Descriptor instead.
+func (*OracleNodeReason) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *OracleNodeReason) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *OracleNodeReason) GetWeight() float64 {
+	if x != nil {
+		return x.Weight
+	}
+	return 0
+}
+
+type OracleNodesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        uint32                 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleNodesRequest) Reset() {
+	*x = OracleNodesRequest{}
+	mi := &file_headpanel_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleNodesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleNodesRequest) ProtoMessage() {}
+
+func (x *OracleNodesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleNodesRequest.ProtoReflect.Descriptor instead.
+func (*OracleNodesRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *OracleNodesRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *OracleNodesRequest) GetOffset() uint32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type OracleNodesResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Nodes []*OracleNode          `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	Total uint32                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Accused - скольким нодам есть что предъявить
+	Accused       uint32 `protobuf:"varint,3,opt,name=accused,proto3" json:"accused,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleNodesResponse) Reset() {
+	*x = OracleNodesResponse{}
+	mi := &file_headpanel_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleNodesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleNodesResponse) ProtoMessage() {}
+
+func (x *OracleNodesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleNodesResponse.ProtoReflect.Descriptor instead.
+func (*OracleNodesResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *OracleNodesResponse) GetNodes() []*OracleNode {
+	if x != nil {
+		return x.Nodes
+	}
+	return nil
+}
+
+func (x *OracleNodesResponse) GetTotal() uint32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *OracleNodesResponse) GetAccused() uint32 {
+	if x != nil {
+		return x.Accused
+	}
+	return 0
+}
+
 // OracleClass - один класс сигнала и во что он обошёлся субъекту
 type OracleClass struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
@@ -2863,7 +3157,7 @@ type OracleClass struct {
 
 func (x *OracleClass) Reset() {
 	*x = OracleClass{}
-	mi := &file_headpanel_proto_msgTypes[40]
+	mi := &file_headpanel_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2875,7 +3169,7 @@ func (x *OracleClass) String() string {
 func (*OracleClass) ProtoMessage() {}
 
 func (x *OracleClass) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[40]
+	mi := &file_headpanel_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2888,7 +3182,7 @@ func (x *OracleClass) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleClass.ProtoReflect.Descriptor instead.
 func (*OracleClass) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{40}
+	return file_headpanel_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *OracleClass) GetKind() string {
@@ -2945,7 +3239,7 @@ type OracleSubject struct {
 
 func (x *OracleSubject) Reset() {
 	*x = OracleSubject{}
-	mi := &file_headpanel_proto_msgTypes[41]
+	mi := &file_headpanel_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2957,7 +3251,7 @@ func (x *OracleSubject) String() string {
 func (*OracleSubject) ProtoMessage() {}
 
 func (x *OracleSubject) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[41]
+	mi := &file_headpanel_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2970,7 +3264,7 @@ func (x *OracleSubject) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleSubject.ProtoReflect.Descriptor instead.
 func (*OracleSubject) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{41}
+	return file_headpanel_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *OracleSubject) GetSubjectId() string {
@@ -3054,7 +3348,7 @@ type OracleOverviewResponse struct {
 
 func (x *OracleOverviewResponse) Reset() {
 	*x = OracleOverviewResponse{}
-	mi := &file_headpanel_proto_msgTypes[42]
+	mi := &file_headpanel_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3066,7 +3360,7 @@ func (x *OracleOverviewResponse) String() string {
 func (*OracleOverviewResponse) ProtoMessage() {}
 
 func (x *OracleOverviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[42]
+	mi := &file_headpanel_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3079,7 +3373,7 @@ func (x *OracleOverviewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleOverviewResponse.ProtoReflect.Descriptor instead.
 func (*OracleOverviewResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{42}
+	return file_headpanel_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *OracleOverviewResponse) GetTotal() uint32 {
@@ -3388,7 +3682,32 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x15OracleSubjectResponse\x12<\n" +
 	"\asubject\x18\x01 \x01(\v2\".wingsv.headpanel.v1.OracleSubjectR\asubject\x12;\n" +
 	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\x12;\n" +
-	"\adomains\x18\x03 \x03(\v2!.wingsv.headpanel.v1.OracleDomainR\adomains\"\x88\x01\n" +
+	"\adomains\x18\x03 \x03(\v2!.wingsv.headpanel.v1.OracleDomainR\adomains\"\xea\x02\n" +
+	"\n" +
+	"OracleNode\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1a\n" +
+	"\bhostname\x18\x02 \x01(\tR\bhostname\x12\x19\n" +
+	"\bdonor_id\x18\x03 \x01(\tR\adonorId\x12\x14\n" +
+	"\x05trust\x18\x04 \x01(\x05R\x05trust\x12\x18\n" +
+	"\asuspect\x18\x05 \x01(\bR\asuspect\x12\x18\n" +
+	"\abenched\x18\x06 \x01(\bR\abenched\x12?\n" +
+	"\areasons\x18\a \x03(\v2%.wingsv.headpanel.v1.OracleNodeReasonR\areasons\x12\x19\n" +
+	"\bprobe_ok\x18\b \x01(\rR\aprobeOk\x12!\n" +
+	"\fprobe_failed\x18\t \x01(\rR\vprobeFailed\x12\x1d\n" +
+	"\n" +
+	"uptime_pct\x18\n" +
+	" \x01(\x01R\tuptimePct\x12$\n" +
+	"\x0elast_seen_unix\x18\v \x01(\x03R\flastSeenUnix\"B\n" +
+	"\x10OracleNodeReason\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\x12\x16\n" +
+	"\x06weight\x18\x02 \x01(\x01R\x06weight\"B\n" +
+	"\x12OracleNodesRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\rR\x06offset\"|\n" +
+	"\x13OracleNodesResponse\x125\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x1f.wingsv.headpanel.v1.OracleNodeR\x05nodes\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\rR\x05total\x12\x18\n" +
+	"\aaccused\x18\x03 \x01(\rR\aaccused\"\x88\x01\n" +
 	"\vOracleClass\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\rR\x05count\x12\x16\n" +
@@ -3425,7 +3744,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\xa5\r\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\x87\x0e\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -3446,7 +3765,8 @@ const file_headpanel_proto_rawDesc = "" +
 	"\fProbeReports\x12(.wingsv.headpanel.v1.ProbeReportsRequest\x1a).wingsv.headpanel.v1.ProbeReportsResponse\x12Z\n" +
 	"\tRunProbes\x12%.wingsv.headpanel.v1.RunProbesRequest\x1a&.wingsv.headpanel.v1.RunProbesResponse\x12i\n" +
 	"\x0eOracleOverview\x12*.wingsv.headpanel.v1.OracleOverviewRequest\x1a+.wingsv.headpanel.v1.OracleOverviewResponse\x12f\n" +
-	"\rOracleSubject\x12).wingsv.headpanel.v1.OracleSubjectRequest\x1a*.wingsv.headpanel.v1.OracleSubjectResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
+	"\rOracleSubject\x12).wingsv.headpanel.v1.OracleSubjectRequest\x1a*.wingsv.headpanel.v1.OracleSubjectResponse\x12`\n" +
+	"\vOracleNodes\x12'.wingsv.headpanel.v1.OracleNodesRequest\x1a(.wingsv.headpanel.v1.OracleNodesResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
 
 var (
 	file_headpanel_proto_rawDescOnce sync.Once
@@ -3461,7 +3781,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -3504,9 +3824,13 @@ var file_headpanel_proto_goTypes = []any{
 	(*OracleSignal)(nil),             // 38: wingsv.headpanel.v1.OracleSignal
 	(*OracleDomain)(nil),             // 39: wingsv.headpanel.v1.OracleDomain
 	(*OracleSubjectResponse)(nil),    // 40: wingsv.headpanel.v1.OracleSubjectResponse
-	(*OracleClass)(nil),              // 41: wingsv.headpanel.v1.OracleClass
-	(*OracleSubject)(nil),            // 42: wingsv.headpanel.v1.OracleSubject
-	(*OracleOverviewResponse)(nil),   // 43: wingsv.headpanel.v1.OracleOverviewResponse
+	(*OracleNode)(nil),               // 41: wingsv.headpanel.v1.OracleNode
+	(*OracleNodeReason)(nil),         // 42: wingsv.headpanel.v1.OracleNodeReason
+	(*OracleNodesRequest)(nil),       // 43: wingsv.headpanel.v1.OracleNodesRequest
+	(*OracleNodesResponse)(nil),      // 44: wingsv.headpanel.v1.OracleNodesResponse
+	(*OracleClass)(nil),              // 45: wingsv.headpanel.v1.OracleClass
+	(*OracleSubject)(nil),            // 46: wingsv.headpanel.v1.OracleSubject
+	(*OracleOverviewResponse)(nil),   // 47: wingsv.headpanel.v1.OracleOverviewResponse
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -3520,51 +3844,55 @@ var file_headpanel_proto_depIdxs = []int32{
 	25, // 8: wingsv.headpanel.v1.FleetSettings.vktp:type_name -> wingsv.headpanel.v1.BuildChoice
 	33, // 9: wingsv.headpanel.v1.ProbeReportsResponse.vantages:type_name -> wingsv.headpanel.v1.ProbeVantage
 	34, // 10: wingsv.headpanel.v1.ProbeReportsResponse.measurements:type_name -> wingsv.headpanel.v1.ProbeMeasurement
-	42, // 11: wingsv.headpanel.v1.OracleSubjectResponse.subject:type_name -> wingsv.headpanel.v1.OracleSubject
+	46, // 11: wingsv.headpanel.v1.OracleSubjectResponse.subject:type_name -> wingsv.headpanel.v1.OracleSubject
 	38, // 12: wingsv.headpanel.v1.OracleSubjectResponse.signals:type_name -> wingsv.headpanel.v1.OracleSignal
 	39, // 13: wingsv.headpanel.v1.OracleSubjectResponse.domains:type_name -> wingsv.headpanel.v1.OracleDomain
-	41, // 14: wingsv.headpanel.v1.OracleSubject.classes:type_name -> wingsv.headpanel.v1.OracleClass
-	42, // 15: wingsv.headpanel.v1.OracleOverviewResponse.subjects:type_name -> wingsv.headpanel.v1.OracleSubject
-	41, // 16: wingsv.headpanel.v1.OracleOverviewResponse.signals:type_name -> wingsv.headpanel.v1.OracleClass
-	5,  // 17: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
-	1,  // 18: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
-	12, // 19: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
-	7,  // 20: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
-	8,  // 21: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
-	17, // 22: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
-	19, // 23: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
-	15, // 24: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
-	21, // 25: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	28, // 26: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
-	23, // 27: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
-	24, // 28: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
-	26, // 29: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
-	30, // 30: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
-	31, // 31: wingsv.headpanel.v1.FederationHead.RunProbes:input_type -> wingsv.headpanel.v1.RunProbesRequest
-	36, // 32: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
-	37, // 33: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
-	4,  // 34: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 35: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	13, // 36: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 37: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	10, // 38: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
-	18, // 39: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	20, // 40: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	16, // 41: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	22, // 42: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	29, // 43: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
-	24, // 44: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	24, // 45: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	27, // 46: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
-	35, // 47: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
-	32, // 48: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
-	43, // 49: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
-	40, // 50: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
-	34, // [34:51] is the sub-list for method output_type
-	17, // [17:34] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	42, // 14: wingsv.headpanel.v1.OracleNode.reasons:type_name -> wingsv.headpanel.v1.OracleNodeReason
+	41, // 15: wingsv.headpanel.v1.OracleNodesResponse.nodes:type_name -> wingsv.headpanel.v1.OracleNode
+	45, // 16: wingsv.headpanel.v1.OracleSubject.classes:type_name -> wingsv.headpanel.v1.OracleClass
+	46, // 17: wingsv.headpanel.v1.OracleOverviewResponse.subjects:type_name -> wingsv.headpanel.v1.OracleSubject
+	45, // 18: wingsv.headpanel.v1.OracleOverviewResponse.signals:type_name -> wingsv.headpanel.v1.OracleClass
+	5,  // 19: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
+	1,  // 20: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
+	12, // 21: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
+	7,  // 22: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
+	8,  // 23: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
+	17, // 24: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
+	19, // 25: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
+	15, // 26: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
+	21, // 27: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
+	28, // 28: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
+	23, // 29: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
+	24, // 30: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
+	26, // 31: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
+	30, // 32: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
+	31, // 33: wingsv.headpanel.v1.FederationHead.RunProbes:input_type -> wingsv.headpanel.v1.RunProbesRequest
+	36, // 34: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
+	37, // 35: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
+	43, // 36: wingsv.headpanel.v1.FederationHead.OracleNodes:input_type -> wingsv.headpanel.v1.OracleNodesRequest
+	4,  // 37: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 38: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	13, // 39: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 40: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	10, // 41: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
+	18, // 42: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	20, // 43: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	16, // 44: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	22, // 45: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	29, // 46: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
+	24, // 47: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 48: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	27, // 49: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	35, // 50: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
+	32, // 51: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
+	47, // 52: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
+	40, // 53: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
+	44, // 54: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
+	37, // [37:55] is the sub-list for method output_type
+	19, // [19:37] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_headpanel_proto_init() }
@@ -3578,7 +3906,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   43,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

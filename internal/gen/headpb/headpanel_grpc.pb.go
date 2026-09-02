@@ -39,6 +39,7 @@ const (
 	FederationHead_RunProbes_FullMethodName         = "/wingsv.headpanel.v1.FederationHead/RunProbes"
 	FederationHead_OracleOverview_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/OracleOverview"
 	FederationHead_OracleSubject_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/OracleSubject"
+	FederationHead_OracleNodes_FullMethodName       = "/wingsv.headpanel.v1.FederationHead/OracleNodes"
 )
 
 // FederationHeadClient is the client API for FederationHead service.
@@ -87,6 +88,8 @@ type FederationHeadClient interface {
 	// Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
 	// вопрос "за что", который иначе остаётся без ответа.
 	OracleSubject(ctx context.Context, in *OracleSubjectRequest, opts ...grpc.CallOption) (*OracleSubjectResponse, error)
+	// Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
+	OracleNodes(ctx context.Context, in *OracleNodesRequest, opts ...grpc.CallOption) (*OracleNodesResponse, error)
 }
 
 type federationHeadClient struct {
@@ -270,6 +273,16 @@ func (c *federationHeadClient) OracleSubject(ctx context.Context, in *OracleSubj
 	return out, nil
 }
 
+func (c *federationHeadClient) OracleNodes(ctx context.Context, in *OracleNodesRequest, opts ...grpc.CallOption) (*OracleNodesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OracleNodesResponse)
+	err := c.cc.Invoke(ctx, FederationHead_OracleNodes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationHeadServer is the server API for FederationHead service.
 // All implementations must embed UnimplementedFederationHeadServer
 // for forward compatibility.
@@ -316,6 +329,8 @@ type FederationHeadServer interface {
 	// Один субъект целиком: вердикт, вклад классов и сырые сигналы. Отвечает на
 	// вопрос "за что", который иначе остаётся без ответа.
 	OracleSubject(context.Context, *OracleSubjectRequest) (*OracleSubjectResponse, error)
+	// Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
+	OracleNodes(context.Context, *OracleNodesRequest) (*OracleNodesResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
 }
 
@@ -376,6 +391,9 @@ func (UnimplementedFederationHeadServer) OracleOverview(context.Context, *Oracle
 }
 func (UnimplementedFederationHeadServer) OracleSubject(context.Context, *OracleSubjectRequest) (*OracleSubjectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OracleSubject not implemented")
+}
+func (UnimplementedFederationHeadServer) OracleNodes(context.Context, *OracleNodesRequest) (*OracleNodesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OracleNodes not implemented")
 }
 func (UnimplementedFederationHeadServer) mustEmbedUnimplementedFederationHeadServer() {}
 func (UnimplementedFederationHeadServer) testEmbeddedByValue()                        {}
@@ -693,6 +711,24 @@ func _FederationHead_OracleSubject_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_OracleNodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OracleNodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).OracleNodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_OracleNodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).OracleNodes(ctx, req.(*OracleNodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationHead_ServiceDesc is the grpc.ServiceDesc for FederationHead service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -763,6 +799,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OracleSubject",
 			Handler:    _FederationHead_OracleSubject_Handler,
+		},
+		{
+			MethodName: "OracleNodes",
+			Handler:    _FederationHead_OracleNodes_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
