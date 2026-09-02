@@ -102,7 +102,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Activity, Building2, Clock, Gauge, Handshake, MapPin, Play, Radar, Timer } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungPager from '@/components/controls/SamsungPager.vue';
-import { formatBytes } from '@/utils/format';
+import { formatBytes, formatSpeed } from '@/utils/format';
 
 const enabled = ref(false);
 const vantages = ref([]);
@@ -158,10 +158,10 @@ async function runNow() {
   }
 }
 
-// Голова присылает байты в секунду; Mbit/s рядом, потому что каналы меряют в них
+// Голова присылает байты в секунду, и единица та же, что во всём остальном
 function speed(bytesPerSecond) {
   const bytes = Number(bytesPerSecond) || 0;
-  return `${formatBytes(bytes)}/s (${((bytes * 8) / 1e6).toFixed(1)} Mbit/s)`;
+  return formatSpeed(bytes);
 }
 
 function ago(unix) {

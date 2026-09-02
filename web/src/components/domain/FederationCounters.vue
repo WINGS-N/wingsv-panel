@@ -79,6 +79,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { formatSpeed as formatRate } from '@/utils/format.js';
 import { ArrowDown, ArrowUp, Server, Users } from 'lucide-vue-next';
 
 // Тот же цветовой код направления, что в приложении: приём зелёный, отдача синяя
@@ -125,18 +126,6 @@ onBeforeUnmount(() => {
     source = null;
   }
 });
-
-function formatRate(bytesPerSecond) {
-  const bits = (bytesPerSecond || 0) * 8;
-  const units = ['bit/s', 'Kbit/s', 'Mbit/s', 'Gbit/s'];
-  let index = 0;
-  let value = bits;
-  while (value >= 1000 && index < units.length - 1) {
-    value /= 1000;
-    index += 1;
-  }
-  return `${value >= 100 || index === 0 ? Math.round(value) : value.toFixed(1)} ${units[index]}`;
-}
 
 function formatBytes(size) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];

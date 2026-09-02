@@ -86,6 +86,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ArrowDownUp, Gauge, Server, Smartphone } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
+import { formatSpeed } from '@/utils/format.js';
 
 const CLASS_LABELS = {
   high_fanout: 'много адресов сразу',
@@ -168,11 +169,6 @@ function bandLabel(band) {
 }
 
 // Потолок скорости соразмерен оценке доверия, а не полосе
-function formatSpeed(bps) {
-  if (!bps) return 'без лимита';
-  const mbits = (bps * 8) / 1000000;
-  return `${mbits >= 10 ? Math.round(mbits) : mbits.toFixed(1)} Mbit/s`;
-}
 
 // Единицы английские, как везде в проекте
 function formatBytes(value) {

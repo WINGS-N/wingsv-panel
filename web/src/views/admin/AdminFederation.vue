@@ -188,7 +188,7 @@ const FLOW_DOWN = '#15b76f';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
-import { formatBytes } from '@/utils/format';
+import { formatBytes, formatSpeed as rate } from '@/utils/format';
 
 const enabled = ref(false);
 const loading = ref(false);
@@ -337,18 +337,6 @@ async function errorText(res) {
 
 function bytes(value) {
   return formatBytes(value || 0);
-}
-
-function rate(bytesPerSecond) {
-  const bits = (bytesPerSecond || 0) * 8;
-  const units = ['bit/s', 'Kbit/s', 'Mbit/s', 'Gbit/s'];
-  let index = 0;
-  let value = bits;
-  while (value >= 1000 && index < units.length - 1) {
-    value /= 1000;
-    index += 1;
-  }
-  return `${value >= 100 || index === 0 ? Math.round(value) : value.toFixed(1)} ${units[index]}`;
 }
 
 // Доля выбранного бюджета. Именно она решает судьбу ноды: около 85 процентов он

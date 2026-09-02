@@ -15,6 +15,15 @@ export function formatBytes(bytes) {
   return `${n.toFixed(digits)} ${UNITS[i]}`;
 }
 
+// formatSpeed renders bytes per second in the same base-1024 units as the app.
+// Единица подбирается по величине, основная - MB/s: биты рядом с байтами читаются
+// как расхождение, хотя это одно и то же число.
+export function formatSpeed(bytesPerSecond) {
+  const n = Number(bytesPerSecond) || 0;
+  if (n < 1) return '0 B/s';
+  return `${formatBytes(n)}/s`;
+}
+
 // formatUnix renders a unix-seconds timestamp in the ru-RU locale, or a dash.
 export function formatUnix(seconds) {
   const s = Number(seconds) || 0;
