@@ -11,6 +11,7 @@ export const CLASS_LABELS = {
   no_device_id: 'клиент не назвался',
   no_receipts: 'трафик без расписок',
   address_mismatch: 'адрес не сходится',
+  client_spread: 'разные клиенты на одной ссылке',
 };
 
 export function bandLabel(band) {
