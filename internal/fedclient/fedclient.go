@@ -261,13 +261,14 @@ func (c *Client) RunProbes(ctx context.Context) (uint32, error) {
 	return got.GetProbes(), nil
 }
 
-// OracleSubject - вердикт и сырые сигналы по одному профилю
-func (c *Client) OracleSubject(ctx context.Context, subjectID string) (*headpb.OracleSubjectResponse, error) {
+// OracleSubject - вердикт и сырые сигналы по одному профилю, страницами: у
+// активного участника хвост доменов уходит в тысячи строк
+func (c *Client) OracleSubject(ctx context.Context, req *headpb.OracleSubjectRequest) (*headpb.OracleSubjectResponse, error) {
 	client, err := c.dial()
 	if err != nil {
 		return nil, err
 	}
-	return client.OracleSubject(ctx, &headpb.OracleSubjectRequest{SubjectId: subjectID})
+	return client.OracleSubject(ctx, req)
 }
 
 // retryDelay is how long the live loop waits before re-dialing a head that is

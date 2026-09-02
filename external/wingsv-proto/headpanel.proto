@@ -379,6 +379,15 @@ message OracleOverviewRequest {
 
 message OracleSubjectRequest {
   string subject_id = 1;
+  // Страница по доменам, 0 - тридцать. Хвост у активного участника уходит в
+  // тысячи строк, и целиком его никто не читает
+  uint32 domain_limit = 2;
+  uint32 domain_offset = 3;
+  // Страница по сырым сигналам
+  uint32 signal_limit = 4;
+  uint32 signal_offset = 5;
+  // За сколько часов поднимать домены, 0 - неделя
+  uint32 window_hours = 6;
 }
 
 // OracleSignal - сырое наблюдение, которое хранится ради ответа на вопрос
@@ -405,6 +414,9 @@ message OracleSubjectResponse {
   OracleSubject subject = 1;
   repeated OracleSignal signals = 2;
   repeated OracleDomain domains = 3;
+  // Сколько их всего, чтобы страница знала, докуда листать
+  uint32 domains_total = 4;
+  uint32 signals_total = 5;
 }
 
 // OracleNode - доверие к ноде. Отдельная шкала от людской: у ноды другие грехи

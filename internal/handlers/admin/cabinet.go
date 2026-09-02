@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"v.wingsnet.org/internal/gen/headpb"
 	"v.wingsnet.org/internal/gen/wingsvpb"
 	"v.wingsnet.org/internal/preview"
 	"v.wingsnet.org/internal/storage"
@@ -107,7 +108,7 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 	}
 	// Уровень доверия объясняет, почему серверов столько, а не иначе. Голова без
 	// Oracle отвечает Unimplemented, и экран просто остаётся без этой части
-	if subject, err := h.fed.OracleSubject(ctx, federationUserID(admin)); err == nil {
+	if subject, err := h.fed.OracleSubject(ctx, &headpb.OracleSubjectRequest{SubjectId: federationUserID(admin)}); err == nil {
 		s := subject.GetSubject()
 		classes := make([]map[string]any, 0, len(s.GetClasses()))
 		for _, c := range s.GetClasses() {

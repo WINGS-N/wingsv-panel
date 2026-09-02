@@ -2588,8 +2588,17 @@ func (x *OracleOverviewRequest) GetSubjectIds() []string {
 }
 
 type OracleSubjectRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SubjectId     string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	SubjectId string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// Страница по доменам, 0 - тридцать. Хвост у активного участника уходит в
+	// тысячи строк, и целиком его никто не читает
+	DomainLimit  uint32 `protobuf:"varint,2,opt,name=domain_limit,json=domainLimit,proto3" json:"domain_limit,omitempty"`
+	DomainOffset uint32 `protobuf:"varint,3,opt,name=domain_offset,json=domainOffset,proto3" json:"domain_offset,omitempty"`
+	// Страница по сырым сигналам
+	SignalLimit  uint32 `protobuf:"varint,4,opt,name=signal_limit,json=signalLimit,proto3" json:"signal_limit,omitempty"`
+	SignalOffset uint32 `protobuf:"varint,5,opt,name=signal_offset,json=signalOffset,proto3" json:"signal_offset,omitempty"`
+	// За сколько часов поднимать домены, 0 - неделя
+	WindowHours   uint32 `protobuf:"varint,6,opt,name=window_hours,json=windowHours,proto3" json:"window_hours,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2629,6 +2638,41 @@ func (x *OracleSubjectRequest) GetSubjectId() string {
 		return x.SubjectId
 	}
 	return ""
+}
+
+func (x *OracleSubjectRequest) GetDomainLimit() uint32 {
+	if x != nil {
+		return x.DomainLimit
+	}
+	return 0
+}
+
+func (x *OracleSubjectRequest) GetDomainOffset() uint32 {
+	if x != nil {
+		return x.DomainOffset
+	}
+	return 0
+}
+
+func (x *OracleSubjectRequest) GetSignalLimit() uint32 {
+	if x != nil {
+		return x.SignalLimit
+	}
+	return 0
+}
+
+func (x *OracleSubjectRequest) GetSignalOffset() uint32 {
+	if x != nil {
+		return x.SignalOffset
+	}
+	return 0
+}
+
+func (x *OracleSubjectRequest) GetWindowHours() uint32 {
+	if x != nil {
+		return x.WindowHours
+	}
+	return 0
 }
 
 // OracleSignal - сырое наблюдение, которое хранится ради ответа на вопрос
@@ -2788,10 +2832,13 @@ func (x *OracleDomain) GetLastSeenUnix() int64 {
 }
 
 type OracleSubjectResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Subject       *OracleSubject         `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
-	Signals       []*OracleSignal        `protobuf:"bytes,2,rep,name=signals,proto3" json:"signals,omitempty"`
-	Domains       []*OracleDomain        `protobuf:"bytes,3,rep,name=domains,proto3" json:"domains,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Subject *OracleSubject         `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
+	Signals []*OracleSignal        `protobuf:"bytes,2,rep,name=signals,proto3" json:"signals,omitempty"`
+	Domains []*OracleDomain        `protobuf:"bytes,3,rep,name=domains,proto3" json:"domains,omitempty"`
+	// Сколько их всего, чтобы страница знала, докуда листать
+	DomainsTotal  uint32 `protobuf:"varint,4,opt,name=domains_total,json=domainsTotal,proto3" json:"domains_total,omitempty"`
+	SignalsTotal  uint32 `protobuf:"varint,5,opt,name=signals_total,json=signalsTotal,proto3" json:"signals_total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2845,6 +2892,20 @@ func (x *OracleSubjectResponse) GetDomains() []*OracleDomain {
 		return x.Domains
 	}
 	return nil
+}
+
+func (x *OracleSubjectResponse) GetDomainsTotal() uint32 {
+	if x != nil {
+		return x.DomainsTotal
+	}
+	return 0
+}
+
+func (x *OracleSubjectResponse) GetSignalsTotal() uint32 {
+	if x != nil {
+		return x.SignalsTotal
+	}
+	return 0
 }
 
 // OracleNode - доверие к ноде. Отдельная шкала от людской: у ноды другие грехи
@@ -3663,10 +3724,15 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x16\n" +
 	"\x06offset\x18\x03 \x01(\rR\x06offset\x12\x1f\n" +
 	"\vsubject_ids\x18\x02 \x03(\tR\n" +
-	"subjectIds\"5\n" +
+	"subjectIds\"\xe8\x01\n" +
 	"\x14OracleSubjectRequest\x12\x1d\n" +
 	"\n" +
-	"subject_id\x18\x01 \x01(\tR\tsubjectId\"\x91\x01\n" +
+	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12!\n" +
+	"\fdomain_limit\x18\x02 \x01(\rR\vdomainLimit\x12#\n" +
+	"\rdomain_offset\x18\x03 \x01(\rR\fdomainOffset\x12!\n" +
+	"\fsignal_limit\x18\x04 \x01(\rR\vsignalLimit\x12#\n" +
+	"\rsignal_offset\x18\x05 \x01(\rR\fsignalOffset\x12!\n" +
+	"\fwindow_hours\x18\x06 \x01(\rR\vwindowHours\"\x91\x01\n" +
 	"\fOracleSignal\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\rR\x05count\x12\x17\n" +
@@ -3679,11 +3745,13 @@ const file_headpanel_proto_rawDesc = "" +
 	"\bup_bytes\x18\x03 \x01(\x04R\aupBytes\x12\x1d\n" +
 	"\n" +
 	"down_bytes\x18\x04 \x01(\x04R\tdownBytes\x12$\n" +
-	"\x0elast_seen_unix\x18\x05 \x01(\x03R\flastSeenUnix\"\xcf\x01\n" +
+	"\x0elast_seen_unix\x18\x05 \x01(\x03R\flastSeenUnix\"\x99\x02\n" +
 	"\x15OracleSubjectResponse\x12<\n" +
 	"\asubject\x18\x01 \x01(\v2\".wingsv.headpanel.v1.OracleSubjectR\asubject\x12;\n" +
 	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\x12;\n" +
-	"\adomains\x18\x03 \x03(\v2!.wingsv.headpanel.v1.OracleDomainR\adomains\"\x84\x03\n" +
+	"\adomains\x18\x03 \x03(\v2!.wingsv.headpanel.v1.OracleDomainR\adomains\x12#\n" +
+	"\rdomains_total\x18\x04 \x01(\rR\fdomainsTotal\x12#\n" +
+	"\rsignals_total\x18\x05 \x01(\rR\fsignalsTotal\"\x84\x03\n" +
 	"\n" +
 	"OracleNode\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1a\n" +

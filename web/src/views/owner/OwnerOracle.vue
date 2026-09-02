@@ -79,7 +79,12 @@
     <h2 class="section-title">Наблюдаемые</h2>
     <p v-if="!overview.subjects.length" class="state-hint">Пока ни на кого ничего нет.</p>
     <div v-else class="fed-node-list mt-4">
-      <div v-for="s in pagedSubjects" :key="s.subject_id" class="fed-node-row is-tappable" @click="open(s)">
+      <router-link
+        v-for="s in pagedSubjects"
+        :key="s.subject_id"
+        class="fed-node-row is-tappable"
+        :to="{ name: 'owner-oracle-subject', params: { id: s.subject_id } }"
+      >
         <img :src="bandIcon(s.band)" alt="" class="probe-icon" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
@@ -102,7 +107,7 @@
           </span>
         </div>
         <ChevronRight :size="18" class="text-wings-muted" aria-hidden="true" />
-      </div>
+      </router-link>
     </div>
   </section>
 
@@ -142,72 +147,18 @@
       </div>
     </div>
   </section>
-
-  <SamsungModal :model-value="detailOpen" title="Профиль под наблюдением" @update:model-value="closeDetail">
-    <p v-if="detailName" class="mt-1 text-[16px]">{{ detailName }}</p>
-    <p class="admin-mono mt-1 break-all text-[13px] text-wings-muted">{{ detailId }}</p>
-    <p v-if="detailError" class="state-error mt-3">{{ detailError }}</p>
-    <SamsungSectionLoader v-else-if="!detail" />
-    <template v-else>
-      <p class="admin-muted mt-2">
-        Доверие {{ detail.subject.confidence }}, полоса {{ bandLabel(detail.subject.band) }}. Каждое наблюдение с
-        временем и нодой, на которой оно случилось.
-      </p>
-      <div v-if="detail.signals.length" class="fed-node-list mt-4">
-        <div v-for="(sig, i) in detail.signals" :key="i" class="fed-node-row">
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-[15px]">{{ classLabel(sig.kind) }}</span>
-              <span class="admin-pill">{{ sig.count }}</span>
-            </div>
-            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
-              <span>{{ when(sig.at_unix) }}</span>
-              <span v-if="sig.node_id">нода {{ sig.node_id.slice(0, 8) }}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-      <p v-else class="state-hint mt-4">Сырых сигналов не осталось, их вес истёк.</p>
-
-      <h3 class="section-title mt-6 text-[15px]">Куда ходил</h3>
-      <p class="admin-muted mt-1">Чаще всего за неделю. Наблюдения хранятся месяц.</p>
-      <div v-if="detail.domains && detail.domains.length" class="fed-node-list mt-3">
-        <div v-for="d in detail.domains" :key="d.domain" class="fed-node-row">
-          <div class="min-w-0 flex-1">
-            <span class="admin-mono block truncate text-[14px]">{{ d.domain }}</span>
-            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
-              <span>{{ d.hits }} раз</span>
-              <span>{{ formatBytes(Number(d.down_bytes || 0)) }} вниз</span>
-              <span>{{ formatBytes(Number(d.up_bytes || 0)) }} вверх</span>
-              <span>{{ when(d.last_seen_unix) }}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-      <p v-else class="state-hint mt-3">Наблюдений нет.</p>
-    </template>
-    <template #actions>
-      <SamsungButton variant="secondary" @click="closeDetail">Закрыть</SamsungButton>
-    </template>
-  </SamsungModal>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
-import SamsungButton from '@/components/layout/SamsungButton.vue';
-import SamsungModal from '@/components/layout/SamsungModal.vue';
 import SamsungPager from '@/components/controls/SamsungPager.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
+import { CLASS_LABELS, bandClass, bandIcon, bandLabel } from './oracleLabels';
 
 const enabled = ref(false);
 const scorer = ref('');
 const loadError = ref('');
-const detail = ref(null);
-const detailOpen = ref(false);
-const detailId = ref('');
-const detailName = ref('');
-const detailError = ref('');
 const overview = reactive({
   watched: 0,
   subjects_total: 0,
@@ -237,21 +188,6 @@ const page = ref(1);
 const perPage = 20;
 const pagedSubjects = computed(() => overview.subjects.slice((page.value - 1) * perPage, page.value * perPage));
 let timer = null;
-
-// Классы приходят с головы машинными именами: показывать их человеку незачем
-const CLASS_LABELS = {
-  high_fanout: 'много адресов сразу',
-  geo_spread: 'работа из разных мест',
-  port_scan: 'сканирование портов',
-  mail_port: 'почтовые порты',
-  torrent: 'торренты',
-  malware: 'вредонос',
-  upload_heavy: 'тяжёлая отдача',
-  ads: 'реклама',
-  no_device_id: 'клиент не назвался',
-  no_receipts: 'трафик без расписок',
-  address_mismatch: 'адрес не сходится',
-};
 
 onMounted(() => {
   load();
@@ -323,31 +259,6 @@ async function load() {
   }
 }
 
-async function open(subject) {
-  detailOpen.value = true;
-  detailId.value = subject.subject_id;
-  detailName.value = subject.username || '';
-  detail.value = null;
-  detailError.value = '';
-  try {
-    const res = await fetch(`/api/owner/federation/oracle/subject?id=${encodeURIComponent(subject.subject_id)}`, {
-      credentials: 'include',
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    // Пока ждали ответ, модалку могли закрыть или открыть другого
-    if (detailOpen.value && detailId.value === subject.subject_id) detail.value = data;
-  } catch (err) {
-    if (detailOpen.value && detailId.value === subject.subject_id) detailError.value = String(err.message || err);
-  }
-}
-
-function closeDetail() {
-  detailOpen.value = false;
-  detail.value = null;
-  detailError.value = '';
-}
-
 function classLabel(kind) {
   return CLASS_LABELS[kind] || kind;
 }
@@ -355,41 +266,5 @@ function classLabel(kind) {
 function signalPct(signal) {
   const top = Math.max(...overview.signals.map((s) => Number(s.count) || 0), 1);
   return Math.max(2, Math.round((Number(signal.count) / top) * 100));
-}
-
-function bandLabel(band) {
-  if (band === 'full') return 'полный';
-  if (band === 'reduced') return 'урезанный';
-  if (band === 'quarantine') return 'карантин';
-  return band;
-}
-
-function bandClass(band) {
-  if (band === 'full') return 'is-online';
-  if (band === 'reduced') return 'is-info';
-  return 'is-offline';
-}
-
-function bandIcon(band) {
-  if (band === 'full') return '/img/oneui/security-high.svg';
-  if (band === 'reduced') return '/img/oneui/security-medium.svg';
-  return '/img/oneui/security-low.svg';
-}
-
-function formatBytes(bytes) {
-  if (!bytes) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value >= 100 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
-}
-
-function when(unix) {
-  if (!unix) return '';
-  return new Date(Number(unix) * 1000).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
 }
 </script>

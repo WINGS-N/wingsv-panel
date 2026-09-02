@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"v.wingsnet.org/internal/gen/headpb"
 	"v.wingsnet.org/internal/storage"
 )
 
@@ -212,7 +213,16 @@ func (h *Handler) handleOracleSubject(w http.ResponseWriter, r *http.Request, _ 
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), headTimeout)
 	defer cancel()
-	got, err := h.fed.OracleSubject(ctx, id)
+	domainLimit, domainOffset := pageParams(r, 30)
+	signalLimit, signalOffset := namedPageParams(r, "signal_limit", "signal_offset", 50)
+	got, err := h.fed.OracleSubject(ctx, &headpb.OracleSubjectRequest{
+		SubjectId:    id,
+		DomainLimit:  domainLimit,
+		DomainOffset: domainOffset,
+		SignalLimit:  signalLimit,
+		SignalOffset: signalOffset,
+		WindowHours:  windowHours(r),
+	})
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
 		return
@@ -244,9 +254,11 @@ func (h *Handler) handleOracleSubject(w http.ResponseWriter, r *http.Request, _ 
 	}}
 	h.nameSubjects(subject)
 	writeJSON(w, http.StatusOK, map[string]any{
-		"subject": subject[0],
-		"signals": signals,
-		"domains": domains,
+		"subject":       subject[0],
+		"signals":       signals,
+		"domains":       domains,
+		"domains_total": got.GetDomainsTotal(),
+		"signals_total": got.GetSignalsTotal(),
 	})
 }
 
@@ -272,16 +284,35 @@ func (h *Handler) handleRunProbes(w http.ResponseWriter, r *http.Request, _ stor
 
 // pageParams читает страницу из запроса
 func pageParams(r *http.Request, fallback uint32) (limit, offset uint32) {
+	return namedPageParams(r, "limit", "offset", fallback)
+}
+
+// namedPageParams нужен там, где на одной ручке едут два списка разом и общими
+// limit и offset их не разделить
+func namedPageParams(r *http.Request, limitKey, offsetKey string, fallback uint32) (limit, offset uint32) {
 	limit = fallback
-	if v := r.URL.Query().Get("limit"); v != "" {
+	if v := r.URL.Query().Get(limitKey); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 500 {
 			limit = uint32(n)
 		}
 	}
-	if v := r.URL.Query().Get("offset"); v != "" {
+	if v := r.URL.Query().Get(offsetKey); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			offset = uint32(n)
 		}
 	}
 	return limit, offset
+}
+
+// windowHours - за какой срок поднимать домены. Ноль означает срок по умолчанию
+func windowHours(r *http.Request) uint32 {
+	v := r.URL.Query().Get("window_hours")
+	if v == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 || n > 24*30 {
+		return 0
+	}
+	return uint32(n)
 }
