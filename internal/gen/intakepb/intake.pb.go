@@ -122,9 +122,15 @@ func (x *RegisterKeyResponse) GetChanged() bool {
 }
 
 type SubmitReceiptsRequest struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	SubjectId     string                  `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	Receipts      []*fedpb.TrafficReceipt `protobuf:"bytes,2,rep,name=receipts,proto3" json:"receipts,omitempty"`
+	state     protoimpl.MessageState  `protogen:"open.v1"`
+	SubjectId string                  `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	Receipts  []*fedpb.TrafficReceipt `protobuf:"bytes,2,rep,name=receipts,proto3" json:"receipts,omitempty"`
+	// Адрес, который клиент видит у себя сам, замеренный мимо туннеля.
+	//
+	// Он сам себя этим сдаёт, и в том и смысл: нода видит адрес входящего
+	// соединения, и когда эти два адреса из разных концов света, значит поверх
+	// нашего туннеля крутится ещё один или профиль раздали дальше
+	ClientIp      string `protobuf:"bytes,3,opt,name=client_ip,json=clientIp,proto3" json:"client_ip,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -171,6 +177,13 @@ func (x *SubmitReceiptsRequest) GetReceipts() []*fedpb.TrafficReceipt {
 		return x.Receipts
 	}
 	return nil
+}
+
+func (x *SubmitReceiptsRequest) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
+	}
+	return ""
 }
 
 type SubmitReceiptsResponse struct {
@@ -245,11 +258,12 @@ const file_intake_proto_rawDesc = "" +
 	"\n" +
 	"public_key\x18\x02 \x01(\fR\tpublicKey\"/\n" +
 	"\x13RegisterKeyResponse\x12\x18\n" +
-	"\achanged\x18\x01 \x01(\bR\achanged\"x\n" +
+	"\achanged\x18\x01 \x01(\bR\achanged\"\x95\x01\n" +
 	"\x15SubmitReceiptsRequest\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12@\n" +
-	"\breceipts\x18\x02 \x03(\v2$.wingsv.federation.v1.TrafficReceiptR\breceipts\"h\n" +
+	"\breceipts\x18\x02 \x03(\v2$.wingsv.federation.v1.TrafficReceiptR\breceipts\x12\x1b\n" +
+	"\tclient_ip\x18\x03 \x01(\tR\bclientIp\"h\n" +
 	"\x16SubmitReceiptsResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\rR\baccepted\x12\x1a\n" +
 	"\brejected\x18\x02 \x01(\rR\brejected\x12\x16\n" +

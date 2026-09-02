@@ -250,6 +250,7 @@ const CLASS_LABELS = {
   ads: 'реклама',
   no_device_id: 'клиент не назвался',
   no_receipts: 'трафик без расписок',
+  address_mismatch: 'адрес не сходится',
 };
 
 onMounted(() => {

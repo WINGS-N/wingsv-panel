@@ -401,6 +401,9 @@ enum AbuseKind {
   // всегда, так что молчит либо чужой клиент, либо кто-то, кому есть что
   // скрывать от сверки
   ABUSE_KIND_NO_RECEIPTS = 10;
+  // Клиент называет один адрес, а нода видит совсем другой. Значит поверх
+  // нашего туннеля крутится ещё один, или профилем пользуется не он
+  ABUSE_KIND_ADDRESS_MISMATCH = 11;
 }
 
 message AbuseSignal {
@@ -468,9 +471,19 @@ message PortSample {
   uint64 down_bytes = 6;
 }
 
+// ClientAddresses - с каких адресов профиль сейчас работает, в виде отпечатков.
+//
+// Хеши, а не адреса: голове нужно только сверить их с тем, что клиент заявил о
+// себе сам, и для этого сам адрес наверх тащить незачем
+message ClientAddresses {
+  string profile_id = 1;
+  repeated bytes addr_hash = 2;
+}
+
 message DomainBatch {
   repeated DomainSample samples = 1;
   repeated PortSample ports = 4;
+  repeated ClientAddresses addresses = 5;
   uint32 window_seconds = 2;
   // Сколько событий ядро выкинуло, не успев отдать. Без этого тишина
   // неотличима от того, что мы просрали половину наблюдений

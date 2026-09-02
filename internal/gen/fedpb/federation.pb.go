@@ -47,6 +47,9 @@ const (
 	// всегда, так что молчит либо чужой клиент, либо кто-то, кому есть что
 	// скрывать от сверки
 	AbuseKind_ABUSE_KIND_NO_RECEIPTS AbuseKind = 10
+	// Клиент называет один адрес, а нода видит совсем другой. Значит поверх
+	// нашего туннеля крутится ещё один, или профилем пользуется не он
+	AbuseKind_ABUSE_KIND_ADDRESS_MISMATCH AbuseKind = 11
 )
 
 // Enum value maps for AbuseKind.
@@ -63,19 +66,21 @@ var (
 		8:  "ABUSE_KIND_GEO_SPREAD",
 		9:  "ABUSE_KIND_NO_DEVICE_ID",
 		10: "ABUSE_KIND_NO_RECEIPTS",
+		11: "ABUSE_KIND_ADDRESS_MISMATCH",
 	}
 	AbuseKind_value = map[string]int32{
-		"ABUSE_KIND_UNSPECIFIED":  0,
-		"ABUSE_KIND_ADS":          1,
-		"ABUSE_KIND_MALWARE":      2,
-		"ABUSE_KIND_TORRENT":      3,
-		"ABUSE_KIND_MAIL_PORT":    4,
-		"ABUSE_KIND_PORT_SCAN":    5,
-		"ABUSE_KIND_HIGH_FANOUT":  6,
-		"ABUSE_KIND_UPLOAD_HEAVY": 7,
-		"ABUSE_KIND_GEO_SPREAD":   8,
-		"ABUSE_KIND_NO_DEVICE_ID": 9,
-		"ABUSE_KIND_NO_RECEIPTS":  10,
+		"ABUSE_KIND_UNSPECIFIED":      0,
+		"ABUSE_KIND_ADS":              1,
+		"ABUSE_KIND_MALWARE":          2,
+		"ABUSE_KIND_TORRENT":          3,
+		"ABUSE_KIND_MAIL_PORT":        4,
+		"ABUSE_KIND_PORT_SCAN":        5,
+		"ABUSE_KIND_HIGH_FANOUT":      6,
+		"ABUSE_KIND_UPLOAD_HEAVY":     7,
+		"ABUSE_KIND_GEO_SPREAD":       8,
+		"ABUSE_KIND_NO_DEVICE_ID":     9,
+		"ABUSE_KIND_NO_RECEIPTS":      10,
+		"ABUSE_KIND_ADDRESS_MISMATCH": 11,
 	}
 )
 
@@ -3207,10 +3212,67 @@ func (x *PortSample) GetDownBytes() uint64 {
 	return 0
 }
 
+// ClientAddresses - с каких адресов профиль сейчас работает, в виде отпечатков.
+//
+// Хеши, а не адреса: голове нужно только сверить их с тем, что клиент заявил о
+// себе сам, и для этого сам адрес наверх тащить незачем
+type ClientAddresses struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProfileId     string                 `protobuf:"bytes,1,opt,name=profile_id,json=profileId,proto3" json:"profile_id,omitempty"`
+	AddrHash      [][]byte               `protobuf:"bytes,2,rep,name=addr_hash,json=addrHash,proto3" json:"addr_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClientAddresses) Reset() {
+	*x = ClientAddresses{}
+	mi := &file_federation_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClientAddresses) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientAddresses) ProtoMessage() {}
+
+func (x *ClientAddresses) ProtoReflect() protoreflect.Message {
+	mi := &file_federation_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientAddresses.ProtoReflect.Descriptor instead.
+func (*ClientAddresses) Descriptor() ([]byte, []int) {
+	return file_federation_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ClientAddresses) GetProfileId() string {
+	if x != nil {
+		return x.ProfileId
+	}
+	return ""
+}
+
+func (x *ClientAddresses) GetAddrHash() [][]byte {
+	if x != nil {
+		return x.AddrHash
+	}
+	return nil
+}
+
 type DomainBatch struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Samples       []*DomainSample        `protobuf:"bytes,1,rep,name=samples,proto3" json:"samples,omitempty"`
 	Ports         []*PortSample          `protobuf:"bytes,4,rep,name=ports,proto3" json:"ports,omitempty"`
+	Addresses     []*ClientAddresses     `protobuf:"bytes,5,rep,name=addresses,proto3" json:"addresses,omitempty"`
 	WindowSeconds uint32                 `protobuf:"varint,2,opt,name=window_seconds,json=windowSeconds,proto3" json:"window_seconds,omitempty"`
 	// Сколько событий ядро выкинуло, не успев отдать. Без этого тишина
 	// неотличима от того, что мы просрали половину наблюдений
@@ -3221,7 +3283,7 @@ type DomainBatch struct {
 
 func (x *DomainBatch) Reset() {
 	*x = DomainBatch{}
-	mi := &file_federation_proto_msgTypes[33]
+	mi := &file_federation_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3233,7 +3295,7 @@ func (x *DomainBatch) String() string {
 func (*DomainBatch) ProtoMessage() {}
 
 func (x *DomainBatch) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[33]
+	mi := &file_federation_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3246,7 +3308,7 @@ func (x *DomainBatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DomainBatch.ProtoReflect.Descriptor instead.
 func (*DomainBatch) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{33}
+	return file_federation_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *DomainBatch) GetSamples() []*DomainSample {
@@ -3259,6 +3321,13 @@ func (x *DomainBatch) GetSamples() []*DomainSample {
 func (x *DomainBatch) GetPorts() []*PortSample {
 	if x != nil {
 		return x.Ports
+	}
+	return nil
+}
+
+func (x *DomainBatch) GetAddresses() []*ClientAddresses {
+	if x != nil {
+		return x.Addresses
 	}
 	return nil
 }
@@ -3288,7 +3357,7 @@ type Alarm struct {
 
 func (x *Alarm) Reset() {
 	*x = Alarm{}
-	mi := &file_federation_proto_msgTypes[34]
+	mi := &file_federation_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3300,7 +3369,7 @@ func (x *Alarm) String() string {
 func (*Alarm) ProtoMessage() {}
 
 func (x *Alarm) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[34]
+	mi := &file_federation_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3313,7 +3382,7 @@ func (x *Alarm) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Alarm.ProtoReflect.Descriptor instead.
 func (*Alarm) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{34}
+	return file_federation_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *Alarm) GetLevel() string {
@@ -3360,7 +3429,7 @@ type AgentFrame struct {
 
 func (x *AgentFrame) Reset() {
 	*x = AgentFrame{}
-	mi := &file_federation_proto_msgTypes[35]
+	mi := &file_federation_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3372,7 +3441,7 @@ func (x *AgentFrame) String() string {
 func (*AgentFrame) ProtoMessage() {}
 
 func (x *AgentFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[35]
+	mi := &file_federation_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3385,7 +3454,7 @@ func (x *AgentFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentFrame.ProtoReflect.Descriptor instead.
 func (*AgentFrame) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{35}
+	return file_federation_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *AgentFrame) GetFrame() isAgentFrame_Frame {
@@ -3594,7 +3663,7 @@ type RealityScan struct {
 
 func (x *RealityScan) Reset() {
 	*x = RealityScan{}
-	mi := &file_federation_proto_msgTypes[36]
+	mi := &file_federation_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3606,7 +3675,7 @@ func (x *RealityScan) String() string {
 func (*RealityScan) ProtoMessage() {}
 
 func (x *RealityScan) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[36]
+	mi := &file_federation_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3619,7 +3688,7 @@ func (x *RealityScan) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RealityScan.ProtoReflect.Descriptor instead.
 func (*RealityScan) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{36}
+	return file_federation_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RealityScan) GetResults() []*ProbeResult {
@@ -3662,7 +3731,7 @@ type ProfileSpec struct {
 
 func (x *ProfileSpec) Reset() {
 	*x = ProfileSpec{}
-	mi := &file_federation_proto_msgTypes[37]
+	mi := &file_federation_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3674,7 +3743,7 @@ func (x *ProfileSpec) String() string {
 func (*ProfileSpec) ProtoMessage() {}
 
 func (x *ProfileSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[37]
+	mi := &file_federation_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3687,7 +3756,7 @@ func (x *ProfileSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileSpec.ProtoReflect.Descriptor instead.
 func (*ProfileSpec) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{37}
+	return file_federation_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ProfileSpec) GetMetered() bool {
@@ -3761,7 +3830,7 @@ type ProfileDelta struct {
 
 func (x *ProfileDelta) Reset() {
 	*x = ProfileDelta{}
-	mi := &file_federation_proto_msgTypes[38]
+	mi := &file_federation_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3773,7 +3842,7 @@ func (x *ProfileDelta) String() string {
 func (*ProfileDelta) ProtoMessage() {}
 
 func (x *ProfileDelta) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[38]
+	mi := &file_federation_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3786,7 +3855,7 @@ func (x *ProfileDelta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProfileDelta.ProtoReflect.Descriptor instead.
 func (*ProfileDelta) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{38}
+	return file_federation_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ProfileDelta) GetAdd() []*ProfileSpec {
@@ -3821,7 +3890,7 @@ type RotationCommand struct {
 
 func (x *RotationCommand) Reset() {
 	*x = RotationCommand{}
-	mi := &file_federation_proto_msgTypes[39]
+	mi := &file_federation_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3833,7 +3902,7 @@ func (x *RotationCommand) String() string {
 func (*RotationCommand) ProtoMessage() {}
 
 func (x *RotationCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[39]
+	mi := &file_federation_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3846,7 +3915,7 @@ func (x *RotationCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotationCommand.ProtoReflect.Descriptor instead.
 func (*RotationCommand) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{39}
+	return file_federation_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *RotationCommand) GetState() RotationState {
@@ -3880,7 +3949,7 @@ type BudgetUpdate struct {
 
 func (x *BudgetUpdate) Reset() {
 	*x = BudgetUpdate{}
-	mi := &file_federation_proto_msgTypes[40]
+	mi := &file_federation_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3892,7 +3961,7 @@ func (x *BudgetUpdate) String() string {
 func (*BudgetUpdate) ProtoMessage() {}
 
 func (x *BudgetUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[40]
+	mi := &file_federation_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3905,7 +3974,7 @@ func (x *BudgetUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BudgetUpdate.ProtoReflect.Descriptor instead.
 func (*BudgetUpdate) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{40}
+	return file_federation_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *BudgetUpdate) GetDeclaredBudgetBytes() uint64 {
@@ -3931,7 +4000,7 @@ type Ping struct {
 
 func (x *Ping) Reset() {
 	*x = Ping{}
-	mi := &file_federation_proto_msgTypes[41]
+	mi := &file_federation_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3943,7 +4012,7 @@ func (x *Ping) String() string {
 func (*Ping) ProtoMessage() {}
 
 func (x *Ping) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[41]
+	mi := &file_federation_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3956,7 +4025,7 @@ func (x *Ping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ping.ProtoReflect.Descriptor instead.
 func (*Ping) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{41}
+	return file_federation_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *Ping) GetNonce() uint64 {
@@ -3983,7 +4052,7 @@ type UpgradeCommand struct {
 
 func (x *UpgradeCommand) Reset() {
 	*x = UpgradeCommand{}
-	mi := &file_federation_proto_msgTypes[42]
+	mi := &file_federation_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3995,7 +4064,7 @@ func (x *UpgradeCommand) String() string {
 func (*UpgradeCommand) ProtoMessage() {}
 
 func (x *UpgradeCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[42]
+	mi := &file_federation_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4008,7 +4077,7 @@ func (x *UpgradeCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpgradeCommand.ProtoReflect.Descriptor instead.
 func (*UpgradeCommand) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{42}
+	return file_federation_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *UpgradeCommand) GetComponent() string {
@@ -4055,7 +4124,7 @@ type Ack struct {
 
 func (x *Ack) Reset() {
 	*x = Ack{}
-	mi := &file_federation_proto_msgTypes[43]
+	mi := &file_federation_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4067,7 +4136,7 @@ func (x *Ack) String() string {
 func (*Ack) ProtoMessage() {}
 
 func (x *Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[43]
+	mi := &file_federation_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4080,7 +4149,7 @@ func (x *Ack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ack.ProtoReflect.Descriptor instead.
 func (*Ack) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{43}
+	return file_federation_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *Ack) GetSeq() uint64 {
@@ -4099,7 +4168,7 @@ type SecretRotate struct {
 
 func (x *SecretRotate) Reset() {
 	*x = SecretRotate{}
-	mi := &file_federation_proto_msgTypes[44]
+	mi := &file_federation_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4111,7 +4180,7 @@ func (x *SecretRotate) String() string {
 func (*SecretRotate) ProtoMessage() {}
 
 func (x *SecretRotate) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[44]
+	mi := &file_federation_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4124,7 +4193,7 @@ func (x *SecretRotate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecretRotate.ProtoReflect.Descriptor instead.
 func (*SecretRotate) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{44}
+	return file_federation_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *SecretRotate) GetNewSecret() string {
@@ -4153,7 +4222,7 @@ type HeadFrame struct {
 
 func (x *HeadFrame) Reset() {
 	*x = HeadFrame{}
-	mi := &file_federation_proto_msgTypes[45]
+	mi := &file_federation_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4165,7 +4234,7 @@ func (x *HeadFrame) String() string {
 func (*HeadFrame) ProtoMessage() {}
 
 func (x *HeadFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_federation_proto_msgTypes[45]
+	mi := &file_federation_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4178,7 +4247,7 @@ func (x *HeadFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeadFrame.ProtoReflect.Descriptor instead.
 func (*HeadFrame) Descriptor() ([]byte, []int) {
-	return file_federation_proto_rawDescGZIP(), []int{45}
+	return file_federation_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *HeadFrame) GetFrame() isHeadFrame_Frame {
@@ -4604,10 +4673,15 @@ const file_federation_proto_rawDesc = "" +
 	"\x10distinct_targets\x18\x04 \x01(\rR\x0fdistinctTargets\x12\x19\n" +
 	"\bup_bytes\x18\x05 \x01(\x04R\aupBytes\x12\x1d\n" +
 	"\n" +
-	"down_bytes\x18\x06 \x01(\x04R\tdownBytes\"\xc4\x01\n" +
+	"down_bytes\x18\x06 \x01(\x04R\tdownBytes\"M\n" +
+	"\x0fClientAddresses\x12\x1d\n" +
+	"\n" +
+	"profile_id\x18\x01 \x01(\tR\tprofileId\x12\x1b\n" +
+	"\taddr_hash\x18\x02 \x03(\fR\baddrHash\"\x89\x02\n" +
 	"\vDomainBatch\x12<\n" +
 	"\asamples\x18\x01 \x03(\v2\".wingsv.federation.v1.DomainSampleR\asamples\x126\n" +
-	"\x05ports\x18\x04 \x03(\v2 .wingsv.federation.v1.PortSampleR\x05ports\x12%\n" +
+	"\x05ports\x18\x04 \x03(\v2 .wingsv.federation.v1.PortSampleR\x05ports\x12C\n" +
+	"\taddresses\x18\x05 \x03(\v2%.wingsv.federation.v1.ClientAddressesR\taddresses\x12%\n" +
 	"\x0ewindow_seconds\x18\x02 \x01(\rR\rwindowSeconds\x12\x18\n" +
 	"\adropped\x18\x03 \x01(\x04R\adropped\"K\n" +
 	"\x05Alarm\x12\x14\n" +
@@ -4680,7 +4754,7 @@ const file_federation_proto_rawDesc = "" +
 	"\aupgrade\x18\x06 \x01(\v2$.wingsv.federation.v1.UpgradeCommandH\x00R\aupgrade\x12-\n" +
 	"\x03ack\x18\a \x01(\v2\x19.wingsv.federation.v1.AckH\x00R\x03ack\x12I\n" +
 	"\rsecret_rotate\x18\b \x01(\v2\".wingsv.federation.v1.SecretRotateH\x00R\fsecretRotateB\a\n" +
-	"\x05frame*\xac\x02\n" +
+	"\x05frame*\xcd\x02\n" +
 	"\tAbuseKind\x12\x1a\n" +
 	"\x16ABUSE_KIND_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eABUSE_KIND_ADS\x10\x01\x12\x16\n" +
@@ -4693,7 +4767,8 @@ const file_federation_proto_rawDesc = "" +
 	"\x15ABUSE_KIND_GEO_SPREAD\x10\b\x12\x1b\n" +
 	"\x17ABUSE_KIND_NO_DEVICE_ID\x10\t\x12\x1a\n" +
 	"\x16ABUSE_KIND_NO_RECEIPTS\x10\n" +
-	"*\xa2\x01\n" +
+	"\x12\x1f\n" +
+	"\x1bABUSE_KIND_ADDRESS_MISMATCH\x10\v*\xa2\x01\n" +
 	"\rRotationState\x12\x1e\n" +
 	"\x1aROTATION_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15ROTATION_STATE_ACTIVE\x10\x01\x12\x1b\n" +
@@ -4719,7 +4794,7 @@ func file_federation_proto_rawDescGZIP() []byte {
 }
 
 var file_federation_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_federation_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
+var file_federation_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_federation_proto_goTypes = []any{
 	(AbuseKind)(0),             // 0: wingsv.federation.v1.AbuseKind
 	(RotationState)(0),         // 1: wingsv.federation.v1.RotationState
@@ -4756,19 +4831,20 @@ var file_federation_proto_goTypes = []any{
 	(*ReceiptBatch)(nil),       // 32: wingsv.federation.v1.ReceiptBatch
 	(*DomainSample)(nil),       // 33: wingsv.federation.v1.DomainSample
 	(*PortSample)(nil),         // 34: wingsv.federation.v1.PortSample
-	(*DomainBatch)(nil),        // 35: wingsv.federation.v1.DomainBatch
-	(*Alarm)(nil),              // 36: wingsv.federation.v1.Alarm
-	(*AgentFrame)(nil),         // 37: wingsv.federation.v1.AgentFrame
-	(*RealityScan)(nil),        // 38: wingsv.federation.v1.RealityScan
-	(*ProfileSpec)(nil),        // 39: wingsv.federation.v1.ProfileSpec
-	(*ProfileDelta)(nil),       // 40: wingsv.federation.v1.ProfileDelta
-	(*RotationCommand)(nil),    // 41: wingsv.federation.v1.RotationCommand
-	(*BudgetUpdate)(nil),       // 42: wingsv.federation.v1.BudgetUpdate
-	(*Ping)(nil),               // 43: wingsv.federation.v1.Ping
-	(*UpgradeCommand)(nil),     // 44: wingsv.federation.v1.UpgradeCommand
-	(*Ack)(nil),                // 45: wingsv.federation.v1.Ack
-	(*SecretRotate)(nil),       // 46: wingsv.federation.v1.SecretRotate
-	(*HeadFrame)(nil),          // 47: wingsv.federation.v1.HeadFrame
+	(*ClientAddresses)(nil),    // 35: wingsv.federation.v1.ClientAddresses
+	(*DomainBatch)(nil),        // 36: wingsv.federation.v1.DomainBatch
+	(*Alarm)(nil),              // 37: wingsv.federation.v1.Alarm
+	(*AgentFrame)(nil),         // 38: wingsv.federation.v1.AgentFrame
+	(*RealityScan)(nil),        // 39: wingsv.federation.v1.RealityScan
+	(*ProfileSpec)(nil),        // 40: wingsv.federation.v1.ProfileSpec
+	(*ProfileDelta)(nil),       // 41: wingsv.federation.v1.ProfileDelta
+	(*RotationCommand)(nil),    // 42: wingsv.federation.v1.RotationCommand
+	(*BudgetUpdate)(nil),       // 43: wingsv.federation.v1.BudgetUpdate
+	(*Ping)(nil),               // 44: wingsv.federation.v1.Ping
+	(*UpgradeCommand)(nil),     // 45: wingsv.federation.v1.UpgradeCommand
+	(*Ack)(nil),                // 46: wingsv.federation.v1.Ack
+	(*SecretRotate)(nil),       // 47: wingsv.federation.v1.SecretRotate
+	(*HeadFrame)(nil),          // 48: wingsv.federation.v1.HeadFrame
 }
 var file_federation_proto_depIdxs = []int32{
 	3,  // 0: wingsv.federation.v1.ProbeFrame.hello:type_name -> wingsv.federation.v1.ProbeHello
@@ -4797,40 +4873,41 @@ var file_federation_proto_depIdxs = []int32{
 	31, // 23: wingsv.federation.v1.ReceiptBatch.receipts:type_name -> wingsv.federation.v1.TrafficReceipt
 	33, // 24: wingsv.federation.v1.DomainBatch.samples:type_name -> wingsv.federation.v1.DomainSample
 	34, // 25: wingsv.federation.v1.DomainBatch.ports:type_name -> wingsv.federation.v1.PortSample
-	21, // 26: wingsv.federation.v1.AgentFrame.hello:type_name -> wingsv.federation.v1.Hello
-	22, // 27: wingsv.federation.v1.AgentFrame.heartbeat:type_name -> wingsv.federation.v1.Heartbeat
-	24, // 28: wingsv.federation.v1.AgentFrame.stats:type_name -> wingsv.federation.v1.StatsSample
-	26, // 29: wingsv.federation.v1.AgentFrame.profiles:type_name -> wingsv.federation.v1.ProfileSample
-	27, // 30: wingsv.federation.v1.AgentFrame.budget:type_name -> wingsv.federation.v1.BudgetReport
-	29, // 31: wingsv.federation.v1.AgentFrame.config_ack:type_name -> wingsv.federation.v1.ConfigAck
-	30, // 32: wingsv.federation.v1.AgentFrame.abuse:type_name -> wingsv.federation.v1.AbuseSignal
-	36, // 33: wingsv.federation.v1.AgentFrame.alarm:type_name -> wingsv.federation.v1.Alarm
-	8,  // 34: wingsv.federation.v1.AgentFrame.addresses:type_name -> wingsv.federation.v1.AddressReport
-	32, // 35: wingsv.federation.v1.AgentFrame.receipts:type_name -> wingsv.federation.v1.ReceiptBatch
-	35, // 36: wingsv.federation.v1.AgentFrame.domains:type_name -> wingsv.federation.v1.DomainBatch
-	38, // 37: wingsv.federation.v1.AgentFrame.reality_scan:type_name -> wingsv.federation.v1.RealityScan
-	28, // 38: wingsv.federation.v1.RealityScan.results:type_name -> wingsv.federation.v1.ProbeResult
-	39, // 39: wingsv.federation.v1.ProfileDelta.add:type_name -> wingsv.federation.v1.ProfileSpec
-	1,  // 40: wingsv.federation.v1.RotationCommand.state:type_name -> wingsv.federation.v1.RotationState
-	19, // 41: wingsv.federation.v1.HeadFrame.config_push:type_name -> wingsv.federation.v1.NodeConfig
-	40, // 42: wingsv.federation.v1.HeadFrame.profile_delta:type_name -> wingsv.federation.v1.ProfileDelta
-	41, // 43: wingsv.federation.v1.HeadFrame.rotation:type_name -> wingsv.federation.v1.RotationCommand
-	42, // 44: wingsv.federation.v1.HeadFrame.budget:type_name -> wingsv.federation.v1.BudgetUpdate
-	43, // 45: wingsv.federation.v1.HeadFrame.ping:type_name -> wingsv.federation.v1.Ping
-	44, // 46: wingsv.federation.v1.HeadFrame.upgrade:type_name -> wingsv.federation.v1.UpgradeCommand
-	45, // 47: wingsv.federation.v1.HeadFrame.ack:type_name -> wingsv.federation.v1.Ack
-	46, // 48: wingsv.federation.v1.HeadFrame.secret_rotate:type_name -> wingsv.federation.v1.SecretRotate
-	10, // 49: wingsv.federation.v1.Federation.Join:input_type -> wingsv.federation.v1.JoinRequest
-	37, // 50: wingsv.federation.v1.Federation.Session:input_type -> wingsv.federation.v1.AgentFrame
-	4,  // 51: wingsv.federation.v1.Federation.ProbeSession:input_type -> wingsv.federation.v1.ProbeFrame
-	11, // 52: wingsv.federation.v1.Federation.Join:output_type -> wingsv.federation.v1.JoinResponse
-	47, // 53: wingsv.federation.v1.Federation.Session:output_type -> wingsv.federation.v1.HeadFrame
-	6,  // 54: wingsv.federation.v1.Federation.ProbeSession:output_type -> wingsv.federation.v1.ProbeTask
-	52, // [52:55] is the sub-list for method output_type
-	49, // [49:52] is the sub-list for method input_type
-	49, // [49:49] is the sub-list for extension type_name
-	49, // [49:49] is the sub-list for extension extendee
-	0,  // [0:49] is the sub-list for field type_name
+	35, // 26: wingsv.federation.v1.DomainBatch.addresses:type_name -> wingsv.federation.v1.ClientAddresses
+	21, // 27: wingsv.federation.v1.AgentFrame.hello:type_name -> wingsv.federation.v1.Hello
+	22, // 28: wingsv.federation.v1.AgentFrame.heartbeat:type_name -> wingsv.federation.v1.Heartbeat
+	24, // 29: wingsv.federation.v1.AgentFrame.stats:type_name -> wingsv.federation.v1.StatsSample
+	26, // 30: wingsv.federation.v1.AgentFrame.profiles:type_name -> wingsv.federation.v1.ProfileSample
+	27, // 31: wingsv.federation.v1.AgentFrame.budget:type_name -> wingsv.federation.v1.BudgetReport
+	29, // 32: wingsv.federation.v1.AgentFrame.config_ack:type_name -> wingsv.federation.v1.ConfigAck
+	30, // 33: wingsv.federation.v1.AgentFrame.abuse:type_name -> wingsv.federation.v1.AbuseSignal
+	37, // 34: wingsv.federation.v1.AgentFrame.alarm:type_name -> wingsv.federation.v1.Alarm
+	8,  // 35: wingsv.federation.v1.AgentFrame.addresses:type_name -> wingsv.federation.v1.AddressReport
+	32, // 36: wingsv.federation.v1.AgentFrame.receipts:type_name -> wingsv.federation.v1.ReceiptBatch
+	36, // 37: wingsv.federation.v1.AgentFrame.domains:type_name -> wingsv.federation.v1.DomainBatch
+	39, // 38: wingsv.federation.v1.AgentFrame.reality_scan:type_name -> wingsv.federation.v1.RealityScan
+	28, // 39: wingsv.federation.v1.RealityScan.results:type_name -> wingsv.federation.v1.ProbeResult
+	40, // 40: wingsv.federation.v1.ProfileDelta.add:type_name -> wingsv.federation.v1.ProfileSpec
+	1,  // 41: wingsv.federation.v1.RotationCommand.state:type_name -> wingsv.federation.v1.RotationState
+	19, // 42: wingsv.federation.v1.HeadFrame.config_push:type_name -> wingsv.federation.v1.NodeConfig
+	41, // 43: wingsv.federation.v1.HeadFrame.profile_delta:type_name -> wingsv.federation.v1.ProfileDelta
+	42, // 44: wingsv.federation.v1.HeadFrame.rotation:type_name -> wingsv.federation.v1.RotationCommand
+	43, // 45: wingsv.federation.v1.HeadFrame.budget:type_name -> wingsv.federation.v1.BudgetUpdate
+	44, // 46: wingsv.federation.v1.HeadFrame.ping:type_name -> wingsv.federation.v1.Ping
+	45, // 47: wingsv.federation.v1.HeadFrame.upgrade:type_name -> wingsv.federation.v1.UpgradeCommand
+	46, // 48: wingsv.federation.v1.HeadFrame.ack:type_name -> wingsv.federation.v1.Ack
+	47, // 49: wingsv.federation.v1.HeadFrame.secret_rotate:type_name -> wingsv.federation.v1.SecretRotate
+	10, // 50: wingsv.federation.v1.Federation.Join:input_type -> wingsv.federation.v1.JoinRequest
+	38, // 51: wingsv.federation.v1.Federation.Session:input_type -> wingsv.federation.v1.AgentFrame
+	4,  // 52: wingsv.federation.v1.Federation.ProbeSession:input_type -> wingsv.federation.v1.ProbeFrame
+	11, // 53: wingsv.federation.v1.Federation.Join:output_type -> wingsv.federation.v1.JoinResponse
+	48, // 54: wingsv.federation.v1.Federation.Session:output_type -> wingsv.federation.v1.HeadFrame
+	6,  // 55: wingsv.federation.v1.Federation.ProbeSession:output_type -> wingsv.federation.v1.ProbeTask
+	53, // [53:56] is the sub-list for method output_type
+	50, // [50:53] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_federation_proto_init() }
@@ -4843,7 +4920,7 @@ func file_federation_proto_init() {
 		(*ProbeFrame_Report)(nil),
 		(*ProbeFrame_Heartbeat)(nil),
 	}
-	file_federation_proto_msgTypes[35].OneofWrappers = []any{
+	file_federation_proto_msgTypes[36].OneofWrappers = []any{
 		(*AgentFrame_Hello)(nil),
 		(*AgentFrame_Heartbeat)(nil),
 		(*AgentFrame_Stats)(nil),
@@ -4857,7 +4934,7 @@ func file_federation_proto_init() {
 		(*AgentFrame_Domains)(nil),
 		(*AgentFrame_RealityScan)(nil),
 	}
-	file_federation_proto_msgTypes[45].OneofWrappers = []any{
+	file_federation_proto_msgTypes[46].OneofWrappers = []any{
 		(*HeadFrame_ConfigPush)(nil),
 		(*HeadFrame_ProfileDelta)(nil),
 		(*HeadFrame_Rotation)(nil),
@@ -4873,7 +4950,7 @@ func file_federation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_federation_proto_rawDesc), len(file_federation_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   46,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

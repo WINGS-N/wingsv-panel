@@ -60,6 +60,9 @@ func (h *Handler) handleAppReceipts(w http.ResponseWriter, r *http.Request, admi
 		return
 	}
 	var req struct {
+		// ClientIP - адрес, который устройство замерило у себя мимо туннеля.
+		// Сверяется с тем, что видят ноды
+		ClientIP string `json:"client_ip"`
 		Receipts []struct {
 			ClientID        string `json:"client_id"`
 			NodeID          string `json:"node_id"`
@@ -101,7 +104,7 @@ func (h *Handler) handleAppReceipts(w http.ResponseWriter, r *http.Request, admi
 
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
-	got, err := h.fed.SubmitReceipts(ctx, federationUserID(admin), out)
+	got, err := h.fed.SubmitReceipts(ctx, federationUserID(admin), out, req.ClientIP)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
 		return

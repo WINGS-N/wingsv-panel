@@ -35,12 +35,12 @@ func (c *Client) RegisterKey(ctx context.Context, subjectID string, key []byte) 
 }
 
 // SubmitReceipts несёт подписанные расписки голове
-func (c *Client) SubmitReceipts(ctx context.Context, subjectID string, receipts []*fedpb.TrafficReceipt) (*intakepb.SubmitReceiptsResponse, error) {
+func (c *Client) SubmitReceipts(ctx context.Context, subjectID string, receipts []*fedpb.TrafficReceipt, clientIP string) (*intakepb.SubmitReceiptsResponse, error) {
 	client, err := c.intake()
 	if err != nil {
 		return nil, err
 	}
 	return client.SubmitReceipts(ctx, &intakepb.SubmitReceiptsRequest{
-		SubjectId: subjectID, Receipts: receipts,
+		SubjectId: subjectID, Receipts: receipts, ClientIp: clientIP,
 	})
 }

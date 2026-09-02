@@ -36,6 +36,12 @@ message RegisterKeyResponse {
 message SubmitReceiptsRequest {
   string subject_id = 1;
   repeated wingsv.federation.v1.TrafficReceipt receipts = 2;
+  // Адрес, который клиент видит у себя сам, замеренный мимо туннеля.
+  //
+  // Он сам себя этим сдаёт, и в том и смысл: нода видит адрес входящего
+  // соединения, и когда эти два адреса из разных концов света, значит поверх
+  // нашего туннеля крутится ещё один или профиль раздали дальше
+  string client_ip = 3;
 }
 
 message SubmitReceiptsResponse {
