@@ -6,6 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"v.wingsnet.org/internal/avatarpic"
 	"v.wingsnet.org/internal/storage/dbmodel"
 )
 
@@ -98,6 +99,13 @@ func (s *Store) CreateAccount(username, passwordHash string, mustChange bool, ro
 	}
 	if err := s.gdb.Create(&row).Error; err != nil {
 		return Admin{}, err
+	}
+	// Аватар заводится вместе с аккаунтом: он есть с первой же минуты, а не
+	// появляется хуй знает когда
+	if picture := avatarpic.Default(); len(picture) > 0 {
+		if _, err := s.SetAdminAvatar(row.ID, "image/png", picture); err == nil {
+			row.AvatarVersion++
+		}
 	}
 	return toStorageAdmin(row), nil
 }
@@ -206,14 +214,26 @@ func (s *Store) EnsureAtLeastOneOwner() error {
 
 // SetAdminAvatar stores the avatar bytes + mime, bumping the version so cached
 // URLs invalidate.
+//
+// Сами байты уезжают в blobs под своим хешем: одинаковую картинку грузит не один
+// человек, и плодить её копию на каждого - тупая трата места нахуй
 func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, error) {
+	hash, err := s.PutBlob(mime, bytes)
+	if err != nil {
+		return 0, err
+	}
+	previous := s.avatarBlobOf(id)
 	if err := s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
 		"avatar_mime":    mime,
-		"avatar_png":     bytes,
+		"avatar_blob":    hash,
+		"avatar_png":     gorm.Expr("NULL"),
 		"avatar_version": gorm.Expr("avatar_version + 1"),
 		"updated_at":     time.Now().UTC().UnixMilli(),
 	}).Error; err != nil {
 		return 0, err
+	}
+	if previous != hash {
+		s.dropBlobIfOrphan(previous)
 	}
 	var m dbmodel.Admin
 	if err := s.gdb.Select("avatar_version").Where("id = ?", id).First(&m).Error; err != nil {
@@ -226,22 +246,47 @@ func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, erro
 // no custom avatar was uploaded (frontend falls back to default).
 func (s *Store) GetAdminAvatar(id int64) (mime string, data []byte, version int64, err error) {
 	var m dbmodel.Admin
-	if err = s.gdb.Select("avatar_mime", "avatar_png", "avatar_version").
+	if err = s.gdb.Select("avatar_mime", "avatar_png", "avatar_blob", "avatar_version").
 		Where("id = ?", id).First(&m).Error; err != nil {
 		return "", nil, 0, err
 	}
+	if m.AvatarBlob != "" {
+		blobMime, blobData, blobErr := s.GetBlob(m.AvatarBlob)
+		if blobErr == nil {
+			if blobMime == "" {
+				blobMime = m.AvatarMime
+			}
+			return blobMime, blobData, m.AvatarVersion, nil
+		}
+	}
+	// Старьё, заведённое до blobs, держит байты прямо в себе - его не бросаем
 	return m.AvatarMime, m.AvatarPNG, m.AvatarVersion, nil
+}
+
+// avatarBlobOf - хеш текущей картинки аккаунта
+func (s *Store) avatarBlobOf(id int64) string {
+	var m dbmodel.Admin
+	if err := s.gdb.Select("avatar_blob").Where("id = ?", id).First(&m).Error; err != nil {
+		return ""
+	}
+	return m.AvatarBlob
 }
 
 // ClearAdminAvatar wipes the avatar. Version still bumps so caches refresh
 // to the default image.
 func (s *Store) ClearAdminAvatar(id int64) error {
-	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
+	previous := s.avatarBlobOf(id)
+	if err := s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
 		"avatar_mime":    "",
 		"avatar_png":     gorm.Expr("NULL"),
+		"avatar_blob":    "",
 		"avatar_version": gorm.Expr("avatar_version + 1"),
 		"updated_at":     time.Now().UTC().UnixMilli(),
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+	s.dropBlobIfOrphan(previous)
+	return nil
 }
 
 func boolToInt(b bool) int {

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS admins (
     avatar_mime TEXT NOT NULL DEFAULT '',
     avatar_png BLOB,
     avatar_version INTEGER NOT NULL DEFAULT 0,
+    avatar_blob TEXT NOT NULL DEFAULT '',
     vk_links TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
@@ -339,4 +340,14 @@ CREATE TABLE IF NOT EXISTS node_traffic_total (
     tx_total INTEGER NOT NULL DEFAULT 0,
     last_rx INTEGER NOT NULL DEFAULT 0,
     last_tx INTEGER NOT NULL DEFAULT 0
+);
+
+-- Содержимое загруженных файлов, ключ - SHA-512/256 самих байтов. Одинаковые
+-- загрузки схлопываются в одну строку: хеш у них совпадает
+CREATE TABLE IF NOT EXISTS blobs (
+    hash TEXT PRIMARY KEY,
+    mime TEXT NOT NULL DEFAULT '',
+    data BLOB,
+    size INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
 );

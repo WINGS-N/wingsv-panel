@@ -182,6 +182,8 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE admins ADD COLUMN panel_access INTEGER NOT NULL DEFAULT 1`,
 		// Заявка участника на панель: ноль означает, что он не просил
 		`ALTER TABLE admins ADD COLUMN panel_requested_at INTEGER NOT NULL DEFAULT 0`,
+		// Картинки переехали в blobs: в аккаунте остаётся только хеш
+		`ALTER TABLE admins ADD COLUMN avatar_blob TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE clients ADD COLUMN last_peer_ip TEXT NOT NULL DEFAULT ''`,
 		`CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_matrix_id ON admins(matrix_id) WHERE matrix_id IS NOT NULL`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,

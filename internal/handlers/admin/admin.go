@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"v.wingsnet.org/internal/auth"
+	"v.wingsnet.org/internal/avatarpic"
 	"v.wingsnet.org/internal/config"
 	"v.wingsnet.org/internal/fedclient"
 	"v.wingsnet.org/internal/guardianhub"
@@ -383,7 +384,7 @@ func (h *Handler) handleAvatar(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		generated, drawErr := generatedAvatar(admin.Username)
+		generated, drawErr := avatarpic.Generate(admin.Username)
 		if drawErr != nil {
 			http.NotFound(w, r)
 			return
@@ -447,6 +448,10 @@ func (h *Handler) handleMyAvatar(w http.ResponseWriter, r *http.Request, admin s
 		if err := h.store.ClearAdminAvatar(admin.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
+		}
+		// Аккаунт возвращается к аватару, который был у него с регистрации
+		if picture, drawErr := avatarpic.Generate(admin.Username); drawErr == nil {
+			_, _ = h.store.SetAdminAvatar(admin.ID, "image/png", picture)
 		}
 		_ = h.store.AppendAudit(storage.AuditEntry{
 			ActorAdminID: admin.ID, ActorUsername: admin.Username,

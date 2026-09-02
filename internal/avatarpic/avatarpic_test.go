@@ -1,4 +1,4 @@
-package admin
+package avatarpic
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 
 // Аккаунт без своей картинки всё равно получает свою: буква имени на цветном круге
 func TestGeneratedAvatarIsAPngWithColour(t *testing.T) {
-	data, err := generatedAvatar("admin")
+	data, err := Generate("admin")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,12 +17,12 @@ func TestGeneratedAvatarIsAPngWithColour(t *testing.T) {
 	if err != nil {
 		t.Fatalf("отдали не png: %v", err)
 	}
-	if img.Bounds().Dx() != generatedAvatarSize || img.Bounds().Dy() != generatedAvatarSize {
-		t.Fatalf("размер %v, ждали %d", img.Bounds(), generatedAvatarSize)
+	if img.Bounds().Dx() != Size || img.Bounds().Dy() != Size {
+		t.Fatalf("размер %v, ждали %d", img.Bounds(), Size)
 	}
 
 	// Центр круга закрашен, а угол за его пределами прозрачный
-	centre := img.At(generatedAvatarSize/2, generatedAvatarSize/2)
+	centre := img.At(Size/2, Size/2)
 	if _, _, _, alpha := centre.RGBA(); alpha == 0 {
 		t.Fatal("середина прозрачная - круг не нарисовался")
 	}

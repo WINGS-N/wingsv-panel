@@ -1,4 +1,6 @@
-package admin
+// Package avatarpic рисует аватар из имени: его ставят при регистрации и к нему
+// же аккаунт возвращается, когда свою картинку убирают
+package avatarpic
 
 import (
 	"bytes"
@@ -22,9 +24,22 @@ import (
 //go:embed fonts/samsungsharpsans_bold.otf
 var sharpSansBold []byte
 
-// generatedAvatarSize - сторона картинки. Берётся с запасом от любого места, где
+// Аватар, который стоит у аккаунта с рождения. Буква приходит на его место
+// только когда человек убирает свою картинку - до тех пор все выглядят одинаково
+//
+//go:embed assets/avatar-default.png
+var defaultAvatar []byte
+
+// Default отдаёт стартовый аватар нового аккаунта
+func Default() []byte {
+	out := make([]byte, len(defaultAvatar))
+	copy(out, defaultAvatar)
+	return out
+}
+
+// Size - сторона картинки. Берётся с запасом от любого места, где
 // её показывают: клиент пусть ужимает, апскейл мылит всё нахуй
-const generatedAvatarSize = 460
+const Size = 460
 
 var (
 	sharpSansOnce sync.Once
@@ -49,8 +64,8 @@ var avatarPalette = []color.RGBA{
 //
 // Рисуется тут, а не в клиенте: их дохуя (панель, андроид, DeX), и каждый
 // нарисовал бы свою хуйню - три разных лица на один аккаунт
-func generatedAvatar(username string) ([]byte, error) {
-	size := generatedAvatarSize
+func Generate(username string) ([]byte, error) {
+	size := Size
 	img := image.NewRGBA(image.Rect(0, 0, size, size))
 	drawCircle(img, avatarColor(username))
 

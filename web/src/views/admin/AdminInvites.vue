@@ -60,6 +60,12 @@
             </span>
           </span>
           <CopyableLink :value="it.link" class="mt-2" />
+          <div class="actions-row mt-2">
+            <SamsungButton variant="ghost" @click="openInApp(it)">
+              <template #icon><Smartphone class="button-icon" aria-hidden="true" /></template>
+              Открыть в приложении
+            </SamsungButton>
+          </div>
         </div>
         <SamsungButton variant="ghost" :busy="revoking === it.token" @click="revoke(it)">
           <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
@@ -73,7 +79,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { CalendarRange, Plus, Ticket, Trash2, Users } from 'lucide-vue-next';
+import { CalendarRange, Plus, Ticket, Trash2, Users, Smartphone } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
@@ -169,6 +175,11 @@ async function create() {
   } finally {
     creating.value = false;
   }
+}
+
+// Приложение ловит эту схему и применяет код само, без копипасты руками
+function openInApp(invite) {
+  window.location.href = `wingsv://invite/${invite.token}`;
 }
 
 function short(value) {

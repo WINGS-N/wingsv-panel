@@ -17,8 +17,11 @@ type Admin struct {
 	LastLoginAt        int64  `gorm:"column:last_login_at;not null;default:0"`
 	AvatarMime         string `gorm:"column:avatar_mime;not null;default:''"`
 	AvatarPNG          []byte `gorm:"column:avatar_png"`
-	AvatarVersion      int64  `gorm:"column:avatar_version;not null;default:0"`
-	VKLinks            string `gorm:"column:vk_links;not null;default:''"`
+	// AvatarBlob - хеш картинки в blobs. Одна и та же аватарка у десятка
+	// аккаунтов лежит одним блобом, а не десятком копий нахуй
+	AvatarBlob    string `gorm:"column:avatar_blob;not null;default:''"`
+	AvatarVersion int64  `gorm:"column:avatar_version;not null;default:0"`
+	VKLinks       string `gorm:"column:vk_links;not null;default:''"`
 	// SuspendedAtUnix cuts this admin out of the invite tree. Zero means active.
 	// A suspension is inherited by everyone below: an invite tree is only worth
 	// having if a bad branch can be taken off at any point in it.
@@ -39,6 +42,21 @@ type Admin struct {
 }
 
 func (Admin) TableName() string { return "admins" }
+
+// Blob - содержимое файла, на которое ссылаются по его же хешу.
+//
+// Ключ - SHA-512/256: length-extension его не берёт, а на 64-битных он ещё и
+// быстрее обычного SHA-256. Одинаковые загрузки схлопываются в одну строку -
+// хеш-то у них один
+type Blob struct {
+	Hash          string `gorm:"column:hash;primaryKey"`
+	Mime          string `gorm:"column:mime;not null;default:''"`
+	Data          []byte `gorm:"column:data"`
+	Size          int64  `gorm:"column:size;not null;default:0"`
+	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
+}
+
+func (Blob) TableName() string { return "blobs" }
 
 type AdminSession struct {
 	ID            string `gorm:"column:id;primaryKey"`
@@ -385,6 +403,7 @@ func (NodeTrafficTotal) TableName() string { return "node_traffic_total" }
 func All() []any {
 	return []any{
 		&Admin{},
+		&Blob{},
 		&AdminSession{},
 		&Client{},
 		&InviteToken{},
