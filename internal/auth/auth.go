@@ -377,6 +377,19 @@ func GenerateInviteToken() (string, error) {
 	return newToken(16)
 }
 
+// GenerateInviteCode returns the code a human retypes or scans.
+//
+// Короче обычного токена и заглавными: код диктуют голосом, вбивают руками и
+// снимают камерой, а 32 строчных символа для этого - издевательство. Восьми байт
+// хватает: подобрать их мешает лимит попыток на самом эндпоинте.
+func GenerateInviteCode() (string, error) {
+	code, err := newToken(8)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToUpper(code), nil
+}
+
 // ErrMatrixAccountUnknown means nobody has attached this Matrix account, and the
 // deployment is not accepting new registrations from it.
 var ErrMatrixAccountUnknown = errors.New("auth: this matrix account is not linked to an admin")

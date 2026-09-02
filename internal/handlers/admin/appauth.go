@@ -98,6 +98,11 @@ func (h *Handler) handleAppSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad request body")
 		return
 	}
+	// Одноразовый код короткий и живёт две минуты, но перебрать его за это время
+	// можно, если никто не считает попытки
+	if !h.limitAttempt(w, r, "appcode-ip:"+clientIP(r)) {
+		return
+	}
 	adminID, ok := h.appCodes.redeem(strings.TrimSpace(req.Code), time.Now())
 	if !ok {
 		writeError(w, http.StatusForbidden, "код недействителен или уже использован")
@@ -126,6 +131,11 @@ func (h *Handler) handleAppLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "bad request body")
+		return
+	}
+	// Тот же пароль и тот же код 2FA, что и в панели: без счётчика попыток вход
+	// из приложения обходит её лимит стороной
+	if !h.limitAttempt(w, r, "login-ip:"+clientIP(r), "login-user:"+strings.ToLower(strings.TrimSpace(req.Username))) {
 		return
 	}
 	admin, err := h.auth.VerifyCredentials(req.Username, req.Password)

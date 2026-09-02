@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/pquerna/otp"
@@ -105,6 +106,9 @@ func (h *Handler) confirmTOTP(w http.ResponseWriter, r *http.Request, admin stor
 		writeError(w, http.StatusBadRequest, "bad request body")
 		return
 	}
+	if !h.limitAttempt(w, r, "totp:"+strconv.FormatInt(admin.ID, 10)) {
+		return
+	}
 	state, err := h.store.TOTPFor(admin.ID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "2FA не настраивалась")
@@ -178,6 +182,9 @@ func (h *Handler) disableTOTP(w http.ResponseWriter, r *http.Request, admin stor
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "bad request body")
+		return
+	}
+	if !h.limitAttempt(w, r, "totp-off:"+strconv.FormatInt(admin.ID, 10)) {
 		return
 	}
 	if _, err := h.auth.VerifyCredentials(admin.Username, req.Password); err != nil {

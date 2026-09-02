@@ -329,7 +329,9 @@ func (s *Store) FindInvite(token string) (InviteToken, error) {
 		return InviteToken{}, ErrNotFound
 	}
 	var r dbmodel.InviteToken
-	if err := s.gdb.First(&r, "token = ?", token).Error; err != nil {
+	// Регистр не важен: код диктуют голосом и вбивают руками, а половина клавиатур
+	// подсовывает автозаглавную первую букву
+	if err := s.gdb.First(&r, "UPPER(token) = UPPER(?)", token).Error; err != nil {
 		return InviteToken{}, ErrNotFound
 	}
 	return InviteToken{

@@ -83,7 +83,7 @@ func (h *Handler) handleInvites(w http.ResponseWriter, r *http.Request, admin st
 				"по одному коду может зарегистрироваться не больше "+strconv.Itoa(maxInviteUses)+" человек")
 			return
 		}
-		token, err := auth.GenerateInviteToken()
+		token, err := auth.GenerateInviteCode()
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -252,6 +252,10 @@ func (h *Handler) handleRedeemInvite(w http.ResponseWriter, r *http.Request, adm
 		writeError(w, http.StatusBadRequest, "введите код приглашения")
 		return
 	}
+	// Код короткий, и без лимита его тупо переберут циклом по HEX
+	if !h.limitRedeem(w, r, strconv.FormatInt(admin.ID, 10)) {
+		return
+	}
 	if redeemed, err := h.store.RedeemedInvite(admin.ID); err == nil && redeemed {
 		writeError(w, http.StatusConflict, "вы уже в дереве приглашений")
 		return
@@ -269,6 +273,9 @@ func (h *Handler) handleRedeemInvite(w http.ResponseWriter, r *http.Request, adm
 		writeError(w, http.StatusForbidden, "код исчерпан или просрочен")
 		return
 	}
+	// Код подошёл: счётчик попыток обнуляется, за прошлые опечатки не наказываем
+	h.redeemLimiter.Forget("acc:" + strconv.FormatInt(admin.ID, 10))
+	h.redeemLimiter.Forget("ip:" + clientIP(r))
 	_ = h.store.AppendAudit(storage.AuditEntry{
 		ActorAdminID: admin.ID, ActorUsername: admin.Username,
 		Action: "admin.invite_redeemed", TargetType: "invite", TargetID: token,

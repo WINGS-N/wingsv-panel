@@ -35,6 +35,8 @@ type Handler struct {
 	fed *fedclient.Client
 	// appCodes - одноразовые коды, которыми приложение забирает свой токен
 	appCodes *appCodes
+	// redeemLimiter режет перебор кода приглашения
+	redeemLimiter *attemptLimiter
 	// oidc is the deployment's own account service. Nil-safe: without one the
 	// panel simply never offers the button
 	oidc *oidcauth.Client
@@ -45,9 +47,10 @@ type Handler struct {
 func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *guardianhub.Hub) *Handler {
 	h := &Handler{
 		cfg: cfg, store: store, auth: authSvc, hub: hub,
-		xui:      xuiclient.New(),
-		fed:      fedclient.New(cfg.FederationHead, cfg.FederationSecret),
-		appCodes: newAppCodes(),
+		xui:           xuiclient.New(),
+		fed:           fedclient.New(cfg.FederationHead, cfg.FederationSecret),
+		appCodes:      newAppCodes(),
+		redeemLimiter: newAttemptLimiter(),
 		oidc: oidcauth.New(oidcauth.Config{
 			Issuer:       cfg.OIDCIssuer,
 			Homeserver:   cfg.MatrixHomeserver,
@@ -110,6 +113,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// ходит с ним, а не с сессионной кукой
 	mux.HandleFunc("/api/app/password", h.requireApp(h.handleChangePassword))
 	mux.HandleFunc("/api/app/avatar", h.requireApp(h.handleMyAvatar))
+	mux.HandleFunc("/api/app/invites", h.requireApp(h.handleAppInvites))
+	mux.HandleFunc("/api/app/invites/redeem", h.requireApp(h.handleRedeemInvite))
 	mux.HandleFunc("/api/app/logout", h.requireApp(h.handleAppLogout))
 	// Не под /api/admin: этим входом пользуются не только администраторы.
 	// Бесплатный пользователь федерации заходит тем же WINGS V ID, и путь,
@@ -157,6 +162,11 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	// Подбор пароля и кода 2FA упирается только в скорость сети, если попытки не
+	// считать. Ключей два: адрес меняется через прокси, логин - нет
+	if !h.limitAttempt(w, r, "login-ip:"+clientIP(r), "login-user:"+strings.ToLower(strings.TrimSpace(req.Username))) {
 		return
 	}
 	// 2FA проверяется до выдачи сессии: пароль сам по себе входом уже
