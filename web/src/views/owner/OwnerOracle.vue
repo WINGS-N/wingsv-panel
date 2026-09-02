@@ -5,9 +5,10 @@
       <span v-if="scorer" class="admin-pill is-info">{{ scorer }}</span>
     </div>
     <p class="body-copy body-copy-wide">
-      Уровень доверия есть у каждого профиля. Он начинается посередине и двигается сам: подозрительное поведение
-      опускает его, спокойное поднимает обратно, потому что вес каждого сигнала со временем тает. Считается количество и
-      форма, а не содержимое: ни одного домена сюда не приезжает.
+      Уровень доверия есть у каждого участника. Он двигается сам, подозрительное поведение опускает его, спокойное
+      поднимает обратно, потому что вес каждого сигнала со временем тает. Считается и поведение, и то, куда шли
+      соединения, потому что мошенничество по одним счётчикам не отличить от обычной жизни. Наблюдения живут месяц и
+      удаляются.
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
     <p v-else-if="!enabled" class="state-hint">Федерация выключена.</p>
@@ -51,8 +52,8 @@
   <section v-if="enabled && overview.signals.length" class="surface-card mt-6">
     <h2 class="section-title">Сигналы за сутки</h2>
     <p class="admin-muted mt-1">
-      На что уходит внимание оракула: доля класса среди всех сигналов и скольких профилей он касается. Что именно
-      открывали, не знает никто.
+      На что уходит внимание оракула, доля класса среди всех сигналов и скольких профилей он касается. Сотня
+      срабатываний у одного и по одному у сотни - это разные истории.
     </p>
     <div class="fed-months mt-4">
       <div v-for="s in overview.signals" :key="s.kind" class="fed-month">
@@ -76,7 +77,8 @@
         <img :src="bandIcon(s.band)" alt="" class="probe-icon" aria-hidden="true" />
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="admin-mono truncate text-[15px]">{{ s.subject_id }}</span>
+            <span class="truncate text-[15px]">{{ s.username || s.subject_id }}</span>
+            <span v-if="s.username" class="admin-mono text-[12px] text-wings-muted">{{ s.subject_id }}</span>
             <span class="admin-pill" :class="bandClass(s.band)">{{ bandLabel(s.band) }}</span>
             <span
               v-if="s.shadow_band && s.shadow_band !== s.band"
@@ -106,7 +108,8 @@
   />
 
   <SamsungModal :model-value="detailOpen" title="Профиль под наблюдением" @update:model-value="closeDetail">
-    <p class="admin-mono mt-1 break-all text-[14px]">{{ detailId }}</p>
+    <p v-if="detailName" class="mt-1 text-[16px]">{{ detailName }}</p>
+    <p class="admin-mono mt-1 break-all text-[13px] text-wings-muted">{{ detailId }}</p>
     <p v-if="detailError" class="state-error mt-3">{{ detailError }}</p>
     <SamsungSectionLoader v-else-if="!detail" />
     <template v-else>
@@ -128,7 +131,27 @@
           </div>
         </div>
       </div>
-      <p v-else class="state-hint mt-4">Сырых сигналов не осталось: их вес истёк.</p>
+      <p v-else class="state-hint mt-4">Сырых сигналов не осталось, их вес истёк.</p>
+
+      <h3 class="section-title mt-6 text-[15px]">Куда ходил</h3>
+      <p class="admin-muted mt-1">
+        Чаще всего за неделю. Разбор нужен, чтобы отрезать мошенника, а не чтобы собирать историю посещений, и
+        наблюдения не хранятся дольше месяца.
+      </p>
+      <div v-if="detail.domains && detail.domains.length" class="fed-node-list mt-3">
+        <div v-for="d in detail.domains" :key="d.domain" class="fed-node-row">
+          <div class="min-w-0 flex-1">
+            <span class="admin-mono block truncate text-[14px]">{{ d.domain }}</span>
+            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
+              <span>{{ d.hits }} раз</span>
+              <span>{{ formatBytes(Number(d.down_bytes || 0)) }} вниз</span>
+              <span>{{ formatBytes(Number(d.up_bytes || 0)) }} вверх</span>
+              <span>{{ when(d.last_seen_unix) }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <p v-else class="state-hint mt-3">Наблюдений нет.</p>
     </template>
     <template #actions>
       <SamsungButton variant="secondary" @click="closeDetail">Закрыть</SamsungButton>
@@ -150,6 +173,7 @@ const loadError = ref('');
 const detail = ref(null);
 const detailOpen = ref(false);
 const detailId = ref('');
+const detailName = ref('');
 const detailError = ref('');
 const overview = reactive({
   watched: 0,
@@ -211,6 +235,7 @@ async function load() {
 async function open(subject) {
   detailOpen.value = true;
   detailId.value = subject.subject_id;
+  detailName.value = subject.username || '';
   detail.value = null;
   detailError.value = '';
   try {
@@ -258,6 +283,18 @@ function bandIcon(band) {
   if (band === 'full') return '/img/oneui/security-high.svg';
   if (band === 'reduced') return '/img/oneui/security-medium.svg';
   return '/img/oneui/security-low.svg';
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value >= 100 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
 }
 
 function when(unix) {

@@ -94,7 +94,10 @@ type oracleClassView struct {
 }
 
 type oracleSubjectView struct {
-	SubjectID        string            `json:"subject_id"`
+	SubjectID string `json:"subject_id"`
+	// Username - кто это на самом деле. Голова людей не знает и знать не должна,
+	// поэтому имя подставляет панель: у неё и аккаунты, и право их видеть
+	Username         string            `json:"username"`
 	Confidence       int32             `json:"confidence"`
 	Band             string            `json:"band"`
 	Scorer           string            `json:"scorer"`
@@ -104,8 +107,38 @@ type oracleSubjectView struct {
 	ShadowConfidence int32             `json:"shadow_confidence"`
 }
 
-// handleOracle отдаёт состояние судьи. Ни одного поля, по которому профиль
-// сводится к человеку: этих данных у головы нет
+// subjectAdminID разбирает идентификатор субъекта обратно в аккаунт. Ноль, если
+// это не участник: у головы бывают и профильные субъекты
+func subjectAdminID(subjectID string) int64 {
+	raw, ok := strings.CutPrefix(subjectID, "user-")
+	if !ok {
+		return 0
+	}
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return id
+}
+
+// nameSubjects проставляет имена одной выборкой из базы панели
+func (h *Handler) nameSubjects(subjects []oracleSubjectView) {
+	ids := make([]int64, 0, len(subjects))
+	for _, s := range subjects {
+		if id := subjectAdminID(s.SubjectID); id > 0 {
+			ids = append(ids, id)
+		}
+	}
+	names, err := h.store.UsernamesByIDs(ids)
+	if err != nil {
+		return
+	}
+	for i := range subjects {
+		subjects[i].Username = names[subjectAdminID(subjects[i].SubjectID)]
+	}
+}
+
+// handleOracle отдаёт состояние судьи
 func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -139,6 +172,7 @@ func (h *Handler) handleOracle(w http.ResponseWriter, r *http.Request, _ storage
 			ShadowBand: s.GetShadowBand(), ShadowConfidence: s.GetShadowConfidence(),
 		})
 	}
+	h.nameSubjects(subjects)
 	signals := make([]oracleClassView, 0, len(got.GetSignals()))
 	for _, c := range got.GetSignals() {
 		signals = append(signals, oracleClassView{
@@ -195,13 +229,24 @@ func (h *Handler) handleOracleSubject(w http.ResponseWriter, r *http.Request, _ 
 	for _, c := range s.GetClasses() {
 		classes = append(classes, oracleClassView{Kind: c.GetKind(), Count: c.GetCount(), Weight: c.GetWeight()})
 	}
+	domains := make([]map[string]any, 0, len(got.GetDomains()))
+	for _, d := range got.GetDomains() {
+		domains = append(domains, map[string]any{
+			"domain": d.GetDomain(), "hits": d.GetHits(),
+			"up_bytes": d.GetUpBytes(), "down_bytes": d.GetDownBytes(),
+			"last_seen_unix": d.GetLastSeenUnix(),
+		})
+	}
+	subject := []oracleSubjectView{{
+		SubjectID: s.GetSubjectId(), Confidence: s.GetConfidence(), Band: s.GetBand(),
+		Scorer: s.GetScorer(), AtUnix: s.GetAtUnix(), Classes: classes,
+		ShadowBand: s.GetShadowBand(), ShadowConfidence: s.GetShadowConfidence(),
+	}}
+	h.nameSubjects(subject)
 	writeJSON(w, http.StatusOK, map[string]any{
-		"subject": oracleSubjectView{
-			SubjectID: s.GetSubjectId(), Confidence: s.GetConfidence(), Band: s.GetBand(),
-			Scorer: s.GetScorer(), AtUnix: s.GetAtUnix(), Classes: classes,
-			ShadowBand: s.GetShadowBand(), ShadowConfidence: s.GetShadowConfidence(),
-		},
+		"subject": subject[0],
 		"signals": signals,
+		"domains": domains,
 	})
 }
 

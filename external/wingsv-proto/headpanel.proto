@@ -389,9 +389,20 @@ message OracleSignal {
   uint32 window_seconds = 5;
 }
 
+// OracleDomain - куда субъект ходил чаще всего. Показывается владельцу площадки,
+// донору эти данные не отдаются никогда: он и так видит только агрегаты
+message OracleDomain {
+  string domain = 1;
+  int64 hits = 2;
+  uint64 up_bytes = 3;
+  uint64 down_bytes = 4;
+  int64 last_seen_unix = 5;
+}
+
 message OracleSubjectResponse {
   OracleSubject subject = 1;
   repeated OracleSignal signals = 2;
+  repeated OracleDomain domains = 3;
 }
 
 // OracleClass - один класс сигнала и во что он обошёлся субъекту

@@ -142,6 +142,23 @@ func (s *Store) ListAdmins() ([]Admin, error) {
 	return out, nil
 }
 
+// UsernamesByIDs достаёт имена одной выборкой: список судьи рисуется страницами
+// по два десятка, и запрос на строку превратил бы отрисовку в долбёжку базы
+func (s *Store) UsernamesByIDs(ids []int64) (map[int64]string, error) {
+	out := make(map[int64]string, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	var ms []dbmodel.Admin
+	if err := s.gdb.Select("id", "username").Where("id IN ?", ids).Find(&ms).Error; err != nil {
+		return nil, err
+	}
+	for _, m := range ms {
+		out[m.ID] = m.Username
+	}
+	return out, nil
+}
+
 func (s *Store) UpdateAdminPassword(id int64, passwordHash string, requireChange bool) error {
 	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
 		"password_hash":        passwordHash,
