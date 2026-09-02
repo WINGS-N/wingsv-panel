@@ -106,6 +106,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/app/session", h.handleAppSession)
 	mux.HandleFunc("/api/app/me", h.requireApp(h.handleAppMe))
 	mux.HandleFunc("/api/app/access", h.requireApp(h.handleMyAccess))
+	// Те же действия над своим аккаунтом, но по токену устройства: приложение
+	// ходит с ним, а не с сессионной кукой
+	mux.HandleFunc("/api/app/password", h.requireApp(h.handleChangePassword))
+	mux.HandleFunc("/api/app/avatar", h.requireApp(h.handleMyAvatar))
 	mux.HandleFunc("/api/app/logout", h.requireApp(h.handleAppLogout))
 	// Не под /api/admin: этим входом пользуются не только администраторы.
 	// Бесплатный пользователь федерации заходит тем же WINGS V ID, и путь,
