@@ -10,11 +10,7 @@
         :title="anyOnline ? 'Есть точки онлайн' : 'Ни одна точка не отвечает'"
       ></span>
     </div>
-    <p class="body-copy body-copy-wide">
-      Зонды стоят внутри страны и меряют ноды так, как до них дотягивается обычный пользователь: не пингом, а
-      протаскиванием байтов через настоящий профиль. Нода, доступная из сети головы, может быть придушена там, где сидят
-      люди - видно это только отсюда.
-    </p>
+    <p class="body-copy body-copy-wide">Замеры изнутри страны: не пинг, а скачивание через настоящий профиль.</p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
     <div v-if="enabled" class="actions-row">
       <SamsungButton :busy="running" @click="runNow">

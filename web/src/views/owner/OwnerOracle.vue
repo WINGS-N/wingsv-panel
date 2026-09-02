@@ -5,10 +5,8 @@
       <span v-if="scorer" class="admin-pill is-info">{{ scorer }}</span>
     </div>
     <p class="body-copy body-copy-wide">
-      Уровень доверия есть у каждого участника. Он двигается сам, подозрительное поведение опускает его, спокойное
-      поднимает обратно, потому что вес каждого сигнала со временем тает. Считается и поведение, и то, куда шли
-      соединения, потому что мошенничество по одним счётчикам не отличить от обычной жизни. Наблюдения живут месяц и
-      удаляются.
+      Доверие есть у каждого участника и двигается само: подозрительное поведение опускает его, спокойное поднимает, вес
+      сигналов со временем тает. Считается и поведение, и то, куда шли соединения.
     </p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
     <p v-else-if="!enabled" class="state-hint">Федерация выключена.</p>
@@ -62,10 +60,7 @@
 
   <section v-if="enabled && tab === 'people' && overview.signals.length" class="surface-card mt-6">
     <h2 class="section-title">Сигналы за сутки</h2>
-    <p class="admin-muted mt-1">
-      На что уходит внимание оракула, доля класса среди всех сигналов и скольких профилей он касается. Сотня
-      срабатываний у одного и по одному у сотни - это разные истории.
-    </p>
+    <p class="admin-muted mt-1">Доля класса среди всех сигналов и скольких участников он задел.</p>
     <div class="fed-months mt-4">
       <div v-for="s in overview.signals" :key="s.kind" class="fed-month">
         <span class="fed-month-name">{{ classLabel(s.kind) }}</span>
@@ -123,10 +118,7 @@
       <h2 class="section-title">Доверие к нодам</h2>
       <span v-if="nodes.accused" class="admin-pill is-offline">обвиняемых: {{ nodes.accused }}</span>
     </div>
-    <p class="admin-muted mt-1">
-      Репутация под выплаты, а не под выдачу: из ротации ноду убирают замеры зондов. Здесь её цифры сверяются с тем, что
-      подписали клиенты, и от этого зависит, сколько ей причитается.
-    </p>
+    <p class="admin-muted mt-1">Цифры ноды против того, что подписали клиенты. От расхождения зависит начисление.</p>
     <SamsungSectionLoader v-if="nodesLoading" />
     <p v-else-if="!nodes.list.length" class="state-hint mt-4">Нод пока нет.</p>
     <div v-else class="fed-node-list mt-4">
@@ -178,10 +170,7 @@
       <p v-else class="state-hint mt-4">Сырых сигналов не осталось, их вес истёк.</p>
 
       <h3 class="section-title mt-6 text-[15px]">Куда ходил</h3>
-      <p class="admin-muted mt-1">
-        Чаще всего за неделю. Разбор нужен, чтобы отрезать мошенника, а не чтобы собирать историю посещений, и
-        наблюдения не хранятся дольше месяца.
-      </p>
+      <p class="admin-muted mt-1">Чаще всего за неделю. Наблюдения хранятся месяц.</p>
       <div v-if="detail.domains && detail.domains.length" class="fed-node-list mt-3">
         <div v-for="d in detail.domains" :key="d.domain" class="fed-node-row">
           <div class="min-w-0 flex-1">

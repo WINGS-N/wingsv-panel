@@ -4,10 +4,7 @@
       <h2 class="section-title">Флот</h2>
       <span v-if="fleet.config_version" class="admin-pill is-info">конфиг {{ fleet.config_version }}</span>
     </div>
-    <p class="body-copy body-copy-wide">
-      Какие сборки несут все ноды сразу. Версия выбирается из релизов нашего форка - апстримовый Xray не несёт патчей
-      WINGS, и нода с ним выглядит здоровым, пока статистика по пирам остаётся пустой.
-    </p>
+    <p class="body-copy body-copy-wide">Какие сборки несут все ноды сразу. Версии берутся из релизов нашего форка.</p>
     <p v-if="loadError" class="state-error mt-3">{{ loadError }}</p>
 
     <div class="form-grid mt-5">
