@@ -40,6 +40,9 @@ const (
 	FederationHead_OracleOverview_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/OracleOverview"
 	FederationHead_OracleSubject_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/OracleSubject"
 	FederationHead_OracleNodes_FullMethodName       = "/wingsv.headpanel.v1.FederationHead/OracleNodes"
+	FederationHead_SetPayoutAddress_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetPayoutAddress"
+	FederationHead_PayoutStatement_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/PayoutStatement"
+	FederationHead_Epochs_FullMethodName            = "/wingsv.headpanel.v1.FederationHead/Epochs"
 )
 
 // FederationHeadClient is the client API for FederationHead service.
@@ -90,6 +93,12 @@ type FederationHeadClient interface {
 	OracleSubject(ctx context.Context, in *OracleSubjectRequest, opts ...grpc.CallOption) (*OracleSubjectResponse, error)
 	// Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
 	OracleNodes(ctx context.Context, in *OracleNodesRequest, opts ...grpc.CallOption) (*OracleNodesResponse, error)
+	// Деньги донора: куда платить и что уже начислено. Голова считает и хранит,
+	// цепочка потом только фиксирует посчитанное
+	SetPayoutAddress(ctx context.Context, in *SetPayoutAddressRequest, opts ...grpc.CallOption) (*SetPayoutAddressResponse, error)
+	PayoutStatement(ctx context.Context, in *PayoutStatementRequest, opts ...grpc.CallOption) (*PayoutStatementResponse, error)
+	// Все эпохи разом - это уже владельцу площадки, а не донору
+	Epochs(ctx context.Context, in *EpochsRequest, opts ...grpc.CallOption) (*EpochsResponse, error)
 }
 
 type federationHeadClient struct {
@@ -283,6 +292,36 @@ func (c *federationHeadClient) OracleNodes(ctx context.Context, in *OracleNodesR
 	return out, nil
 }
 
+func (c *federationHeadClient) SetPayoutAddress(ctx context.Context, in *SetPayoutAddressRequest, opts ...grpc.CallOption) (*SetPayoutAddressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetPayoutAddressResponse)
+	err := c.cc.Invoke(ctx, FederationHead_SetPayoutAddress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) PayoutStatement(ctx context.Context, in *PayoutStatementRequest, opts ...grpc.CallOption) (*PayoutStatementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PayoutStatementResponse)
+	err := c.cc.Invoke(ctx, FederationHead_PayoutStatement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) Epochs(ctx context.Context, in *EpochsRequest, opts ...grpc.CallOption) (*EpochsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EpochsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_Epochs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationHeadServer is the server API for FederationHead service.
 // All implementations must embed UnimplementedFederationHeadServer
 // for forward compatibility.
@@ -331,6 +370,12 @@ type FederationHeadServer interface {
 	OracleSubject(context.Context, *OracleSubjectRequest) (*OracleSubjectResponse, error)
 	// Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
 	OracleNodes(context.Context, *OracleNodesRequest) (*OracleNodesResponse, error)
+	// Деньги донора: куда платить и что уже начислено. Голова считает и хранит,
+	// цепочка потом только фиксирует посчитанное
+	SetPayoutAddress(context.Context, *SetPayoutAddressRequest) (*SetPayoutAddressResponse, error)
+	PayoutStatement(context.Context, *PayoutStatementRequest) (*PayoutStatementResponse, error)
+	// Все эпохи разом - это уже владельцу площадки, а не донору
+	Epochs(context.Context, *EpochsRequest) (*EpochsResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
 }
 
@@ -394,6 +439,15 @@ func (UnimplementedFederationHeadServer) OracleSubject(context.Context, *OracleS
 }
 func (UnimplementedFederationHeadServer) OracleNodes(context.Context, *OracleNodesRequest) (*OracleNodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OracleNodes not implemented")
+}
+func (UnimplementedFederationHeadServer) SetPayoutAddress(context.Context, *SetPayoutAddressRequest) (*SetPayoutAddressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetPayoutAddress not implemented")
+}
+func (UnimplementedFederationHeadServer) PayoutStatement(context.Context, *PayoutStatementRequest) (*PayoutStatementResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PayoutStatement not implemented")
+}
+func (UnimplementedFederationHeadServer) Epochs(context.Context, *EpochsRequest) (*EpochsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Epochs not implemented")
 }
 func (UnimplementedFederationHeadServer) mustEmbedUnimplementedFederationHeadServer() {}
 func (UnimplementedFederationHeadServer) testEmbeddedByValue()                        {}
@@ -729,6 +783,60 @@ func _FederationHead_OracleNodes_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_SetPayoutAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPayoutAddressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).SetPayoutAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_SetPayoutAddress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).SetPayoutAddress(ctx, req.(*SetPayoutAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_PayoutStatement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PayoutStatementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).PayoutStatement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_PayoutStatement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).PayoutStatement(ctx, req.(*PayoutStatementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_Epochs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EpochsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).Epochs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_Epochs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).Epochs(ctx, req.(*EpochsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationHead_ServiceDesc is the grpc.ServiceDesc for FederationHead service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -803,6 +911,18 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OracleNodes",
 			Handler:    _FederationHead_OracleNodes_Handler,
+		},
+		{
+			MethodName: "SetPayoutAddress",
+			Handler:    _FederationHead_SetPayoutAddress_Handler,
+		},
+		{
+			MethodName: "PayoutStatement",
+			Handler:    _FederationHead_PayoutStatement_Handler,
+		},
+		{
+			MethodName: "Epochs",
+			Handler:    _FederationHead_Epochs_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

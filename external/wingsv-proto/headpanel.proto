@@ -51,6 +51,12 @@ service FederationHead {
   rpc OracleSubject(OracleSubjectRequest) returns (OracleSubjectResponse);
   // Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
   rpc OracleNodes(OracleNodesRequest) returns (OracleNodesResponse);
+  // Деньги донора: куда платить и что уже начислено. Голова считает и хранит,
+  // цепочка потом только фиксирует посчитанное
+  rpc SetPayoutAddress(SetPayoutAddressRequest) returns (SetPayoutAddressResponse);
+  rpc PayoutStatement(PayoutStatementRequest) returns (PayoutStatementResponse);
+  // Все эпохи разом - это уже владельцу площадки, а не донору
+  rpc Epochs(EpochsRequest) returns (EpochsResponse);
 }
 
 enum LiveScope {
@@ -499,4 +505,60 @@ message OracleOverviewResponse {
   repeated OracleClass signals = 6;
   string scorer = 7;
   string shadow_scorer = 8;
+}
+
+message SetPayoutAddressRequest {
+  string donor_id = 1;
+  // Кошелёк Solana. Пустой стирает: донор вправе передумать и уйти из выплат
+  string address = 2;
+}
+
+message SetPayoutAddressResponse {}
+
+message PayoutStatementRequest {
+  string donor_id = 1;
+  // Сколько последних эпох вернуть, 0 - двадцать
+  uint32 limit = 2;
+}
+
+// EpochAccrual - что донору начислено в одной эпохе
+message EpochAccrual {
+  uint64 number = 1;
+  int64 start_unix = 2;
+  int64 end_unix = 3;
+  // Micro - миллионные доли USDT, потому что деньги считаются целыми
+  uint64 amount_micro = 4;
+  // Root и tx_ref заполняются, когда корень уехал в цепочку. Пустой tx_ref
+  // означает, что эпоха посчитана, но клеймить пока не по чему
+  string root_hex = 5;
+  string tx_ref = 6;
+  int64 published_unix = 7;
+}
+
+message PayoutStatementResponse {
+  string address = 1;
+  repeated EpochAccrual epochs = 2;
+  uint64 total_micro = 3;
+  // Сколько уже опубликовано в цепочке, то есть доступно к клейму
+  uint64 claimable_micro = 4;
+}
+
+message EpochsRequest {
+  uint32 limit = 1;
+}
+
+// EpochSummary - эпоха целиком, без разбивки по донорам
+message EpochSummary {
+  uint64 number = 1;
+  int64 start_unix = 2;
+  int64 end_unix = 3;
+  uint64 total_micro = 4;
+  uint32 leaves = 5;
+  string root_hex = 6;
+  string tx_ref = 7;
+  int64 published_unix = 8;
+}
+
+message EpochsResponse {
+  repeated EpochSummary epochs = 1;
 }

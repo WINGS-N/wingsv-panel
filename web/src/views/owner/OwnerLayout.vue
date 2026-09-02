@@ -66,6 +66,10 @@
             <ShieldCheck class="admin-nav-icon" aria-hidden="true" />
             <span>Oracle</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-payouts' }" active-class="is-active">
+            <Coins class="admin-nav-icon" aria-hidden="true" />
+            <span>Выплаты</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-audit' }" active-class="is-active">
             <ClipboardList class="admin-nav-icon" aria-hidden="true" />
             <span>Аудит</span>
@@ -91,6 +95,7 @@ import {
   Boxes,
   ArrowLeft,
   ClipboardList,
+  Coins,
   LayoutDashboard,
   LogOut,
   Network,

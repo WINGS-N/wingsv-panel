@@ -91,6 +91,51 @@
     </div>
   </section>
 
+  <section v-if="enabled && payouts.enabled" class="surface-card mt-6">
+    <div class="federation-live-head">
+      <h2 class="section-title">Выплаты</h2>
+      <span v-if="payouts.total_micro" class="admin-pill is-info">{{ usdt(payouts.total_micro) }} USDT начислено</span>
+    </div>
+    <p class="admin-muted mt-1">Начисляется за трафик, который подписали клиенты. Период закрывается раз в неделю.</p>
+    <p v-if="payouts.note" class="state-hint mt-3">{{ payouts.note }}</p>
+    <template v-else>
+      <div class="mt-4 flex flex-wrap items-end gap-3">
+        <OneuiInput
+          v-model="walletDraft"
+          label="Кошелёк Solana (USDT)"
+          placeholder="адрес, на который платить"
+          class="min-w-[280px] flex-1"
+        />
+        <SamsungButton :busy="savingWallet" @click="saveWallet">
+          <template #icon><Wallet class="button-icon" aria-hidden="true" /></template>
+          Сохранить
+        </SamsungButton>
+      </div>
+      <p v-if="walletError" class="state-error mt-2">{{ walletError }}</p>
+      <p v-else-if="!payouts.address" class="state-hint mt-2">
+        Без кошелька начисления копятся, но в расчётный период не попадают.
+      </p>
+
+      <div v-if="payouts.epochs.length" class="fed-node-list mt-4">
+        <div v-for="epoch in payouts.epochs" :key="epoch.number" class="fed-node-row">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[15px]">Эпоха {{ epoch.number }}</span>
+              <span class="admin-pill">{{ usdt(epoch.amount_micro) }} USDT</span>
+              <span class="admin-pill" :class="epoch.tx_ref ? 'is-online' : 'is-info'">
+                {{ epoch.tx_ref ? 'можно забирать' : 'посчитана' }}
+              </span>
+            </div>
+            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
+              <span>{{ epochDate(epoch.start_unix) }} - {{ epochDate(epoch.end_unix) }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <p v-else class="state-hint mt-4">Ни один период ещё не закрыт.</p>
+    </template>
+  </section>
+
   <section v-if="enabled && summary.months.length" class="surface-card mt-6">
     <h2 class="section-title">По месяцам</h2>
     <p class="admin-muted mt-1">Сколько трафика ушло через ваши серверы. Счётчик сверху обнуляется, этот - нет.</p>
@@ -188,6 +233,7 @@ import {
   Plus,
   Server,
   Users,
+  Wallet,
 } from 'lucide-vue-next';
 
 // Тот же цветовой код направления, что в приложении
@@ -196,7 +242,7 @@ const FLOW_DOWN = '#15b76f';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
-import { formatBytes, formatSpeed as rate } from '@/utils/format';
+import { formatBytes, formatSpeed as rate, formatUsdt as usdt } from '@/utils/format';
 
 const enabled = ref(false);
 const loading = ref(false);
@@ -227,11 +273,19 @@ const summary = reactive({
   months: [],
 });
 
+// Выплаты живут своей жизнью: их считают раз в период, и дёргать их вместе с
+// живыми счётчиками незачем
+const payouts = reactive({ enabled: false, note: '', address: '', total_micro: 0, claimable_micro: 0, epochs: [] });
+const walletDraft = ref('');
+const walletError = ref('');
+const savingWallet = ref(false);
+
 let timer = null;
 let live = null;
 
 onMounted(() => {
   load();
+  loadPayouts();
   // Список нод и их состояния приходят по REST: они меняются медленно, и
   // опрашивать их чаще смысла нет
   timer = setInterval(load, 20000);
@@ -254,6 +308,50 @@ onBeforeUnmount(() => {
     live = null;
   }
 });
+
+async function loadPayouts() {
+  try {
+    const res = await fetch('/api/admin/federation/payouts', { credentials: 'include' });
+    if (!res.ok) throw new Error(await errorText(res));
+    const data = await res.json();
+    Object.assign(payouts, {
+      enabled: Boolean(data.enabled),
+      note: data.error || '',
+      address: data.address || '',
+      total_micro: Number(data.total_micro || 0),
+      claimable_micro: Number(data.claimable_micro || 0),
+      epochs: data.epochs || [],
+    });
+    // Поле не перетираем, пока человек в нём печатает
+    if (!walletDraft.value) walletDraft.value = payouts.address;
+  } catch {
+    // Выплаты - не повод завалить весь раздел: счётчики трафика важнее
+  }
+}
+
+async function saveWallet() {
+  savingWallet.value = true;
+  walletError.value = '';
+  try {
+    const res = await fetch('/api/admin/federation/payouts/address', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: walletDraft.value.trim() }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    await loadPayouts();
+  } catch (err) {
+    walletError.value = String(err.message || err);
+  } finally {
+    savingWallet.value = false;
+  }
+}
+
+function epochDate(unix) {
+  if (!unix) return '';
+  return new Date(Number(unix) * 1000).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
+}
 
 async function load() {
   loading.value = true;

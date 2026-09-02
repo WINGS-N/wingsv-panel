@@ -34,3 +34,12 @@ export function formatUnix(seconds) {
     return String(s);
   }
 }
+
+// USDT считается целыми миллионными долями: перевести их во float означает
+// подарить или отнять у кого-то копейку, о которой никто не узнает
+export function formatUsdt(micro) {
+  const value = BigInt(micro || 0);
+  const whole = value / 1000000n;
+  const frac = (value % 1000000n).toString().padStart(6, '0').replace(/0+$/, '');
+  return frac ? `${whole}.${frac}` : String(whole);
+}

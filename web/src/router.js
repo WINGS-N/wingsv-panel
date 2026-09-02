@@ -24,6 +24,7 @@ import CabinetAccess from '@/views/cabinet/CabinetAccess.vue';
 import MatrixLanding from '@/views/MatrixLanding.vue';
 import OwnerOracle from '@/views/owner/OwnerOracle.vue';
 import OwnerOracleSubject from '@/views/owner/OwnerOracleSubject.vue';
+import OwnerPayouts from '@/views/owner/OwnerPayouts.vue';
 import OwnerProbes from '@/views/owner/OwnerProbes.vue';
 import OwnerFleet from '@/views/owner/OwnerFleet.vue';
 import OwnerClients from './views/owner/OwnerClients.vue';
@@ -104,6 +105,7 @@ const router = createRouter({
         { path: 'probes', component: OwnerProbes, name: 'owner-probes' },
         { path: 'oracle', component: OwnerOracle, name: 'owner-oracle' },
         { path: 'oracle/:id', component: OwnerOracleSubject, name: 'owner-oracle-subject' },
+        { path: 'payouts', component: OwnerPayouts, name: 'owner-payouts' },
         { path: 'audit', component: OwnerAudit, name: 'owner-audit' },
       ],
     },

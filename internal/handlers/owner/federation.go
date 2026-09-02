@@ -316,3 +316,43 @@ func windowHours(r *http.Request) uint32 {
 	}
 	return uint32(n)
 }
+
+// handleEpochs показывает владельцу закрытые расчётные периоды: сколько
+// начислено, скольким донорам и уехал ли корень в цепочку
+func (h *Handler) handleEpochs(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if h.fed == nil || !h.fed.Enabled() {
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": false})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), headTimeout)
+	defer cancel()
+	limit, _ := pageParams(r, 25)
+	got, err := h.fed.Epochs(ctx, limit)
+	if err != nil {
+		// Голова без настроенной ставки отвечает Unimplemented: это состояние,
+		// а не поломка, и раздел остаётся с объяснением вместо цифр
+		writeJSON(w, http.StatusOK, map[string]any{
+			"enabled": true,
+			"error":   "выплаты пока не считаются: " + err.Error(),
+		})
+		return
+	}
+	epochs := make([]map[string]any, 0, len(got.GetEpochs()))
+	var total uint64
+	for _, e := range got.GetEpochs() {
+		epochs = append(epochs, map[string]any{
+			"number": e.GetNumber(), "start_unix": e.GetStartUnix(), "end_unix": e.GetEndUnix(),
+			"total_micro": e.GetTotalMicro(), "leaves": e.GetLeaves(),
+			"root_hex": e.GetRootHex(), "tx_ref": e.GetTxRef(),
+			"published_unix": e.GetPublishedUnix(),
+		})
+		total += e.GetTotalMicro()
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"enabled": true, "epochs": epochs, "total_micro": total,
+	})
+}

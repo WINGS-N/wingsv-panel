@@ -271,6 +271,34 @@ func (c *Client) OracleSubject(ctx context.Context, req *headpb.OracleSubjectReq
 	return client.OracleSubject(ctx, req)
 }
 
+// PayoutStatement - что донору начислено и куда ему платить
+func (c *Client) PayoutStatement(ctx context.Context, donorID string, limit uint32) (*headpb.PayoutStatementResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.PayoutStatement(ctx, &headpb.PayoutStatementRequest{DonorId: donorID, Limit: limit})
+}
+
+// SetPayoutAddress записывает кошелёк донора
+func (c *Client) SetPayoutAddress(ctx context.Context, donorID, address string) error {
+	client, err := c.dial()
+	if err != nil {
+		return err
+	}
+	_, err = client.SetPayoutAddress(ctx, &headpb.SetPayoutAddressRequest{DonorId: donorID, Address: address})
+	return err
+}
+
+// Epochs - закрытые расчётные периоды целиком, это уже владельцу площадки
+func (c *Client) Epochs(ctx context.Context, limit uint32) (*headpb.EpochsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.Epochs(ctx, &headpb.EpochsRequest{Limit: limit})
+}
+
 // retryDelay is how long the live loop waits before re-dialing a head that is
 // down. Long enough not to hammer it, short enough that the counter comes back
 // on its own after a head restart.
