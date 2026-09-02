@@ -37,6 +37,10 @@
             <UserPlus class="admin-nav-icon" aria-hidden="true" />
             <span>Приглашения</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'cabinet-donate' }" active-class="is-active">
+            <HeartHandshake class="admin-nav-icon" aria-hidden="true" />
+            <span>Поддержать</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'cabinet-account' }" active-class="is-active">
             <UserCog class="admin-nav-icon" aria-hidden="true" />
             <span>Аккаунт</span>
@@ -60,7 +64,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { LogOut, SlidersHorizontal, Ticket, UserCog, UserPlus } from 'lucide-vue-next';
+import { HeartHandshake, LogOut, SlidersHorizontal, Ticket, UserCog, UserPlus } from 'lucide-vue-next';
 import { authState, logout, myAvatarUrl, refreshSession } from '@/stores/auth.js';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 

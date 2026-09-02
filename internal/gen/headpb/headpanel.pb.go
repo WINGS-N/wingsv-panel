@@ -219,7 +219,7 @@ type GlobalCounters struct {
 	// Survives a restart, and a node leaving does not take its share away with it
 	LifetimeBytes uint64 `protobuf:"varint,9,opt,name=lifetime_bytes,json=lifetimeBytes,proto3" json:"lifetime_bytes,omitempty"`
 	// С начала текущего периода бюджета. Считается от сохранённой отметки, а не
-	// от счётчиков в памяти, поэтому переживает выкат головы
+	// от счётчиков в памяти, поэтому переживает выкат башки
 	PeriodBytes uint64 `protobuf:"varint,10,opt,name=period_bytes,json=periodBytes,proto3" json:"period_bytes,omitempty"`
 	// Часть перенесённого, которую сожгли проверки зондов. Донору это считается
 	// как обычный трафик, но он вправе знать, сколько ушло на наши замеры
@@ -1723,7 +1723,7 @@ type FleetSettings struct {
 	// Ставить новую сборку сразу, как только она приехала. Перезапуск рвёт живые
 	// соединения, поэтому по умолчанию выключено.
 	AutoUpgrade bool `protobuf:"varint,3,opt,name=auto_upgrade,json=autoUpgrade,proto3" json:"auto_upgrade,omitempty"`
-	// Чью tls-личность занимает REALITY. Пусто и auto_dest - голова выбирает сама
+	// Чью tls-личность занимает REALITY. Пусто и auto_dest - башка выбирает сама
 	// из проверенного пула.
 	RealityDest string `protobuf:"bytes,4,opt,name=reality_dest,json=realityDest,proto3" json:"reality_dest,omitempty"`
 	AutoDest    bool   `protobuf:"varint,5,opt,name=auto_dest,json=autoDest,proto3" json:"auto_dest,omitempty"`
@@ -1732,7 +1732,7 @@ type FleetSettings struct {
 	PostQuantum bool   `protobuf:"varint,6,opt,name=post_quantum,json=postQuantum,proto3" json:"post_quantum,omitempty"`
 	TcpPort     uint32 `protobuf:"varint,7,opt,name=tcp_port,json=tcpPort,proto3" json:"tcp_port,omitempty"`
 	XhttpPort   uint32 `protobuf:"varint,8,opt,name=xhttp_port,json=xhttpPort,proto3" json:"xhttp_port,omitempty"`
-	// Версия конфига, которую голова разослала после последнего изменения
+	// Версия конфига, которую башка разослала после последнего изменения
 	ConfigVersion uint64 `protobuf:"varint,9,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	// Сколько целей в проверенном пуле. Ноды разводятся по нему, поэтому dest в
 	// поле выше - лишь та, что досталась бы ноде без своей записи
@@ -2530,7 +2530,7 @@ type OracleOverviewRequest struct {
 	Limit  uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset uint32 `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
 	// Когда список задан, отдаются вердикты только по нему. Так панель считает
-	// ветку инвайт-дерева: голова про дерево не знает и знать не должна
+	// ветку инвайт-дерева: башка про дерево не знает и знать не должна
 	SubjectIds    []string `protobuf:"bytes,2,rep,name=subject_ids,json=subjectIds,proto3" json:"subject_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3283,7 +3283,7 @@ func (x *OracleClass) GetSubjects() uint32 {
 }
 
 // OracleSubject - вердикт вместе с тем, что к нему привело. Субъект тут
-// профиль, а не человек: у головы нет ни имени, ни почты, ни адреса
+// профиль, а не человек: у башки нет ни имени, ни почты, ни адреса
 type OracleSubject struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	SubjectId  string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
@@ -4155,6 +4155,120 @@ func (x *ReportInviteTreeResponse) GetSubjects() uint32 {
 	return 0
 }
 
+type ReportDonationRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	SubjectId   string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	AmountMicro uint64                 `protobuf:"varint,2,opt,name=amount_micro,json=amountMicro,proto3" json:"amount_micro,omitempty"`
+	AtUnix      int64                  `protobuf:"varint,3,opt,name=at_unix,json=atUnix,proto3" json:"at_unix,omitempty"`
+	// Подпись транзакции - чтобы один занос не засчитали дважды
+	Reference     string `protobuf:"bytes,4,opt,name=reference,proto3" json:"reference,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportDonationRequest) Reset() {
+	*x = ReportDonationRequest{}
+	mi := &file_headpanel_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportDonationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportDonationRequest) ProtoMessage() {}
+
+func (x *ReportDonationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportDonationRequest.ProtoReflect.Descriptor instead.
+func (*ReportDonationRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *ReportDonationRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *ReportDonationRequest) GetAmountMicro() uint64 {
+	if x != nil {
+		return x.AmountMicro
+	}
+	return 0
+}
+
+func (x *ReportDonationRequest) GetAtUnix() int64 {
+	if x != nil {
+		return x.AtUnix
+	}
+	return 0
+}
+
+func (x *ReportDonationRequest) GetReference() string {
+	if x != nil {
+		return x.Reference
+	}
+	return ""
+}
+
+type ReportDonationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Credit - сколько очков доверия занос даёт прямо сейчас
+	Credit        float64 `protobuf:"fixed64,1,opt,name=credit,proto3" json:"credit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportDonationResponse) Reset() {
+	*x = ReportDonationResponse{}
+	mi := &file_headpanel_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportDonationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportDonationResponse) ProtoMessage() {}
+
+func (x *ReportDonationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportDonationResponse.ProtoReflect.Descriptor instead.
+func (*ReportDonationResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *ReportDonationResponse) GetCredit() float64 {
+	if x != nil {
+		return x.Credit
+	}
+	return 0
+}
+
 var File_headpanel_proto protoreflect.FileDescriptor
 
 const file_headpanel_proto_rawDesc = "" +
@@ -4493,12 +4607,20 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x17ReportInviteTreeRequest\x12@\n" +
 	"\bsubjects\x18\x01 \x03(\v2$.wingsv.headpanel.v1.SubjectAncestryR\bsubjects\"6\n" +
 	"\x18ReportInviteTreeResponse\x12\x1a\n" +
-	"\bsubjects\x18\x01 \x01(\rR\bsubjects*i\n" +
+	"\bsubjects\x18\x01 \x01(\rR\bsubjects\"\x90\x01\n" +
+	"\x15ReportDonationRequest\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12!\n" +
+	"\famount_micro\x18\x02 \x01(\x04R\vamountMicro\x12\x17\n" +
+	"\aat_unix\x18\x03 \x01(\x03R\x06atUnix\x12\x1c\n" +
+	"\treference\x18\x04 \x01(\tR\treference\"0\n" +
+	"\x16ReportDonationResponse\x12\x16\n" +
+	"\x06credit\x18\x01 \x01(\x01R\x06credit*i\n" +
 	"\tLiveScope\x12\x1a\n" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\xaa\x11\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\x95\x12\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -4524,7 +4646,8 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x10SetPayoutAddress\x12,.wingsv.headpanel.v1.SetPayoutAddressRequest\x1a-.wingsv.headpanel.v1.SetPayoutAddressResponse\x12l\n" +
 	"\x0fPayoutStatement\x12+.wingsv.headpanel.v1.PayoutStatementRequest\x1a,.wingsv.headpanel.v1.PayoutStatementResponse\x12Q\n" +
 	"\x06Epochs\x12\".wingsv.headpanel.v1.EpochsRequest\x1a#.wingsv.headpanel.v1.EpochsResponse\x12o\n" +
-	"\x10ReportInviteTree\x12,.wingsv.headpanel.v1.ReportInviteTreeRequest\x1a-.wingsv.headpanel.v1.ReportInviteTreeResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
+	"\x10ReportInviteTree\x12,.wingsv.headpanel.v1.ReportInviteTreeRequest\x1a-.wingsv.headpanel.v1.ReportInviteTreeResponse\x12i\n" +
+	"\x0eReportDonation\x12*.wingsv.headpanel.v1.ReportDonationRequest\x1a+.wingsv.headpanel.v1.ReportDonationResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
 
 var (
 	file_headpanel_proto_rawDescOnce sync.Once
@@ -4539,7 +4662,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 60)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -4600,6 +4723,8 @@ var file_headpanel_proto_goTypes = []any{
 	(*SubjectAncestry)(nil),          // 56: wingsv.headpanel.v1.SubjectAncestry
 	(*ReportInviteTreeRequest)(nil),  // 57: wingsv.headpanel.v1.ReportInviteTreeRequest
 	(*ReportInviteTreeResponse)(nil), // 58: wingsv.headpanel.v1.ReportInviteTreeResponse
+	(*ReportDonationRequest)(nil),    // 59: wingsv.headpanel.v1.ReportDonationRequest
+	(*ReportDonationResponse)(nil),   // 60: wingsv.headpanel.v1.ReportDonationResponse
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -4646,30 +4771,32 @@ var file_headpanel_proto_depIdxs = []int32{
 	50, // 41: wingsv.headpanel.v1.FederationHead.PayoutStatement:input_type -> wingsv.headpanel.v1.PayoutStatementRequest
 	53, // 42: wingsv.headpanel.v1.FederationHead.Epochs:input_type -> wingsv.headpanel.v1.EpochsRequest
 	57, // 43: wingsv.headpanel.v1.FederationHead.ReportInviteTree:input_type -> wingsv.headpanel.v1.ReportInviteTreeRequest
-	4,  // 44: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 45: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	13, // 46: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 47: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	10, // 48: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
-	18, // 49: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	20, // 50: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	16, // 51: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	22, // 52: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	29, // 53: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
-	24, // 54: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	24, // 55: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	27, // 56: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
-	35, // 57: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
-	32, // 58: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
-	47, // 59: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
-	40, // 60: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
-	44, // 61: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
-	49, // 62: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:output_type -> wingsv.headpanel.v1.SetPayoutAddressResponse
-	52, // 63: wingsv.headpanel.v1.FederationHead.PayoutStatement:output_type -> wingsv.headpanel.v1.PayoutStatementResponse
-	55, // 64: wingsv.headpanel.v1.FederationHead.Epochs:output_type -> wingsv.headpanel.v1.EpochsResponse
-	58, // 65: wingsv.headpanel.v1.FederationHead.ReportInviteTree:output_type -> wingsv.headpanel.v1.ReportInviteTreeResponse
-	44, // [44:66] is the sub-list for method output_type
-	22, // [22:44] is the sub-list for method input_type
+	59, // 44: wingsv.headpanel.v1.FederationHead.ReportDonation:input_type -> wingsv.headpanel.v1.ReportDonationRequest
+	4,  // 45: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 46: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	13, // 47: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 48: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	10, // 49: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
+	18, // 50: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	20, // 51: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	16, // 52: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	22, // 53: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	29, // 54: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
+	24, // 55: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 56: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	27, // 57: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	35, // 58: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
+	32, // 59: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
+	47, // 60: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
+	40, // 61: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
+	44, // 62: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
+	49, // 63: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:output_type -> wingsv.headpanel.v1.SetPayoutAddressResponse
+	52, // 64: wingsv.headpanel.v1.FederationHead.PayoutStatement:output_type -> wingsv.headpanel.v1.PayoutStatementResponse
+	55, // 65: wingsv.headpanel.v1.FederationHead.Epochs:output_type -> wingsv.headpanel.v1.EpochsResponse
+	58, // 66: wingsv.headpanel.v1.FederationHead.ReportInviteTree:output_type -> wingsv.headpanel.v1.ReportInviteTreeResponse
+	60, // 67: wingsv.headpanel.v1.FederationHead.ReportDonation:output_type -> wingsv.headpanel.v1.ReportDonationResponse
+	45, // [45:68] is the sub-list for method output_type
+	22, // [22:45] is the sub-list for method input_type
 	22, // [22:22] is the sub-list for extension type_name
 	22, // [22:22] is the sub-list for extension extendee
 	0,  // [0:22] is the sub-list for field type_name
@@ -4686,7 +4813,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   58,
+			NumMessages:   60,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

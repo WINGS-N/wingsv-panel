@@ -51,16 +51,19 @@ service FederationHead {
   rpc OracleSubject(OracleSubjectRequest) returns (OracleSubjectResponse);
   // Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
   rpc OracleNodes(OracleNodesRequest) returns (OracleNodesResponse);
-  // Деньги донора: куда платить и что уже начислено. Голова считает и хранит,
+  // Деньги донора: куда платить и что уже начислено. Башка считает и хранит,
   // цепочка потом только фиксирует посчитанное
   rpc SetPayoutAddress(SetPayoutAddressRequest) returns (SetPayoutAddressResponse);
   rpc PayoutStatement(PayoutStatementRequest) returns (PayoutStatementResponse);
   // Все эпохи разом - это уже владельцу площадки, а не донору
   rpc Epochs(EpochsRequest) returns (EpochsResponse);
-  // Дерево инвайтов живёт в панели, а трафик в голове. Без этой карты голова не
+  // Дерево инвайтов живёт в панели, а трафик в башке. Без этой карты башка не
   // отличит донора, обслуживающего чужих людей, от донора, возящего трафик
   // собственным приглашённым ради выплаты
   rpc ReportInviteTree(ReportInviteTreeRequest) returns (ReportInviteTreeResponse);
+  // Занос в общий котёл греет доверие: кто донатит, тот не ферма. Проверку
+  // транзакции делает панель, башка получает уже подтверждённое
+  rpc ReportDonation(ReportDonationRequest) returns (ReportDonationResponse);
 }
 
 enum LiveScope {
@@ -97,7 +100,7 @@ message GlobalCounters {
   // Survives a restart, and a node leaving does not take its share away with it
   uint64 lifetime_bytes = 9;
   // С начала текущего периода бюджета. Считается от сохранённой отметки, а не
-  // от счётчиков в памяти, поэтому переживает выкат головы
+  // от счётчиков в памяти, поэтому переживает выкат башки
   uint64 period_bytes = 10;
   // Часть перенесённого, которую сожгли проверки зондов. Донору это считается
   // как обычный трафик, но он вправе знать, сколько ушло на наши замеры
@@ -288,7 +291,7 @@ message FleetSettings {
   // Ставить новую сборку сразу, как только она приехала. Перезапуск рвёт живые
   // соединения, поэтому по умолчанию выключено.
   bool auto_upgrade = 3;
-  // Чью tls-личность занимает REALITY. Пусто и auto_dest - голова выбирает сама
+  // Чью tls-личность занимает REALITY. Пусто и auto_dest - башка выбирает сама
   // из проверенного пула.
   string reality_dest = 4;
   bool auto_dest = 5;
@@ -297,7 +300,7 @@ message FleetSettings {
   bool post_quantum = 6;
   uint32 tcp_port = 7;
   uint32 xhttp_port = 8;
-  // Версия конфига, которую голова разослала после последнего изменения
+  // Версия конфига, которую башка разослала после последнего изменения
   uint64 config_version = 9;
   // Сколько целей в проверенном пуле. Ноды разводятся по нему, поэтому dest в
   // поле выше - лишь та, что досталась бы ноде без своей записи
@@ -383,7 +386,7 @@ message OracleOverviewRequest {
   uint32 limit = 1;
   uint32 offset = 3;
   // Когда список задан, отдаются вердикты только по нему. Так панель считает
-  // ветку инвайт-дерева: голова про дерево не знает и знать не должна
+  // ветку инвайт-дерева: башка про дерево не знает и знать не должна
   repeated string subject_ids = 2;
 }
 
@@ -478,7 +481,7 @@ message OracleClass {
 }
 
 // OracleSubject - вердикт вместе с тем, что к нему привело. Субъект тут
-// профиль, а не человек: у головы нет ни имени, ни почты, ни адреса
+// профиль, а не человек: у башки нет ни имени, ни почты, ни адреса
 message OracleSubject {
   string subject_id = 1;
   int32 confidence = 2;
@@ -582,4 +585,17 @@ message ReportInviteTreeRequest {
 
 message ReportInviteTreeResponse {
   uint32 subjects = 1;
+}
+
+message ReportDonationRequest {
+  string subject_id = 1;
+  uint64 amount_micro = 2;
+  int64 at_unix = 3;
+  // Подпись транзакции - чтобы один занос не засчитали дважды
+  string reference = 4;
+}
+
+message ReportDonationResponse {
+  // Credit - сколько очков доверия занос даёт прямо сейчас
+  double credit = 1;
 }

@@ -315,6 +315,22 @@ func (c *Client) ReportInviteTree(ctx context.Context, subjects []*headpb.Subjec
 	return got.GetSubjects(), nil
 }
 
+// ReportDonation засчитывает занос и возвращает, на сколько очков он греет
+// доверие. Нулевая сумма означает "просто скажи текущий кредит"
+func (c *Client) ReportDonation(ctx context.Context, subjectID string, amountMicro uint64, atUnix int64, reference string) (float64, error) {
+	client, err := c.dial()
+	if err != nil {
+		return 0, err
+	}
+	got, err := client.ReportDonation(ctx, &headpb.ReportDonationRequest{
+		SubjectId: subjectID, AmountMicro: amountMicro, AtUnix: atUnix, Reference: reference,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return got.GetCredit(), nil
+}
+
 // retryDelay is how long the live loop waits before re-dialing a head that is
 // down. Long enough not to hammer it, short enough that the counter comes back
 // on its own after a head restart.

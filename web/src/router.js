@@ -21,6 +21,7 @@ import OwnerAdmins from './views/owner/OwnerAdmins.vue';
 import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
 import CabinetLayout from '@/views/cabinet/CabinetLayout.vue';
 import CabinetAccess from '@/views/cabinet/CabinetAccess.vue';
+import CabinetDonate from '@/views/cabinet/CabinetDonate.vue';
 import MatrixLanding from '@/views/MatrixLanding.vue';
 import OwnerOracle from '@/views/owner/OwnerOracle.vue';
 import OwnerOracleSubject from '@/views/owner/OwnerOracleSubject.vue';
@@ -41,6 +42,7 @@ const router = createRouter({
       children: [
         { path: '', component: CabinetAccess, name: 'cabinet-access' },
         { path: 'invites', component: AdminInvites, name: 'cabinet-invites' },
+        { path: 'donate', component: CabinetDonate, name: 'cabinet-donate' },
         { path: 'account', component: AdminAccount, name: 'cabinet-account' },
       ],
     },

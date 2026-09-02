@@ -408,6 +408,7 @@ func All() []any {
 	return []any{
 		&Admin{},
 		&Blob{},
+		&Donation{},
 		&AdminSession{},
 		&Client{},
 		&InviteToken{},
@@ -442,6 +443,26 @@ func All() []any {
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(All()...)
 }
+
+// Donation - занос деньгами в общий котёл или на разработку.
+//
+// Держим у себя, а не только в башке: башка про аккаунты не знает ничего, а
+// человеку надо показать его же историю заносов
+type Donation struct {
+	ID      uint64 `gorm:"column:id;primaryKey"`
+	AdminID int64  `gorm:"column:admin_id;index;not null"`
+	// Kind - traffic или dev. Первый идёт в общий котёл и греет доверие, второй
+	// нам на разработку и не греет нихуя
+	Kind string `gorm:"column:kind;not null;default:'traffic'"`
+	// Reference - подпись транзакции, уникальна: один занос засчитывается ровно
+	// раз, иначе доверие раздаётся за чужие деньги
+	Reference   string `gorm:"column:reference;uniqueIndex;not null"`
+	AmountMicro int64  `gorm:"column:amount_micro;not null"`
+	AtUnix      int64  `gorm:"column:at;not null"`
+}
+
+// TableName задаёт имя таблицы
+func (Donation) TableName() string { return "donations" }
 
 // InviteRedemption - один погашенный код одним аккаунтом
 type InviteRedemption struct {

@@ -148,6 +148,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/federation/summary", h.requirePanel(h.handleFederationSummary))
 	mux.HandleFunc("/api/admin/federation/enroll-token", h.requirePanel(h.handleFederationEnrollToken))
 	mux.HandleFunc("/api/admin/federation/live", h.requirePanel(h.handleFederationLive))
+	mux.HandleFunc("/api/admin/donations", h.requireAuth(h.handleDonations))
+	mux.HandleFunc("/api/admin/donations/claim", h.requireAuth(h.handleClaimDonation))
 	mux.HandleFunc("/api/admin/federation/payouts", h.requirePanel(h.handlePayoutStatement))
 	mux.HandleFunc("/api/admin/federation/payouts/address", h.requirePanel(h.handlePayoutAddress))
 	mux.HandleFunc("/api/admin/federation/nodes/", h.requirePanel(h.handleFederationNodeState))
