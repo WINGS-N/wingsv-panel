@@ -414,9 +414,10 @@ message OracleNode {
   string hostname = 2;
   string donor_id = 3;
   int32 trust = 4;
-  // Suspect - новых юзеров не даём, Benched - вывели из выдачи совсем
-  bool suspect = 5;
-  bool benched = 6;
+  // Про ВЫПЛАТЫ, не про выдачу: тёмную ноду из ротации убирают зонды, а тут
+  // решается, сколько ей причитается
+  bool payout_reduced = 5;
+  bool payout_stopped = 6;
   // Reasons - за что именно, чтобы донору было что предъявить
   repeated OracleNodeReason reasons = 7;
   // Probes - как нода выглядит из страны, Uptime - сколько держится

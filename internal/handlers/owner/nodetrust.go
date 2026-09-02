@@ -9,8 +9,8 @@ import (
 
 // handleOracleNodes отдаёт доверие к нодам.
 //
-// Судить надо обе стороны: человека мы ловим давно, а нода до сих пор считалась
-// честной по умолчанию, хотя пиздеть о трафике ей выгоднее всех
+// Это репутация под линейку выплат, а не под выдачу: из ротации тёмную ноду
+// убирают зонды, а тут решается, сколько ей причитается за отданный трафик
 func (h *Handler) handleOracleNodes(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -39,7 +39,7 @@ func (h *Handler) handleOracleNodes(w http.ResponseWriter, r *http.Request, _ st
 		nodes = append(nodes, map[string]any{
 			"node_id": n.GetNodeId(), "hostname": n.GetHostname(),
 			"donor_id": n.GetDonorId(), "trust": n.GetTrust(),
-			"suspect": n.GetSuspect(), "benched": n.GetBenched(),
+			"payout_reduced": n.GetPayoutReduced(), "payout_stopped": n.GetPayoutStopped(),
 			"probe_ok": n.GetProbeOk(), "probe_failed": n.GetProbeFailed(),
 			"uptime_pct": n.GetUptimePct(), "last_seen_unix": n.GetLastSeenUnix(),
 			"reasons": reasons,

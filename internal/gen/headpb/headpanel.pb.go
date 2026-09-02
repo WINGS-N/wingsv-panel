@@ -2855,9 +2855,10 @@ type OracleNode struct {
 	Hostname string                 `protobuf:"bytes,2,opt,name=hostname,proto3" json:"hostname,omitempty"`
 	DonorId  string                 `protobuf:"bytes,3,opt,name=donor_id,json=donorId,proto3" json:"donor_id,omitempty"`
 	Trust    int32                  `protobuf:"varint,4,opt,name=trust,proto3" json:"trust,omitempty"`
-	// Suspect - новых юзеров не даём, Benched - вывели из выдачи совсем
-	Suspect bool `protobuf:"varint,5,opt,name=suspect,proto3" json:"suspect,omitempty"`
-	Benched bool `protobuf:"varint,6,opt,name=benched,proto3" json:"benched,omitempty"`
+	// Про ВЫПЛАТЫ, не про выдачу: тёмную ноду из ротации убирают зонды, а тут
+	// решается, сколько ей причитается
+	PayoutReduced bool `protobuf:"varint,5,opt,name=payout_reduced,json=payoutReduced,proto3" json:"payout_reduced,omitempty"`
+	PayoutStopped bool `protobuf:"varint,6,opt,name=payout_stopped,json=payoutStopped,proto3" json:"payout_stopped,omitempty"`
 	// Reasons - за что именно, чтобы донору было что предъявить
 	Reasons []*OracleNodeReason `protobuf:"bytes,7,rep,name=reasons,proto3" json:"reasons,omitempty"`
 	// Probes - как нода выглядит из страны, Uptime - сколько держится
@@ -2927,16 +2928,16 @@ func (x *OracleNode) GetTrust() int32 {
 	return 0
 }
 
-func (x *OracleNode) GetSuspect() bool {
+func (x *OracleNode) GetPayoutReduced() bool {
 	if x != nil {
-		return x.Suspect
+		return x.PayoutReduced
 	}
 	return false
 }
 
-func (x *OracleNode) GetBenched() bool {
+func (x *OracleNode) GetPayoutStopped() bool {
 	if x != nil {
-		return x.Benched
+		return x.PayoutStopped
 	}
 	return false
 }
@@ -3682,15 +3683,15 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x15OracleSubjectResponse\x12<\n" +
 	"\asubject\x18\x01 \x01(\v2\".wingsv.headpanel.v1.OracleSubjectR\asubject\x12;\n" +
 	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\x12;\n" +
-	"\adomains\x18\x03 \x03(\v2!.wingsv.headpanel.v1.OracleDomainR\adomains\"\xea\x02\n" +
+	"\adomains\x18\x03 \x03(\v2!.wingsv.headpanel.v1.OracleDomainR\adomains\"\x84\x03\n" +
 	"\n" +
 	"OracleNode\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1a\n" +
 	"\bhostname\x18\x02 \x01(\tR\bhostname\x12\x19\n" +
 	"\bdonor_id\x18\x03 \x01(\tR\adonorId\x12\x14\n" +
-	"\x05trust\x18\x04 \x01(\x05R\x05trust\x12\x18\n" +
-	"\asuspect\x18\x05 \x01(\bR\asuspect\x12\x18\n" +
-	"\abenched\x18\x06 \x01(\bR\abenched\x12?\n" +
+	"\x05trust\x18\x04 \x01(\x05R\x05trust\x12%\n" +
+	"\x0epayout_reduced\x18\x05 \x01(\bR\rpayoutReduced\x12%\n" +
+	"\x0epayout_stopped\x18\x06 \x01(\bR\rpayoutStopped\x12?\n" +
 	"\areasons\x18\a \x03(\v2%.wingsv.headpanel.v1.OracleNodeReasonR\areasons\x12\x19\n" +
 	"\bprobe_ok\x18\b \x01(\rR\aprobeOk\x12!\n" +
 	"\fprobe_failed\x18\t \x01(\rR\vprobeFailed\x12\x1d\n" +

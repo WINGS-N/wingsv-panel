@@ -124,8 +124,8 @@
       <span v-if="nodes.accused" class="admin-pill is-offline">обвиняемых: {{ nodes.accused }}</span>
     </div>
     <p class="admin-muted mt-1">
-      Судим обе стороны. Нода тоже может завысить трафик ради выплаты или светить зелёным здоровьем, не везя при этом
-      ничего. Цифры ноды сверяются с тем, что подписали клиенты.
+      Репутация под выплаты, а не под выдачу: из ротации ноду убирают замеры зондов. Здесь её цифры сверяются с тем, что
+      подписали клиенты, и от этого зависит, сколько ей причитается.
     </p>
     <SamsungSectionLoader v-if="nodesLoading" />
     <p v-else-if="!nodes.list.length" class="state-hint mt-4">Нод пока нет.</p>
@@ -136,11 +136,11 @@
           <div class="flex flex-wrap items-center gap-2">
             <span class="truncate text-[15px]">{{ n.hostname || n.node_id.slice(0, 12) }}</span>
             <span class="admin-pill" :class="trustClass(n)">доверие {{ n.trust }}</span>
-            <span v-if="n.benched" class="admin-pill is-offline">выведена</span>
-            <span v-else-if="n.suspect" class="admin-pill is-info">под подозрением</span>
+            <span v-if="n.payout_stopped" class="admin-pill is-offline">выплата остановлена</span>
+            <span v-else-if="n.payout_reduced" class="admin-pill is-info">выплата урезана</span>
           </div>
           <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
-            <span>замеры {{ n.probe_ok }} на связи, {{ n.probe_failed }} мимо</span>
+            <span>замеры {{ n.probe_ok }} онлайн, {{ n.probe_failed }} мимо</span>
             <span>аптайм {{ Math.round(n.uptime_pct || 0) }}%</span>
             <span v-for="reason in n.reasons.slice(0, 3)" :key="reason.reason">
               {{ reasonLabel(reason.reason) }} -{{ Math.round(reason.weight) }}
@@ -300,14 +300,14 @@ function reasonLabel(reason) {
 }
 
 function trustClass(node) {
-  if (node.benched) return 'is-offline';
-  if (node.suspect) return 'is-info';
+  if (node.payout_stopped) return 'is-offline';
+  if (node.payout_reduced) return 'is-info';
   return 'is-online';
 }
 
 function trustIcon(node) {
-  if (node.benched) return '/img/oneui/security-low.svg';
-  if (node.suspect) return '/img/oneui/security-medium.svg';
+  if (node.payout_stopped) return '/img/oneui/security-low.svg';
+  if (node.payout_reduced) return '/img/oneui/security-medium.svg';
   return '/img/oneui/security-high.svg';
 }
 

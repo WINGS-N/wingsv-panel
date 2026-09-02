@@ -6,8 +6,8 @@
         class="live-dot"
         :class="{ 'is-dead': !anyOnline }"
         role="status"
-        :aria-label="anyOnline ? 'Есть точки на связи' : 'Ни одна точка не отвечает'"
-        :title="anyOnline ? 'Есть точки на связи' : 'Ни одна точка не отвечает'"
+        :aria-label="anyOnline ? 'Есть точки онлайн' : 'Ни одна точка не отвечает'"
+        :title="anyOnline ? 'Есть точки онлайн' : 'Ни одна точка не отвечает'"
       ></span>
     </div>
     <p class="body-copy body-copy-wide">
@@ -149,7 +149,7 @@ async function runNow() {
     const data = await res.json();
     runNote.value = data.probes
       ? `запущено на ${data.probes} точках, результат через минуту`
-      : 'ни одна точка не на связи';
+      : 'ни одна точка не онлайн';
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
