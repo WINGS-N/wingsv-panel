@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package wingsv.federation.intake;
+option go_package = "wingsnet.org/federation/gen/intakepb;intakepb";
+
+import "federation.proto";
+
+// Intake принимает то, что приходит ОТ КЛИЕНТА через панель.
+//
+// Отдельным сервисом, а не в панельном контракте, нарочно. Тот стережётся
+// тестом, который запрещает связывать участника с нодой: он защищает донора от
+// того, чтобы тот вычислил своих юзеров. А расписка эту связь несёт по самой
+// своей природе, потому что иначе непонятно, кому и за что платить. Разница в
+// том, что связь тут заявляет сам клиент своей подписью, и уходит она голове, а
+// не донору
+service Intake {
+  // RegisterKey запоминает публичную половину ключа устройства. Без неё
+  // расписки проверить нечем, и они все пойдут нахуй как неподписанные
+  rpc RegisterKey(RegisterKeyRequest) returns (RegisterKeyResponse);
+  // SubmitReceipts принимает подписанные расписки
+  rpc SubmitReceipts(SubmitReceiptsRequest) returns (SubmitReceiptsResponse);
+}
+
+message RegisterKeyRequest {
+  string subject_id = 1;
+  // PublicKey - сырые 32 байта ed25519
+  bytes public_key = 2;
+}
+
+message RegisterKeyResponse {
+  // Changed - ключ поменялся, а не подтвердился. Смена ключа это либо новый
+  // телефон, либо кто-то пытается переписать историю, и голове это надо знать
+  bool changed = 1;
+}
+
+message SubmitReceiptsRequest {
+  string subject_id = 1;
+  repeated wingsv.federation.v1.TrafficReceipt receipts = 2;
+}
+
+message SubmitReceiptsResponse {
+  uint32 accepted = 1;
+  uint32 rejected = 2;
+  // Reason объясняет отказ первой отвергнутой, чтобы клиент не гадал молча
+  string reason = 3;
+}

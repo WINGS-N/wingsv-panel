@@ -199,6 +199,8 @@ const CLASS_LABELS = {
   malware: 'вредонос',
   upload_heavy: 'тяжёлая отдача',
   ads: 'реклама',
+  no_device_id: 'клиент не назвался',
+  no_receipts: 'трафик без расписок',
 };
 
 onMounted(() => {

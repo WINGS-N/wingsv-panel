@@ -293,6 +293,10 @@ message Heartbeat {
   // релей поднялись, и голова видела бы пустые строки до переподключения
   string xray_version = 12;
   string vktp_version = 13;
+  // Адрес релея, каким его набирает приложение: внешний адрес ноды и порт, на
+  // котором релей слушает. Собирается на ноде, потому что снаружи виден только
+  // один из них
+  string relay_endpoint = 14;
 }
 
 message InboundSample {
@@ -315,6 +319,9 @@ message StatsSample {
   // Трафик наших собственных замеров. Он входит в total_* и в общую статистику,
   // но из бюджета донора вычитается: это наша проверка, а не его пользователи
   uint64 probe_bytes = 9;
+  // Дельты по выданным профилям. Только metered: платящие клиенты донора нас
+  // не касаются
+  repeated ProfileDeltaSample profiles = 10;
 }
 
 message ProfileDeltaSample {
@@ -387,6 +394,13 @@ enum AbuseKind {
   // Считает нода: count - расстояние в сотнях километров, сами адреса и города
   // остаются на ней и голове не отправляются
   ABUSE_KIND_GEO_SPREAD = 8;
+  // За подпиской пришёл клиент, который не назвал устройство. Наше приложение
+  // называет его всегда, значит это либо чужой клиент, либо пересланная ссылка
+  ABUSE_KIND_NO_DEVICE_ID = 9;
+  // Трафик через ноду идёт, а расписок за него нет. Наше приложение их шлёт
+  // всегда, так что молчит либо чужой клиент, либо кто-то, кому есть что
+  // скрывать от сверки
+  ABUSE_KIND_NO_RECEIPTS = 10;
 }
 
 message AbuseSignal {
@@ -423,6 +437,46 @@ message ReceiptBatch {
   repeated TrafficReceipt receipts = 1;
 }
 
+// DomainSample - сколько раз профиль сходил на домен за окно. Нода ничего не
+// хранит у себя: сложила в память, отдала голове, забыла. Сырые строки лога с
+// чужой машины не уезжают и на диск там не ложатся
+message DomainSample {
+  string profile_id = 1;
+  string domain = 2;
+  uint32 count = 3;
+  uint64 up_bytes = 4;
+  uint64 down_bytes = 5;
+  // Сколько соединений жило дольше порога. Пачка коротких запросов и один
+  // долгий поток - разное поведение, а по общему счётчику они неразличимы
+  uint32 long_lived = 6;
+  int64 first_seen_unix = 7;
+  int64 last_seen_unix = 8;
+  // Порт назначения. Списки доменов обходятся поднятием своего домена, а вот
+  // почтовые порты подделать нельзя, спам идёт именно в них
+  uint32 port = 9;
+}
+
+// PortSample - соединения профиля, у которых домена не было вовсе. Голый адрес
+// это либо торрент, либо чужой прокси, либо сканирование, и по доменам такое не
+// видно в принципе
+message PortSample {
+  string profile_id = 1;
+  uint32 port = 2;
+  uint32 count = 3;
+  uint32 distinct_targets = 4;
+  uint64 up_bytes = 5;
+  uint64 down_bytes = 6;
+}
+
+message DomainBatch {
+  repeated DomainSample samples = 1;
+  repeated PortSample ports = 4;
+  uint32 window_seconds = 2;
+  // Сколько событий ядро выкинуло, не успев отдать. Без этого тишина
+  // неотличима от того, что мы просрали половину наблюдений
+  uint64 dropped = 3;
+}
+
 message Alarm {
   string level = 1;
   string code = 2;
@@ -441,6 +495,7 @@ message AgentFrame {
     Alarm alarm = 8;
     AddressReport addresses = 9;
     ReceiptBatch receipts = 10;
+    DomainBatch domains = 12;
     // Sent when a scan finishes, which is minutes after the config was applied:
     // spinning a real handshake per candidate cannot block the ack
     RealityScan reality_scan = 11;
@@ -468,6 +523,12 @@ message ProfileSpec {
   // One entry per inbound, because vision cannot be shared across both
   string inbound_tag = 4;
   string flow = 5;
+  // Потолки скорости профиля, байт в секунду, по направлениям отдельно: канал
+  // домашнего пользователя несимметричен, и одна цифра на оба конца врёт про
+  // обе. Ноль - без потолка. Нода раскладывает пару в уровень политики Xray,
+  // потому что ядро ограничивает по уровню, а не по конкретному аккаунту
+  uint64 uplink_bps = 7;
+  uint64 downlink_bps = 8;
 }
 
 message ProfileDelta {

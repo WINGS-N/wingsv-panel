@@ -117,6 +117,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/app/invites", h.requireApp(h.handleAppInvites))
 	// Донорская часть админа: свои отданные серверы, их лимиты и токен подключения
 	mux.HandleFunc("/api/app/federation/summary", h.requireApp(h.handleFederationSummary))
+	mux.HandleFunc("/api/app/federation/key", h.requireApp(h.handleAppReceiptKey))
+	mux.HandleFunc("/api/app/federation/receipts", h.requireApp(h.handleAppReceipts))
 	mux.HandleFunc("/api/app/federation/enroll", h.requireApp(h.handleFederationEnrollToken))
 	mux.HandleFunc("/api/app/federation/nodes/", h.requireApp(h.handleFederationNodeState))
 	mux.HandleFunc("/api/app/invites/redeem", h.requireApp(h.handleRedeemInvite))
@@ -304,6 +306,10 @@ func adminMePayload(admin storage.Admin) map[string]any {
 		"avatar_version":       admin.AvatarVersion,
 		"created_at":           admin.CreatedAt.Format(timeRFC3339),
 		"panel_requested":      !admin.PanelRequestedAt.IsZero(),
+		// Как участника зовут в федерации. Приложение подписывает этим именем
+		// расписки, и выдумывать его на своей стороне ему нечего: схема имён
+		// принадлежит панели и однажды поменяется
+		"federation_id": federationUserID(admin),
 	}
 }
 

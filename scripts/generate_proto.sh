@@ -34,6 +34,8 @@ sync_federation_proto() {
     --branch "${FED_PROTO_REF:-main}" "$repo" "$tmp"
   git -C "$tmp" sparse-checkout set proto >/dev/null
   cp "$tmp/proto/headpanel.proto" "$PROTO_DIR/headpanel.proto"
+  cp "$tmp/proto/intake.proto" "$PROTO_DIR/intake.proto"
+  cp "$tmp/proto/federation.proto" "$PROTO_DIR/federation.proto"
 }
 
 sync_vktp_control_proto() {
@@ -123,3 +125,17 @@ protoc \
   --go-grpc_opt=module=v.wingsnet.org \
   --go-grpc_opt=Mheadpanel.proto=v.wingsnet.org/internal/gen/headpb \
   "$PROTO_DIR/headpanel.proto"
+
+# Приём расписок. Отдельный сервис у головы, отдельные стабы и тут: панель ходит
+# в него тем же секретом, что и в панельный API
+protoc \
+  --proto_path="$PROTO_DIR" \
+  --go_out="$ROOT_DIR" \
+  --go_opt=module=v.wingsnet.org \
+  --go_opt=Mintake.proto=v.wingsnet.org/internal/gen/intakepb \
+  --go_opt=Mfederation.proto=v.wingsnet.org/internal/gen/fedpb \
+  --go-grpc_out="$ROOT_DIR" \
+  --go-grpc_opt=module=v.wingsnet.org \
+  --go-grpc_opt=Mintake.proto=v.wingsnet.org/internal/gen/intakepb \
+  --go-grpc_opt=Mfederation.proto=v.wingsnet.org/internal/gen/fedpb \
+  "$PROTO_DIR/intake.proto" "$PROTO_DIR/federation.proto"
