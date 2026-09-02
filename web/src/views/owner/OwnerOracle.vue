@@ -154,7 +154,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
 import SamsungPager from '@/components/controls/SamsungPager.vue';
 import SamsungSectionLoader from '@/components/layout/SamsungSectionLoader.vue';
-import { CLASS_LABELS, bandClass, bandIcon, bandLabel } from './oracleLabels';
+import { CLASS_LABELS, NODE_REASONS, bandClass, bandIcon, bandLabel } from './oracleLabels';
 
 const enabled = ref(false);
 const scorer = ref('');
@@ -176,13 +176,6 @@ const tabs = [
 const tab = ref('people');
 const nodesLoading = ref(false);
 const nodes = reactive({ list: [], accused: 0 });
-
-const NODE_REASONS = {
-  overclaim: 'завышенный трафик',
-  probe_fail: 'не пускает трафик из страны',
-  flapping: 'то есть, то нет',
-  profile_drop: 'не обслуживает профили',
-};
 
 const page = ref(1);
 const perPage = 20;

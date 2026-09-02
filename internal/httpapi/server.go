@@ -678,6 +678,9 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// needs no change of its own.
 	fed := fedclient.New(cfg.FederationHead, cfg.FederationSecret)
 	apiServer.StartFederationLive(ctx, fed, liveEmit)
+	// Дерево инвайтов уезжает в башку: она считает трафик, но про то, кто кого
+	// позвал, знает только панель
+	startInviteTreeReports(ctx, store, fed)
 
 	go collector.New(store, relayFactory, collector.Options{
 		Interval:        3 * time.Second,

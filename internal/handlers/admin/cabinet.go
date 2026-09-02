@@ -17,8 +17,8 @@ import (
 // federationSubscriptionTitle - как подписка называется в приложении
 const federationSubscriptionTitle = "WINGS Federation"
 
-// federationUserID - как участник называется голове федерации. Никакого имени,
-// почты или адреса: голова про человека не знает ничего и знать не должна
+// federationUserID - как участник называется башке федерации. Никакого имени,
+// почты или адреса: башка про человека не знает ничего и знать не должна
 func federationUserID(admin storage.Admin) string {
 	return "user-" + strconv.FormatInt(admin.ID, 10)
 }
@@ -68,7 +68,7 @@ func (h *Handler) handlePanelAccess(w http.ResponseWriter, r *http.Request, admi
 
 // handleMyAccess выдаёт участнику его собственный доступ.
 //
-// Вызов идемпотентен: голова возвращает уже выданное, если оно есть, поэтому
+// Вызов идемпотентен: башка возвращает уже выданное, если оно есть, поэтому
 // экран можно открывать сколько угодно раз, никого при этом не переселяя
 func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
@@ -106,7 +106,7 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		"role":         admin.Role,
 		"sticky_until": got.GetStickyUntilUnix(),
 	}
-	// Уровень доверия объясняет, почему серверов столько, а не иначе. Голова без
+	// Уровень доверия объясняет, почему серверов столько, а не иначе. Башка без
 	// Oracle отвечает Unimplemented, и экран просто остаётся без этой части
 	if subject, err := h.fed.OracleSubject(ctx, &headpb.OracleSubjectRequest{SubjectId: federationUserID(admin)}); err == nil {
 		s := subject.GetSubject()

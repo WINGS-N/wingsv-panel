@@ -57,6 +57,10 @@ service FederationHead {
   rpc PayoutStatement(PayoutStatementRequest) returns (PayoutStatementResponse);
   // Все эпохи разом - это уже владельцу площадки, а не донору
   rpc Epochs(EpochsRequest) returns (EpochsResponse);
+  // Дерево инвайтов живёт в панели, а трафик в голове. Без этой карты голова не
+  // отличит донора, обслуживающего чужих людей, от донора, возящего трафик
+  // собственным приглашённым ради выплаты
+  rpc ReportInviteTree(ReportInviteTreeRequest) returns (ReportInviteTreeResponse);
 }
 
 enum LiveScope {
@@ -561,4 +565,21 @@ message EpochSummary {
 
 message EpochsResponse {
   repeated EpochSummary epochs = 1;
+}
+
+// SubjectAncestry - кто пригласил этого участника, вся цепочка вверх.
+//
+// Цепочка целиком, а не только пригласивший: ферма строится на два колена, и
+// проверка одного уровня её не увидит
+message SubjectAncestry {
+  string subject_id = 1;
+  repeated string donor_ids = 2;
+}
+
+message ReportInviteTreeRequest {
+  repeated SubjectAncestry subjects = 1;
+}
+
+message ReportInviteTreeResponse {
+  uint32 subjects = 1;
 }

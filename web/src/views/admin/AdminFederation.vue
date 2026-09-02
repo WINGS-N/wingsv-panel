@@ -360,7 +360,7 @@ async function load() {
     if (!res.ok) throw new Error(await errorText(res));
     const data = await res.json();
     enabled.value = Boolean(data.enabled);
-    // Голова могла отвалиться: раздел остаётся, цифры замирают, причина видна
+    // Башка могла отвалиться: раздел остаётся, цифры замирают, причина видна
     loadError.value = data.error || '';
     Object.assign(summary, { ...data, node_list: data.node_list || [], months: data.months || [] });
     loadError.value = '';
@@ -394,7 +394,7 @@ async function mint() {
   }
 }
 
-// Донор правит лимит в GB: байты он всё равно набирает из головы, а руками
+// Донор правит лимит в GB: байты он всё равно набирает из башки, а руками
 // вводить их некому
 function startBudget(node) {
   budgetFor.value = node.id;

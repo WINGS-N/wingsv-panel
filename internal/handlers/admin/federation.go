@@ -83,8 +83,8 @@ type federationSummaryView struct {
 	ProbeBytes uint64                `json:"probe_bytes"`
 	NodeList   []federationNodeView  `json:"node_list"`
 	Months     []federationMonthView `json:"months"`
-	// Error непустой, когда федерация включена, но голова не отвечает. Раздел
-	// при этом остаётся на месте: перезапуск головы не должен выглядеть как
+	// Error непустой, когда федерация включена, но башка не отвечает. Раздел
+	// при этом остаётся на месте: перезапуск башки не должен выглядеть как
 	// отключение федерации
 	Error string `json:"error,omitempty"`
 }
@@ -104,7 +104,7 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 	donor := donorID(admin)
 	summary, err := h.fed.DonorSummary(ctx, donor)
 	if err != nil {
-		// Голова недоступна - это не повод убирать раздел из меню: федерация
+		// Башка недоступна - это не повод убирать раздел из меню: федерация
 		// включена оператором, и её перезапуск не должен выглядеть как её
 		// отключение. Отдаём включённый раздел с пустыми цифрами и текстом
 		// ошибки, чтобы человек видел, что именно сломалось.
@@ -116,7 +116,7 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 	}
 	nodes, err := h.fed.ListNodes(ctx, donor)
 	if err != nil {
-		// Голова недоступна - это не повод убирать раздел из меню: федерация
+		// Башка недоступна - это не повод убирать раздел из меню: федерация
 		// включена оператором, и её перезапуск не должен выглядеть как её
 		// отключение. Отдаём включённый раздел с пустыми цифрами и текстом
 		// ошибки, чтобы человек видел, что именно сломалось.
@@ -140,7 +140,7 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 		UsedBytes:           summary.GetUsedBytes(),
 		ProbeBytes:          summary.GetProbeBytes(),
 	}
-	// История - не повод завалить экран: голова без неё отдаёт Unimplemented,
+	// История - не повод завалить экран: башка без неё отдаёт Unimplemented,
 	// и раздел просто останется без графика
 	if history, err := h.fed.DonorHistory(ctx, donor, 12); err == nil {
 		for _, m := range history {

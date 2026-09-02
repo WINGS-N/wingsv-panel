@@ -43,6 +43,7 @@ const (
 	FederationHead_SetPayoutAddress_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetPayoutAddress"
 	FederationHead_PayoutStatement_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/PayoutStatement"
 	FederationHead_Epochs_FullMethodName            = "/wingsv.headpanel.v1.FederationHead/Epochs"
+	FederationHead_ReportInviteTree_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/ReportInviteTree"
 )
 
 // FederationHeadClient is the client API for FederationHead service.
@@ -99,6 +100,10 @@ type FederationHeadClient interface {
 	PayoutStatement(ctx context.Context, in *PayoutStatementRequest, opts ...grpc.CallOption) (*PayoutStatementResponse, error)
 	// Все эпохи разом - это уже владельцу площадки, а не донору
 	Epochs(ctx context.Context, in *EpochsRequest, opts ...grpc.CallOption) (*EpochsResponse, error)
+	// Дерево инвайтов живёт в панели, а трафик в голове. Без этой карты голова не
+	// отличит донора, обслуживающего чужих людей, от донора, возящего трафик
+	// собственным приглашённым ради выплаты
+	ReportInviteTree(ctx context.Context, in *ReportInviteTreeRequest, opts ...grpc.CallOption) (*ReportInviteTreeResponse, error)
 }
 
 type federationHeadClient struct {
@@ -322,6 +327,16 @@ func (c *federationHeadClient) Epochs(ctx context.Context, in *EpochsRequest, op
 	return out, nil
 }
 
+func (c *federationHeadClient) ReportInviteTree(ctx context.Context, in *ReportInviteTreeRequest, opts ...grpc.CallOption) (*ReportInviteTreeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportInviteTreeResponse)
+	err := c.cc.Invoke(ctx, FederationHead_ReportInviteTree_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationHeadServer is the server API for FederationHead service.
 // All implementations must embed UnimplementedFederationHeadServer
 // for forward compatibility.
@@ -376,6 +391,10 @@ type FederationHeadServer interface {
 	PayoutStatement(context.Context, *PayoutStatementRequest) (*PayoutStatementResponse, error)
 	// Все эпохи разом - это уже владельцу площадки, а не донору
 	Epochs(context.Context, *EpochsRequest) (*EpochsResponse, error)
+	// Дерево инвайтов живёт в панели, а трафик в голове. Без этой карты голова не
+	// отличит донора, обслуживающего чужих людей, от донора, возящего трафик
+	// собственным приглашённым ради выплаты
+	ReportInviteTree(context.Context, *ReportInviteTreeRequest) (*ReportInviteTreeResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
 }
 
@@ -448,6 +467,9 @@ func (UnimplementedFederationHeadServer) PayoutStatement(context.Context, *Payou
 }
 func (UnimplementedFederationHeadServer) Epochs(context.Context, *EpochsRequest) (*EpochsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Epochs not implemented")
+}
+func (UnimplementedFederationHeadServer) ReportInviteTree(context.Context, *ReportInviteTreeRequest) (*ReportInviteTreeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReportInviteTree not implemented")
 }
 func (UnimplementedFederationHeadServer) mustEmbedUnimplementedFederationHeadServer() {}
 func (UnimplementedFederationHeadServer) testEmbeddedByValue()                        {}
@@ -837,6 +859,24 @@ func _FederationHead_Epochs_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_ReportInviteTree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportInviteTreeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).ReportInviteTree(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_ReportInviteTree_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).ReportInviteTree(ctx, req.(*ReportInviteTreeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationHead_ServiceDesc is the grpc.ServiceDesc for FederationHead service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -923,6 +963,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Epochs",
 			Handler:    _FederationHead_Epochs_Handler,
+		},
+		{
+			MethodName: "ReportInviteTree",
+			Handler:    _FederationHead_ReportInviteTree_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

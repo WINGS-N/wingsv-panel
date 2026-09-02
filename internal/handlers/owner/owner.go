@@ -22,7 +22,7 @@ type Handler struct {
 	store *storage.Store
 	auth  *auth.Service
 	hub   *guardianhub.Hub
-	// fed talks to the federation head. Nil-safe: без головы у панели просто нет
+	// fed talks to the federation head. Nil-safe: без башки у панели просто нет
 	// федеративной поверхности
 	fed       *fedclient.Client
 	startedAt time.Time

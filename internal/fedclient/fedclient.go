@@ -19,7 +19,7 @@ import (
 	"v.wingsnet.org/internal/tokenaead"
 )
 
-// retryPolicy повторяет вызовы, упавшие на недоступности головы
+// retryPolicy повторяет вызовы, упавшие на недоступности башки
 const retryPolicy = `{
   "methodConfig": [{
     "name": [{"service": "wingsv.headpanel.v1.FederationHead"}],
@@ -80,7 +80,7 @@ func (c *Client) dial() (headpb.FederationHeadClient, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.conn == nil {
-		// Голова переезжает между репликами, и на время переключения вызов
+		// Башка переезжает между репликами, и на время переключения вызов
 		// упирается в отказ соединения. Это не поломка федерации, а секунда
 		// выката, поэтому повтор берёт на себя транспорт, а не каждый хендлер
 		conn, err := grpc.NewClient(c.endpoint,
@@ -190,7 +190,7 @@ func (c *Client) SetNodeState(ctx context.Context, nodeID, state, reason string)
 }
 
 // SetNodeBudget меняет обещанный на месяц бюджет и возвращает то, на чём
-// остановилась голова
+// остановилась башка
 func (c *Client) SetNodeBudget(ctx context.Context, nodeID string, bytes uint64) (uint64, error) {
 	client, err := c.dial()
 	if err != nil {
@@ -297,6 +297,22 @@ func (c *Client) Epochs(ctx context.Context, limit uint32) (*headpb.EpochsRespon
 		return nil, err
 	}
 	return client.Epochs(ctx, &headpb.EpochsRequest{Limit: limit})
+}
+
+// ReportInviteTree отдаёт башке карту приглашений.
+//
+// Дерево живёт тут, трафик у башки, и без карты нода, возящая трафик своим же
+// приглашённым ради выплаты, неотличима от честной
+func (c *Client) ReportInviteTree(ctx context.Context, subjects []*headpb.SubjectAncestry) (uint32, error) {
+	client, err := c.dial()
+	if err != nil {
+		return 0, err
+	}
+	got, err := client.ReportInviteTree(ctx, &headpb.ReportInviteTreeRequest{Subjects: subjects})
+	if err != nil {
+		return 0, err
+	}
+	return got.GetSubjects(), nil
 }
 
 // retryDelay is how long the live loop waits before re-dialing a head that is

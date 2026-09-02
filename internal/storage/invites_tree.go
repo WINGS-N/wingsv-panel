@@ -253,3 +253,34 @@ func (s *Store) IsSuspended(adminID int64) (bool, string, error) {
 	}
 	return got.SuspendedAt > 0, got.SuspendedReason, nil
 }
+
+// InviteAncestry - для каждого участника вся цепочка пригласивших вверх.
+//
+// Цепочка целиком, а не только тот, кто позвал напрямую: ферма строится на два
+// колена, и проверка одного уровня её просто не увидит
+func (s *Store) InviteAncestry() (map[int64][]int64, error) {
+	edges, err := s.inviteEdges()
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64][]int64, len(edges))
+	for child := range edges {
+		var chain []int64
+		// Дерево маленькое, но цикл в данных всё равно возможен, и без счётчика
+		// шагов один кривой ряд подвесил бы весь обход
+		seen := map[int64]bool{child: true}
+		for at, steps := child, 0; steps < len(edges)+1; steps++ {
+			parent, ok := edges[at]
+			if !ok || seen[parent] {
+				break
+			}
+			chain = append(chain, parent)
+			seen[parent] = true
+			at = parent
+		}
+		if len(chain) > 0 {
+			out[child] = chain
+		}
+	}
+	return out, nil
+}

@@ -154,7 +154,7 @@ async function runNow() {
   }
 }
 
-// Голова присылает байты в секунду, и единица та же, что во всём остальном
+// Башка присылает байты в секунду, и единица та же, что во всём остальном
 function speed(bytesPerSecond) {
   const bytes = Number(bytesPerSecond) || 0;
   return formatSpeed(bytes);

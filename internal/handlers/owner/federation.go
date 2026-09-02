@@ -11,7 +11,7 @@ import (
 	"v.wingsnet.org/internal/storage"
 )
 
-// headTimeout ограничивает вызов к голове федерации
+// headTimeout ограничивает вызов к башке федерации
 const headTimeout = 5 * time.Second
 
 type probeVantageView struct {
@@ -40,7 +40,7 @@ type probeMeasurementView struct {
 }
 
 // handleProbes отдаёт замеры точек наблюдения внутри цензурируемой сети.
-// Достижимость из сети головы ничего не говорит о достижимости оттуда, где
+// Достижимость из сети башки ничего не говорит о достижимости оттуда, где
 // сидят люди, и это единственный экран, где видна разница
 func (h *Handler) handleProbes(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
 	if r.Method != http.MethodGet {
@@ -96,7 +96,7 @@ type oracleClassView struct {
 
 type oracleSubjectView struct {
 	SubjectID string `json:"subject_id"`
-	// Username - кто это на самом деле. Голова людей не знает и знать не должна,
+	// Username - кто это на самом деле. Башка людей не знает и знать не должна,
 	// поэтому имя подставляет панель: у неё и аккаунты, и право их видеть
 	Username         string            `json:"username"`
 	Confidence       int32             `json:"confidence"`
@@ -109,7 +109,7 @@ type oracleSubjectView struct {
 }
 
 // subjectAdminID разбирает идентификатор субъекта обратно в аккаунт. Ноль, если
-// это не участник: у головы бывают и профильные субъекты
+// это не участник: у башки бывают и профильные субъекты
 func subjectAdminID(subjectID string) int64 {
 	raw, ok := strings.CutPrefix(subjectID, "user-")
 	if !ok {
@@ -333,7 +333,7 @@ func (h *Handler) handleEpochs(w http.ResponseWriter, r *http.Request, _ storage
 	limit, _ := pageParams(r, 25)
 	got, err := h.fed.Epochs(ctx, limit)
 	if err != nil {
-		// Голова без настроенной ставки отвечает Unimplemented: это состояние,
+		// Башка без настроенной ставки отвечает Unimplemented: это состояние,
 		// а не поломка, и раздел остаётся с объяснением вместо цифр
 		writeJSON(w, http.StatusOK, map[string]any{
 			"enabled": true,

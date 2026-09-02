@@ -114,7 +114,7 @@ func (h *Handler) handleInvites(w http.ResponseWriter, r *http.Request, admin st
 // домашний компьютер, поднятый на вечер ради инвайта, отсеивается стажем и
 // реально прокачанным трафиком.
 //
-// Недоступная голова - это отказ, а не пропуск: иначе привилегия, на которой
+// Недоступная башка - это отказ, а не пропуск: иначе привилегия, на которой
 // держится вся защита от ферм, раздаётся при первом же сбое сети.
 func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 	if admin.Role == storage.RoleOwner {
