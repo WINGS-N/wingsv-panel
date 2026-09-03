@@ -211,6 +211,10 @@ function scrollRail(direction) {
 </script>
 
 <style scoped>
+.landing-hero-illustration {
+  width: clamp(230px, 26vw, 345px);
+}
+
 .headline-dot {
   display: inline-block;
   width: 0.22em;
