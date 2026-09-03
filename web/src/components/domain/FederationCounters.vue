@@ -31,7 +31,7 @@
       </div>
       <div class="stat">
         <span class="stat-kicker">
-          <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
+          <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
           Downlink
         </span>
         <span class="stat-value">{{ formatRate(live.down_rate_bps) }}</span>
@@ -39,7 +39,7 @@
       </div>
       <div class="stat">
         <span class="stat-kicker">
-          <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
+          <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
           Uplink
         </span>
         <span class="stat-value">{{ formatRate(live.up_rate_bps) }}</span>

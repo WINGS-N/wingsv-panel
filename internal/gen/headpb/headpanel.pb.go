@@ -488,10 +488,15 @@ type DonorCounters struct {
 	DownRateBps         float64                `protobuf:"fixed64,8,opt,name=down_rate_bps,json=downRateBps,proto3" json:"down_rate_bps,omitempty"`
 	DeclaredBudgetBytes uint64                 `protobuf:"varint,9,opt,name=declared_budget_bytes,json=declaredBudgetBytes,proto3" json:"declared_budget_bytes,omitempty"`
 	UsedBytes           uint64                 `protobuf:"varint,10,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
-	// Сколько из used_bytes сожгли проверки зондов
-	ProbeBytes    uint64 `protobuf:"varint,11,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// Сколько зонды нагнали своими проверками. В used_bytes НЕ входит: свою
+	// диагностику мы донору в счёт не пишем
+	ProbeBytes uint64 `protobuf:"varint,11,opt,name=probe_bytes,json=probeBytes,proto3" json:"probe_bytes,omitempty"`
+	// Потолок, который уйдёт в команду установки, если донор не назвал свой.
+	// Панель обязана его показать: молча подставить свою цифру в чужое
+	// обязательство это наёбка
+	DefaultBudgetGb uint32 `protobuf:"varint,12,opt,name=default_budget_gb,json=defaultBudgetGb,proto3" json:"default_budget_gb,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *DonorCounters) Reset() {
@@ -597,6 +602,13 @@ func (x *DonorCounters) GetUsedBytes() uint64 {
 func (x *DonorCounters) GetProbeBytes() uint64 {
 	if x != nil {
 		return x.ProbeBytes
+	}
+	return 0
+}
+
+func (x *DonorCounters) GetDefaultBudgetGb() uint32 {
+	if x != nil {
+		return x.DefaultBudgetGb
 	}
 	return 0
 }
@@ -4611,7 +4623,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0elifetime_bytes\x18\a \x01(\x04R\rlifetimeBytes\x12\x1f\n" +
 	"\vprobe_bytes\x18\b \x01(\x04R\n" +
 	"probeBytes\"\x17\n" +
-	"\x15PublicCountersRequest\"\xf1\x02\n" +
+	"\x15PublicCountersRequest\"\x9d\x03\n" +
 	"\rDonorCounters\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\x12\x14\n" +
 	"\x05nodes\x18\x02 \x01(\rR\x05nodes\x12!\n" +
@@ -4627,7 +4639,8 @@ const file_headpanel_proto_rawDesc = "" +
 	"used_bytes\x18\n" +
 	" \x01(\x04R\tusedBytes\x12\x1f\n" +
 	"\vprobe_bytes\x18\v \x01(\x04R\n" +
-	"probeBytes\"0\n" +
+	"probeBytes\x12*\n" +
+	"\x11default_budget_gb\x18\f \x01(\rR\x0fdefaultBudgetGb\"0\n" +
 	"\x13DonorSummaryRequest\x12\x19\n" +
 	"\bdonor_id\x18\x01 \x01(\tR\adonorId\"H\n" +
 	"\x13DonorHistoryRequest\x12\x19\n" +

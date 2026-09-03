@@ -54,7 +54,7 @@
             <span class="fed-card-fact-label">Использован</span>
             <span class="fed-card-fact-value">
               {{ it.use_count }}
-              <span class="text-wings-kicker">из {{ it.max_uses ? it.max_uses : 'без потолка' }}</span>
+              <span class="text-wings-kicker">/ {{ it.max_uses ? it.max_uses : 'без потолка' }}</span>
             </span>
           </div>
           <div class="fed-card-fact">

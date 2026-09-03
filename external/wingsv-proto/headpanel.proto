@@ -139,8 +139,13 @@ message DonorCounters {
   double down_rate_bps = 8;
   uint64 declared_budget_bytes = 9;
   uint64 used_bytes = 10;
-  // Сколько из used_bytes сожгли проверки зондов
+  // Сколько зонды нагнали своими проверками. В used_bytes НЕ входит: свою
+  // диагностику мы донору в счёт не пишем
   uint64 probe_bytes = 11;
+  // Потолок, который уйдёт в команду установки, если донор не назвал свой.
+  // Панель обязана его показать: молча подставить свою цифру в чужое
+  // обязательство это наёбка
+  uint32 default_budget_gb = 12;
 }
 
 message DonorSummaryRequest {

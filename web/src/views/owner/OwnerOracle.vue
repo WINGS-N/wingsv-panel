@@ -29,7 +29,7 @@
           Наблюдаемые обвиняемые
         </span>
         <span class="stat-value">{{ overview.watched }}</span>
-        <span class="stat-meta">из {{ overview.subjects_total }} с доступом</span>
+        <span class="stat-meta">/ {{ overview.subjects_total }} с доступом</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">

@@ -33,18 +33,18 @@
       </div>
       <div class="stat">
         <span class="stat-kicker">
-          <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
+          <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
           Downlink
         </span>
-        <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.down_rate_bps) }}</span>
+        <span class="stat-value"><span class="traffic-rx">↓</span> {{ rate(summary.down_rate_bps) }}</span>
         <span class="stat-meta">с ваших нод</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">
-          <ArrowDown :size="14" class="stat-kicker-icon" :style="{ color: FLOW_DOWN }" aria-hidden="true" />
+          <ArrowUp :size="14" class="stat-kicker-icon" :style="{ color: FLOW_UP }" aria-hidden="true" />
           Uplink
         </span>
-        <span class="stat-value"><span class="traffic-rx">↓</span> {{ rate(summary.up_rate_bps) }}</span>
+        <span class="stat-value"><span class="traffic-tx">↑</span> {{ rate(summary.up_rate_bps) }}</span>
         <span class="stat-meta">на ваши ноды</span>
       </div>
       <div class="stat">
@@ -54,9 +54,9 @@
         </span>
         <span class="stat-value">{{ bytes(summary.used_bytes) }}</span>
         <span class="stat-meta">
-          из {{ bytes(summary.declared_budget_bytes)
+          / {{ bytes(summary.declared_budget_bytes)
           }}<template v-if="summary.probe_bytes">
-            &middot; из них проверочного трафика {{ bytes(summary.probe_bytes) }}</template
+            &middot; проверки {{ bytes(summary.probe_bytes) }} мимо лимита</template
           >
         </span>
       </div>
@@ -64,14 +64,7 @@
 
     <div class="form-grid mt-5">
       <OneuiInput v-model.number="uses" label="Серверов на один токен" type="number" :min="1" :max="64" />
-      <OneuiInput
-        v-model.number="newNodeBudgetGb"
-        label="Отдаю в месяц, GB"
-        type="number"
-        :min="0"
-        :max="1048576"
-        placeholder="по умолчанию площадки"
-      />
+      <OneuiInput v-model.number="newNodeBudgetGb" label="Отдаю в месяц, GB" type="number" :min="0" :max="1048576" />
     </div>
 
     <div class="actions-row">
@@ -226,7 +219,7 @@
     <h2 class="section-title">Ноды</h2>
     <!-- Карточки, а не строки: колонок столько, сколько влезло в экран -->
     <div class="fed-cards">
-      <div v-for="node in summary.node_list" :key="node.id" class="fed-card">
+      <div v-for="node in pagedNodes" :key="node.id" class="fed-card">
         <div class="fed-card-head">
           <span class="fed-card-name">{{ node.hostname || node.id.slice(0, 8) }}</span>
           <!-- Точка перед подписью: состояние читается раньше, чем текст -->
@@ -242,7 +235,7 @@
             <span class="fed-card-fact-label">Отдано из лимита</span>
             <span class="fed-card-fact-value">
               {{ bytes(node.used_bytes) }}
-              <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
+              <span class="text-wings-kicker">/ {{ bytes(node.declared_budget_bytes) }}</span>
               <button type="button" class="fed-node-edit" title="Изменить месячный лимит" @click="startBudget(node)">
                 <Pencil :size="13" aria-hidden="true" />
               </button>
@@ -298,6 +291,7 @@
         </div>
       </div>
     </div>
+    <SamsungPager v-model:page="nodePage" :total="summary.node_list.length" :per-page="NODES_PER_PAGE" />
   </section>
 
   <SamsungModal :model-value="Boolean(removing)" title="Убрать сервер?" @update:model-value="removing = null">
@@ -315,141 +309,10 @@
       <SamsungButton variant="secondary" @click="removing = null">Отмена</SamsungButton>
     </template>
   </SamsungModal>
-
-  <section v-if="enabled && payouts.enabled" class="surface-card mt-6">
-    <div class="federation-live-head">
-      <h2 class="section-title">Выплаты</h2>
-      <span v-if="payouts.total_micro" class="admin-pill is-info">{{ usdt(payouts.total_micro) }} USDT начислено</span>
-    </div>
-    <p class="admin-muted mt-1">Начисляется за трафик, который подписали клиенты. Период закрывается раз в неделю.</p>
-    <p v-if="payouts.note" class="state-hint mt-3">{{ payouts.note }}</p>
-    <template v-else>
-      <div class="mt-4 flex flex-wrap items-end gap-3">
-        <OneuiInput
-          v-model="walletDraft"
-          label="Кошелёк Solana (USDT)"
-          placeholder="адрес, на который платить"
-          class="min-w-[280px] flex-1"
-        />
-        <SamsungButton :busy="savingWallet" @click="saveWallet">
-          <template #icon><Wallet class="button-icon" aria-hidden="true" /></template>
-          Сохранить
-        </SamsungButton>
-      </div>
-      <p v-if="walletError" class="state-error mt-2">{{ walletError }}</p>
-      <p v-else-if="!payouts.address" class="state-hint mt-2">
-        Без кошелька начисления копятся, но в расчётный период не попадают.
-      </p>
-
-      <div v-if="payouts.epochs.length" class="fed-node-list mt-4">
-        <div v-for="epoch in payouts.epochs" :key="epoch.number" class="fed-node-row">
-          <div class="min-w-0 flex-1">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-[15px]">Эпоха {{ epoch.number }}</span>
-              <span class="admin-pill">{{ usdt(epoch.amount_micro) }} USDT</span>
-              <span class="admin-pill" :class="epoch.tx_ref ? 'is-online' : 'is-info'">
-                {{ epoch.tx_ref ? 'можно забирать' : 'посчитана' }}
-              </span>
-            </div>
-            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
-              <span>{{ epochDate(epoch.start_unix) }} - {{ epochDate(epoch.end_unix) }}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-      <p v-else class="state-hint mt-4">Ни один период ещё не закрыт.</p>
-    </template>
-  </section>
-
-  <section v-if="enabled && summary.months.length" class="surface-card mt-6">
-    <h2 class="section-title">По месяцам</h2>
-    <p class="admin-muted mt-1">Сколько трафика ушло через ваши серверы. Счётчик сверху обнуляется, этот - нет.</p>
-    <div class="fed-months mt-4">
-      <div v-for="m in summary.months" :key="m.month" class="fed-month">
-        <span class="fed-month-name">{{ monthName(m.month) }}</span>
-        <span class="fed-month-track" aria-hidden="true">
-          <span class="fed-month-fill" :style="{ width: monthPct(m) + '%' }"></span>
-        </span>
-        <span class="fed-month-value">{{ bytes(m.bytes) }}</span>
-      </div>
-    </div>
-  </section>
-
-  <section v-if="enabled && summary.node_list.length" class="surface-card mt-6">
-    <h2 class="section-title">Ноды</h2>
-    <!-- Строки без рамок, только разделители - как список профилей в DeX -->
-    <div class="fed-node-list">
-      <div v-for="node in summary.node_list" :key="node.id" class="fed-node-row">
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="truncate text-[17px]">{{ node.hostname || node.id.slice(0, 8) }}</span>
-            <!-- Точка перед подписью: состояние читается раньше, чем текст -->
-            <span class="admin-pill" :class="stateClass(node.state)">
-              <span class="state-dot" :class="dotClass(node.state)" aria-hidden="true"></span>
-              {{ stateLabel(node.state) }}
-            </span>
-          </div>
-          <span v-if="node.reason" class="mt-0.5 block truncate text-sm text-wings-muted">{{ node.reason }}</span>
-          <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
-            <span class="fed-node-fact"> <Users :size="13" aria-hidden="true" />{{ node.sessions }} </span>
-            <span v-if="node.xray_version" class="fed-node-fact" title="Сборка Xray на ноде">
-              <Boxes :size="13" aria-hidden="true" />{{ node.xray_version }}
-            </span>
-            <span v-if="node.vktp_version" class="fed-node-fact" title="Сборка релея на ноде">
-              <Radio :size="13" aria-hidden="true" />{{ node.vktp_version }}
-            </span>
-            <span class="fed-node-fact">
-              <ArrowUp :size="13" :style="{ color: FLOW_UP }" aria-hidden="true" />{{ bytes(node.used_bytes) }}
-              <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
-              <span
-                v-if="node.probe_bytes"
-                class="text-wings-kicker whitespace-nowrap"
-                title="Трафик наших зондов, которым мы проверяем ноду. В ваш лимит не входит"
-              >
-                &middot; проверки {{ bytes(node.probe_bytes) }}
-              </span>
-              <button type="button" class="fed-node-edit" title="Изменить месячный лимит" @click="startBudget(node)">
-                <Pencil :size="13" aria-hidden="true" />
-              </button>
-            </span>
-            <span v-if="budgetFor === node.id" class="mt-2 flex flex-wrap items-center gap-2">
-              <input v-model.number="budgetGb" class="fed-budget-input" type="number" min="1" step="1" />
-              <span class="text-wings-kicker">GB в месяц</span>
-              <SamsungButton :busy="busyNode === node.id" @click="saveBudget(node)">Сохранить</SamsungButton>
-              <SamsungButton variant="ghost" @click="budgetFor = ''">Отмена</SamsungButton>
-            </span>
-          </span>
-          <!-- Полоса показывает ОСТАТОК: полная означает, что лимит цел, и
-               тает по мере того, как его съедают -->
-          <span class="fed-node-track" aria-hidden="true">
-            <span class="fed-node-fill" :class="budgetClass(node)" :style="{ width: budgetLeftPct(node) + '%' }"></span>
-          </span>
-        </div>
-
-        <div class="fed-node-actions">
-          <SamsungButton variant="ghost" :busy="busyNode === node.id" @click="askRemove(node)">
-            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-            Убрать
-          </SamsungButton>
-          <SamsungButton
-            variant="ghost"
-            :busy="busyNode === node.id"
-            @click="setState(node, node.state === 'parked' ? 'active' : 'parked')"
-          >
-            <template #icon>
-              <PlayCircle v-if="node.state === 'parked'" class="button-icon" aria-hidden="true" />
-              <PauseCircle v-else class="button-icon" aria-hidden="true" />
-            </template>
-            {{ node.state === 'parked' ? 'Вернуть' : 'Снять' }}
-          </SamsungButton>
-        </div>
-      </div>
-    </div>
-  </section>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import {
   ArrowDown,
   ArrowUp,
@@ -471,6 +334,7 @@ const FLOW_UP = '#0381fe';
 const FLOW_DOWN = '#15b76f';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungModal from '@/components/layout/SamsungModal.vue';
+import SamsungPager from '@/components/controls/SamsungPager.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatBytes, formatSpeed as rate, formatUsdt as usdt } from '@/utils/format';
@@ -484,10 +348,22 @@ const uses = ref(1);
 // Потолок для новой машины. Ноль оставляет общий потолок площадки: донор не
 // всегда хочет его трогать
 const newNodeBudgetGb = ref(0);
+// Своё значение человека не перетирается ответом сервера
+const budgetTouched = ref(false);
+watch(newNodeBudgetGb, () => {
+  budgetTouched.value = true;
+});
 // Ноль оставляет общий потолок площадки: донор не всегда хочет его трогать
 const mintedUses = ref(1);
 const busyNode = ref('');
 const removing = ref(null);
+// Карточек на страницу: дальше лента становится бесконечной, а найти в ней
+// нужную машину уже нельзя
+const NODES_PER_PAGE = 12;
+const nodePage = ref(1);
+const pagedNodes = computed(() =>
+  summary.node_list.slice((nodePage.value - 1) * NODES_PER_PAGE, nodePage.value * NODES_PER_PAGE),
+);
 const removeError = ref('');
 const budgetFor = ref('');
 const budgetGb = ref(0);
@@ -502,6 +378,7 @@ const summary = reactive({
   used_bytes: 0,
   probe_bytes: 0,
   declared_budget_bytes: 0,
+  default_budget_gb: 0,
   node_list: [],
   months: [],
 });
@@ -641,6 +518,11 @@ async function load() {
     // Башка могла отвалиться: раздел остаётся, цифры замирают, причина видна
     loadError.value = data.error || '';
     Object.assign(summary, { ...data, node_list: data.node_list || [], months: data.months || [] });
+    // Пока человек не трогал поле, показываем в нём то, что реально уйдёт в
+    // команду: молча подставить свою цифру в чужое обязательство это наёбка
+    if (!budgetTouched.value && summary.default_budget_gb) {
+      newNodeBudgetGb.value = summary.default_budget_gb;
+    }
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);

@@ -80,9 +80,12 @@ type federationSummaryView struct {
 	DeclaredBudgetBytes uint64  `json:"declared_budget_bytes"`
 	UsedBytes           uint64  `json:"used_bytes"`
 	// ProbeBytes - часть UsedBytes, которую сожгли наши проверки
-	ProbeBytes uint64                `json:"probe_bytes"`
-	NodeList   []federationNodeView  `json:"node_list"`
-	Months     []federationMonthView `json:"months"`
+	ProbeBytes uint64 `json:"probe_bytes"`
+	// DefaultBudgetGB - потолок, который уйдёт в команду установки, если донор
+	// оставит поле пустым. Показывается ему заранее, а не подставляется молча
+	DefaultBudgetGB uint32                `json:"default_budget_gb"`
+	NodeList        []federationNodeView  `json:"node_list"`
+	Months          []federationMonthView `json:"months"`
 	// Error непустой, когда федерация включена, но башка не отвечает. Раздел
 	// при этом остаётся на месте: перезапуск башки не должен выглядеть как
 	// отключение федерации
@@ -139,6 +142,7 @@ func (h *Handler) handleFederationSummary(w http.ResponseWriter, r *http.Request
 		DeclaredBudgetBytes: summary.GetDeclaredBudgetBytes(),
 		UsedBytes:           summary.GetUsedBytes(),
 		ProbeBytes:          summary.GetProbeBytes(),
+		DefaultBudgetGB:     summary.GetDefaultBudgetGb(),
 	}
 	// История - не повод завалить экран: башка без неё отдаёт Unimplemented,
 	// и раздел просто останется без графика

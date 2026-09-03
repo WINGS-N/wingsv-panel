@@ -5,8 +5,8 @@
       Назад
     </SamsungButton>
     <span class="pager-state">
-      {{ from }}-{{ to }} из {{ total }}
-      <span class="pager-page">стр. {{ page }} из {{ pages }}</span>
+      {{ from }}-{{ to }} / {{ total }}
+      <span class="pager-page">стр. {{ page }} / {{ pages }}</span>
     </span>
     <SamsungButton variant="ghost" :disabled="page >= pages" @click="go(page + 1)">
       <template #icon><ChevronRight class="button-icon" aria-hidden="true" /></template>
