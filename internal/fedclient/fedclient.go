@@ -189,6 +189,20 @@ func (c *Client) SetNodeState(ctx context.Context, nodeID, state, reason string)
 	return err
 }
 
+// RemoveNode выкидывает ноду из федерации по просьбе её донора. Возвращает,
+// скольких пользователей пришлось переселить
+func (c *Client) RemoveNode(ctx context.Context, nodeID, donorID string) (uint32, error) {
+	client, err := c.dial()
+	if err != nil {
+		return 0, err
+	}
+	got, err := client.RemoveNode(ctx, &headpb.RemoveNodeRequest{NodeId: nodeID, DonorId: donorID})
+	if err != nil {
+		return 0, err
+	}
+	return got.GetMoved(), nil
+}
+
 // SetNodeBudget меняет обещанный на месяц бюджет и возвращает то, на чём
 // остановилась башка
 func (c *Client) SetNodeBudget(ctx context.Context, nodeID string, bytes uint64) (uint64, error) {

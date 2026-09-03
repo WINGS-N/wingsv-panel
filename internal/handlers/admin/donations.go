@@ -10,9 +10,9 @@ import (
 	"v.wingsnet.org/internal/storage"
 )
 
-// Адреса лежат в настройках площадки, а не в коде: кошелёк меняют, а выкат ради
-// строки адреса это глупость. Адрес разработки прошит дефолтом, потому что он
-// уже есть и менять его никто не собирается
+// Адреса лежат в настройках площадки, а не в коде: кошелёк меняют, а гонять
+// выкат ради одной строки это дурость. Адрес разработки прошит дефолтом -
+// он уже есть, и менять его никто не собирается
 const (
 	settingTrafficWallet = "donation_traffic_address"
 	settingDevWallet     = "donation_dev_address"
@@ -140,8 +140,8 @@ func (h *Handler) handleClaimDonation(w http.ResponseWriter, r *http.Request, ad
 		writeError(w, http.StatusBadRequest, donationError(err))
 		return
 	}
-	// Txid публичен, и без этой проверки любой вписал бы себе чужой занос,
-	// подсмотренный в эксплорере
+	// Txid публичен нахуй, и без этой проверки любой хитрожопый вписал бы себе
+	// чужой занос, подсмотренный в эксплорере
 	if id, ok := adminFromMemo(transfer.Memo); !ok || id != admin.ID {
 		writeError(w, http.StatusBadRequest,
 			"в заметке перевода нет вашего кода "+MemoFor(admin.ID)+", засчитать его вам нельзя")
@@ -157,8 +157,8 @@ func (h *Handler) handleClaimDonation(w http.ResponseWriter, r *http.Request, ad
 		return
 	}
 
-	// Доверие греет только занос в общий котёл: разработка это нам на хлеб, и
-	// покупать за неё отношение оракула было бы враньём
+	// Доверие греет только общий котёл: разработка это нам на хлеб, и продавать
+	// за неё отношение оракула было бы наёбкой
 	var credit float64
 	if kind == "traffic" && h.federationOn() {
 		ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)

@@ -321,12 +321,66 @@
     @apply flex items-center gap-3 py-3.5;
   }
 
+  /* Короткое значение с копированием: адрес и код это одна строка, и раздувать
+     под них поле на всю карточку незачем */
+  .copy-value {
+    @apply flex min-w-0 flex-col gap-1;
+  }
+
+  .copy-value-label {
+    @apply text-[12px] uppercase tracking-wide text-wings-kicker;
+  }
+
+  .copy-value-body {
+    @apply flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-left transition-colors hover:bg-white/10;
+  }
+
+  .copy-value-text {
+    @apply min-w-0 flex-1 truncate font-mono text-[13px] text-wings-text;
+  }
+
+  .copy-value-icon {
+    @apply shrink-0 text-wings-muted;
+  }
+
+  /* Донат-карточки: контента в каждой на три строки, и городить под него
+     полноширинные секции незачем */
+  .donate-grid {
+    @apply grid gap-4 sm:grid-cols-2;
+  }
+
+  .donate-card {
+    @apply rounded-2xl border border-white/10 bg-white/5 p-4;
+  }
+
+  .donate-card-title {
+    @apply text-[15px] font-semibold text-wings-text;
+  }
+
+  .donate-card-note {
+    @apply mt-1 text-[13px] leading-snug text-wings-muted;
+  }
+
   .fed-node-track {
     @apply mt-2 block h-1.5 w-full max-w-[320px] overflow-hidden rounded-full bg-white/10;
   }
 
   .fed-node-fill {
-    @apply block h-full rounded-full bg-wings-accent;
+    @apply block h-full rounded-full bg-wings-accent transition-all;
+  }
+
+  /* Цвета остатка лимита - те же, что в приложении: зелёный запас, жёлтая
+     тревога, красный конец */
+  .fed-node-fill.is-plenty {
+    @apply bg-[#15b76f];
+  }
+
+  .fed-node-fill.is-low {
+    @apply bg-[#f5a623];
+  }
+
+  .fed-node-fill.is-empty {
+    @apply bg-[#e5484d];
   }
 
   /* Логотип сервиса, а не глиф в строке: на 16px фирменный знак читается как

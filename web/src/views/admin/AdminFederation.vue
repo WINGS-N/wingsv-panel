@@ -91,6 +91,22 @@
     </div>
   </section>
 
+  <SamsungModal :model-value="Boolean(removing)" title="Убрать сервер?" @update:model-value="removing = null">
+    <p class="body-copy">
+      Сервер <b>{{ removing?.hostname || removing?.id?.slice(0, 12) }}</b> перестанет выдаваться людям, а те, кто на нём
+      сидит, переедут на другие. Ваш агент можно будет просто остановить.
+    </p>
+    <p class="admin-muted mt-2">Вернуть сервер потом можно, зачислив его заново новым токеном.</p>
+    <p v-if="removeError" class="state-error mt-3">{{ removeError }}</p>
+    <template #actions>
+      <SamsungButton :busy="busyNode === removing?.id" @click="confirmRemove">
+        <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+        Убрать
+      </SamsungButton>
+      <SamsungButton variant="secondary" @click="removing = null">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
+
   <section v-if="enabled && payouts.enabled" class="surface-card mt-6">
     <div class="federation-live-head">
       <h2 class="section-title">Выплаты</h2>
@@ -181,7 +197,7 @@
               <span
                 v-if="node.probe_bytes"
                 class="text-wings-kicker"
-                title="Проверочный трафик наших зондов, он тоже идёт из вашего лимита"
+                title="Трафик наших зондов, которым мы проверяем ноду. В ваш лимит не входит"
               >
                 &middot; проверки {{ bytes(node.probe_bytes) }}
               </span>
@@ -196,13 +212,17 @@
               <SamsungButton variant="ghost" @click="budgetFor = ''">Отмена</SamsungButton>
             </span>
           </span>
-          <!-- Полоса бюджета: цифры выше говорят сколько, она - насколько близко
-               нода к тому, чтобы выйти из выдачи -->
+          <!-- Полоса показывает ОСТАТОК: полная означает, что лимит цел, и
+               тает по мере того, как его съедают -->
           <span class="fed-node-track" aria-hidden="true">
-            <span class="fed-node-fill" :style="{ width: budgetPct(node) + '%' }"></span>
+            <span class="fed-node-fill" :class="budgetClass(node)" :style="{ width: budgetLeftPct(node) + '%' }"></span>
           </span>
         </div>
 
+        <SamsungButton variant="ghost" :busy="busyNode === node.id" @click="askRemove(node)">
+          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+          Убрать
+        </SamsungButton>
         <SamsungButton
           variant="ghost"
           :busy="busyNode === node.id"
@@ -232,6 +252,7 @@ import {
   PlayCircle,
   Plus,
   Server,
+  Trash2,
   Users,
   Wallet,
 } from 'lucide-vue-next';
@@ -240,6 +261,7 @@ import {
 const FLOW_UP = '#0381fe';
 const FLOW_DOWN = '#15b76f';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatBytes, formatSpeed as rate, formatUsdt as usdt } from '@/utils/format';
@@ -256,6 +278,8 @@ const newNodeBudgetGb = ref(0);
 // Ноль оставляет общий потолок площадки: донор не всегда хочет его трогать
 const mintedUses = ref(1);
 const busyNode = ref('');
+const removing = ref(null);
+const removeError = ref('');
 const budgetFor = ref('');
 const budgetGb = ref(0);
 const loadError = ref('');
@@ -308,6 +332,31 @@ onBeforeUnmount(() => {
     live = null;
   }
 });
+
+function askRemove(node) {
+  removing.value = node;
+  removeError.value = '';
+}
+
+async function confirmRemove() {
+  const node = removing.value;
+  if (!node) return;
+  busyNode.value = node.id;
+  removeError.value = '';
+  try {
+    const res = await fetch(`/api/admin/federation/nodes/${encodeURIComponent(node.id)}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    removing.value = null;
+    await load();
+  } catch (err) {
+    removeError.value = String(err.message || err);
+  } finally {
+    busyNode.value = '';
+  }
+}
 
 async function loadPayouts() {
   try {
@@ -483,10 +532,21 @@ function monthName(value) {
   return Number(year) === new Date().getFullYear() ? name : `${name} ${year}`;
 }
 
-function budgetPct(node) {
+// Остаток лимита в процентах. Полная полоса - лимит нетронут
+function budgetLeftPct(node) {
   const limit = Number(node.declared_budget_bytes) || 0;
-  if (limit <= 0) return 0;
-  return Math.min(100, Math.round((Number(node.used_bytes) / limit) * 100));
+  if (limit <= 0) return 100;
+  const left = limit - Number(node.used_bytes);
+  return Math.max(0, Math.min(100, Math.round((left / limit) * 100)));
+}
+
+// Цвет предупреждает раньше, чем цифра: зелёный - запас есть, жёлтый - лимит на
+// исходе, красный - нода вот-вот выйдет из выдачи
+function budgetClass(node) {
+  const left = budgetLeftPct(node);
+  if (left <= 10) return 'is-empty';
+  if (left <= 30) return 'is-low';
+  return 'is-plenty';
 }
 
 // Цвет несёт то же, что и слово: зелёная - нода раздаётся людям, красная -

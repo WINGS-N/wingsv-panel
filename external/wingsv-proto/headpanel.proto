@@ -28,6 +28,9 @@ service FederationHead {
   rpc RevokeUser(RevokeUserRequest) returns (RevokeUserResponse);
   rpc MintEnrollToken(MintEnrollTokenRequest) returns (MintEnrollTokenResponse);
   rpc SetNodeState(SetNodeStateRequest) returns (SetNodeStateResponse);
+  // Донор забирает машину: снимаем с неё людей и выкидываем из реестра. Держать
+  // чужое железо силой мы не будем, федерация на добровольности и стоит
+  rpc RemoveNode(RemoveNodeRequest) returns (RemoveNodeResponse);
   // Сколько трафика донор обещает в этом месяце. Меняется на живой ноде: пока
   // этого не было, поднять лимит можно было только перезачислением, теряя
   // личность ноды, результаты зондов и уже посчитанный за период трафик.
@@ -598,4 +601,16 @@ message ReportDonationRequest {
 message ReportDonationResponse {
   // Credit - сколько очков доверия занос даёт прямо сейчас
   double credit = 1;
+}
+
+message RemoveNodeRequest {
+  string node_id = 1;
+  // Донор проверяется вызывающей стороной, но передаётся и сюда: снести чужую
+  // ноду не должно выходить даже случайно
+  string donor_id = 2;
+}
+
+message RemoveNodeResponse {
+  // Moved - скольких пользователей пришлось переселить
+  uint32 moved = 1;
 }

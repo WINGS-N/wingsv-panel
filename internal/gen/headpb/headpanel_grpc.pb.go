@@ -31,6 +31,7 @@ const (
 	FederationHead_RevokeUser_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/RevokeUser"
 	FederationHead_MintEnrollToken_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/MintEnrollToken"
 	FederationHead_SetNodeState_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/SetNodeState"
+	FederationHead_RemoveNode_FullMethodName        = "/wingsv.headpanel.v1.FederationHead/RemoveNode"
 	FederationHead_SetNodeBudget_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/SetNodeBudget"
 	FederationHead_GetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/GetFleetSettings"
 	FederationHead_SetFleetSettings_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetFleetSettings"
@@ -72,6 +73,9 @@ type FederationHeadClient interface {
 	RevokeUser(ctx context.Context, in *RevokeUserRequest, opts ...grpc.CallOption) (*RevokeUserResponse, error)
 	MintEnrollToken(ctx context.Context, in *MintEnrollTokenRequest, opts ...grpc.CallOption) (*MintEnrollTokenResponse, error)
 	SetNodeState(ctx context.Context, in *SetNodeStateRequest, opts ...grpc.CallOption) (*SetNodeStateResponse, error)
+	// Донор забирает машину: снимаем с неё людей и выкидываем из реестра. Держать
+	// чужое железо силой мы не будем, федерация на добровольности и стоит
+	RemoveNode(ctx context.Context, in *RemoveNodeRequest, opts ...grpc.CallOption) (*RemoveNodeResponse, error)
 	// Сколько трафика донор обещает в этом месяце. Меняется на живой ноде: пока
 	// этого не было, поднять лимит можно было только перезачислением, теряя
 	// личность ноды, результаты зондов и уже посчитанный за период трафик.
@@ -205,6 +209,16 @@ func (c *federationHeadClient) SetNodeState(ctx context.Context, in *SetNodeStat
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetNodeStateResponse)
 	err := c.cc.Invoke(ctx, FederationHead_SetNodeState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) RemoveNode(ctx context.Context, in *RemoveNodeRequest, opts ...grpc.CallOption) (*RemoveNodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveNodeResponse)
+	err := c.cc.Invoke(ctx, FederationHead_RemoveNode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -376,6 +390,9 @@ type FederationHeadServer interface {
 	RevokeUser(context.Context, *RevokeUserRequest) (*RevokeUserResponse, error)
 	MintEnrollToken(context.Context, *MintEnrollTokenRequest) (*MintEnrollTokenResponse, error)
 	SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error)
+	// Донор забирает машину: снимаем с неё людей и выкидываем из реестра. Держать
+	// чужое железо силой мы не будем, федерация на добровольности и стоит
+	RemoveNode(context.Context, *RemoveNodeRequest) (*RemoveNodeResponse, error)
 	// Сколько трафика донор обещает в этом месяце. Меняется на живой ноде: пока
 	// этого не было, поднять лимит можно было только перезачислением, теряя
 	// личность ноды, результаты зондов и уже посчитанный за период трафик.
@@ -448,6 +465,9 @@ func (UnimplementedFederationHeadServer) MintEnrollToken(context.Context, *MintE
 }
 func (UnimplementedFederationHeadServer) SetNodeState(context.Context, *SetNodeStateRequest) (*SetNodeStateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetNodeState not implemented")
+}
+func (UnimplementedFederationHeadServer) RemoveNode(context.Context, *RemoveNodeRequest) (*RemoveNodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveNode not implemented")
 }
 func (UnimplementedFederationHeadServer) SetNodeBudget(context.Context, *SetNodeBudgetRequest) (*SetNodeBudgetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetNodeBudget not implemented")
@@ -659,6 +679,24 @@ func _FederationHead_SetNodeState_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FederationHeadServer).SetNodeState(ctx, req.(*SetNodeStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_RemoveNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveNodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).RemoveNode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_RemoveNode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).RemoveNode(ctx, req.(*RemoveNodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -953,6 +991,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetNodeState",
 			Handler:    _FederationHead_SetNodeState_Handler,
+		},
+		{
+			MethodName: "RemoveNode",
+			Handler:    _FederationHead_RemoveNode_Handler,
 		},
 		{
 			MethodName: "SetNodeBudget",

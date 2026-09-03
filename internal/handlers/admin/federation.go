@@ -227,7 +227,9 @@ func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Req
 }
 
 func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
-	if r.Method != http.MethodPost {
+	// DELETE - это "забираю машину нахуй": донор волен уйти когда захочет, и
+	// держать его железо силой мы не будем
+	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
@@ -265,6 +267,16 @@ func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Reque
 	}
 	if !mine {
 		writeError(w, http.StatusNotFound, "no such node")
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		moved, err := h.fed.RemoveNode(ctx, nodeID, donorID(admin))
+		if err != nil {
+			writeError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"moved": moved})
 		return
 	}
 
