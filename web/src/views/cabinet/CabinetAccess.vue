@@ -94,6 +94,11 @@ const CLASS_LABELS = {
   malware: 'вредонос',
   upload_heavy: 'тяжёлая отдача',
   ads: 'реклама',
+  no_device_id: 'клиент не назвался',
+  no_receipts: 'трафик без расписок',
+  address_mismatch: 'адрес не сходится',
+  client_spread: 'разные клиенты на одной ссылке',
+  flat_rhythm: 'активность без суточного ритма',
 };
 
 const enabled = ref(false);
