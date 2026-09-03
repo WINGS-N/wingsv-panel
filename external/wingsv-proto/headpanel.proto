@@ -67,6 +67,12 @@ service FederationHead {
   // Занос в общий котёл греет доверие: кто донатит, тот не ферма. Проверку
   // транзакции делает панель, башка получает уже подтверждённое
   rpc ReportDonation(ReportDonationRequest) returns (ReportDonationResponse);
+  // Купленные подписки заводит владелец площадки. По умолчанию раздача
+  // выключена: за чужим сервером наш оракул слеп, и включать это должен человек
+  rpc Upstreams(UpstreamsRequest) returns (UpstreamsResponse);
+  rpc PutUpstream(PutUpstreamRequest) returns (UpstreamsResponse);
+  rpc RemoveUpstream(RemoveUpstreamRequest) returns (UpstreamsResponse);
+  rpc EnableUpstreams(EnableUpstreamsRequest) returns (UpstreamsResponse);
 }
 
 enum LiveScope {
@@ -649,4 +655,45 @@ message RemoveNodeRequest {
 message RemoveNodeResponse {
   // Moved - скольких пользователей пришлось переселить
   uint32 moved = 1;
+}
+
+// UpstreamSource - одна купленная подписка
+message UpstreamSource {
+  string id = 1;
+  // Vendor - чьё это добро. Уходит в имя сервера у человека, чтобы он понимал,
+  // чем пользуется
+  string vendor = 2;
+  string url = 3;
+  // DeviceId - чем башка представляется продавцу, всегда одинаково
+  string device_id = 4;
+  // MaxClients - скольким людям раздавать одновременно. У купленного тарифа
+  // потолок есть всегда, просто мы его не знаем
+  uint32 max_clients = 5;
+  bool enabled = 6;
+  // Links - сколько ссылок прочитали в последний раз, FetchedAt - когда
+  uint32 links = 7;
+  int64 fetched_unix = 8;
+  string last_error = 9;
+}
+
+message UpstreamsRequest {}
+
+message UpstreamsResponse {
+  // Enabled - общий рубильник раздачи купленного
+  bool enabled = 1;
+  repeated UpstreamSource sources = 2;
+  // MinConfidence - какое доверие нужно, чтобы человека вообще пустили наружу
+  uint32 min_confidence = 3;
+}
+
+message PutUpstreamRequest {
+  UpstreamSource source = 1;
+}
+
+message RemoveUpstreamRequest {
+  string id = 1;
+}
+
+message EnableUpstreamsRequest {
+  bool enabled = 1;
 }

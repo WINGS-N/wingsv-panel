@@ -444,3 +444,39 @@ func (c *Client) RestartComponent(ctx context.Context, component, nodeID string)
 	}
 	return resp.GetNodes(), nil
 }
+
+// Upstreams - купленные подписки, которыми рулит владелец площадки
+func (c *Client) Upstreams(ctx context.Context) (*headpb.UpstreamsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.Upstreams(ctx, &headpb.UpstreamsRequest{})
+}
+
+// PutUpstream заводит или правит источник
+func (c *Client) PutUpstream(ctx context.Context, source *headpb.UpstreamSource) (*headpb.UpstreamsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.PutUpstream(ctx, &headpb.PutUpstreamRequest{Source: source})
+}
+
+// RemoveUpstream убирает источник
+func (c *Client) RemoveUpstream(ctx context.Context, id string) (*headpb.UpstreamsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.RemoveUpstream(ctx, &headpb.RemoveUpstreamRequest{Id: id})
+}
+
+// EnableUpstreams дёргает общий рубильник раздачи купленного
+func (c *Client) EnableUpstreams(ctx context.Context, on bool) (*headpb.UpstreamsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.EnableUpstreams(ctx, &headpb.EnableUpstreamsRequest{Enabled: on})
+}

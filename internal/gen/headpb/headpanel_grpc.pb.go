@@ -46,6 +46,10 @@ const (
 	FederationHead_Epochs_FullMethodName            = "/wingsv.headpanel.v1.FederationHead/Epochs"
 	FederationHead_ReportInviteTree_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/ReportInviteTree"
 	FederationHead_ReportDonation_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/ReportDonation"
+	FederationHead_Upstreams_FullMethodName         = "/wingsv.headpanel.v1.FederationHead/Upstreams"
+	FederationHead_PutUpstream_FullMethodName       = "/wingsv.headpanel.v1.FederationHead/PutUpstream"
+	FederationHead_RemoveUpstream_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/RemoveUpstream"
+	FederationHead_EnableUpstreams_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/EnableUpstreams"
 )
 
 // FederationHeadClient is the client API for FederationHead service.
@@ -112,6 +116,12 @@ type FederationHeadClient interface {
 	// Занос в общий котёл греет доверие: кто донатит, тот не ферма. Проверку
 	// транзакции делает панель, башка получает уже подтверждённое
 	ReportDonation(ctx context.Context, in *ReportDonationRequest, opts ...grpc.CallOption) (*ReportDonationResponse, error)
+	// Купленные подписки заводит владелец площадки. По умолчанию раздача
+	// выключена: за чужим сервером наш оракул слеп, и включать это должен человек
+	Upstreams(ctx context.Context, in *UpstreamsRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
+	PutUpstream(ctx context.Context, in *PutUpstreamRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
+	RemoveUpstream(ctx context.Context, in *RemoveUpstreamRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
+	EnableUpstreams(ctx context.Context, in *EnableUpstreamsRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
 }
 
 type federationHeadClient struct {
@@ -365,6 +375,46 @@ func (c *federationHeadClient) ReportDonation(ctx context.Context, in *ReportDon
 	return out, nil
 }
 
+func (c *federationHeadClient) Upstreams(ctx context.Context, in *UpstreamsRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpstreamsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_Upstreams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) PutUpstream(ctx context.Context, in *PutUpstreamRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpstreamsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_PutUpstream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) RemoveUpstream(ctx context.Context, in *RemoveUpstreamRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpstreamsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_RemoveUpstream_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) EnableUpstreams(ctx context.Context, in *EnableUpstreamsRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpstreamsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_EnableUpstreams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FederationHeadServer is the server API for FederationHead service.
 // All implementations must embed UnimplementedFederationHeadServer
 // for forward compatibility.
@@ -429,6 +479,12 @@ type FederationHeadServer interface {
 	// Занос в общий котёл греет доверие: кто донатит, тот не ферма. Проверку
 	// транзакции делает панель, башка получает уже подтверждённое
 	ReportDonation(context.Context, *ReportDonationRequest) (*ReportDonationResponse, error)
+	// Купленные подписки заводит владелец площадки. По умолчанию раздача
+	// выключена: за чужим сервером наш оракул слеп, и включать это должен человек
+	Upstreams(context.Context, *UpstreamsRequest) (*UpstreamsResponse, error)
+	PutUpstream(context.Context, *PutUpstreamRequest) (*UpstreamsResponse, error)
+	RemoveUpstream(context.Context, *RemoveUpstreamRequest) (*UpstreamsResponse, error)
+	EnableUpstreams(context.Context, *EnableUpstreamsRequest) (*UpstreamsResponse, error)
 	mustEmbedUnimplementedFederationHeadServer()
 }
 
@@ -510,6 +566,18 @@ func (UnimplementedFederationHeadServer) ReportInviteTree(context.Context, *Repo
 }
 func (UnimplementedFederationHeadServer) ReportDonation(context.Context, *ReportDonationRequest) (*ReportDonationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReportDonation not implemented")
+}
+func (UnimplementedFederationHeadServer) Upstreams(context.Context, *UpstreamsRequest) (*UpstreamsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Upstreams not implemented")
+}
+func (UnimplementedFederationHeadServer) PutUpstream(context.Context, *PutUpstreamRequest) (*UpstreamsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PutUpstream not implemented")
+}
+func (UnimplementedFederationHeadServer) RemoveUpstream(context.Context, *RemoveUpstreamRequest) (*UpstreamsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveUpstream not implemented")
+}
+func (UnimplementedFederationHeadServer) EnableUpstreams(context.Context, *EnableUpstreamsRequest) (*UpstreamsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnableUpstreams not implemented")
 }
 func (UnimplementedFederationHeadServer) mustEmbedUnimplementedFederationHeadServer() {}
 func (UnimplementedFederationHeadServer) testEmbeddedByValue()                        {}
@@ -953,6 +1021,78 @@ func _FederationHead_ReportDonation_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_Upstreams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpstreamsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).Upstreams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_Upstreams_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).Upstreams(ctx, req.(*UpstreamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_PutUpstream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutUpstreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).PutUpstream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_PutUpstream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).PutUpstream(ctx, req.(*PutUpstreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_RemoveUpstream_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveUpstreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).RemoveUpstream(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_RemoveUpstream_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).RemoveUpstream(ctx, req.(*RemoveUpstreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_EnableUpstreams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnableUpstreamsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).EnableUpstreams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_EnableUpstreams_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).EnableUpstreams(ctx, req.(*EnableUpstreamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FederationHead_ServiceDesc is the grpc.ServiceDesc for FederationHead service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1051,6 +1191,22 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportDonation",
 			Handler:    _FederationHead_ReportDonation_Handler,
+		},
+		{
+			MethodName: "Upstreams",
+			Handler:    _FederationHead_Upstreams_Handler,
+		},
+		{
+			MethodName: "PutUpstream",
+			Handler:    _FederationHead_PutUpstream_Handler,
+		},
+		{
+			MethodName: "RemoveUpstream",
+			Handler:    _FederationHead_RemoveUpstream_Handler,
+		},
+		{
+			MethodName: "EnableUpstreams",
+			Handler:    _FederationHead_EnableUpstreams_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -4582,6 +4582,351 @@ func (x *RemoveNodeResponse) GetMoved() uint32 {
 	return 0
 }
 
+// UpstreamSource - одна купленная подписка
+type UpstreamSource struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Vendor - чьё это добро. Уходит в имя сервера у человека, чтобы он понимал,
+	// чем пользуется
+	Vendor string `protobuf:"bytes,2,opt,name=vendor,proto3" json:"vendor,omitempty"`
+	Url    string `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
+	// DeviceId - чем башка представляется продавцу, всегда одинаково
+	DeviceId string `protobuf:"bytes,4,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	// MaxClients - скольким людям раздавать одновременно. У купленного тарифа
+	// потолок есть всегда, просто мы его не знаем
+	MaxClients uint32 `protobuf:"varint,5,opt,name=max_clients,json=maxClients,proto3" json:"max_clients,omitempty"`
+	Enabled    bool   `protobuf:"varint,6,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Links - сколько ссылок прочитали в последний раз, FetchedAt - когда
+	Links         uint32 `protobuf:"varint,7,opt,name=links,proto3" json:"links,omitempty"`
+	FetchedUnix   int64  `protobuf:"varint,8,opt,name=fetched_unix,json=fetchedUnix,proto3" json:"fetched_unix,omitempty"`
+	LastError     string `protobuf:"bytes,9,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpstreamSource) Reset() {
+	*x = UpstreamSource{}
+	mi := &file_headpanel_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpstreamSource) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpstreamSource) ProtoMessage() {}
+
+func (x *UpstreamSource) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpstreamSource.ProtoReflect.Descriptor instead.
+func (*UpstreamSource) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *UpstreamSource) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpstreamSource) GetVendor() string {
+	if x != nil {
+		return x.Vendor
+	}
+	return ""
+}
+
+func (x *UpstreamSource) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *UpstreamSource) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *UpstreamSource) GetMaxClients() uint32 {
+	if x != nil {
+		return x.MaxClients
+	}
+	return 0
+}
+
+func (x *UpstreamSource) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *UpstreamSource) GetLinks() uint32 {
+	if x != nil {
+		return x.Links
+	}
+	return 0
+}
+
+func (x *UpstreamSource) GetFetchedUnix() int64 {
+	if x != nil {
+		return x.FetchedUnix
+	}
+	return 0
+}
+
+func (x *UpstreamSource) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+type UpstreamsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpstreamsRequest) Reset() {
+	*x = UpstreamsRequest{}
+	mi := &file_headpanel_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpstreamsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpstreamsRequest) ProtoMessage() {}
+
+func (x *UpstreamsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpstreamsRequest.ProtoReflect.Descriptor instead.
+func (*UpstreamsRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{65}
+}
+
+type UpstreamsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Enabled - общий рубильник раздачи купленного
+	Enabled bool              `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Sources []*UpstreamSource `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
+	// MinConfidence - какое доверие нужно, чтобы человека вообще пустили наружу
+	MinConfidence uint32 `protobuf:"varint,3,opt,name=min_confidence,json=minConfidence,proto3" json:"min_confidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpstreamsResponse) Reset() {
+	*x = UpstreamsResponse{}
+	mi := &file_headpanel_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpstreamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpstreamsResponse) ProtoMessage() {}
+
+func (x *UpstreamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpstreamsResponse.ProtoReflect.Descriptor instead.
+func (*UpstreamsResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *UpstreamsResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *UpstreamsResponse) GetSources() []*UpstreamSource {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *UpstreamsResponse) GetMinConfidence() uint32 {
+	if x != nil {
+		return x.MinConfidence
+	}
+	return 0
+}
+
+type PutUpstreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Source        *UpstreamSource        `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PutUpstreamRequest) Reset() {
+	*x = PutUpstreamRequest{}
+	mi := &file_headpanel_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PutUpstreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutUpstreamRequest) ProtoMessage() {}
+
+func (x *PutUpstreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutUpstreamRequest.ProtoReflect.Descriptor instead.
+func (*PutUpstreamRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *PutUpstreamRequest) GetSource() *UpstreamSource {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+type RemoveUpstreamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveUpstreamRequest) Reset() {
+	*x = RemoveUpstreamRequest{}
+	mi := &file_headpanel_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveUpstreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveUpstreamRequest) ProtoMessage() {}
+
+func (x *RemoveUpstreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveUpstreamRequest.ProtoReflect.Descriptor instead.
+func (*RemoveUpstreamRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *RemoveUpstreamRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type EnableUpstreamsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnableUpstreamsRequest) Reset() {
+	*x = EnableUpstreamsRequest{}
+	mi := &file_headpanel_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnableUpstreamsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnableUpstreamsRequest) ProtoMessage() {}
+
+func (x *EnableUpstreamsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnableUpstreamsRequest.ProtoReflect.Descriptor instead.
+func (*EnableUpstreamsRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *EnableUpstreamsRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
 var File_headpanel_proto protoreflect.FileDescriptor
 
 const file_headpanel_proto_rawDesc = "" +
@@ -4953,12 +5298,35 @@ const file_headpanel_proto_rawDesc = "" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x19\n" +
 	"\bdonor_id\x18\x02 \x01(\tR\adonorId\"*\n" +
 	"\x12RemoveNodeResponse\x12\x14\n" +
-	"\x05moved\x18\x01 \x01(\rR\x05moved*i\n" +
+	"\x05moved\x18\x01 \x01(\rR\x05moved\"\xfa\x01\n" +
+	"\x0eUpstreamSource\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06vendor\x18\x02 \x01(\tR\x06vendor\x12\x10\n" +
+	"\x03url\x18\x03 \x01(\tR\x03url\x12\x1b\n" +
+	"\tdevice_id\x18\x04 \x01(\tR\bdeviceId\x12\x1f\n" +
+	"\vmax_clients\x18\x05 \x01(\rR\n" +
+	"maxClients\x12\x18\n" +
+	"\aenabled\x18\x06 \x01(\bR\aenabled\x12\x14\n" +
+	"\x05links\x18\a \x01(\rR\x05links\x12!\n" +
+	"\ffetched_unix\x18\b \x01(\x03R\vfetchedUnix\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\t \x01(\tR\tlastError\"\x12\n" +
+	"\x10UpstreamsRequest\"\x93\x01\n" +
+	"\x11UpstreamsResponse\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12=\n" +
+	"\asources\x18\x02 \x03(\v2#.wingsv.headpanel.v1.UpstreamSourceR\asources\x12%\n" +
+	"\x0emin_confidence\x18\x03 \x01(\rR\rminConfidence\"Q\n" +
+	"\x12PutUpstreamRequest\x12;\n" +
+	"\x06source\x18\x01 \x01(\v2#.wingsv.headpanel.v1.UpstreamSourceR\x06source\"'\n" +
+	"\x15RemoveUpstreamRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"2\n" +
+	"\x16EnableUpstreamsRequest\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled*i\n" +
 	"\tLiveScope\x12\x1a\n" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\xf4\x12\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\xfe\x15\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -4987,7 +5355,11 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0fPayoutStatement\x12+.wingsv.headpanel.v1.PayoutStatementRequest\x1a,.wingsv.headpanel.v1.PayoutStatementResponse\x12Q\n" +
 	"\x06Epochs\x12\".wingsv.headpanel.v1.EpochsRequest\x1a#.wingsv.headpanel.v1.EpochsResponse\x12o\n" +
 	"\x10ReportInviteTree\x12,.wingsv.headpanel.v1.ReportInviteTreeRequest\x1a-.wingsv.headpanel.v1.ReportInviteTreeResponse\x12i\n" +
-	"\x0eReportDonation\x12*.wingsv.headpanel.v1.ReportDonationRequest\x1a+.wingsv.headpanel.v1.ReportDonationResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
+	"\x0eReportDonation\x12*.wingsv.headpanel.v1.ReportDonationRequest\x1a+.wingsv.headpanel.v1.ReportDonationResponse\x12Z\n" +
+	"\tUpstreams\x12%.wingsv.headpanel.v1.UpstreamsRequest\x1a&.wingsv.headpanel.v1.UpstreamsResponse\x12^\n" +
+	"\vPutUpstream\x12'.wingsv.headpanel.v1.PutUpstreamRequest\x1a&.wingsv.headpanel.v1.UpstreamsResponse\x12d\n" +
+	"\x0eRemoveUpstream\x12*.wingsv.headpanel.v1.RemoveUpstreamRequest\x1a&.wingsv.headpanel.v1.UpstreamsResponse\x12f\n" +
+	"\x0fEnableUpstreams\x12+.wingsv.headpanel.v1.EnableUpstreamsRequest\x1a&.wingsv.headpanel.v1.UpstreamsResponseB+Z)wingsnet.org/federation/gen/headpb;headpbb\x06proto3"
 
 var (
 	file_headpanel_proto_rawDescOnce sync.Once
@@ -5002,7 +5374,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 64)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 70)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -5069,6 +5441,12 @@ var file_headpanel_proto_goTypes = []any{
 	(*ReportDonationResponse)(nil),   // 62: wingsv.headpanel.v1.ReportDonationResponse
 	(*RemoveNodeRequest)(nil),        // 63: wingsv.headpanel.v1.RemoveNodeRequest
 	(*RemoveNodeResponse)(nil),       // 64: wingsv.headpanel.v1.RemoveNodeResponse
+	(*UpstreamSource)(nil),           // 65: wingsv.headpanel.v1.UpstreamSource
+	(*UpstreamsRequest)(nil),         // 66: wingsv.headpanel.v1.UpstreamsRequest
+	(*UpstreamsResponse)(nil),        // 67: wingsv.headpanel.v1.UpstreamsResponse
+	(*PutUpstreamRequest)(nil),       // 68: wingsv.headpanel.v1.PutUpstreamRequest
+	(*RemoveUpstreamRequest)(nil),    // 69: wingsv.headpanel.v1.RemoveUpstreamRequest
+	(*EnableUpstreamsRequest)(nil),   // 70: wingsv.headpanel.v1.EnableUpstreamsRequest
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -5095,59 +5473,69 @@ var file_headpanel_proto_depIdxs = []int32{
 	54, // 21: wingsv.headpanel.v1.PayoutStatementResponse.pending:type_name -> wingsv.headpanel.v1.NodeAccrual
 	56, // 22: wingsv.headpanel.v1.EpochsResponse.epochs:type_name -> wingsv.headpanel.v1.EpochSummary
 	58, // 23: wingsv.headpanel.v1.ReportInviteTreeRequest.subjects:type_name -> wingsv.headpanel.v1.SubjectAncestry
-	5,  // 24: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
-	1,  // 25: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
-	12, // 26: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
-	7,  // 27: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
-	8,  // 28: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
-	17, // 29: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
-	19, // 30: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
-	15, // 31: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
-	21, // 32: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	63, // 33: wingsv.headpanel.v1.FederationHead.RemoveNode:input_type -> wingsv.headpanel.v1.RemoveNodeRequest
-	28, // 34: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
-	23, // 35: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
-	24, // 36: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
-	26, // 37: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
-	30, // 38: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
-	31, // 39: wingsv.headpanel.v1.FederationHead.RunProbes:input_type -> wingsv.headpanel.v1.RunProbesRequest
-	36, // 40: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
-	37, // 41: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
-	43, // 42: wingsv.headpanel.v1.FederationHead.OracleNodes:input_type -> wingsv.headpanel.v1.OracleNodesRequest
-	48, // 43: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:input_type -> wingsv.headpanel.v1.SetPayoutAddressRequest
-	50, // 44: wingsv.headpanel.v1.FederationHead.PayoutStatement:input_type -> wingsv.headpanel.v1.PayoutStatementRequest
-	55, // 45: wingsv.headpanel.v1.FederationHead.Epochs:input_type -> wingsv.headpanel.v1.EpochsRequest
-	59, // 46: wingsv.headpanel.v1.FederationHead.ReportInviteTree:input_type -> wingsv.headpanel.v1.ReportInviteTreeRequest
-	61, // 47: wingsv.headpanel.v1.FederationHead.ReportDonation:input_type -> wingsv.headpanel.v1.ReportDonationRequest
-	4,  // 48: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 49: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	13, // 50: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 51: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	10, // 52: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
-	18, // 53: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	20, // 54: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	16, // 55: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	22, // 56: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	64, // 57: wingsv.headpanel.v1.FederationHead.RemoveNode:output_type -> wingsv.headpanel.v1.RemoveNodeResponse
-	29, // 58: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
-	24, // 59: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	24, // 60: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	27, // 61: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
-	35, // 62: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
-	32, // 63: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
-	47, // 64: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
-	40, // 65: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
-	44, // 66: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
-	49, // 67: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:output_type -> wingsv.headpanel.v1.SetPayoutAddressResponse
-	52, // 68: wingsv.headpanel.v1.FederationHead.PayoutStatement:output_type -> wingsv.headpanel.v1.PayoutStatementResponse
-	57, // 69: wingsv.headpanel.v1.FederationHead.Epochs:output_type -> wingsv.headpanel.v1.EpochsResponse
-	60, // 70: wingsv.headpanel.v1.FederationHead.ReportInviteTree:output_type -> wingsv.headpanel.v1.ReportInviteTreeResponse
-	62, // 71: wingsv.headpanel.v1.FederationHead.ReportDonation:output_type -> wingsv.headpanel.v1.ReportDonationResponse
-	48, // [48:72] is the sub-list for method output_type
-	24, // [24:48] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	65, // 24: wingsv.headpanel.v1.UpstreamsResponse.sources:type_name -> wingsv.headpanel.v1.UpstreamSource
+	65, // 25: wingsv.headpanel.v1.PutUpstreamRequest.source:type_name -> wingsv.headpanel.v1.UpstreamSource
+	5,  // 26: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
+	1,  // 27: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
+	12, // 28: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
+	7,  // 29: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
+	8,  // 30: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
+	17, // 31: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
+	19, // 32: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
+	15, // 33: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
+	21, // 34: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
+	63, // 35: wingsv.headpanel.v1.FederationHead.RemoveNode:input_type -> wingsv.headpanel.v1.RemoveNodeRequest
+	28, // 36: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
+	23, // 37: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
+	24, // 38: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
+	26, // 39: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
+	30, // 40: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
+	31, // 41: wingsv.headpanel.v1.FederationHead.RunProbes:input_type -> wingsv.headpanel.v1.RunProbesRequest
+	36, // 42: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
+	37, // 43: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
+	43, // 44: wingsv.headpanel.v1.FederationHead.OracleNodes:input_type -> wingsv.headpanel.v1.OracleNodesRequest
+	48, // 45: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:input_type -> wingsv.headpanel.v1.SetPayoutAddressRequest
+	50, // 46: wingsv.headpanel.v1.FederationHead.PayoutStatement:input_type -> wingsv.headpanel.v1.PayoutStatementRequest
+	55, // 47: wingsv.headpanel.v1.FederationHead.Epochs:input_type -> wingsv.headpanel.v1.EpochsRequest
+	59, // 48: wingsv.headpanel.v1.FederationHead.ReportInviteTree:input_type -> wingsv.headpanel.v1.ReportInviteTreeRequest
+	61, // 49: wingsv.headpanel.v1.FederationHead.ReportDonation:input_type -> wingsv.headpanel.v1.ReportDonationRequest
+	66, // 50: wingsv.headpanel.v1.FederationHead.Upstreams:input_type -> wingsv.headpanel.v1.UpstreamsRequest
+	68, // 51: wingsv.headpanel.v1.FederationHead.PutUpstream:input_type -> wingsv.headpanel.v1.PutUpstreamRequest
+	69, // 52: wingsv.headpanel.v1.FederationHead.RemoveUpstream:input_type -> wingsv.headpanel.v1.RemoveUpstreamRequest
+	70, // 53: wingsv.headpanel.v1.FederationHead.EnableUpstreams:input_type -> wingsv.headpanel.v1.EnableUpstreamsRequest
+	4,  // 54: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 55: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	13, // 56: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 57: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	10, // 58: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
+	18, // 59: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	20, // 60: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	16, // 61: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	22, // 62: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	64, // 63: wingsv.headpanel.v1.FederationHead.RemoveNode:output_type -> wingsv.headpanel.v1.RemoveNodeResponse
+	29, // 64: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
+	24, // 65: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 66: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	27, // 67: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	35, // 68: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
+	32, // 69: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
+	47, // 70: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
+	40, // 71: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
+	44, // 72: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
+	49, // 73: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:output_type -> wingsv.headpanel.v1.SetPayoutAddressResponse
+	52, // 74: wingsv.headpanel.v1.FederationHead.PayoutStatement:output_type -> wingsv.headpanel.v1.PayoutStatementResponse
+	57, // 75: wingsv.headpanel.v1.FederationHead.Epochs:output_type -> wingsv.headpanel.v1.EpochsResponse
+	60, // 76: wingsv.headpanel.v1.FederationHead.ReportInviteTree:output_type -> wingsv.headpanel.v1.ReportInviteTreeResponse
+	62, // 77: wingsv.headpanel.v1.FederationHead.ReportDonation:output_type -> wingsv.headpanel.v1.ReportDonationResponse
+	67, // 78: wingsv.headpanel.v1.FederationHead.Upstreams:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	67, // 79: wingsv.headpanel.v1.FederationHead.PutUpstream:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	67, // 80: wingsv.headpanel.v1.FederationHead.RemoveUpstream:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	67, // 81: wingsv.headpanel.v1.FederationHead.EnableUpstreams:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	54, // [54:82] is the sub-list for method output_type
+	26, // [26:54] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_headpanel_proto_init() }
@@ -5161,7 +5549,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   64,
+			NumMessages:   70,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

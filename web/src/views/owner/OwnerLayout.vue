@@ -66,6 +66,10 @@
             <ShieldCheck class="admin-nav-icon" aria-hidden="true" />
             <span>Oracle</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-upstreams' }" active-class="is-active">
+            <ShoppingCart class="admin-nav-icon" aria-hidden="true" />
+            <span>Купленное</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-payouts' }" active-class="is-active">
             <Coins class="admin-nav-icon" aria-hidden="true" />
             <span>Выплаты</span>
@@ -102,6 +106,7 @@ import {
   Radar,
   Server,
   ShieldCheck,
+  ShoppingCart,
   Smartphone,
   UsersRound,
 } from 'lucide-vue-next';
