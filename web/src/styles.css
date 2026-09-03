@@ -278,6 +278,20 @@
     @apply min-h-[120px] resize-y py-3;
   }
 
+  /* Нативные стрелки у числовых полей выглядят как кусок чужой формы из
+     девяностых. Значение и так правится с клавиатуры */
+  .text-input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .text-input[type='number']::-webkit-outer-spin-button,
+  .text-input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
   .text-input::placeholder,
   .link-input::placeholder {
     color: rgba(252, 252, 252, 0.32);

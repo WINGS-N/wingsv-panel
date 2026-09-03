@@ -27,15 +27,8 @@
       <p v-if="redeemError" class="state-error">{{ redeemError }}</p>
     </div>
 
-    <!-- Поля стоят полями, а не втиснуты в строку рядом с кнопкой: подпись над
-         вводом и кнопка снизу - то, как выглядит любая форма в этой панели -->
-    <div v-if="mayInvite" class="form-grid mt-5">
-      <OneuiInput v-model.number="maxUses" label="Человек по коду" type="number" :min="1" :max="50" />
-      <OneuiInput v-model.number="ttlHours" label="Живёт часов (0 - без срока)" type="number" :min="0" :max="8760" />
-    </div>
-
     <div v-if="mayInvite" class="actions-row">
-      <SamsungButton :busy="creating" @click="create">
+      <SamsungButton @click="createOpen = true">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
         Выписать код
       </SamsungButton>
@@ -73,12 +66,27 @@
     </div>
     <p v-else-if="!loading" class="admin-muted mt-4">Вы пока никого не приглашали.</p>
   </section>
+
+  <SamsungModal v-model="createOpen" title="Новый код" :busy="creating">
+    <div class="form-grid">
+      <OneuiInput v-model.number="maxUses" label="Человек по коду" type="number" :min="1" :max="50" />
+      <OneuiInput v-model.number="ttlHours" label="Живёт часов (0 - без срока)" type="number" :min="0" :max="8760" />
+    </div>
+    <template #actions>
+      <SamsungButton :busy="creating" @click="create">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Выписать
+      </SamsungButton>
+      <SamsungButton variant="secondary" @click="createOpen = false">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
 </template>
 
 <script setup>
 import { onMounted, ref } from 'vue';
 import { Plus, Ticket, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableValue from '@/components/domain/CopyableValue.vue';
 import InviteHero from '@/components/domain/InviteHero.vue';
@@ -86,6 +94,7 @@ import InviteHero from '@/components/domain/InviteHero.vue';
 const invites = ref([]);
 const loading = ref(false);
 const creating = ref(false);
+const createOpen = ref(false);
 const loadError = ref('');
 const maxUses = ref(1);
 const ttlHours = ref(0);
@@ -167,6 +176,7 @@ async function create() {
     });
     if (!res.ok) throw new Error(await errorText(res));
     loadError.value = '';
+    createOpen.value = false;
     await load();
   } catch (err) {
     loadError.value = String(err.message || err);

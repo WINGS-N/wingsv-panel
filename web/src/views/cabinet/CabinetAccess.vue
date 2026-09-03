@@ -108,10 +108,15 @@ const trustRaw = ref(null);
 const trust = computed(() => trustRaw.value);
 // Когда выдано меньше положенного, дело не в доверии: две ноды одного донора
 // падают вместе, поэтому вторую такую не дают
+// Выданное и положенное расходятся в обе стороны: серверов может не хватать на
+// всех, а может уже выданное держаться закреплением, пока доверие просело
 const nodesMeta = computed(() => {
   const entitled = Number(access.nodes_entitled || 0);
   if (entitled > access.nodes) {
     return `из ${entitled} по доверию - остальные пока некому отдать`;
+  }
+  if (entitled > 0 && entitled < access.nodes) {
+    return `закреплены за вами, по доверию сейчас положено ${entitled}`;
   }
   return 'выдано вам сейчас';
 });
@@ -172,8 +177,8 @@ function formatBytes(value) {
 }
 
 function bandMeaning(band) {
-  if (band === 'full') return 'несколько серверов на выбор';
-  if (band === 'reduced') return 'один сервер и меньше скорость';
+  if (band === 'full') return 'полная скорость и несколько серверов';
+  if (band === 'reduced') return 'скорость урезана, серверов меньше';
   return 'доступ приостановлен';
 }
 

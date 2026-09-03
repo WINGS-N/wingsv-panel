@@ -15,32 +15,15 @@
     <p v-else-if="note" class="state-hint">{{ note }}</p>
 
     <div class="actions-row mt-4">
-      <SamsungButton :busy="busy" @click="toggleAll">
+      <SamsungButton @click="openAdd">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Добавить источник
+      </SamsungButton>
+      <SamsungButton variant="ghost" :busy="busy" @click="toggleAll">
         <template #icon>
           <Power class="button-icon" aria-hidden="true" />
         </template>
         {{ enabled ? 'Выключить раздачу' : 'Включить раздачу' }}
-      </SamsungButton>
-    </div>
-  </section>
-
-  <section class="surface-card mt-6">
-    <h2 class="section-title">Добавить</h2>
-    <p class="admin-muted mt-1">
-      Вендор попадёт в название сервера у человека. Устройство - то, чем мы представляемся продавцу: оно всегда одно и
-      то же, иначе на той стороне это выглядит как толпа новых железок.
-    </p>
-    <div class="form-grid mt-4">
-      <OneuiInput v-model="draft.vendor" label="Вендор" placeholder="как назвать в списке" />
-      <OneuiInput v-model="draft.url" label="Ссылка на подписку" />
-      <OneuiInput v-model="draft.device_id" label="Устройство (memo продавца)" />
-      <OneuiInput v-model.number="draft.max_clients" label="Людей одновременно" type="number" :min="0" :max="1000" />
-    </div>
-    <p v-if="formError" class="state-error mt-2">{{ formError }}</p>
-    <div class="actions-row mt-4">
-      <SamsungButton :busy="busy" @click="save">
-        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-        Добавить
       </SamsungButton>
     </div>
   </section>
@@ -57,11 +40,11 @@
         </div>
         <div class="fed-card-facts">
           <div class="fed-card-fact">
-            <span class="fed-card-fact-label">Серверов в подписке</span>
+            <span class="fed-card-fact-label">Серверов</span>
             <span class="fed-card-fact-value">{{ source.links }}</span>
           </div>
           <div class="fed-card-fact">
-            <span class="fed-card-fact-label">Людей одновременно</span>
+            <span class="fed-card-fact-label">Лимит людей</span>
             <span class="fed-card-fact-value">{{ source.max_clients || 'без потолка' }}</span>
           </div>
           <div class="fed-card-fact">
@@ -86,6 +69,27 @@
       </div>
     </div>
   </section>
+
+  <SamsungModal v-model="addOpen" title="Новый источник" :busy="busy">
+    <p class="admin-muted">
+      Вендор попадёт в название сервера у человека. Устройство - то, чем мы представляемся продавцу: оно всегда одно и
+      то же, иначе на той стороне это выглядит как толпа новых железок.
+    </p>
+    <div class="form-grid mt-4">
+      <OneuiInput v-model="draft.vendor" label="Вендор" placeholder="как назвать в списке" />
+      <OneuiInput v-model="draft.url" label="Ссылка на подписку" />
+      <OneuiInput v-model="draft.device_id" label="Устройство (memo продавца)" />
+      <OneuiInput v-model.number="draft.max_clients" label="Лимит людей" type="number" :min="0" :max="1000" />
+    </div>
+    <p v-if="formError" class="state-error mt-3">{{ formError }}</p>
+    <template #actions>
+      <SamsungButton :busy="busy" @click="save">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Добавить
+      </SamsungButton>
+      <SamsungButton variant="secondary" @click="closeAdd">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
 </template>
 
 <script setup>
@@ -93,6 +97,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { Plus, Power, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
+import SamsungModal from '@/components/layout/SamsungModal.vue';
 
 const enabled = ref(false);
 const sources = ref([]);
@@ -101,6 +106,7 @@ const loadError = ref('');
 const note = ref('');
 const formError = ref('');
 const busy = ref(false);
+const addOpen = ref(false);
 const draft = reactive({ vendor: '', url: '', device_id: '', max_clients: 0 });
 
 onMounted(load);
@@ -165,11 +171,23 @@ function save() {
       enabled: true,
     },
   }).then(() => {
-    draft.vendor = '';
-    draft.url = '';
-    draft.device_id = '';
-    draft.max_clients = 0;
+    if (formError.value) return;
+    closeAdd();
   });
+}
+
+function openAdd() {
+  formError.value = '';
+  addOpen.value = true;
+}
+
+function closeAdd() {
+  addOpen.value = false;
+  formError.value = '';
+  draft.vendor = '';
+  draft.url = '';
+  draft.device_id = '';
+  draft.max_clients = 0;
 }
 
 function toggle(source) {
