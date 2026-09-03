@@ -107,7 +107,7 @@ func (h *Handler) creditDonation(ctx context.Context, adminID int64, kind string
 	}
 	log.Printf("donation scan: credited %d micro-USDT to admin %d (%s)", row.AmountMicro, adminID, kind)
 	// Доверие греет только общий котёл: разработка это нам на хлеб, и продавать
-	// за неё отношение оракула было бы наёбкой
+	// за неё отношение Oracle было бы наёбкой
 	if kind != "traffic" || !h.federationOn() {
 		return
 	}

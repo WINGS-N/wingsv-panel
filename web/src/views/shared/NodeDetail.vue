@@ -140,7 +140,7 @@
   </SamsungModal>
 
   <SamsungModal :model-value="showEdit" :busy="saving" title="Настройка ноды" @update:model-value="showEdit = false">
-    <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой релей" class="mt-2" />
+    <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой сервер" class="mt-2" />
     <div class="node-endpoint-row mt-3">
       <OneuiInput
         v-model.trim="form.host"

@@ -158,7 +158,7 @@ func (h *Handler) handleClaimDonation(w http.ResponseWriter, r *http.Request, ad
 	}
 
 	// Доверие греет только общий котёл: разработка это нам на хлеб, и продавать
-	// за неё отношение оракула было бы наёбкой
+	// за неё отношение Oracle было бы наёбкой
 	var credit float64
 	if kind == "traffic" && h.federationOn() {
 		ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)

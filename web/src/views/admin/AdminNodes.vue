@@ -31,7 +31,7 @@
     </template>
     <label class="field-label mt-4">Тип сервера</label>
     <OneuiRadioGroup v-model="form.kind" :options="kindOptions" variant="pill" :disabled="!!editingId" />
-    <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой релей" class="mt-4" />
+    <OneuiInput v-model.trim="form.name" label="Название" placeholder="Мой сервер" class="mt-4" />
     <div class="node-endpoint-row mt-3">
       <OneuiInput
         v-model.trim="form.host"

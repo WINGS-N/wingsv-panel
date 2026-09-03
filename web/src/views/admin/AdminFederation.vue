@@ -254,7 +254,7 @@
             <span class="fed-card-fact-value">{{ node.xray_version }}</span>
           </div>
           <div v-if="node.vktp_version" class="fed-card-fact">
-            <span class="fed-card-fact-label">Релей</span>
+            <span class="fed-card-fact-label">VKTP</span>
             <span class="fed-card-fact-value">{{ node.vktp_version }}</span>
           </div>
         </div>
