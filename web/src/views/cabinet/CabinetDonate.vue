@@ -62,67 +62,67 @@
       </div>
     </div>
   </section>
-
-  <script setup>
-    import { onMounted, ref } from 'vue';
-    import SamsungButton from '@/components/layout/SamsungButton.vue';
-    import OneuiInput from '@/components/controls/OneuiInput.vue';
-    import CopyableValue from '@/components/domain/CopyableValue.vue';
-    import { formatUsdt as usdt } from '@/utils/format';
-
-    const wallets = ref({ traffic: '', dev: '', mint: '' });
-    const memo = ref('');
-    const mine = ref([]);
-    const totalMicro = ref(0);
-    const loadError = ref('');
-    const signature = ref('');
-    const claiming = ref(false);
-    const claimError = ref('');
-    const claimNote = ref('');
-
-    onMounted(load);
-
-    async function load() {
-      try {
-        const res = await fetch('/api/admin/donations', { credentials: 'include' });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        wallets.value = data.wallets || { traffic: '', dev: '', mint: '' };
-        memo.value = data.memo || '';
-        mine.value = data.mine || [];
-        totalMicro.value = Number(data.total_micro || 0);
-        loadError.value = '';
-      } catch (err) {
-        loadError.value = String(err.message || err);
-      }
-    }
-
-    async function claim() {
-      claiming.value = true;
-      claimError.value = '';
-      claimNote.value = '';
-      try {
-        const res = await fetch('/api/admin/donations/claim', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ signature: signature.value.trim(), kind: 'traffic' }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'не вышло засчитать');
-        claimNote.value = `Засчитано ${usdt(data.amount_micro)} USDT`;
-        signature.value = '';
-        await load();
-      } catch (err) {
-        claimError.value = String(err.message || err);
-      } finally {
-        claiming.value = false;
-      }
-    }
-
-    function when(unix) {
-      if (!unix) return '';
-      return new Date(Number(unix) * 1000).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
-    }
-  </script>
 </template>
+
+<script setup>
+import { onMounted, ref } from 'vue';
+import SamsungButton from '@/components/layout/SamsungButton.vue';
+import OneuiInput from '@/components/controls/OneuiInput.vue';
+import CopyableValue from '@/components/domain/CopyableValue.vue';
+import { formatUsdt as usdt } from '@/utils/format';
+
+const wallets = ref({ traffic: '', dev: '', mint: '' });
+const memo = ref('');
+const mine = ref([]);
+const totalMicro = ref(0);
+const loadError = ref('');
+const signature = ref('');
+const claiming = ref(false);
+const claimError = ref('');
+const claimNote = ref('');
+
+onMounted(load);
+
+async function load() {
+  try {
+    const res = await fetch('/api/admin/donations', { credentials: 'include' });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    wallets.value = data.wallets || { traffic: '', dev: '', mint: '' };
+    memo.value = data.memo || '';
+    mine.value = data.mine || [];
+    totalMicro.value = Number(data.total_micro || 0);
+    loadError.value = '';
+  } catch (err) {
+    loadError.value = String(err.message || err);
+  }
+}
+
+async function claim() {
+  claiming.value = true;
+  claimError.value = '';
+  claimNote.value = '';
+  try {
+    const res = await fetch('/api/admin/donations/claim', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signature: signature.value.trim(), kind: 'traffic' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'не вышло засчитать');
+    claimNote.value = `Засчитано ${usdt(data.amount_micro)} USDT`;
+    signature.value = '';
+    await load();
+  } catch (err) {
+    claimError.value = String(err.message || err);
+  } finally {
+    claiming.value = false;
+  }
+}
+
+function when(unix) {
+  if (!unix) return '';
+  return new Date(Number(unix) * 1000).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+}
+</script>

@@ -317,6 +317,22 @@
     @apply mt-2 divide-y divide-wings-divider;
   }
 
+  /* Настройки раскладываются плиткой: одна колонка на всю ширину монитора
+     растягивала поля пароля на полтора метра и гнала всё остальное под сгиб */
+  .settings-grid {
+    @apply grid items-start gap-4;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  }
+
+  .settings-card {
+    @apply flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-5;
+  }
+
+  /* Секция, которой тесно в одной колонке - QR, списки кодов, длинные формы */
+  .settings-card-wide {
+    grid-column: 1 / -1;
+  }
+
   /* Карточки нод раскладываются сами: колонок столько, сколько влезло, и на
      телефоне это одна. Плоский список строк на узком экране разрывал каждую
      цифру по словам */

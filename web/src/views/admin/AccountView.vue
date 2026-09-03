@@ -32,138 +32,144 @@
       </div>
     </div>
 
-    <h2 class="admin-section-subtitle mt-6">Пароль</h2>
-    <form class="admin-account-form" @submit.prevent="onSubmit">
-      <OneuiInput v-model="oldPassword" label="Текущий пароль" type="password" autocomplete="current-password" />
-      <div class="mt-3">
-        <OneuiInput v-model="newPassword" label="Новый пароль" type="password" autocomplete="new-password" />
+    <div class="settings-grid mt-6">
+      <div class="settings-card">
+        <h2 class="admin-section-subtitle">Пароль</h2>
+        <form class="admin-account-form" @submit.prevent="onSubmit">
+          <OneuiInput v-model="oldPassword" label="Текущий пароль" type="password" autocomplete="current-password" />
+          <div class="mt-3">
+            <OneuiInput v-model="newPassword" label="Новый пароль" type="password" autocomplete="new-password" />
+          </div>
+          <div class="mt-3">
+            <OneuiInput v-model="newPassword2" label="Повтор" type="password" autocomplete="new-password" />
+          </div>
+          <p v-if="error" class="admin-error mt-3">{{ error }}</p>
+          <p v-if="ok" class="admin-success mt-3">Пароль обновлён.</p>
+          <div class="actions-row mt-4">
+            <SamsungButton type="submit" :busy="busy" :disabled="!canSubmit">
+              <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
+              {{ busy ? 'Сохраняем...' : 'Сменить пароль' }}
+            </SamsungButton>
+          </div>
+        </form>
       </div>
-      <div class="mt-3">
-        <OneuiInput v-model="newPassword2" label="Повтор" type="password" autocomplete="new-password" />
-      </div>
-      <p v-if="error" class="admin-error mt-3">{{ error }}</p>
-      <p v-if="ok" class="admin-success mt-3">Пароль обновлён.</p>
-      <div class="actions-row mt-4">
-        <SamsungButton type="submit" :busy="busy" :disabled="!canSubmit">
-          <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
-          {{ busy ? 'Сохраняем...' : 'Сменить пароль' }}
-        </SamsungButton>
-      </div>
-    </form>
 
-    <h2 class="admin-section-subtitle mt-6">2FA</h2>
-    <p class="admin-muted">
-      Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении.
-    </p>
-    <p v-if="totpError" class="state-error mt-2">{{ totpError }}</p>
+      <div class="settings-card" :class="totp.enabled ? '' : 'settings-card-wide'">
+        <h2 class="admin-section-subtitle">2FA</h2>
+        <p class="admin-muted">
+          Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении.
+        </p>
+        <p v-if="totpError" class="state-error mt-2">{{ totpError }}</p>
 
-    <div v-if="totp.enabled">
-      <div class="actions-row mt-3">
-        <span class="admin-pill is-online">включён</span>
-        <span class="admin-muted">кодов восстановления осталось: {{ totp.backup_codes }}</span>
-        <SamsungButton v-if="!disarm.open && !reissue.open" variant="ghost" @click="reissue.open = true">
-          Новые коды восстановления
-        </SamsungButton>
-        <SamsungButton v-if="!disarm.open && !reissue.open" variant="ghost" @click="disarm.open = true">
-          Отключить
-        </SamsungButton>
-      </div>
-      <!-- Новый набор кодов обесценивает старый, поэтому тоже под паролем -->
-      <template v-if="reissue.open">
-        <div class="form-grid mt-3">
-          <OneuiInput
-            v-model="reissue.password"
-            label="Пароль от аккаунта"
-            type="password"
-            autocomplete="current-password"
-          />
+        <div v-if="totp.enabled">
+          <div class="actions-row mt-3">
+            <span class="admin-pill is-online">включён</span>
+            <span class="admin-muted">кодов восстановления осталось: {{ totp.backup_codes }}</span>
+            <SamsungButton v-if="!disarm.open && !reissue.open" variant="ghost" @click="reissue.open = true">
+              Новые коды восстановления
+            </SamsungButton>
+            <SamsungButton v-if="!disarm.open && !reissue.open" variant="ghost" @click="disarm.open = true">
+              Отключить
+            </SamsungButton>
+          </div>
+          <!-- Новый набор кодов обесценивает старый, поэтому тоже под паролем -->
+          <template v-if="reissue.open">
+            <div class="form-grid mt-3">
+              <OneuiInput
+                v-model="reissue.password"
+                label="Пароль от аккаунта"
+                type="password"
+                autocomplete="current-password"
+              />
+            </div>
+            <div class="actions-row">
+              <SamsungButton :busy="totpBusy" :disabled="!reissue.password" @click="reissueCodes">
+                Выпустить коды
+              </SamsungButton>
+              <SamsungButton variant="ghost" @click="closeReissue">Отмена</SamsungButton>
+            </div>
+          </template>
+
+          <!-- Снятие защиты подтверждается паролем, а не одним нажатием -->
+          <template v-if="disarm.open">
+            <div class="form-grid mt-3">
+              <OneuiInput
+                v-model="disarm.password"
+                label="Пароль от аккаунта"
+                type="password"
+                autocomplete="current-password"
+              />
+            </div>
+            <div class="actions-row">
+              <SamsungButton :busy="totpBusy" :disabled="!disarm.password" @click="disableTotp">
+                Отключить 2FA
+              </SamsungButton>
+              <SamsungButton variant="ghost" @click="closeDisarm">Отмена</SamsungButton>
+            </div>
+          </template>
         </div>
-        <div class="actions-row">
-          <SamsungButton :busy="totpBusy" :disabled="!reissue.password" @click="reissueCodes">
-            Выпустить коды
-          </SamsungButton>
-          <SamsungButton variant="ghost" @click="closeReissue">Отмена</SamsungButton>
-        </div>
-      </template>
 
-      <!-- Снятие защиты подтверждается паролем, а не одним нажатием -->
-      <template v-if="disarm.open">
-        <div class="form-grid mt-3">
-          <OneuiInput
-            v-model="disarm.password"
-            label="Пароль от аккаунта"
-            type="password"
-            autocomplete="current-password"
-          />
-        </div>
-        <div class="actions-row">
-          <SamsungButton :busy="totpBusy" :disabled="!disarm.password" @click="disableTotp">
-            Отключить 2FA
-          </SamsungButton>
-          <SamsungButton variant="ghost" @click="closeDisarm">Отмена</SamsungButton>
-        </div>
-      </template>
-    </div>
-
-    <template v-else-if="totpSetup.otpauth">
-      <p class="body-copy mt-3">
-        Отсканируйте код приложением-аутентификатором и введите шесть цифр, которые оно покажет.
-      </p>
-      <img v-if="totpQr" :src="totpQr" alt="QR для 2FA" class="totp-qr" />
-      <p class="admin-mono admin-muted">{{ totpSetup.secret }}</p>
-      <div class="form-grid mt-3">
-        <OneuiInput v-model.trim="totpCode" label="Код из приложения" inputmode="numeric" maxlength="6" />
-      </div>
-      <div class="actions-row">
-        <SamsungButton :busy="totpBusy" @click="confirmTotp">Подтвердить</SamsungButton>
-        <SamsungButton variant="ghost" @click="totpSetup.otpauth = ''">Отмена</SamsungButton>
-      </div>
-    </template>
-
-    <div v-else class="actions-row mt-3">
-      <SamsungButton :busy="totpBusy" @click="startTotp">
-        <template #icon><ShieldCheck class="button-icon" aria-hidden="true" /></template>
-        Включить
-      </SamsungButton>
-    </div>
-
-    <!-- Коды показываются один раз: панель их не хранит в открытом виде -->
-    <div v-if="backupCodes.length" class="entry-card mt-4">
-      <p class="body-copy">
-        Сохраните коды восстановления. Каждый работает один раз и нужен, когда телефона с аутентификатором нет под
-        рукой.
-      </p>
-      <ul class="backup-codes mt-3">
-        <li v-for="code in backupCodes" :key="code" class="admin-mono">{{ code }}</li>
-      </ul>
-    </div>
-
-    <template v-if="matrix.enabled">
-      <h2 class="admin-section-subtitle mt-5">Matrix</h2>
-      <p class="admin-muted">
-        Вход через <strong>{{ matrix.homeserver }}</strong
-        >. Аватар загружается здесь.
-      </p>
-      <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
-      <div class="actions-row mt-3">
-        <template v-if="matrix.matrix_id">
-          <span class="admin-mono">{{ matrix.matrix_id }}</span>
-          <SamsungButton variant="ghost" :busy="matrixBusy" @click="unlinkMatrix">Отвязать</SamsungButton>
+        <template v-else-if="totpSetup.otpauth">
+          <p class="body-copy mt-3">
+            Отсканируйте код приложением-аутентификатором и введите шесть цифр, которые оно покажет.
+          </p>
+          <img v-if="totpQr" :src="totpQr" alt="QR для 2FA" class="totp-qr" />
+          <p class="admin-mono admin-muted">{{ totpSetup.secret }}</p>
+          <div class="form-grid mt-3">
+            <OneuiInput v-model.trim="totpCode" label="Код из приложения" inputmode="numeric" maxlength="6" />
+          </div>
+          <div class="actions-row">
+            <SamsungButton :busy="totpBusy" @click="confirmTotp">Подтвердить</SamsungButton>
+            <SamsungButton variant="ghost" @click="totpSetup.otpauth = ''">Отмена</SamsungButton>
+          </div>
         </template>
-        <SamsungButton v-else @click="linkMatrix">Привязать аккаунт</SamsungButton>
-      </div>
-    </template>
 
-    <!-- Панель открывается самому, если владелец не включил модерацию -->
-    <template v-if="!hasPanel">
-      <h2 class="admin-section-subtitle mt-6">Управление клиентами</h2>
-      <p class="admin-muted">Своих клиентов заводят в админ-панели. Откройте её себе, когда понадобится.</p>
-      <p v-if="panelError" class="state-error mt-2">{{ panelError }}</p>
-      <p v-if="panelRequested" class="state-hint mt-2">Заявка отправлена, ждём решения владельца.</p>
-      <div v-else class="actions-row mt-3">
-        <SamsungButton :busy="panelBusy" @click="openPanel">Стать администратором</SamsungButton>
+        <div v-else class="actions-row mt-3">
+          <SamsungButton :busy="totpBusy" @click="startTotp">
+            <template #icon><ShieldCheck class="button-icon" aria-hidden="true" /></template>
+            Включить
+          </SamsungButton>
+        </div>
+
+        <!-- Коды показываются один раз: панель их не хранит в открытом виде -->
+        <div v-if="backupCodes.length" class="entry-card mt-4">
+          <p class="body-copy">
+            Сохраните коды восстановления. Каждый работает один раз и нужен, когда телефона с аутентификатором нет под
+            рукой.
+          </p>
+          <ul class="backup-codes mt-3">
+            <li v-for="code in backupCodes" :key="code" class="admin-mono">{{ code }}</li>
+          </ul>
+        </div>
       </div>
-    </template>
+
+      <div v-if="matrix.enabled" class="settings-card">
+        <h2 class="admin-section-subtitle">Matrix</h2>
+        <p class="admin-muted">
+          Вход через <strong>{{ matrix.homeserver }}</strong
+          >. Аватар загружается здесь.
+        </p>
+        <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
+        <div class="actions-row mt-3">
+          <template v-if="matrix.matrix_id">
+            <span class="admin-mono">{{ matrix.matrix_id }}</span>
+            <SamsungButton variant="ghost" :busy="matrixBusy" @click="unlinkMatrix">Отвязать</SamsungButton>
+          </template>
+          <SamsungButton v-else @click="linkMatrix">Привязать аккаунт</SamsungButton>
+        </div>
+      </div>
+
+      <!-- Панель открывается самому, если владелец не включил модерацию -->
+      <div v-if="!hasPanel" class="settings-card">
+        <h2 class="admin-section-subtitle">Управление клиентами</h2>
+        <p class="admin-muted">Своих клиентов заводят в админ-панели. Откройте её себе, когда понадобится.</p>
+        <p v-if="panelError" class="state-error mt-2">{{ panelError }}</p>
+        <p v-if="panelRequested" class="state-hint mt-2">Заявка отправлена, ждём решения владельца.</p>
+        <div v-else class="actions-row mt-3">
+          <SamsungButton :busy="panelBusy" @click="openPanel">Стать администратором</SamsungButton>
+        </div>
+      </div>
+    </div>
   </section>
 </template>
 

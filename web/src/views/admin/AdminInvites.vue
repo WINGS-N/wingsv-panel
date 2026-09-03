@@ -41,36 +41,34 @@
       </SamsungButton>
     </div>
 
-    <div v-if="invites.length" class="fed-node-list mt-4">
-      <div v-for="it in invites" :key="it.token" class="fed-node-row">
-        <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="admin-mono text-[15px]">{{ it.token }}</span>
-            <span class="admin-pill" :class="it.spent ? 'is-offline' : 'is-online'">
-              {{ it.spent ? 'исчерпан' : 'годен' }}
+    <div v-if="invites.length" class="fed-cards">
+      <div v-for="it in invites" :key="it.token" class="fed-card">
+        <div class="fed-card-head">
+          <span class="admin-mono min-w-0 flex-1 truncate text-[15px]">{{ it.token }}</span>
+          <span class="admin-pill shrink-0" :class="it.spent ? 'is-offline' : 'is-online'">
+            {{ it.spent ? 'исчерпан' : 'годен' }}
+          </span>
+        </div>
+        <div class="fed-card-facts">
+          <div class="fed-card-fact">
+            <span class="fed-card-fact-label">Использован</span>
+            <span class="fed-card-fact-value">
+              {{ it.use_count }}
+              <span class="text-wings-kicker">из {{ it.max_uses ? it.max_uses : 'без потолка' }}</span>
             </span>
           </div>
-          <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
-            <span class="inline-flex items-center gap-1">
-              <Users :size="13" aria-hidden="true" />{{ it.use_count }} / {{ it.max_uses }}
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <CalendarRange :size="13" aria-hidden="true" />
-              {{ it.expires_at ? `до ${short(it.expires_at)}` : 'без срока' }}
-            </span>
-          </span>
-          <CopyableLink :value="it.link" class="mt-2" />
-          <div class="actions-row mt-2">
-            <SamsungButton variant="ghost" @click="openInApp(it)">
-              <template #icon><Smartphone class="button-icon" aria-hidden="true" /></template>
-              Открыть в приложении
-            </SamsungButton>
+          <div class="fed-card-fact">
+            <span class="fed-card-fact-label">Срок</span>
+            <span class="fed-card-fact-value">{{ it.expires_at ? short(it.expires_at) : 'без срока' }}</span>
           </div>
         </div>
-        <SamsungButton variant="ghost" :busy="revoking === it.token" @click="revoke(it)">
-          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          Отозвать
-        </SamsungButton>
+        <CopyableValue label="Ссылка" :value="it.link" />
+        <div class="fed-node-actions">
+          <SamsungButton variant="ghost" :busy="revoking === it.token" @click="revoke(it)">
+            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+            Отозвать
+          </SamsungButton>
+        </div>
       </div>
     </div>
     <p v-else-if="!loading" class="admin-muted mt-4">Вы пока никого не приглашали.</p>
@@ -79,10 +77,10 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { CalendarRange, Plus, Ticket, Trash2, Users, Smartphone } from 'lucide-vue-next';
+import { Plus, Ticket, Trash2 } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
-import CopyableLink from '@/components/domain/CopyableLink.vue';
+import CopyableValue from '@/components/domain/CopyableValue.vue';
 import InviteHero from '@/components/domain/InviteHero.vue';
 
 const invites = ref([]);
@@ -178,9 +176,6 @@ async function create() {
 }
 
 // Приложение ловит эту схему и применяет код само, без копипасты руками
-function openInApp(invite) {
-  window.location.href = `wingsv://invite/${invite.token}`;
-}
 
 function short(value) {
   try {
