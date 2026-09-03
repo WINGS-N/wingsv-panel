@@ -62,13 +62,8 @@
       </div>
     </div>
 
-    <div class="form-grid mt-5">
-      <OneuiInput v-model.number="uses" label="Серверов на один токен" type="number" :min="1" :max="64" />
-      <OneuiInput v-model.number="newNodeBudgetGb" label="Отдаю в месяц, GB" type="number" :min="0" :max="1048576" />
-    </div>
-
     <div class="actions-row">
-      <SamsungButton :busy="minting" @click="mint">
+      <SamsungButton @click="mintOpen = true">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
         Подключить сервер
       </SamsungButton>
@@ -259,13 +254,6 @@
           </div>
         </div>
 
-        <span v-if="budgetFor === node.id" class="flex flex-wrap items-center gap-2">
-          <input v-model.number="budgetGb" class="fed-budget-input" type="number" min="1" step="1" />
-          <span class="text-wings-kicker">GB в месяц</span>
-          <SamsungButton :busy="busyNode === node.id" @click="saveBudget(node)">Сохранить</SamsungButton>
-          <SamsungButton variant="ghost" @click="budgetFor = ''">Отмена</SamsungButton>
-        </span>
-
         <!-- Полоса показывает ОСТАТОК: полная означает, что лимит цел, и тает
              по мере того, как его съедают -->
         <span class="fed-node-track w-full max-w-none" aria-hidden="true">
@@ -294,19 +282,29 @@
     <SamsungPager v-model:page="nodePage" :total="summary.node_list.length" :per-page="NODES_PER_PAGE" />
   </section>
 
-  <SamsungModal :model-value="Boolean(removing)" title="Убрать сервер?" @update:model-value="removing = null">
-    <p class="body-copy">
-      Сервер <b>{{ removing?.hostname || removing?.id?.slice(0, 12) }}</b> перестанет выдаваться людям, а те, кто на нём
-      сидит, переедут на другие. Ваш агент можно будет просто остановить.
-    </p>
-    <p class="admin-muted mt-2">Вернуть сервер потом можно, зачислив его заново новым токеном.</p>
-    <p v-if="removeError" class="state-error mt-3">{{ removeError }}</p>
+
+  <SamsungModal v-model="mintOpen" title="Новый сервер" :busy="minting">
+    <p class="admin-muted">Токен скоро протухнет, поэтому команду лучше выполнить сразу.</p>
+    <div class="form-grid mt-4">
+      <OneuiInput v-model.number="uses" label="Серверов на один токен" type="number" :min="1" :max="64" />
+      <OneuiInput v-model.number="newNodeBudgetGb" label="Отдаю в месяц, GB" type="number" :min="0" :max="1048576" />
+    </div>
     <template #actions>
-      <SamsungButton :busy="busyNode === removing?.id" @click="confirmRemove">
-        <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-        Убрать
+      <SamsungButton :busy="minting" @click="mint">
+        <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
+        Выпустить команду
       </SamsungButton>
-      <SamsungButton variant="secondary" @click="removing = null">Отмена</SamsungButton>
+      <SamsungButton variant="secondary" @click="mintOpen = false">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
+
+  <SamsungModal :model-value="Boolean(budgetFor)" title="Сколько отдаём" :busy="Boolean(busyNode)" @update:model-value="budgetFor = ''">
+    <div class="form-grid">
+      <OneuiInput v-model.number="budgetGb" label="GB в месяц" type="number" :min="1" />
+    </div>
+    <template #actions>
+      <SamsungButton :busy="busyNode === budgetFor" @click="saveBudget(nodeById(budgetFor))">Сохранить</SamsungButton>
+      <SamsungButton variant="secondary" @click="budgetFor = ''">Отмена</SamsungButton>
     </template>
   </SamsungModal>
 </template>
@@ -342,6 +340,7 @@ import { formatBytes, formatSpeed as rate, formatUsdt as usdt } from '@/utils/fo
 const enabled = ref(false);
 const loading = ref(false);
 const minting = ref(false);
+const mintOpen = ref(false);
 // Сколько серверов вступит по одному токену. Больше одного нужно там, где
 // ноды поднимаются из общего секрета - в кубере это DaemonSet.
 const uses = ref(1);
@@ -547,6 +546,7 @@ async function mint() {
     const got = await res.json();
     command.value = got.command;
     mintedUses.value = got.uses || 1;
+    mintOpen.value = false;
   } catch (err) {
     loadError.value = String(err.message || err);
   } finally {
@@ -559,6 +559,12 @@ async function mint() {
 function startBudget(node) {
   budgetFor.value = node.id;
   budgetGb.value = Math.max(1, Math.round(Number(node.declared_budget_bytes || 0) / 1024 ** 3));
+}
+
+// Правку бюджета нужно вернуть в ту самую строку списка, а не в болванку из
+// модалки: иначе цифра на экране остаётся вчерашней до перезагрузки
+function nodeById(id) {
+  return (summary.node_list || []).find((n) => n.id === id) || { id };
 }
 
 async function saveBudget(node) {
