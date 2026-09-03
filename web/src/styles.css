@@ -317,20 +317,22 @@
     @apply mt-2 divide-y divide-wings-divider;
   }
 
-  /* Настройки раскладываются плиткой: одна колонка на всю ширину монитора
-     растягивала поля пароля на полтора метра и гнала всё остальное под сгиб */
+  /* Настройки раскладываются плиткой. auto-fit, а НЕ auto-fill: fill оставляет
+     пустые треки, и три карточки жались влево, а справа зияла дыра в пол-экрана */
   .settings-grid {
     @apply grid items-start gap-4;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   }
 
   .settings-card {
     @apply flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-5;
   }
 
-  /* Секция, которой тесно в одной колонке - QR, списки кодов, длинные формы */
-  .settings-card-wide {
-    grid-column: 1 / -1;
+  /* Поля внутри карточки не растягиваются вместе с ней: строка пароля во всю
+     ширину монитора это то, ради чего плитку и заводили */
+  .settings-card .form-grid,
+  .settings-card .input-field {
+    max-width: 420px;
   }
 
   /* Карточки нод раскладываются сами: колонок столько, сколько влезло, и на

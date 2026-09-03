@@ -56,7 +56,7 @@
 
       <!-- Во всю ширину только когда внутри реально много: QR при настройке или
            список кодов. Пустая карточка на весь ряд выбивает соседей вниз -->
-      <div class="settings-card" :class="totpSetup.otpauth || totp.enabled ? 'settings-card-wide' : ''">
+      <div class="settings-card">
         <h2 class="admin-section-subtitle">2FA</h2>
         <p class="admin-muted">
           Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении.
@@ -149,7 +149,7 @@
         <h2 class="admin-section-subtitle">Matrix</h2>
         <p class="admin-muted">
           Вход через <strong>{{ matrix.homeserver }}</strong
-          >. Аватар загружается здесь.
+          >.
         </p>
         <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
         <div class="actions-row mt-3">
