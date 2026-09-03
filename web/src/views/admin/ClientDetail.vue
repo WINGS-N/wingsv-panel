@@ -169,27 +169,12 @@
             Загрузить текущий с клиента
           </SamsungButton>
         </div>
-        <details class="admin-config-import">
-          <summary>Импорт из wingsv:// или vless:// ссылки</summary>
-          <p class="admin-muted">
-            Вставьте ссылку <code class="font-sharp">wingsv://</code> или <code class="font-sharp">vless://</code>
-            — её содержимое заменит текущий черновик. Изменения не отправятся клиенту, пока вы не нажмёте «Применить».
-          </p>
-          <textarea
-            v-model.trim="importLinkDraft"
-            class="text-input admin-import-area"
-            rows="3"
-            spellcheck="false"
-            placeholder="wingsv://... или vless://..."
-          />
-          <p v-if="importError" class="admin-error">{{ importError }}</p>
-          <div class="actions-row mt-2">
-            <SamsungButton variant="secondary" :busy="busyImport" :disabled="!importLinkDraft" @click="importFromLink">
-              <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-              {{ busyImport ? 'Распаковываем...' : 'Подставить' }}
-            </SamsungButton>
-          </div>
-        </details>
+        <div class="actions-row">
+          <SamsungButton variant="secondary" @click="importOpen = true">
+            <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
+            Импорт из ссылки
+          </SamsungButton>
+        </div>
         <ConfigFormEditor
           v-if="configMode === 'form'"
           :model-value="formValue"
@@ -523,28 +508,12 @@
         <div class="mt-3">
           <OneuiRadioGroup v-model="profileBackend" :options="profileBackendOptions" variant="pill" />
         </div>
-        <details class="admin-config-import">
-          <summary>Добавить из vless:// или wingsv://</summary>
-          <textarea
-            v-model.trim="profileImportDraft"
-            class="text-input admin-import-area"
-            rows="3"
-            spellcheck="false"
-            placeholder="vless://... или wingsv://..."
-          />
-          <p v-if="profileImportError" class="admin-error">{{ profileImportError }}</p>
-          <div class="actions-row mt-2">
-            <SamsungButton
-              variant="secondary"
-              :busy="busyProfileImport"
-              :disabled="!profileImportDraft"
-              @click="importProfile"
-            >
-              <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
-              {{ busyProfileImport ? 'Распаковываем...' : 'Добавить' }}
-            </SamsungButton>
-          </div>
-        </details>
+        <div class="actions-row">
+          <SamsungButton variant="secondary" @click="profileImportOpen = true">
+            <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
+            Добавить из ссылки
+          </SamsungButton>
+        </div>
         <p class="admin-muted mt-3" v-if="currentProfiles.length">
           Активный профиль применится на устройстве после нажатия «Применить (Push)».
         </p>
@@ -731,6 +700,45 @@
       </section>
     </template>
   </div>
+
+  <SamsungModal v-model="importOpen" title="Импорт из ссылки" :busy="busyImport">
+    <p class="admin-muted">
+      Содержимое ссылки заменит текущий черновик. Клиенту это не уедет, пока вы не нажмёте "Применить".
+    </p>
+    <textarea
+      v-model.trim="importLinkDraft"
+      class="text-input admin-import-area mt-3"
+      rows="4"
+      spellcheck="false"
+      placeholder="wingsv://... или vless://..."
+    />
+    <p v-if="importError" class="admin-error">{{ importError }}</p>
+    <template #actions>
+      <SamsungButton :busy="busyImport" :disabled="!importLinkDraft" @click="importFromLink">
+        <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
+        {{ busyImport ? 'Распаковываем...' : 'Подставить' }}
+      </SamsungButton>
+      <SamsungButton variant="secondary" @click="importOpen = false">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
+
+  <SamsungModal v-model="profileImportOpen" title="Новый профиль" :busy="busyProfileImport">
+    <textarea
+      v-model.trim="profileImportDraft"
+      class="text-input admin-import-area"
+      rows="4"
+      spellcheck="false"
+      placeholder="vless://... или wingsv://..."
+    />
+    <p v-if="profileImportError" class="admin-error">{{ profileImportError }}</p>
+    <template #actions>
+      <SamsungButton :busy="busyProfileImport" :disabled="!profileImportDraft" @click="importProfile">
+        <template #icon><Link2 class="button-icon" aria-hidden="true" /></template>
+        {{ busyProfileImport ? 'Распаковываем...' : 'Добавить' }}
+      </SamsungButton>
+      <SamsungButton variant="secondary" @click="profileImportOpen = false">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
 </template>
 
 <script setup>
@@ -845,6 +853,7 @@ const configAppliedDetail = computed(() => {
 const configDraftSeeded = ref(false);
 const activeLogTab = ref('runtime');
 const profileImportDraft = ref('');
+const profileImportOpen = ref(false);
 const profileImportError = ref('');
 const busyProfileImport = ref(false);
 const copiedProfileId = ref('');
@@ -1055,6 +1064,7 @@ function syncModeLabel(mode) {
   }
 }
 const importLinkDraft = ref('');
+const importOpen = ref(false);
 const importError = ref('');
 const busyImport = ref(false);
 const lastCmdAck = ref(null);
@@ -1832,6 +1842,7 @@ async function importProfile() {
     if (!currentActiveProfileId.value && merged.length) patch.activeProfileId = merged[0].id;
     patchBackendSection(patch);
     profileImportDraft.value = '';
+    profileImportOpen.value = false;
   } catch (err) {
     profileImportError.value = err.message;
   } finally {
@@ -2161,6 +2172,7 @@ async function importFromLink() {
     const merged = mergeConfig(current, body.config || {});
     configDraft.value = JSON.stringify(merged, null, 2);
     importLinkDraft.value = '';
+    importOpen.value = false;
   } catch (err) {
     importError.value = err.message;
   } finally {
