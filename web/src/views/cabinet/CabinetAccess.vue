@@ -51,16 +51,9 @@
 
     <div v-if="enabled && access.subscription_url" class="entry-card mt-4">
       <p class="body-copy">
-        Откройте на телефоне с установленным WINGS V - подписка заведётся сама и будет обновляться.
+        Войдите в WINGS Account в приложении - серверы появятся сами и будут обновляться. Добавлять и вставлять ничего
+        не нужно.
       </p>
-      <div class="actions-row">
-        <SamsungButton v-if="access.import_link" @click="openInApp">
-          <template #icon><Smartphone class="button-icon" aria-hidden="true" /></template>
-          Добавить в приложение
-        </SamsungButton>
-      </div>
-      <p class="admin-muted mt-3">Или вставьте ссылку вручную:</p>
-      <CopyableLink :value="access.subscription_url" class="mt-2" />
     </div>
   </section>
 
@@ -80,9 +73,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { ArrowDownUp, Gauge, Server, Smartphone } from 'lucide-vue-next';
-import SamsungButton from '@/components/layout/SamsungButton.vue';
-import CopyableLink from '@/components/domain/CopyableLink.vue';
+import { ArrowDownUp, Gauge, Server } from 'lucide-vue-next';
 import { formatSpeed } from '@/utils/format.js';
 
 const CLASS_LABELS = {
@@ -146,12 +137,6 @@ async function load() {
   } catch (err) {
     loadError.value = String(err.message || err);
   }
-}
-
-// Ссылка открывается своей схемой: приложение перехватывает её и заводит
-// подписку, а браузер остаётся на месте
-function openInApp() {
-  window.location.href = access.import_link;
 }
 
 function classLabel(kind) {
