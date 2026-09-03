@@ -41,7 +41,10 @@ type donationView struct {
 
 type donationsResponse struct {
 	Wallets donationWalletsView `json:"wallets"`
-	Mine    []donationView      `json:"mine"`
+	// Memo - код, который человек кладёт в заметку перевода. Без него занос
+	// прилетит анонимным, и привязать его будет не к кому
+	Memo string         `json:"memo"`
+	Mine []donationView `json:"mine"`
 	// TotalMicro - сколько человек занёс всего, TrustCredit - на сколько очков
 	// это греет доверие прямо сейчас
 	TotalMicro  int64   `json:"total_micro"`
@@ -66,7 +69,7 @@ func (h *Handler) handleDonations(w http.ResponseWriter, r *http.Request, admin 
 		writeError(w, http.StatusInternalServerError, "не смог поднять заносы")
 		return
 	}
-	out := donationsResponse{Wallets: h.donationWallets()}
+	out := donationsResponse{Wallets: h.donationWallets(), Memo: MemoFor(admin.ID)}
 	for _, row := range rows {
 		out.Mine = append(out.Mine, donationView{
 			Kind: row.Kind, AmountMicro: row.AmountMicro,
@@ -135,6 +138,13 @@ func (h *Handler) handleClaimDonation(w http.ResponseWriter, r *http.Request, ad
 	transfer, err := solana.New("").VerifyTransfer(r.Context(), signature, wallet, wallets.Mint)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, donationError(err))
+		return
+	}
+	// Txid публичен, и без этой проверки любой вписал бы себе чужой занос,
+	// подсмотренный в эксплорере
+	if id, ok := adminFromMemo(transfer.Memo); !ok || id != admin.ID {
+		writeError(w, http.StatusBadRequest,
+			"в заметке перевода нет вашего кода "+MemoFor(admin.ID)+", засчитать его вам нельзя")
 		return
 	}
 	fresh, err := h.store.RecordDonation(admin.ID, kind, signature, int64(transfer.AmountMicro), transfer.At)

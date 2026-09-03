@@ -681,6 +681,9 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// Дерево инвайтов уезжает в башку: она считает трафик, но про то, кто кого
 	// позвал, знает только панель
 	startInviteTreeReports(ctx, store, fed)
+	// Заносы разбираются сами: человек отправил USDT с кодом в memo и больше
+	// ничего делать не обязан
+	apiServer.adminH.StartDonationScan(ctx)
 
 	go collector.New(store, relayFactory, collector.Options{
 		Interval:        3 * time.Second,

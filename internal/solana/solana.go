@@ -1,7 +1,7 @@
 // Package solana проверяет, что занос действительно случился.
 //
-// Верить на слово тут нельзя вообще: доверие в оракуле греется за донат, и без
-// проверки любой желающий вписал бы себе чужую подпись и получил очки даром.
+// Верить на слово тут нельзя ни разу: за донат греется доверие в оракуле, и без
+// проверки любой хитрожопый вписал бы себе чужой txid и получил очки даром.
 // Поэтому транзакция поднимается из цепочки и разбирается сама
 package solana
 
@@ -55,6 +55,17 @@ type Transfer struct {
 	AmountMicro uint64
 	Mint        string
 	At          time.Time
+	// Memo - метка, которую отправитель прицепил к переводу. Единственное, что
+	// связывает занос с аккаунтом: сам по себе перевод говорит только "с
+	// кошелька X пришли деньги", а кто такой X, цепочка не знает
+	Memo string
+}
+
+// memoProgram - программа заметок. Их две, старая и новая, и кошельки пишут в
+// обе, поэтому смотрим на любую
+var memoPrograms = map[string]bool{
+	"MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr": true,
+	"Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo": true,
 }
 
 // rpcRequest - тело запроса JSON-RPC
@@ -103,7 +114,15 @@ func (c *Client) VerifyTransfer(ctx context.Context, signature, toOwner, mint st
 				Err               any               `json:"err"`
 				PreTokenBalances  []json.RawMessage `json:"preTokenBalances"`
 				PostTokenBalances []json.RawMessage `json:"postTokenBalances"`
+				InnerInstructions []struct {
+					Instructions []instruction `json:"instructions"`
+				} `json:"innerInstructions"`
 			} `json:"meta"`
+			Transaction *struct {
+				Message struct {
+					Instructions []instruction `json:"instructions"`
+				} `json:"message"`
+			} `json:"transaction"`
 		} `json:"result"`
 		Error *struct {
 			Message string `json:"message"`
@@ -131,7 +150,40 @@ func (c *Client) VerifyTransfer(ctx context.Context, signature, toOwner, mint st
 	if parsed.Result.BlockTime == 0 {
 		at = time.Now().UTC()
 	}
-	return Transfer{AmountMicro: after - before, Mint: mint, At: at}, nil
+	memo := ""
+	if parsed.Result.Transaction != nil {
+		memo = memoOf(parsed.Result.Transaction.Message.Instructions)
+	}
+	if memo == "" {
+		for _, inner := range parsed.Result.Meta.InnerInstructions {
+			if found := memoOf(inner.Instructions); found != "" {
+				memo = found
+				break
+			}
+		}
+	}
+	return Transfer{AmountMicro: after - before, Mint: mint, At: at, Memo: memo}, nil
+}
+
+// instruction - разобранная инструкция в ответе RPC. Заметка приезжает прямо в
+// parsed строкой, разбирать её самим не надо
+type instruction struct {
+	ProgramID string          `json:"programId"`
+	Parsed    json.RawMessage `json:"parsed"`
+}
+
+// memoOf вытаскивает заметку из набора инструкций
+func memoOf(list []instruction) string {
+	for _, item := range list {
+		if !memoPrograms[item.ProgramID] {
+			continue
+		}
+		var text string
+		if err := json.Unmarshal(item.Parsed, &text); err == nil {
+			return strings.TrimSpace(text)
+		}
+	}
+	return ""
 }
 
 // tokenBalance - строка баланса токен-аккаунта в ответе RPC
@@ -162,4 +214,75 @@ func balancesOf(raw []json.RawMessage, owner, mint string) uint64 {
 		total += amount
 	}
 	return total
+}
+
+// Incoming - что прилетело на адрес
+type Incoming struct {
+	Signature string
+	Transfer
+}
+
+// RecentTransfers перечисляет свежие входящие переводы на адрес.
+//
+// Сканим сами, а не ждём, пока человек припрётся с txid: RPC бесплатный, запрос
+// один на круг, а человек занёс денег и больше ебаться ни с чем не должен
+func (c *Client) RecentTransfers(ctx context.Context, owner, mint string, limit int, until string) ([]Incoming, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	params := map[string]any{"limit": limit, "commitment": "finalized"}
+	if until != "" {
+		// Дошли до уже разобранного - дальше в историю лезть незачем
+		params["until"] = until
+	}
+	body, err := json.Marshal(rpcRequest{
+		JSONRPC: "2.0", ID: 1, Method: "getSignaturesForAddress",
+		Params: []any{owner, params},
+	})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("solana: rpc answered %d", resp.StatusCode)
+	}
+	var parsed struct {
+		Result []struct {
+			Signature string `json:"signature"`
+			Err       any    `json:"err"`
+		} `json:"result"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return nil, err
+	}
+	if parsed.Error != nil {
+		return nil, errors.New("solana: " + parsed.Error.Message)
+	}
+
+	out := make([]Incoming, 0, len(parsed.Result))
+	for _, row := range parsed.Result {
+		if row.Err != nil {
+			continue
+		}
+		transfer, err := c.VerifyTransfer(ctx, row.Signature, owner, mint)
+		if err != nil {
+			// Чужой токен или вообще не перевод к нам - обычное дело на живом
+			// адресе, и ронять из-за этого весь круг было бы дуростью нахуй
+			continue
+		}
+		out = append(out, Incoming{Signature: row.Signature, Transfer: transfer})
+	}
+	return out, nil
 }

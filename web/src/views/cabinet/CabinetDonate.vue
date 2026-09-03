@@ -7,6 +7,11 @@
     <p class="body-copy body-copy-wide">
       Два разных кошелька и два разных назначения. Переводы только в USDT в сети Solana.
     </p>
+    <p class="admin-muted mt-3">
+      Обязательно укажите в поле memo перевода свой код - по нему платёж находит ваш аккаунт. Без кода деньги дойдут, но
+      останутся анонимными.
+    </p>
+    <CopyableLink :value="memo" class="mt-3" />
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
   </section>
 
@@ -28,13 +33,13 @@
   </section>
 
   <section class="surface-card mt-6">
-    <h2 class="section-title">Засчитать перевод</h2>
+    <h2 class="section-title">Засчитать вручную</h2>
     <p class="admin-muted mt-1">
-      Вставьте подпись транзакции - мы поднимем её из сети и проверим сами. Занос на трафик после этого начнёт греть
-      доверие.
+      Обычно ничего делать не нужно: переводы с вашим кодом в memo находятся сами в течение минуты. Этот путь нужен,
+      только если платёж почему-то не появился - вставьте TXID перевода.
     </p>
     <div class="mt-4 flex flex-wrap items-end gap-3">
-      <OneuiInput v-model="signature" label="Подпись транзакции" class="min-w-[280px] flex-1" />
+      <OneuiInput v-model="signature" label="TXID перевода" class="min-w-[280px] flex-1" />
       <OneuiRadioGroup v-model="kind" :options="kindOptions" variant="pill" />
       <SamsungButton :busy="claiming" @click="claim">
         <template #icon><Check class="button-icon" aria-hidden="true" /></template>
@@ -73,6 +78,7 @@ import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatUsdt as usdt } from '@/utils/format';
 
 const wallets = ref({ traffic: '', dev: '', mint: '' });
+const memo = ref('');
 const mine = ref([]);
 const totalMicro = ref(0);
 const loadError = ref('');
@@ -95,6 +101,7 @@ async function load() {
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     wallets.value = data.wallets || { traffic: '', dev: '', mint: '' };
+    memo.value = data.memo || '';
     mine.value = data.mine || [];
     totalMicro.value = Number(data.total_micro || 0);
     loadError.value = '';
