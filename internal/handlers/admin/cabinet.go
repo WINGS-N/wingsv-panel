@@ -91,7 +91,12 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		return
 	}
 	out := map[string]any{
-		"enabled":          true,
+		"enabled": true,
+		// Свой идентификатор в федерации приложение подписывает им расписки.
+		// Отдаём его на КАЖДОМ заходе, а не только при входе: кто вошёл раньше,
+		// чем поле появилось, иначе сидел бы с пустым до перелогина, а без него
+		// расписки не собираются вообще нихуя
+		"federation_id":    federationUserID(admin),
 		"subscription_url": got.GetSubscriptionUrl(),
 		"nodes":            got.GetNodes(),
 		"nodes_entitled":   got.GetNodesEntitled(),
