@@ -21,6 +21,27 @@ type payoutEpochView struct {
 	PublishedUnix int64  `json:"published_unix"`
 }
 
+// nodeAccrualView - что набежало одной машине и почему столько. Донору мало
+// итога: он вправе видеть, какая нода сколько принесла и за что получила ноль
+type nodeAccrualView struct {
+	NodeID         string `json:"node_id"`
+	Hostname       string `json:"hostname"`
+	SelfBytes      uint64 `json:"self_bytes"`
+	ReceiptBytes   uint64 `json:"receipt_bytes"`
+	BillableBytes  uint64 `json:"billable_bytes"`
+	ProbeConfirmed bool   `json:"probe_confirmed"`
+	FactorBps      uint32 `json:"factor_bps"`
+	AmountMicro    uint64 `json:"amount_micro"`
+}
+
+// payoutTermsView - прайс и границы периода
+type payoutTermsView struct {
+	MicroPerGiB     uint64 `json:"micro_per_gib"`
+	PeriodSeconds   uint32 `json:"period_seconds"`
+	PeriodStartUnix int64  `json:"period_start_unix"`
+	PeriodEndUnix   int64  `json:"period_end_unix"`
+}
+
 type payoutStatementView struct {
 	Enabled bool   `json:"enabled"`
 	Error   string `json:"error,omitempty"`
@@ -30,6 +51,9 @@ type payoutStatementView struct {
 	TotalMicro     uint64            `json:"total_micro"`
 	ClaimableMicro uint64            `json:"claimable_micro"`
 	Epochs         []payoutEpochView `json:"epochs"`
+	Terms          *payoutTermsView  `json:"terms,omitempty"`
+	Pending        []nodeAccrualView `json:"pending"`
+	PendingMicro   uint64            `json:"pending_micro"`
 }
 
 // handlePayoutStatement отвечает донору, сколько ему причитается и за что
@@ -72,6 +96,21 @@ func (h *Handler) handlePayoutStatement(w http.ResponseWriter, r *http.Request, 
 			Number: e.GetNumber(), StartUnix: e.GetStartUnix(), EndUnix: e.GetEndUnix(),
 			AmountMicro: e.GetAmountMicro(), RootHex: e.GetRootHex(),
 			TxRef: e.GetTxRef(), PublishedUnix: e.GetPublishedUnix(),
+		})
+	}
+	if terms := got.GetTerms(); terms != nil {
+		view.Terms = &payoutTermsView{
+			MicroPerGiB: terms.GetMicroPerGib(), PeriodSeconds: terms.GetPeriodSeconds(),
+			PeriodStartUnix: terms.GetPeriodStartUnix(), PeriodEndUnix: terms.GetPeriodEndUnix(),
+		}
+	}
+	view.PendingMicro = got.GetPendingMicro()
+	for _, n := range got.GetPending() {
+		view.Pending = append(view.Pending, nodeAccrualView{
+			NodeID: n.GetNodeId(), Hostname: n.GetHostname(),
+			SelfBytes: n.GetSelfBytes(), ReceiptBytes: n.GetReceiptBytes(),
+			BillableBytes: n.GetBillableBytes(), ProbeConfirmed: n.GetProbeConfirmed(),
+			FactorBps: n.GetFactorBps(), AmountMicro: n.GetAmountMicro(),
 		})
 	}
 	writeJSON(w, http.StatusOK, view)

@@ -132,6 +132,215 @@
         Без кошелька начисления копятся, но в расчётный период не попадают.
       </p>
 
+      <div v-if="payouts.terms" class="fed-card-facts mt-4 sm:grid-cols-4">
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Ставка</span>
+          <span class="fed-card-fact-value">{{ ratePerTb }} USDT за TB</span>
+        </div>
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Период</span>
+          <span class="fed-card-fact-value">{{ Math.round(payouts.terms.period_seconds / 86400) }} дн.</span>
+        </div>
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Закроется</span>
+          <span class="fed-card-fact-value">{{ epochDate(payouts.terms.period_end_unix) || '-' }}</span>
+        </div>
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Копится сейчас</span>
+          <span class="fed-card-fact-value">{{ usdt(payouts.pending_micro) }} USDT</span>
+        </div>
+      </div>
+
+      <p class="admin-muted mt-3">
+        Платим за меньшее из двух чисел: сколько нода насчитала сама и сколько подтвердили расписки клиентов. Дальше
+        умножаем на уровень доверия ноды. Если зонды не подтвердили, что через неё идёт трафик из страны, за период не
+        начисляется ничего.
+      </p>
+
+      <div v-if="payouts.pending.length" class="fed-cards mt-3">
+        <div v-for="row in payouts.pending" :key="row.node_id" class="fed-card">
+          <div class="fed-card-head">
+            <span class="fed-card-name">{{ row.hostname || row.node_id.slice(0, 8) }}</span>
+            <span class="admin-pill shrink-0" :class="row.probe_confirmed ? 'is-online' : 'is-offline'">
+              {{ row.probe_confirmed ? 'подтверждена' : 'зонды молчат' }}
+            </span>
+          </div>
+          <div class="fed-card-facts">
+            <div class="fed-card-fact">
+              <span class="fed-card-fact-label">Насчитала сама</span>
+              <span class="fed-card-fact-value">{{ bytes(row.self_bytes) }}</span>
+            </div>
+            <div class="fed-card-fact">
+              <span class="fed-card-fact-label">Подписали клиенты</span>
+              <span class="fed-card-fact-value">{{ bytes(row.receipt_bytes) }}</span>
+            </div>
+            <div class="fed-card-fact">
+              <span class="fed-card-fact-label">Пойдёт в счёт</span>
+              <span class="fed-card-fact-value">{{ bytes(row.billable_bytes) }}</span>
+            </div>
+            <div class="fed-card-fact">
+              <span class="fed-card-fact-label">Доверие</span>
+              <span class="fed-card-fact-value">{{ Math.round(row.factor_bps / 100) }}%</span>
+            </div>
+          </div>
+          <span class="text-[15px]">{{ usdt(row.amount_micro) }} USDT за период</span>
+        </div>
+      </div>
+
+      <h3 v-if="payouts.epochs.length" class="section-title mt-6 text-[15px]">Закрытые периоды</h3>
+      <div v-if="payouts.epochs.length" class="fed-node-list mt-2">
+        <div v-for="epoch in payouts.epochs" :key="epoch.number" class="fed-node-row">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[15px]">Эпоха {{ epoch.number }}</span>
+              <span class="admin-pill">{{ usdt(epoch.amount_micro) }} USDT</span>
+              <span class="admin-pill" :class="epoch.tx_ref ? 'is-online' : 'is-info'">
+                {{ epoch.tx_ref ? 'можно забирать' : 'посчитана' }}
+              </span>
+            </div>
+            <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
+              <span>{{ epochDate(epoch.start_unix) }} - {{ epochDate(epoch.end_unix) }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <p v-else class="state-hint mt-4">Ни один период ещё не закрыт.</p>
+    </template>
+  </section>
+
+  <section v-if="enabled && summary.months.length" class="surface-card mt-6">
+    <h2 class="section-title">По месяцам</h2>
+    <p class="admin-muted mt-1">Сколько трафика ушло через ваши серверы. Счётчик сверху обнуляется, этот - нет.</p>
+    <div class="fed-months mt-4">
+      <div v-for="m in summary.months" :key="m.month" class="fed-month">
+        <span class="fed-month-name">{{ monthName(m.month) }}</span>
+        <span class="fed-month-track" aria-hidden="true">
+          <span class="fed-month-fill" :style="{ width: monthPct(m) + '%' }"></span>
+        </span>
+        <span class="fed-month-value">{{ bytes(m.bytes) }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section v-if="enabled && summary.node_list.length" class="surface-card mt-6">
+    <h2 class="section-title">Ноды</h2>
+    <!-- Карточки, а не строки: колонок столько, сколько влезло в экран -->
+    <div class="fed-cards">
+      <div v-for="node in summary.node_list" :key="node.id" class="fed-card">
+        <div class="fed-card-head">
+          <span class="fed-card-name">{{ node.hostname || node.id.slice(0, 8) }}</span>
+          <!-- Точка перед подписью: состояние читается раньше, чем текст -->
+          <span class="admin-pill shrink-0" :class="stateClass(node.state)">
+            <span class="state-dot" :class="dotClass(node.state)" aria-hidden="true"></span>
+            {{ stateLabel(node.state) }}
+          </span>
+        </div>
+        <p v-if="node.reason" class="-mt-1 truncate text-[13px] text-wings-muted">{{ node.reason }}</p>
+
+        <div class="fed-card-facts">
+          <div class="fed-card-fact">
+            <span class="fed-card-fact-label">Отдано из лимита</span>
+            <span class="fed-card-fact-value">
+              {{ bytes(node.used_bytes) }}
+              <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
+              <button type="button" class="fed-node-edit" title="Изменить месячный лимит" @click="startBudget(node)">
+                <Pencil :size="13" aria-hidden="true" />
+              </button>
+            </span>
+          </div>
+          <div class="fed-card-fact">
+            <span class="fed-card-fact-label">Онлайн сейчас</span>
+            <span class="fed-card-fact-value">{{ node.sessions }}</span>
+          </div>
+          <div v-if="node.probe_bytes" class="fed-card-fact">
+            <span class="fed-card-fact-label" title="Наши зонды, в лимит не входят">Проверки</span>
+            <span class="fed-card-fact-value">{{ bytes(node.probe_bytes) }}</span>
+          </div>
+          <div v-if="node.xray_version" class="fed-card-fact">
+            <span class="fed-card-fact-label">Xray</span>
+            <span class="fed-card-fact-value">{{ node.xray_version }}</span>
+          </div>
+          <div v-if="node.vktp_version" class="fed-card-fact">
+            <span class="fed-card-fact-label">Релей</span>
+            <span class="fed-card-fact-value">{{ node.vktp_version }}</span>
+          </div>
+        </div>
+
+        <span v-if="budgetFor === node.id" class="flex flex-wrap items-center gap-2">
+          <input v-model.number="budgetGb" class="fed-budget-input" type="number" min="1" step="1" />
+          <span class="text-wings-kicker">GB в месяц</span>
+          <SamsungButton :busy="busyNode === node.id" @click="saveBudget(node)">Сохранить</SamsungButton>
+          <SamsungButton variant="ghost" @click="budgetFor = ''">Отмена</SamsungButton>
+        </span>
+
+        <!-- Полоса показывает ОСТАТОК: полная означает, что лимит цел, и тает
+             по мере того, как его съедают -->
+        <span class="fed-node-track w-full max-w-none" aria-hidden="true">
+          <span class="fed-node-fill" :class="budgetClass(node)" :style="{ width: budgetLeftPct(node) + '%' }"></span>
+        </span>
+
+        <div class="fed-node-actions">
+          <SamsungButton variant="ghost" :busy="busyNode === node.id" @click="askRemove(node)">
+            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+            Убрать
+          </SamsungButton>
+          <SamsungButton
+            variant="ghost"
+            :busy="busyNode === node.id"
+            @click="setState(node, node.state === 'parked' ? 'active' : 'parked')"
+          >
+            <template #icon>
+              <PlayCircle v-if="node.state === 'parked'" class="button-icon" aria-hidden="true" />
+              <PauseCircle v-else class="button-icon" aria-hidden="true" />
+            </template>
+            {{ node.state === 'parked' ? 'Вернуть' : 'Снять' }}
+          </SamsungButton>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <SamsungModal :model-value="Boolean(removing)" title="Убрать сервер?" @update:model-value="removing = null">
+    <p class="body-copy">
+      Сервер <b>{{ removing?.hostname || removing?.id?.slice(0, 12) }}</b> перестанет выдаваться людям, а те, кто на нём
+      сидит, переедут на другие. Ваш агент можно будет просто остановить.
+    </p>
+    <p class="admin-muted mt-2">Вернуть сервер потом можно, зачислив его заново новым токеном.</p>
+    <p v-if="removeError" class="state-error mt-3">{{ removeError }}</p>
+    <template #actions>
+      <SamsungButton :busy="busyNode === removing?.id" @click="confirmRemove">
+        <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+        Убрать
+      </SamsungButton>
+      <SamsungButton variant="secondary" @click="removing = null">Отмена</SamsungButton>
+    </template>
+  </SamsungModal>
+
+  <section v-if="enabled && payouts.enabled" class="surface-card mt-6">
+    <div class="federation-live-head">
+      <h2 class="section-title">Выплаты</h2>
+      <span v-if="payouts.total_micro" class="admin-pill is-info">{{ usdt(payouts.total_micro) }} USDT начислено</span>
+    </div>
+    <p class="admin-muted mt-1">Начисляется за трафик, который подписали клиенты. Период закрывается раз в неделю.</p>
+    <p v-if="payouts.note" class="state-hint mt-3">{{ payouts.note }}</p>
+    <template v-else>
+      <div class="mt-4 flex flex-wrap items-end gap-3">
+        <OneuiInput
+          v-model="walletDraft"
+          label="Кошелёк Solana (USDT)"
+          placeholder="адрес, на который платить"
+          class="min-w-[280px] flex-1"
+        />
+        <SamsungButton :busy="savingWallet" @click="saveWallet">
+          <template #icon><Wallet class="button-icon" aria-hidden="true" /></template>
+          Сохранить
+        </SamsungButton>
+      </div>
+      <p v-if="walletError" class="state-error mt-2">{{ walletError }}</p>
+      <p v-else-if="!payouts.address" class="state-hint mt-2">
+        Без кошелька начисления копятся, но в расчётный период не попадают.
+      </p>
+
       <div v-if="payouts.epochs.length" class="fed-node-list mt-4">
         <div v-for="epoch in payouts.epochs" :key="epoch.number" class="fed-node-row">
           <div class="min-w-0 flex-1">
@@ -182,21 +391,19 @@
           </div>
           <span v-if="node.reason" class="mt-0.5 block truncate text-sm text-wings-muted">{{ node.reason }}</span>
           <span class="mt-1 flex flex-wrap items-center gap-4 text-[13px] text-wings-muted">
-            <span class="inline-flex items-center gap-1">
-              <Users :size="13" aria-hidden="true" />{{ node.sessions }}
-            </span>
-            <span v-if="node.xray_version" class="inline-flex items-center gap-1" title="Сборка Xray на ноде">
+            <span class="fed-node-fact"> <Users :size="13" aria-hidden="true" />{{ node.sessions }} </span>
+            <span v-if="node.xray_version" class="fed-node-fact" title="Сборка Xray на ноде">
               <Boxes :size="13" aria-hidden="true" />{{ node.xray_version }}
             </span>
-            <span v-if="node.vktp_version" class="inline-flex items-center gap-1" title="Сборка релея на ноде">
+            <span v-if="node.vktp_version" class="fed-node-fact" title="Сборка релея на ноде">
               <Radio :size="13" aria-hidden="true" />{{ node.vktp_version }}
             </span>
-            <span class="inline-flex items-center gap-1">
+            <span class="fed-node-fact">
               <ArrowUp :size="13" :style="{ color: FLOW_UP }" aria-hidden="true" />{{ bytes(node.used_bytes) }}
               <span class="text-wings-kicker">из {{ bytes(node.declared_budget_bytes) }}</span>
               <span
                 v-if="node.probe_bytes"
-                class="text-wings-kicker"
+                class="text-wings-kicker whitespace-nowrap"
                 title="Трафик наших зондов, которым мы проверяем ноду. В ваш лимит не входит"
               >
                 &middot; проверки {{ bytes(node.probe_bytes) }}
@@ -219,28 +426,30 @@
           </span>
         </div>
 
-        <SamsungButton variant="ghost" :busy="busyNode === node.id" @click="askRemove(node)">
-          <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
-          Убрать
-        </SamsungButton>
-        <SamsungButton
-          variant="ghost"
-          :busy="busyNode === node.id"
-          @click="setState(node, node.state === 'parked' ? 'active' : 'parked')"
-        >
-          <template #icon>
-            <PlayCircle v-if="node.state === 'parked'" class="button-icon" aria-hidden="true" />
-            <PauseCircle v-else class="button-icon" aria-hidden="true" />
-          </template>
-          {{ node.state === 'parked' ? 'Вернуть' : 'Снять' }}
-        </SamsungButton>
+        <div class="fed-node-actions">
+          <SamsungButton variant="ghost" :busy="busyNode === node.id" @click="askRemove(node)">
+            <template #icon><Trash2 class="button-icon" aria-hidden="true" /></template>
+            Убрать
+          </SamsungButton>
+          <SamsungButton
+            variant="ghost"
+            :busy="busyNode === node.id"
+            @click="setState(node, node.state === 'parked' ? 'active' : 'parked')"
+          >
+            <template #icon>
+              <PlayCircle v-if="node.state === 'parked'" class="button-icon" aria-hidden="true" />
+              <PauseCircle v-else class="button-icon" aria-hidden="true" />
+            </template>
+            {{ node.state === 'parked' ? 'Вернуть' : 'Снять' }}
+          </SamsungButton>
+        </div>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import {
   ArrowDown,
   ArrowUp,
@@ -299,7 +508,24 @@ const summary = reactive({
 
 // Выплаты живут своей жизнью: их считают раз в период, и дёргать их вместе с
 // живыми счётчиками незачем
-const payouts = reactive({ enabled: false, note: '', address: '', total_micro: 0, claimable_micro: 0, epochs: [] });
+const payouts = reactive({
+  enabled: false,
+  note: '',
+  address: '',
+  total_micro: 0,
+  claimable_micro: 0,
+  pending_micro: 0,
+  epochs: [],
+  pending: [],
+  terms: null,
+});
+
+// Ставка за гигабайт в микро-USDT человеку ни о чём не говорит: в терабайтах
+// она сразу читается как деньги
+const ratePerTb = computed(() => {
+  const perGib = Number(payouts.terms?.micro_per_gib || 0);
+  return usdt(perGib * 1024);
+});
 const walletDraft = ref('');
 const walletError = ref('');
 const savingWallet = ref(false);
@@ -370,6 +596,9 @@ async function loadPayouts() {
       total_micro: Number(data.total_micro || 0),
       claimable_micro: Number(data.claimable_micro || 0),
       epochs: data.epochs || [],
+      pending: data.pending || [],
+      pending_micro: Number(data.pending_micro || 0),
+      terms: data.terms || null,
     });
     // Поле не перетираем, пока человек в нём печатает
     if (!walletDraft.value) walletDraft.value = payouts.address;

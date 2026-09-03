@@ -317,8 +317,60 @@
     @apply mt-2 divide-y divide-wings-divider;
   }
 
+  /* Карточки нод раскладываются сами: колонок столько, сколько влезло, и на
+     телефоне это одна. Плоский список строк на узком экране разрывал каждую
+     цифру по словам */
+  .fed-cards {
+    @apply mt-3 grid gap-3;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  }
+
+  .fed-card {
+    @apply flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4;
+  }
+
+  .fed-card-head {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .fed-card-name {
+    @apply min-w-0 flex-1 truncate text-[16px] text-wings-text;
+  }
+
+  /* Факты парами: подпись сверху мелким, значение снизу - так они читаются и в
+     280 пикселей */
+  .fed-card-facts {
+    @apply grid grid-cols-2 gap-x-3 gap-y-2;
+  }
+
+  .fed-card-fact {
+    @apply flex min-w-0 flex-col;
+  }
+
+  .fed-card-fact-label {
+    @apply truncate text-[11px] uppercase tracking-wide text-wings-kicker;
+  }
+
+  .fed-card-fact-value {
+    @apply truncate text-[14px] text-wings-text;
+  }
+
+  /* На телефоне строка складывается в колонку: горизонтальный ряд душил
+     текстовый блок до пары сотен пикселей, и цифры сыпались по одному слову в
+     строку */
   .fed-node-row {
-    @apply flex items-center gap-3 py-3.5;
+    @apply flex flex-col items-stretch gap-2 py-3.5 sm:flex-row sm:items-center sm:gap-3;
+  }
+
+  /* Кнопки действий уходят вниз отдельным рядом, а не вклиниваются в середину */
+  .fed-node-actions {
+    @apply flex flex-wrap items-center gap-2 sm:shrink-0;
+  }
+
+  /* Факт про ноду не разрывается по словам: "3.8 из 500 GB" читается только
+     целиком */
+  .fed-node-fact {
+    @apply inline-flex items-center gap-1 whitespace-nowrap;
   }
 
   /* Короткое значение с копированием: адрес и код это одна строка, и раздувать

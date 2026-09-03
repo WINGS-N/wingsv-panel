@@ -551,6 +551,37 @@ message PayoutStatementResponse {
   uint64 total_micro = 3;
   // Сколько уже опубликовано в цепочке, то есть доступно к клейму
   uint64 claimable_micro = 4;
+  // Условия: без них донору показывают цифру и ни слова о том, откуда она
+  PayoutTerms terms = 5;
+  // Что набежало в текущем НЕзакрытом периоде, по каждой машине
+  repeated NodeAccrual pending = 6;
+  uint64 pending_micro = 7;
+}
+
+// PayoutTerms - прайс и правила счёта
+message PayoutTerms {
+  // MicroPerGiB - цена гигабайта в миллионных долях USDT
+  uint64 micro_per_gib = 1;
+  uint32 period_seconds = 2;
+  int64 period_start_unix = 3;
+  int64 period_end_unix = 4;
+}
+
+// NodeAccrual - что набежало одной машине и почему столько
+message NodeAccrual {
+  string node_id = 1;
+  string hostname = 2;
+  // SelfBytes - что нода насчитала себе, ReceiptBytes - что подписали клиенты.
+  // Платим по меньшему, и донор вправе видеть оба числа
+  uint64 self_bytes = 3;
+  uint64 receipt_bytes = 4;
+  uint64 billable_bytes = 5;
+  // ProbeConfirmed - подтвердили ли зонды, что через неё вообще идёт трафик из
+  // страны. Без этого не начисляем вовсе
+  bool probe_confirmed = 6;
+  // FactorBps - множитель от репутации, 10000 это полная выплата
+  uint32 factor_bps = 7;
+  uint64 amount_micro = 8;
 }
 
 message EpochsRequest {
