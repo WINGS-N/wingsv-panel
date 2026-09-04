@@ -283,6 +283,23 @@ message UserAllocation {
   // Потолки скорости, байт в секунду. Соразмерны оценке Oracle
   uint64 uplink_bps = 7;
   uint64 downlink_bps = 8;
+  // Трафик по каждому серверу. Локальный счётчик в приложении обнуляется при
+  // переустановке и врёт после смены профиля, а этот считает башка по тому же
+  // источнику, из которого потом берутся деньги
+  repeated ServerUsage servers = 9;
+}
+
+// ServerUsage - сколько прошло через одну СТРОКУ списка: сервер плюс транспорт.
+//
+// Именно так человек и видит доступ в приложении, поэтому и цифры даём в той же
+// нарезке. Ядро считает по учётке, а учётка своя на каждый инбаунд
+message ServerUsage {
+  string name = 1;
+  uint64 up_bytes = 2;
+  uint64 down_bytes = 3;
+  int64 last_seen_unix = 4;
+  // tcp, xhttp или vktp
+  string transport = 5;
 }
 
 message RevokeUserRequest {

@@ -110,6 +110,10 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		"panel_access": admin.PanelAccess || admin.Role == storage.RoleOwner,
 		"role":         admin.Role,
 		"sticky_until": got.GetStickyUntilUnix(),
+		// Трафик по строкам списка. Локальный счётчик в приложении обнуляется
+		// при переустановке, а этот считает башка по тому же источнику, из
+		// которого потом берутся деньги
+		"servers": serverUsage(got.GetServers()),
 	}
 	// Уровень доверия объясняет, почему серверов столько, а не иначе. Башка без
 	// Oracle отвечает Unimplemented, и экран просто остаётся без этой части
@@ -174,4 +178,19 @@ func (h *Handler) mayUseFederation(ctx context.Context, admin storage.Admin) err
 		return nil
 	}
 	return errors.New("бесплатный доступ выдаётся по приглашению: введите код на экране приглашений")
+}
+
+// serverUsage перекладывает трафик по строкам списка для приложения
+func serverUsage(rows []*headpb.ServerUsage) []map[string]any {
+	out := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, map[string]any{
+			"name":       row.GetName(),
+			"transport":  row.GetTransport(),
+			"up_bytes":   row.GetUpBytes(),
+			"down_bytes": row.GetDownBytes(),
+			"last_seen":  row.GetLastSeenUnix(),
+		})
+	}
+	return out
 }
