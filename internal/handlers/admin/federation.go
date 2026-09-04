@@ -232,8 +232,9 @@ func (h *Handler) handleFederationEnrollToken(w http.ResponseWriter, r *http.Req
 
 func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	// DELETE - это "забираю машину нахуй": донор волен уйти когда захочет, и
-	// держать его железо силой мы не будем
-	if r.Method != http.MethodPost && r.Method != http.MethodDelete {
+	// держать его железо силой мы не будем. PUT шлёт приложение, POST - панель,
+	// и обе правки делают ровно одно и то же
+	if r.Method != http.MethodPost && r.Method != http.MethodPut && r.Method != http.MethodDelete {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
