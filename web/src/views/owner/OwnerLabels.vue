@@ -222,10 +222,13 @@ function when(unix) {
   margin-top: 4px;
 }
 
+/* Ширину режем по карточке: имена признаков длинные, и на телефоне такая
+   плашка вылезала за экран вместе со всей страницей */
 .label-value {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
+  max-width: 100%;
   padding: 4px 10px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
@@ -233,10 +236,13 @@ function when(unix) {
 }
 
 .label-value-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: rgba(252, 252, 252, 0.55);
 }
 
 .label-value-number {
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 </style>
