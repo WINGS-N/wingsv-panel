@@ -262,6 +262,27 @@ func (c *Client) OracleNodes(ctx context.Context, limit, offset uint32) (*headpb
 	return client.OracleNodes(ctx, &headpb.OracleNodesRequest{Limit: limit, Offset: offset})
 }
 
+// OracleLabels отдаёт разметку снимков: что наразмечала модель и что подтвердил
+// человек
+func (c *Client) OracleLabels(ctx context.Context, limit, offset uint32, accusedOnly bool) (*headpb.OracleLabelsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.OracleLabels(ctx, &headpb.OracleLabelsRequest{
+		Limit: limit, Offset: offset, AccusedOnly: accusedOnly,
+	})
+}
+
+// SetOracleLabel записывает приговор человека. Он старше машинного всегда
+func (c *Client) SetOracleLabel(ctx context.Context, id uint64, label int32) (*headpb.OracleLabelsResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.SetOracleLabel(ctx, &headpb.SetOracleLabelRequest{Id: id, Label: label})
+}
+
 // RunProbes просит точки наблюдения замерить прямо сейчас
 func (c *Client) RunProbes(ctx context.Context) (uint32, error) {
 	client, err := c.dial()

@@ -66,6 +66,10 @@
             <ShieldCheck class="admin-nav-icon" aria-hidden="true" />
             <span>Oracle</span>
           </router-link>
+          <router-link class="admin-nav-link" :to="{ name: 'owner-labels' }" active-class="is-active">
+            <ClipboardCheck class="admin-nav-icon" aria-hidden="true" />
+            <span>Разметка</span>
+          </router-link>
           <router-link class="admin-nav-link" :to="{ name: 'owner-upstreams' }" active-class="is-active">
             <ShoppingCart class="admin-nav-icon" aria-hidden="true" />
             <span>Купленное</span>
@@ -96,6 +100,7 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
+  ClipboardCheck,
   Boxes,
   ArrowLeft,
   ClipboardList,

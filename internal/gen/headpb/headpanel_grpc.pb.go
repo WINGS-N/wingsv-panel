@@ -41,6 +41,8 @@ const (
 	FederationHead_OracleOverview_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/OracleOverview"
 	FederationHead_OracleSubject_FullMethodName     = "/wingsv.headpanel.v1.FederationHead/OracleSubject"
 	FederationHead_OracleNodes_FullMethodName       = "/wingsv.headpanel.v1.FederationHead/OracleNodes"
+	FederationHead_OracleLabels_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/OracleLabels"
+	FederationHead_SetOracleLabel_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/SetOracleLabel"
 	FederationHead_SetPayoutAddress_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetPayoutAddress"
 	FederationHead_PayoutStatement_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/PayoutStatement"
 	FederationHead_Epochs_FullMethodName            = "/wingsv.headpanel.v1.FederationHead/Epochs"
@@ -103,6 +105,11 @@ type FederationHeadClient interface {
 	OracleSubject(ctx context.Context, in *OracleSubjectRequest, opts ...grpc.CallOption) (*OracleSubjectResponse, error)
 	// Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
 	OracleNodes(ctx context.Context, in *OracleNodesRequest, opts ...grpc.CallOption) (*OracleNodesResponse, error)
+	// Разметка снимков: что наразмечала модель и что с этим сделал человек.
+	// Учить бустинг на непроверенной машинной разметке - способ выучить её же
+	// ошибки и потом резать по ним живых людей
+	OracleLabels(ctx context.Context, in *OracleLabelsRequest, opts ...grpc.CallOption) (*OracleLabelsResponse, error)
+	SetOracleLabel(ctx context.Context, in *SetOracleLabelRequest, opts ...grpc.CallOption) (*OracleLabelsResponse, error)
 	// Деньги донора: куда платить и что уже начислено. Башка считает и хранит,
 	// цепочка потом только фиксирует посчитанное
 	SetPayoutAddress(ctx context.Context, in *SetPayoutAddressRequest, opts ...grpc.CallOption) (*SetPayoutAddressResponse, error)
@@ -117,7 +124,7 @@ type FederationHeadClient interface {
 	// транзакции делает панель, башка получает уже подтверждённое
 	ReportDonation(ctx context.Context, in *ReportDonationRequest, opts ...grpc.CallOption) (*ReportDonationResponse, error)
 	// Купленные подписки заводит владелец площадки. По умолчанию раздача
-	// выключена: за чужим сервером наш оракул слеп, и включать это должен человек
+	// выключена: за чужим сервером наш Oracle слеп, и включать это должен человек
 	Upstreams(ctx context.Context, in *UpstreamsRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
 	PutUpstream(ctx context.Context, in *PutUpstreamRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
 	RemoveUpstream(ctx context.Context, in *RemoveUpstreamRequest, opts ...grpc.CallOption) (*UpstreamsResponse, error)
@@ -325,6 +332,26 @@ func (c *federationHeadClient) OracleNodes(ctx context.Context, in *OracleNodesR
 	return out, nil
 }
 
+func (c *federationHeadClient) OracleLabels(ctx context.Context, in *OracleLabelsRequest, opts ...grpc.CallOption) (*OracleLabelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OracleLabelsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_OracleLabels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *federationHeadClient) SetOracleLabel(ctx context.Context, in *SetOracleLabelRequest, opts ...grpc.CallOption) (*OracleLabelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OracleLabelsResponse)
+	err := c.cc.Invoke(ctx, FederationHead_SetOracleLabel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *federationHeadClient) SetPayoutAddress(ctx context.Context, in *SetPayoutAddressRequest, opts ...grpc.CallOption) (*SetPayoutAddressResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetPayoutAddressResponse)
@@ -466,6 +493,11 @@ type FederationHeadServer interface {
 	OracleSubject(context.Context, *OracleSubjectRequest) (*OracleSubjectResponse, error)
 	// Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
 	OracleNodes(context.Context, *OracleNodesRequest) (*OracleNodesResponse, error)
+	// Разметка снимков: что наразмечала модель и что с этим сделал человек.
+	// Учить бустинг на непроверенной машинной разметке - способ выучить её же
+	// ошибки и потом резать по ним живых людей
+	OracleLabels(context.Context, *OracleLabelsRequest) (*OracleLabelsResponse, error)
+	SetOracleLabel(context.Context, *SetOracleLabelRequest) (*OracleLabelsResponse, error)
 	// Деньги донора: куда платить и что уже начислено. Башка считает и хранит,
 	// цепочка потом только фиксирует посчитанное
 	SetPayoutAddress(context.Context, *SetPayoutAddressRequest) (*SetPayoutAddressResponse, error)
@@ -480,7 +512,7 @@ type FederationHeadServer interface {
 	// транзакции делает панель, башка получает уже подтверждённое
 	ReportDonation(context.Context, *ReportDonationRequest) (*ReportDonationResponse, error)
 	// Купленные подписки заводит владелец площадки. По умолчанию раздача
-	// выключена: за чужим сервером наш оракул слеп, и включать это должен человек
+	// выключена: за чужим сервером наш Oracle слеп, и включать это должен человек
 	Upstreams(context.Context, *UpstreamsRequest) (*UpstreamsResponse, error)
 	PutUpstream(context.Context, *PutUpstreamRequest) (*UpstreamsResponse, error)
 	RemoveUpstream(context.Context, *RemoveUpstreamRequest) (*UpstreamsResponse, error)
@@ -551,6 +583,12 @@ func (UnimplementedFederationHeadServer) OracleSubject(context.Context, *OracleS
 }
 func (UnimplementedFederationHeadServer) OracleNodes(context.Context, *OracleNodesRequest) (*OracleNodesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OracleNodes not implemented")
+}
+func (UnimplementedFederationHeadServer) OracleLabels(context.Context, *OracleLabelsRequest) (*OracleLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OracleLabels not implemented")
+}
+func (UnimplementedFederationHeadServer) SetOracleLabel(context.Context, *SetOracleLabelRequest) (*OracleLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetOracleLabel not implemented")
 }
 func (UnimplementedFederationHeadServer) SetPayoutAddress(context.Context, *SetPayoutAddressRequest) (*SetPayoutAddressResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetPayoutAddress not implemented")
@@ -931,6 +969,42 @@ func _FederationHead_OracleNodes_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_OracleLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OracleLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).OracleLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_OracleLabels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).OracleLabels(ctx, req.(*OracleLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FederationHead_SetOracleLabel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetOracleLabelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).SetOracleLabel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_SetOracleLabel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).SetOracleLabel(ctx, req.(*SetOracleLabelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FederationHead_SetPayoutAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetPayoutAddressRequest)
 	if err := dec(in); err != nil {
@@ -1171,6 +1245,14 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OracleNodes",
 			Handler:    _FederationHead_OracleNodes_Handler,
+		},
+		{
+			MethodName: "OracleLabels",
+			Handler:    _FederationHead_OracleLabels_Handler,
+		},
+		{
+			MethodName: "SetOracleLabel",
+			Handler:    _FederationHead_SetOracleLabel_Handler,
 		},
 		{
 			MethodName: "SetPayoutAddress",

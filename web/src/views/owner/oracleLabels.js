@@ -43,3 +43,29 @@ export function bandIcon(band) {
   if (band === 'reduced') return '/img/oneui/security-medium.svg';
   return '/img/oneui/security-low.svg';
 }
+
+// Имена признаков по-человечески. В снимке они машинные, а владельцу надо
+// понимать, что он смотрит, не лазая в исходники
+export const FEATURE_LABELS = {
+  requests: 'обращений',
+  domains: 'разных имён',
+  domains_per_hour: 'имён в час',
+  bytes_per_request: 'байт на обращение',
+  up_ratio: 'доля отдачи',
+  long_lived_share: 'доля долгих',
+  quiet_hours: 'самая длинная пауза, ч',
+  active_hours: 'часов активности',
+  spread_hours: 'размах, ч',
+  random_name_share: 'доля машинных имён',
+  no_domain_share: 'доля голых адресов',
+  relay_port_hits: 'на почтовый релей',
+  submission_hits: 'отправок почты',
+  submission_targets: 'почтовых серверов',
+  peer_port_hits: 'на порты bittorrent',
+  distinct_bare_peers: 'разных пиров',
+  ports_touched: 'разных портов',
+  distinct_prints: 'разных TLS-стеков',
+  top_print_share: 'доля главного стека',
+  fresh_domains: 'свежих доменов',
+  fresh_domain_share: 'доля свежих',
+};

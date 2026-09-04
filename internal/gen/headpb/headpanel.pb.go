@@ -1420,7 +1420,7 @@ type UserAllocation struct {
 	NodesEntitled uint32 `protobuf:"varint,5,opt,name=nodes_entitled,json=nodesEntitled,proto3" json:"nodes_entitled,omitempty"`
 	// Сколько пользователь пронёс за текущий период
 	UsedBytes uint64 `protobuf:"varint,6,opt,name=used_bytes,json=usedBytes,proto3" json:"used_bytes,omitempty"`
-	// Потолки скорости, байт в секунду. Соразмерны оценке оракула
+	// Потолки скорости, байт в секунду. Соразмерны оценке Oracle
 	UplinkBps     uint64 `protobuf:"varint,7,opt,name=uplink_bps,json=uplinkBps,proto3" json:"uplink_bps,omitempty"`
 	DownlinkBps   uint64 `protobuf:"varint,8,opt,name=downlink_bps,json=downlinkBps,proto3" json:"downlink_bps,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -2843,6 +2843,289 @@ func (x *OracleDomain) GetLastSeenUnix() int64 {
 	return 0
 }
 
+type OracleLabelsRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Limit  uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset uint32                 `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	// Только обвинения: чистых накапливается на порядок больше, а проверять надо
+	// именно те, где модель кого-то записала в мошенники
+	AccusedOnly   bool `protobuf:"varint,3,opt,name=accused_only,json=accusedOnly,proto3" json:"accused_only,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleLabelsRequest) Reset() {
+	*x = OracleLabelsRequest{}
+	mi := &file_headpanel_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleLabelsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleLabelsRequest) ProtoMessage() {}
+
+func (x *OracleLabelsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleLabelsRequest.ProtoReflect.Descriptor instead.
+func (*OracleLabelsRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *OracleLabelsRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *OracleLabelsRequest) GetOffset() uint32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+func (x *OracleLabelsRequest) GetAccusedOnly() bool {
+	if x != nil {
+		return x.AccusedOnly
+	}
+	return false
+}
+
+// OracleLabel - один размеченный снимок, как его показывают человеку.
+//
+// Вектор идёт числами и БЕЗ доменов: по нему модель и решала, по нему человек и
+// проверяет. Имён там нет и не будет
+type OracleLabel struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	AtUnix    int64                  `protobuf:"varint,2,opt,name=at_unix,json=atUnix,proto3" json:"at_unix,omitempty"`
+	SubjectId string                 `protobuf:"bytes,3,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// -1 не размечен, 0 чисто, 1 злоупотребление
+	Label int32 `protobuf:"varint,4,opt,name=label,proto3" json:"label,omitempty"`
+	// Кто разметил: claude, rules или human
+	LabelBy       string             `protobuf:"bytes,5,opt,name=label_by,json=labelBy,proto3" json:"label_by,omitempty"`
+	Why           string             `protobuf:"bytes,6,opt,name=why,proto3" json:"why,omitempty"`
+	Values        map[string]float64 `protobuf:"bytes,7,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleLabel) Reset() {
+	*x = OracleLabel{}
+	mi := &file_headpanel_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleLabel) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleLabel) ProtoMessage() {}
+
+func (x *OracleLabel) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleLabel.ProtoReflect.Descriptor instead.
+func (*OracleLabel) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *OracleLabel) GetId() uint64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *OracleLabel) GetAtUnix() int64 {
+	if x != nil {
+		return x.AtUnix
+	}
+	return 0
+}
+
+func (x *OracleLabel) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *OracleLabel) GetLabel() int32 {
+	if x != nil {
+		return x.Label
+	}
+	return 0
+}
+
+func (x *OracleLabel) GetLabelBy() string {
+	if x != nil {
+		return x.LabelBy
+	}
+	return ""
+}
+
+func (x *OracleLabel) GetWhy() string {
+	if x != nil {
+		return x.Why
+	}
+	return ""
+}
+
+func (x *OracleLabel) GetValues() map[string]float64 {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+type OracleLabelsResponse struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Labels []*OracleLabel         `protobuf:"bytes,1,rep,name=labels,proto3" json:"labels,omitempty"`
+	Total  uint32                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Сколько всего размечено машиной и сколько подтвердил человек: по этим двум
+	// числам видно, можно ли уже учить
+	ByMachine     uint32 `protobuf:"varint,3,opt,name=by_machine,json=byMachine,proto3" json:"by_machine,omitempty"`
+	ByHuman       uint32 `protobuf:"varint,4,opt,name=by_human,json=byHuman,proto3" json:"by_human,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OracleLabelsResponse) Reset() {
+	*x = OracleLabelsResponse{}
+	mi := &file_headpanel_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OracleLabelsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OracleLabelsResponse) ProtoMessage() {}
+
+func (x *OracleLabelsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OracleLabelsResponse.ProtoReflect.Descriptor instead.
+func (*OracleLabelsResponse) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *OracleLabelsResponse) GetLabels() []*OracleLabel {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *OracleLabelsResponse) GetTotal() uint32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
+func (x *OracleLabelsResponse) GetByMachine() uint32 {
+	if x != nil {
+		return x.ByMachine
+	}
+	return 0
+}
+
+func (x *OracleLabelsResponse) GetByHuman() uint32 {
+	if x != nil {
+		return x.ByHuman
+	}
+	return 0
+}
+
+type SetOracleLabelRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Приговор человека. Он старше машинного всегда
+	Label         int32 `protobuf:"varint,2,opt,name=label,proto3" json:"label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetOracleLabelRequest) Reset() {
+	*x = SetOracleLabelRequest{}
+	mi := &file_headpanel_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetOracleLabelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetOracleLabelRequest) ProtoMessage() {}
+
+func (x *SetOracleLabelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_headpanel_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetOracleLabelRequest.ProtoReflect.Descriptor instead.
+func (*SetOracleLabelRequest) Descriptor() ([]byte, []int) {
+	return file_headpanel_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *SetOracleLabelRequest) GetId() uint64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *SetOracleLabelRequest) GetLabel() int32 {
+	if x != nil {
+		return x.Label
+	}
+	return 0
+}
+
 type OracleSubjectResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Subject *OracleSubject         `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
@@ -2857,7 +3140,7 @@ type OracleSubjectResponse struct {
 
 func (x *OracleSubjectResponse) Reset() {
 	*x = OracleSubjectResponse{}
-	mi := &file_headpanel_proto_msgTypes[39]
+	mi := &file_headpanel_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2869,7 +3152,7 @@ func (x *OracleSubjectResponse) String() string {
 func (*OracleSubjectResponse) ProtoMessage() {}
 
 func (x *OracleSubjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[39]
+	mi := &file_headpanel_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2882,7 +3165,7 @@ func (x *OracleSubjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleSubjectResponse.ProtoReflect.Descriptor instead.
 func (*OracleSubjectResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{39}
+	return file_headpanel_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *OracleSubjectResponse) GetSubject() *OracleSubject {
@@ -2945,7 +3228,7 @@ type OracleNode struct {
 
 func (x *OracleNode) Reset() {
 	*x = OracleNode{}
-	mi := &file_headpanel_proto_msgTypes[40]
+	mi := &file_headpanel_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2957,7 +3240,7 @@ func (x *OracleNode) String() string {
 func (*OracleNode) ProtoMessage() {}
 
 func (x *OracleNode) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[40]
+	mi := &file_headpanel_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2970,7 +3253,7 @@ func (x *OracleNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleNode.ProtoReflect.Descriptor instead.
 func (*OracleNode) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{40}
+	return file_headpanel_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *OracleNode) GetNodeId() string {
@@ -3060,7 +3343,7 @@ type OracleNodeReason struct {
 
 func (x *OracleNodeReason) Reset() {
 	*x = OracleNodeReason{}
-	mi := &file_headpanel_proto_msgTypes[41]
+	mi := &file_headpanel_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3072,7 +3355,7 @@ func (x *OracleNodeReason) String() string {
 func (*OracleNodeReason) ProtoMessage() {}
 
 func (x *OracleNodeReason) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[41]
+	mi := &file_headpanel_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3085,7 +3368,7 @@ func (x *OracleNodeReason) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleNodeReason.ProtoReflect.Descriptor instead.
 func (*OracleNodeReason) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{41}
+	return file_headpanel_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *OracleNodeReason) GetReason() string {
@@ -3112,7 +3395,7 @@ type OracleNodesRequest struct {
 
 func (x *OracleNodesRequest) Reset() {
 	*x = OracleNodesRequest{}
-	mi := &file_headpanel_proto_msgTypes[42]
+	mi := &file_headpanel_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3124,7 +3407,7 @@ func (x *OracleNodesRequest) String() string {
 func (*OracleNodesRequest) ProtoMessage() {}
 
 func (x *OracleNodesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[42]
+	mi := &file_headpanel_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3137,7 +3420,7 @@ func (x *OracleNodesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleNodesRequest.ProtoReflect.Descriptor instead.
 func (*OracleNodesRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{42}
+	return file_headpanel_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *OracleNodesRequest) GetLimit() uint32 {
@@ -3166,7 +3449,7 @@ type OracleNodesResponse struct {
 
 func (x *OracleNodesResponse) Reset() {
 	*x = OracleNodesResponse{}
-	mi := &file_headpanel_proto_msgTypes[43]
+	mi := &file_headpanel_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3178,7 +3461,7 @@ func (x *OracleNodesResponse) String() string {
 func (*OracleNodesResponse) ProtoMessage() {}
 
 func (x *OracleNodesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[43]
+	mi := &file_headpanel_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3191,7 +3474,7 @@ func (x *OracleNodesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleNodesResponse.ProtoReflect.Descriptor instead.
 func (*OracleNodesResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{43}
+	return file_headpanel_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *OracleNodesResponse) GetNodes() []*OracleNode {
@@ -3231,7 +3514,7 @@ type OracleClass struct {
 
 func (x *OracleClass) Reset() {
 	*x = OracleClass{}
-	mi := &file_headpanel_proto_msgTypes[44]
+	mi := &file_headpanel_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3243,7 +3526,7 @@ func (x *OracleClass) String() string {
 func (*OracleClass) ProtoMessage() {}
 
 func (x *OracleClass) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[44]
+	mi := &file_headpanel_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3256,7 +3539,7 @@ func (x *OracleClass) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleClass.ProtoReflect.Descriptor instead.
 func (*OracleClass) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{44}
+	return file_headpanel_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *OracleClass) GetKind() string {
@@ -3313,7 +3596,7 @@ type OracleSubject struct {
 
 func (x *OracleSubject) Reset() {
 	*x = OracleSubject{}
-	mi := &file_headpanel_proto_msgTypes[45]
+	mi := &file_headpanel_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3325,7 +3608,7 @@ func (x *OracleSubject) String() string {
 func (*OracleSubject) ProtoMessage() {}
 
 func (x *OracleSubject) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[45]
+	mi := &file_headpanel_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3338,7 +3621,7 @@ func (x *OracleSubject) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleSubject.ProtoReflect.Descriptor instead.
 func (*OracleSubject) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{45}
+	return file_headpanel_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *OracleSubject) GetSubjectId() string {
@@ -3422,7 +3705,7 @@ type OracleOverviewResponse struct {
 
 func (x *OracleOverviewResponse) Reset() {
 	*x = OracleOverviewResponse{}
-	mi := &file_headpanel_proto_msgTypes[46]
+	mi := &file_headpanel_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3434,7 +3717,7 @@ func (x *OracleOverviewResponse) String() string {
 func (*OracleOverviewResponse) ProtoMessage() {}
 
 func (x *OracleOverviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[46]
+	mi := &file_headpanel_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3447,7 +3730,7 @@ func (x *OracleOverviewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OracleOverviewResponse.ProtoReflect.Descriptor instead.
 func (*OracleOverviewResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{46}
+	return file_headpanel_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *OracleOverviewResponse) GetTotal() uint32 {
@@ -3538,7 +3821,7 @@ type SetPayoutAddressRequest struct {
 
 func (x *SetPayoutAddressRequest) Reset() {
 	*x = SetPayoutAddressRequest{}
-	mi := &file_headpanel_proto_msgTypes[47]
+	mi := &file_headpanel_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3550,7 +3833,7 @@ func (x *SetPayoutAddressRequest) String() string {
 func (*SetPayoutAddressRequest) ProtoMessage() {}
 
 func (x *SetPayoutAddressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[47]
+	mi := &file_headpanel_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3563,7 +3846,7 @@ func (x *SetPayoutAddressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPayoutAddressRequest.ProtoReflect.Descriptor instead.
 func (*SetPayoutAddressRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{47}
+	return file_headpanel_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *SetPayoutAddressRequest) GetDonorId() string {
@@ -3588,7 +3871,7 @@ type SetPayoutAddressResponse struct {
 
 func (x *SetPayoutAddressResponse) Reset() {
 	*x = SetPayoutAddressResponse{}
-	mi := &file_headpanel_proto_msgTypes[48]
+	mi := &file_headpanel_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3600,7 +3883,7 @@ func (x *SetPayoutAddressResponse) String() string {
 func (*SetPayoutAddressResponse) ProtoMessage() {}
 
 func (x *SetPayoutAddressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[48]
+	mi := &file_headpanel_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3613,7 +3896,7 @@ func (x *SetPayoutAddressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPayoutAddressResponse.ProtoReflect.Descriptor instead.
 func (*SetPayoutAddressResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{48}
+	return file_headpanel_proto_rawDescGZIP(), []int{52}
 }
 
 type PayoutStatementRequest struct {
@@ -3627,7 +3910,7 @@ type PayoutStatementRequest struct {
 
 func (x *PayoutStatementRequest) Reset() {
 	*x = PayoutStatementRequest{}
-	mi := &file_headpanel_proto_msgTypes[49]
+	mi := &file_headpanel_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3639,7 +3922,7 @@ func (x *PayoutStatementRequest) String() string {
 func (*PayoutStatementRequest) ProtoMessage() {}
 
 func (x *PayoutStatementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[49]
+	mi := &file_headpanel_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3652,7 +3935,7 @@ func (x *PayoutStatementRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PayoutStatementRequest.ProtoReflect.Descriptor instead.
 func (*PayoutStatementRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{49}
+	return file_headpanel_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *PayoutStatementRequest) GetDonorId() string {
@@ -3688,7 +3971,7 @@ type EpochAccrual struct {
 
 func (x *EpochAccrual) Reset() {
 	*x = EpochAccrual{}
-	mi := &file_headpanel_proto_msgTypes[50]
+	mi := &file_headpanel_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3700,7 +3983,7 @@ func (x *EpochAccrual) String() string {
 func (*EpochAccrual) ProtoMessage() {}
 
 func (x *EpochAccrual) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[50]
+	mi := &file_headpanel_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3713,7 +3996,7 @@ func (x *EpochAccrual) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EpochAccrual.ProtoReflect.Descriptor instead.
 func (*EpochAccrual) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{50}
+	return file_headpanel_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *EpochAccrual) GetNumber() uint64 {
@@ -3783,7 +4066,7 @@ type PayoutStatementResponse struct {
 
 func (x *PayoutStatementResponse) Reset() {
 	*x = PayoutStatementResponse{}
-	mi := &file_headpanel_proto_msgTypes[51]
+	mi := &file_headpanel_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3795,7 +4078,7 @@ func (x *PayoutStatementResponse) String() string {
 func (*PayoutStatementResponse) ProtoMessage() {}
 
 func (x *PayoutStatementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[51]
+	mi := &file_headpanel_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3808,7 +4091,7 @@ func (x *PayoutStatementResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PayoutStatementResponse.ProtoReflect.Descriptor instead.
 func (*PayoutStatementResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{51}
+	return file_headpanel_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *PayoutStatementResponse) GetAddress() string {
@@ -3874,7 +4157,7 @@ type PayoutTerms struct {
 
 func (x *PayoutTerms) Reset() {
 	*x = PayoutTerms{}
-	mi := &file_headpanel_proto_msgTypes[52]
+	mi := &file_headpanel_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3886,7 +4169,7 @@ func (x *PayoutTerms) String() string {
 func (*PayoutTerms) ProtoMessage() {}
 
 func (x *PayoutTerms) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[52]
+	mi := &file_headpanel_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3899,7 +4182,7 @@ func (x *PayoutTerms) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PayoutTerms.ProtoReflect.Descriptor instead.
 func (*PayoutTerms) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{52}
+	return file_headpanel_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *PayoutTerms) GetMicroPerGib() uint64 {
@@ -3952,7 +4235,7 @@ type NodeAccrual struct {
 
 func (x *NodeAccrual) Reset() {
 	*x = NodeAccrual{}
-	mi := &file_headpanel_proto_msgTypes[53]
+	mi := &file_headpanel_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3964,7 +4247,7 @@ func (x *NodeAccrual) String() string {
 func (*NodeAccrual) ProtoMessage() {}
 
 func (x *NodeAccrual) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[53]
+	mi := &file_headpanel_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3977,7 +4260,7 @@ func (x *NodeAccrual) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NodeAccrual.ProtoReflect.Descriptor instead.
 func (*NodeAccrual) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{53}
+	return file_headpanel_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *NodeAccrual) GetNodeId() string {
@@ -4045,7 +4328,7 @@ type EpochsRequest struct {
 
 func (x *EpochsRequest) Reset() {
 	*x = EpochsRequest{}
-	mi := &file_headpanel_proto_msgTypes[54]
+	mi := &file_headpanel_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4057,7 +4340,7 @@ func (x *EpochsRequest) String() string {
 func (*EpochsRequest) ProtoMessage() {}
 
 func (x *EpochsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[54]
+	mi := &file_headpanel_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4070,7 +4353,7 @@ func (x *EpochsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EpochsRequest.ProtoReflect.Descriptor instead.
 func (*EpochsRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{54}
+	return file_headpanel_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *EpochsRequest) GetLimit() uint32 {
@@ -4097,7 +4380,7 @@ type EpochSummary struct {
 
 func (x *EpochSummary) Reset() {
 	*x = EpochSummary{}
-	mi := &file_headpanel_proto_msgTypes[55]
+	mi := &file_headpanel_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4109,7 +4392,7 @@ func (x *EpochSummary) String() string {
 func (*EpochSummary) ProtoMessage() {}
 
 func (x *EpochSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[55]
+	mi := &file_headpanel_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4122,7 +4405,7 @@ func (x *EpochSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EpochSummary.ProtoReflect.Descriptor instead.
 func (*EpochSummary) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{55}
+	return file_headpanel_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *EpochSummary) GetNumber() uint64 {
@@ -4190,7 +4473,7 @@ type EpochsResponse struct {
 
 func (x *EpochsResponse) Reset() {
 	*x = EpochsResponse{}
-	mi := &file_headpanel_proto_msgTypes[56]
+	mi := &file_headpanel_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4202,7 +4485,7 @@ func (x *EpochsResponse) String() string {
 func (*EpochsResponse) ProtoMessage() {}
 
 func (x *EpochsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[56]
+	mi := &file_headpanel_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4215,7 +4498,7 @@ func (x *EpochsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EpochsResponse.ProtoReflect.Descriptor instead.
 func (*EpochsResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{56}
+	return file_headpanel_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *EpochsResponse) GetEpochs() []*EpochSummary {
@@ -4239,7 +4522,7 @@ type SubjectAncestry struct {
 
 func (x *SubjectAncestry) Reset() {
 	*x = SubjectAncestry{}
-	mi := &file_headpanel_proto_msgTypes[57]
+	mi := &file_headpanel_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4251,7 +4534,7 @@ func (x *SubjectAncestry) String() string {
 func (*SubjectAncestry) ProtoMessage() {}
 
 func (x *SubjectAncestry) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[57]
+	mi := &file_headpanel_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4264,7 +4547,7 @@ func (x *SubjectAncestry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectAncestry.ProtoReflect.Descriptor instead.
 func (*SubjectAncestry) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{57}
+	return file_headpanel_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *SubjectAncestry) GetSubjectId() string {
@@ -4290,7 +4573,7 @@ type ReportInviteTreeRequest struct {
 
 func (x *ReportInviteTreeRequest) Reset() {
 	*x = ReportInviteTreeRequest{}
-	mi := &file_headpanel_proto_msgTypes[58]
+	mi := &file_headpanel_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4302,7 +4585,7 @@ func (x *ReportInviteTreeRequest) String() string {
 func (*ReportInviteTreeRequest) ProtoMessage() {}
 
 func (x *ReportInviteTreeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[58]
+	mi := &file_headpanel_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4315,7 +4598,7 @@ func (x *ReportInviteTreeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportInviteTreeRequest.ProtoReflect.Descriptor instead.
 func (*ReportInviteTreeRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{58}
+	return file_headpanel_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ReportInviteTreeRequest) GetSubjects() []*SubjectAncestry {
@@ -4334,7 +4617,7 @@ type ReportInviteTreeResponse struct {
 
 func (x *ReportInviteTreeResponse) Reset() {
 	*x = ReportInviteTreeResponse{}
-	mi := &file_headpanel_proto_msgTypes[59]
+	mi := &file_headpanel_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4346,7 +4629,7 @@ func (x *ReportInviteTreeResponse) String() string {
 func (*ReportInviteTreeResponse) ProtoMessage() {}
 
 func (x *ReportInviteTreeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[59]
+	mi := &file_headpanel_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4359,7 +4642,7 @@ func (x *ReportInviteTreeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportInviteTreeResponse.ProtoReflect.Descriptor instead.
 func (*ReportInviteTreeResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{59}
+	return file_headpanel_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *ReportInviteTreeResponse) GetSubjects() uint32 {
@@ -4382,7 +4665,7 @@ type ReportDonationRequest struct {
 
 func (x *ReportDonationRequest) Reset() {
 	*x = ReportDonationRequest{}
-	mi := &file_headpanel_proto_msgTypes[60]
+	mi := &file_headpanel_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4394,7 +4677,7 @@ func (x *ReportDonationRequest) String() string {
 func (*ReportDonationRequest) ProtoMessage() {}
 
 func (x *ReportDonationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[60]
+	mi := &file_headpanel_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4407,7 +4690,7 @@ func (x *ReportDonationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportDonationRequest.ProtoReflect.Descriptor instead.
 func (*ReportDonationRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{60}
+	return file_headpanel_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ReportDonationRequest) GetSubjectId() string {
@@ -4448,7 +4731,7 @@ type ReportDonationResponse struct {
 
 func (x *ReportDonationResponse) Reset() {
 	*x = ReportDonationResponse{}
-	mi := &file_headpanel_proto_msgTypes[61]
+	mi := &file_headpanel_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4460,7 +4743,7 @@ func (x *ReportDonationResponse) String() string {
 func (*ReportDonationResponse) ProtoMessage() {}
 
 func (x *ReportDonationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[61]
+	mi := &file_headpanel_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4473,7 +4756,7 @@ func (x *ReportDonationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportDonationResponse.ProtoReflect.Descriptor instead.
 func (*ReportDonationResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{61}
+	return file_headpanel_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ReportDonationResponse) GetCredit() float64 {
@@ -4495,7 +4778,7 @@ type RemoveNodeRequest struct {
 
 func (x *RemoveNodeRequest) Reset() {
 	*x = RemoveNodeRequest{}
-	mi := &file_headpanel_proto_msgTypes[62]
+	mi := &file_headpanel_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4507,7 +4790,7 @@ func (x *RemoveNodeRequest) String() string {
 func (*RemoveNodeRequest) ProtoMessage() {}
 
 func (x *RemoveNodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[62]
+	mi := &file_headpanel_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4520,7 +4803,7 @@ func (x *RemoveNodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveNodeRequest.ProtoReflect.Descriptor instead.
 func (*RemoveNodeRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{62}
+	return file_headpanel_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *RemoveNodeRequest) GetNodeId() string {
@@ -4547,7 +4830,7 @@ type RemoveNodeResponse struct {
 
 func (x *RemoveNodeResponse) Reset() {
 	*x = RemoveNodeResponse{}
-	mi := &file_headpanel_proto_msgTypes[63]
+	mi := &file_headpanel_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4559,7 +4842,7 @@ func (x *RemoveNodeResponse) String() string {
 func (*RemoveNodeResponse) ProtoMessage() {}
 
 func (x *RemoveNodeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[63]
+	mi := &file_headpanel_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4572,7 +4855,7 @@ func (x *RemoveNodeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveNodeResponse.ProtoReflect.Descriptor instead.
 func (*RemoveNodeResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{63}
+	return file_headpanel_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *RemoveNodeResponse) GetMoved() uint32 {
@@ -4606,7 +4889,7 @@ type UpstreamSource struct {
 
 func (x *UpstreamSource) Reset() {
 	*x = UpstreamSource{}
-	mi := &file_headpanel_proto_msgTypes[64]
+	mi := &file_headpanel_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4618,7 +4901,7 @@ func (x *UpstreamSource) String() string {
 func (*UpstreamSource) ProtoMessage() {}
 
 func (x *UpstreamSource) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[64]
+	mi := &file_headpanel_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4631,7 +4914,7 @@ func (x *UpstreamSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpstreamSource.ProtoReflect.Descriptor instead.
 func (*UpstreamSource) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{64}
+	return file_headpanel_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *UpstreamSource) GetId() string {
@@ -4705,7 +4988,7 @@ type UpstreamsRequest struct {
 
 func (x *UpstreamsRequest) Reset() {
 	*x = UpstreamsRequest{}
-	mi := &file_headpanel_proto_msgTypes[65]
+	mi := &file_headpanel_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4717,7 +5000,7 @@ func (x *UpstreamsRequest) String() string {
 func (*UpstreamsRequest) ProtoMessage() {}
 
 func (x *UpstreamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[65]
+	mi := &file_headpanel_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4730,7 +5013,7 @@ func (x *UpstreamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpstreamsRequest.ProtoReflect.Descriptor instead.
 func (*UpstreamsRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{65}
+	return file_headpanel_proto_rawDescGZIP(), []int{69}
 }
 
 type UpstreamsResponse struct {
@@ -4746,7 +5029,7 @@ type UpstreamsResponse struct {
 
 func (x *UpstreamsResponse) Reset() {
 	*x = UpstreamsResponse{}
-	mi := &file_headpanel_proto_msgTypes[66]
+	mi := &file_headpanel_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4758,7 +5041,7 @@ func (x *UpstreamsResponse) String() string {
 func (*UpstreamsResponse) ProtoMessage() {}
 
 func (x *UpstreamsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[66]
+	mi := &file_headpanel_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4771,7 +5054,7 @@ func (x *UpstreamsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpstreamsResponse.ProtoReflect.Descriptor instead.
 func (*UpstreamsResponse) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{66}
+	return file_headpanel_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *UpstreamsResponse) GetEnabled() bool {
@@ -4804,7 +5087,7 @@ type PutUpstreamRequest struct {
 
 func (x *PutUpstreamRequest) Reset() {
 	*x = PutUpstreamRequest{}
-	mi := &file_headpanel_proto_msgTypes[67]
+	mi := &file_headpanel_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4816,7 +5099,7 @@ func (x *PutUpstreamRequest) String() string {
 func (*PutUpstreamRequest) ProtoMessage() {}
 
 func (x *PutUpstreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[67]
+	mi := &file_headpanel_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4829,7 +5112,7 @@ func (x *PutUpstreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PutUpstreamRequest.ProtoReflect.Descriptor instead.
 func (*PutUpstreamRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{67}
+	return file_headpanel_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *PutUpstreamRequest) GetSource() *UpstreamSource {
@@ -4848,7 +5131,7 @@ type RemoveUpstreamRequest struct {
 
 func (x *RemoveUpstreamRequest) Reset() {
 	*x = RemoveUpstreamRequest{}
-	mi := &file_headpanel_proto_msgTypes[68]
+	mi := &file_headpanel_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4860,7 +5143,7 @@ func (x *RemoveUpstreamRequest) String() string {
 func (*RemoveUpstreamRequest) ProtoMessage() {}
 
 func (x *RemoveUpstreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[68]
+	mi := &file_headpanel_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4873,7 +5156,7 @@ func (x *RemoveUpstreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveUpstreamRequest.ProtoReflect.Descriptor instead.
 func (*RemoveUpstreamRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{68}
+	return file_headpanel_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *RemoveUpstreamRequest) GetId() string {
@@ -4892,7 +5175,7 @@ type EnableUpstreamsRequest struct {
 
 func (x *EnableUpstreamsRequest) Reset() {
 	*x = EnableUpstreamsRequest{}
-	mi := &file_headpanel_proto_msgTypes[69]
+	mi := &file_headpanel_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4904,7 +5187,7 @@ func (x *EnableUpstreamsRequest) String() string {
 func (*EnableUpstreamsRequest) ProtoMessage() {}
 
 func (x *EnableUpstreamsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_headpanel_proto_msgTypes[69]
+	mi := &file_headpanel_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4917,7 +5200,7 @@ func (x *EnableUpstreamsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnableUpstreamsRequest.ProtoReflect.Descriptor instead.
 func (*EnableUpstreamsRequest) Descriptor() ([]byte, []int) {
-	return file_headpanel_proto_rawDescGZIP(), []int{69}
+	return file_headpanel_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *EnableUpstreamsRequest) GetEnabled() bool {
@@ -5158,7 +5441,32 @@ const file_headpanel_proto_rawDesc = "" +
 	"\bup_bytes\x18\x03 \x01(\x04R\aupBytes\x12\x1d\n" +
 	"\n" +
 	"down_bytes\x18\x04 \x01(\x04R\tdownBytes\x12$\n" +
-	"\x0elast_seen_unix\x18\x05 \x01(\x03R\flastSeenUnix\"\x99\x02\n" +
+	"\x0elast_seen_unix\x18\x05 \x01(\x03R\flastSeenUnix\"f\n" +
+	"\x13OracleLabelsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\rR\x06offset\x12!\n" +
+	"\faccused_only\x18\x03 \x01(\bR\vaccusedOnly\"\x99\x02\n" +
+	"\vOracleLabel\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x17\n" +
+	"\aat_unix\x18\x02 \x01(\x03R\x06atUnix\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x03 \x01(\tR\tsubjectId\x12\x14\n" +
+	"\x05label\x18\x04 \x01(\x05R\x05label\x12\x19\n" +
+	"\blabel_by\x18\x05 \x01(\tR\alabelBy\x12\x10\n" +
+	"\x03why\x18\x06 \x01(\tR\x03why\x12D\n" +
+	"\x06values\x18\a \x03(\v2,.wingsv.headpanel.v1.OracleLabel.ValuesEntryR\x06values\x1a9\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xa0\x01\n" +
+	"\x14OracleLabelsResponse\x128\n" +
+	"\x06labels\x18\x01 \x03(\v2 .wingsv.headpanel.v1.OracleLabelR\x06labels\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\rR\x05total\x12\x1d\n" +
+	"\n" +
+	"by_machine\x18\x03 \x01(\rR\tbyMachine\x12\x19\n" +
+	"\bby_human\x18\x04 \x01(\rR\abyHuman\"=\n" +
+	"\x15SetOracleLabelRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x14\n" +
+	"\x05label\x18\x02 \x01(\x05R\x05label\"\x99\x02\n" +
 	"\x15OracleSubjectResponse\x12<\n" +
 	"\asubject\x18\x01 \x01(\v2\".wingsv.headpanel.v1.OracleSubjectR\asubject\x12;\n" +
 	"\asignals\x18\x02 \x03(\v2!.wingsv.headpanel.v1.OracleSignalR\asignals\x12;\n" +
@@ -5326,7 +5634,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x16LIVE_SCOPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11LIVE_SCOPE_GLOBAL\x10\x01\x12\x14\n" +
 	"\x10LIVE_SCOPE_DONOR\x10\x02\x12\x13\n" +
-	"\x0fLIVE_SCOPE_NODE\x10\x032\xfe\x15\n" +
+	"\x0fLIVE_SCOPE_NODE\x10\x032\xcc\x17\n" +
 	"\x0eFederationHead\x12d\n" +
 	"\x11GetPublicCounters\x12*.wingsv.headpanel.v1.PublicCountersRequest\x1a#.wingsv.headpanel.v1.PublicCounters\x12U\n" +
 	"\n" +
@@ -5350,7 +5658,9 @@ const file_headpanel_proto_rawDesc = "" +
 	"\tRunProbes\x12%.wingsv.headpanel.v1.RunProbesRequest\x1a&.wingsv.headpanel.v1.RunProbesResponse\x12i\n" +
 	"\x0eOracleOverview\x12*.wingsv.headpanel.v1.OracleOverviewRequest\x1a+.wingsv.headpanel.v1.OracleOverviewResponse\x12f\n" +
 	"\rOracleSubject\x12).wingsv.headpanel.v1.OracleSubjectRequest\x1a*.wingsv.headpanel.v1.OracleSubjectResponse\x12`\n" +
-	"\vOracleNodes\x12'.wingsv.headpanel.v1.OracleNodesRequest\x1a(.wingsv.headpanel.v1.OracleNodesResponse\x12o\n" +
+	"\vOracleNodes\x12'.wingsv.headpanel.v1.OracleNodesRequest\x1a(.wingsv.headpanel.v1.OracleNodesResponse\x12c\n" +
+	"\fOracleLabels\x12(.wingsv.headpanel.v1.OracleLabelsRequest\x1a).wingsv.headpanel.v1.OracleLabelsResponse\x12g\n" +
+	"\x0eSetOracleLabel\x12*.wingsv.headpanel.v1.SetOracleLabelRequest\x1a).wingsv.headpanel.v1.OracleLabelsResponse\x12o\n" +
 	"\x10SetPayoutAddress\x12,.wingsv.headpanel.v1.SetPayoutAddressRequest\x1a-.wingsv.headpanel.v1.SetPayoutAddressResponse\x12l\n" +
 	"\x0fPayoutStatement\x12+.wingsv.headpanel.v1.PayoutStatementRequest\x1a,.wingsv.headpanel.v1.PayoutStatementResponse\x12Q\n" +
 	"\x06Epochs\x12\".wingsv.headpanel.v1.EpochsRequest\x1a#.wingsv.headpanel.v1.EpochsResponse\x12o\n" +
@@ -5374,7 +5684,7 @@ func file_headpanel_proto_rawDescGZIP() []byte {
 }
 
 var file_headpanel_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 70)
+var file_headpanel_proto_msgTypes = make([]protoimpl.MessageInfo, 75)
 var file_headpanel_proto_goTypes = []any{
 	(LiveScope)(0),                   // 0: wingsv.headpanel.v1.LiveScope
 	(*LiveSubscribe)(nil),            // 1: wingsv.headpanel.v1.LiveSubscribe
@@ -5416,37 +5726,42 @@ var file_headpanel_proto_goTypes = []any{
 	(*OracleSubjectRequest)(nil),     // 37: wingsv.headpanel.v1.OracleSubjectRequest
 	(*OracleSignal)(nil),             // 38: wingsv.headpanel.v1.OracleSignal
 	(*OracleDomain)(nil),             // 39: wingsv.headpanel.v1.OracleDomain
-	(*OracleSubjectResponse)(nil),    // 40: wingsv.headpanel.v1.OracleSubjectResponse
-	(*OracleNode)(nil),               // 41: wingsv.headpanel.v1.OracleNode
-	(*OracleNodeReason)(nil),         // 42: wingsv.headpanel.v1.OracleNodeReason
-	(*OracleNodesRequest)(nil),       // 43: wingsv.headpanel.v1.OracleNodesRequest
-	(*OracleNodesResponse)(nil),      // 44: wingsv.headpanel.v1.OracleNodesResponse
-	(*OracleClass)(nil),              // 45: wingsv.headpanel.v1.OracleClass
-	(*OracleSubject)(nil),            // 46: wingsv.headpanel.v1.OracleSubject
-	(*OracleOverviewResponse)(nil),   // 47: wingsv.headpanel.v1.OracleOverviewResponse
-	(*SetPayoutAddressRequest)(nil),  // 48: wingsv.headpanel.v1.SetPayoutAddressRequest
-	(*SetPayoutAddressResponse)(nil), // 49: wingsv.headpanel.v1.SetPayoutAddressResponse
-	(*PayoutStatementRequest)(nil),   // 50: wingsv.headpanel.v1.PayoutStatementRequest
-	(*EpochAccrual)(nil),             // 51: wingsv.headpanel.v1.EpochAccrual
-	(*PayoutStatementResponse)(nil),  // 52: wingsv.headpanel.v1.PayoutStatementResponse
-	(*PayoutTerms)(nil),              // 53: wingsv.headpanel.v1.PayoutTerms
-	(*NodeAccrual)(nil),              // 54: wingsv.headpanel.v1.NodeAccrual
-	(*EpochsRequest)(nil),            // 55: wingsv.headpanel.v1.EpochsRequest
-	(*EpochSummary)(nil),             // 56: wingsv.headpanel.v1.EpochSummary
-	(*EpochsResponse)(nil),           // 57: wingsv.headpanel.v1.EpochsResponse
-	(*SubjectAncestry)(nil),          // 58: wingsv.headpanel.v1.SubjectAncestry
-	(*ReportInviteTreeRequest)(nil),  // 59: wingsv.headpanel.v1.ReportInviteTreeRequest
-	(*ReportInviteTreeResponse)(nil), // 60: wingsv.headpanel.v1.ReportInviteTreeResponse
-	(*ReportDonationRequest)(nil),    // 61: wingsv.headpanel.v1.ReportDonationRequest
-	(*ReportDonationResponse)(nil),   // 62: wingsv.headpanel.v1.ReportDonationResponse
-	(*RemoveNodeRequest)(nil),        // 63: wingsv.headpanel.v1.RemoveNodeRequest
-	(*RemoveNodeResponse)(nil),       // 64: wingsv.headpanel.v1.RemoveNodeResponse
-	(*UpstreamSource)(nil),           // 65: wingsv.headpanel.v1.UpstreamSource
-	(*UpstreamsRequest)(nil),         // 66: wingsv.headpanel.v1.UpstreamsRequest
-	(*UpstreamsResponse)(nil),        // 67: wingsv.headpanel.v1.UpstreamsResponse
-	(*PutUpstreamRequest)(nil),       // 68: wingsv.headpanel.v1.PutUpstreamRequest
-	(*RemoveUpstreamRequest)(nil),    // 69: wingsv.headpanel.v1.RemoveUpstreamRequest
-	(*EnableUpstreamsRequest)(nil),   // 70: wingsv.headpanel.v1.EnableUpstreamsRequest
+	(*OracleLabelsRequest)(nil),      // 40: wingsv.headpanel.v1.OracleLabelsRequest
+	(*OracleLabel)(nil),              // 41: wingsv.headpanel.v1.OracleLabel
+	(*OracleLabelsResponse)(nil),     // 42: wingsv.headpanel.v1.OracleLabelsResponse
+	(*SetOracleLabelRequest)(nil),    // 43: wingsv.headpanel.v1.SetOracleLabelRequest
+	(*OracleSubjectResponse)(nil),    // 44: wingsv.headpanel.v1.OracleSubjectResponse
+	(*OracleNode)(nil),               // 45: wingsv.headpanel.v1.OracleNode
+	(*OracleNodeReason)(nil),         // 46: wingsv.headpanel.v1.OracleNodeReason
+	(*OracleNodesRequest)(nil),       // 47: wingsv.headpanel.v1.OracleNodesRequest
+	(*OracleNodesResponse)(nil),      // 48: wingsv.headpanel.v1.OracleNodesResponse
+	(*OracleClass)(nil),              // 49: wingsv.headpanel.v1.OracleClass
+	(*OracleSubject)(nil),            // 50: wingsv.headpanel.v1.OracleSubject
+	(*OracleOverviewResponse)(nil),   // 51: wingsv.headpanel.v1.OracleOverviewResponse
+	(*SetPayoutAddressRequest)(nil),  // 52: wingsv.headpanel.v1.SetPayoutAddressRequest
+	(*SetPayoutAddressResponse)(nil), // 53: wingsv.headpanel.v1.SetPayoutAddressResponse
+	(*PayoutStatementRequest)(nil),   // 54: wingsv.headpanel.v1.PayoutStatementRequest
+	(*EpochAccrual)(nil),             // 55: wingsv.headpanel.v1.EpochAccrual
+	(*PayoutStatementResponse)(nil),  // 56: wingsv.headpanel.v1.PayoutStatementResponse
+	(*PayoutTerms)(nil),              // 57: wingsv.headpanel.v1.PayoutTerms
+	(*NodeAccrual)(nil),              // 58: wingsv.headpanel.v1.NodeAccrual
+	(*EpochsRequest)(nil),            // 59: wingsv.headpanel.v1.EpochsRequest
+	(*EpochSummary)(nil),             // 60: wingsv.headpanel.v1.EpochSummary
+	(*EpochsResponse)(nil),           // 61: wingsv.headpanel.v1.EpochsResponse
+	(*SubjectAncestry)(nil),          // 62: wingsv.headpanel.v1.SubjectAncestry
+	(*ReportInviteTreeRequest)(nil),  // 63: wingsv.headpanel.v1.ReportInviteTreeRequest
+	(*ReportInviteTreeResponse)(nil), // 64: wingsv.headpanel.v1.ReportInviteTreeResponse
+	(*ReportDonationRequest)(nil),    // 65: wingsv.headpanel.v1.ReportDonationRequest
+	(*ReportDonationResponse)(nil),   // 66: wingsv.headpanel.v1.ReportDonationResponse
+	(*RemoveNodeRequest)(nil),        // 67: wingsv.headpanel.v1.RemoveNodeRequest
+	(*RemoveNodeResponse)(nil),       // 68: wingsv.headpanel.v1.RemoveNodeResponse
+	(*UpstreamSource)(nil),           // 69: wingsv.headpanel.v1.UpstreamSource
+	(*UpstreamsRequest)(nil),         // 70: wingsv.headpanel.v1.UpstreamsRequest
+	(*UpstreamsResponse)(nil),        // 71: wingsv.headpanel.v1.UpstreamsResponse
+	(*PutUpstreamRequest)(nil),       // 72: wingsv.headpanel.v1.PutUpstreamRequest
+	(*RemoveUpstreamRequest)(nil),    // 73: wingsv.headpanel.v1.RemoveUpstreamRequest
+	(*EnableUpstreamsRequest)(nil),   // 74: wingsv.headpanel.v1.EnableUpstreamsRequest
+	nil,                              // 75: wingsv.headpanel.v1.OracleLabel.ValuesEntry
 }
 var file_headpanel_proto_depIdxs = []int32{
 	0,  // 0: wingsv.headpanel.v1.LiveSubscribe.scope:type_name -> wingsv.headpanel.v1.LiveScope
@@ -5460,82 +5775,88 @@ var file_headpanel_proto_depIdxs = []int32{
 	25, // 8: wingsv.headpanel.v1.FleetSettings.vktp:type_name -> wingsv.headpanel.v1.BuildChoice
 	33, // 9: wingsv.headpanel.v1.ProbeReportsResponse.vantages:type_name -> wingsv.headpanel.v1.ProbeVantage
 	34, // 10: wingsv.headpanel.v1.ProbeReportsResponse.measurements:type_name -> wingsv.headpanel.v1.ProbeMeasurement
-	46, // 11: wingsv.headpanel.v1.OracleSubjectResponse.subject:type_name -> wingsv.headpanel.v1.OracleSubject
-	38, // 12: wingsv.headpanel.v1.OracleSubjectResponse.signals:type_name -> wingsv.headpanel.v1.OracleSignal
-	39, // 13: wingsv.headpanel.v1.OracleSubjectResponse.domains:type_name -> wingsv.headpanel.v1.OracleDomain
-	42, // 14: wingsv.headpanel.v1.OracleNode.reasons:type_name -> wingsv.headpanel.v1.OracleNodeReason
-	41, // 15: wingsv.headpanel.v1.OracleNodesResponse.nodes:type_name -> wingsv.headpanel.v1.OracleNode
-	45, // 16: wingsv.headpanel.v1.OracleSubject.classes:type_name -> wingsv.headpanel.v1.OracleClass
-	46, // 17: wingsv.headpanel.v1.OracleOverviewResponse.subjects:type_name -> wingsv.headpanel.v1.OracleSubject
-	45, // 18: wingsv.headpanel.v1.OracleOverviewResponse.signals:type_name -> wingsv.headpanel.v1.OracleClass
-	51, // 19: wingsv.headpanel.v1.PayoutStatementResponse.epochs:type_name -> wingsv.headpanel.v1.EpochAccrual
-	53, // 20: wingsv.headpanel.v1.PayoutStatementResponse.terms:type_name -> wingsv.headpanel.v1.PayoutTerms
-	54, // 21: wingsv.headpanel.v1.PayoutStatementResponse.pending:type_name -> wingsv.headpanel.v1.NodeAccrual
-	56, // 22: wingsv.headpanel.v1.EpochsResponse.epochs:type_name -> wingsv.headpanel.v1.EpochSummary
-	58, // 23: wingsv.headpanel.v1.ReportInviteTreeRequest.subjects:type_name -> wingsv.headpanel.v1.SubjectAncestry
-	65, // 24: wingsv.headpanel.v1.UpstreamsResponse.sources:type_name -> wingsv.headpanel.v1.UpstreamSource
-	65, // 25: wingsv.headpanel.v1.PutUpstreamRequest.source:type_name -> wingsv.headpanel.v1.UpstreamSource
-	5,  // 26: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
-	1,  // 27: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
-	12, // 28: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
-	7,  // 29: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
-	8,  // 30: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
-	17, // 31: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
-	19, // 32: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
-	15, // 33: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
-	21, // 34: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
-	63, // 35: wingsv.headpanel.v1.FederationHead.RemoveNode:input_type -> wingsv.headpanel.v1.RemoveNodeRequest
-	28, // 36: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
-	23, // 37: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
-	24, // 38: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
-	26, // 39: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
-	30, // 40: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
-	31, // 41: wingsv.headpanel.v1.FederationHead.RunProbes:input_type -> wingsv.headpanel.v1.RunProbesRequest
-	36, // 42: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
-	37, // 43: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
-	43, // 44: wingsv.headpanel.v1.FederationHead.OracleNodes:input_type -> wingsv.headpanel.v1.OracleNodesRequest
-	48, // 45: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:input_type -> wingsv.headpanel.v1.SetPayoutAddressRequest
-	50, // 46: wingsv.headpanel.v1.FederationHead.PayoutStatement:input_type -> wingsv.headpanel.v1.PayoutStatementRequest
-	55, // 47: wingsv.headpanel.v1.FederationHead.Epochs:input_type -> wingsv.headpanel.v1.EpochsRequest
-	59, // 48: wingsv.headpanel.v1.FederationHead.ReportInviteTree:input_type -> wingsv.headpanel.v1.ReportInviteTreeRequest
-	61, // 49: wingsv.headpanel.v1.FederationHead.ReportDonation:input_type -> wingsv.headpanel.v1.ReportDonationRequest
-	66, // 50: wingsv.headpanel.v1.FederationHead.Upstreams:input_type -> wingsv.headpanel.v1.UpstreamsRequest
-	68, // 51: wingsv.headpanel.v1.FederationHead.PutUpstream:input_type -> wingsv.headpanel.v1.PutUpstreamRequest
-	69, // 52: wingsv.headpanel.v1.FederationHead.RemoveUpstream:input_type -> wingsv.headpanel.v1.RemoveUpstreamRequest
-	70, // 53: wingsv.headpanel.v1.FederationHead.EnableUpstreams:input_type -> wingsv.headpanel.v1.EnableUpstreamsRequest
-	4,  // 54: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
-	2,  // 55: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
-	13, // 56: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
-	6,  // 57: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
-	10, // 58: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
-	18, // 59: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
-	20, // 60: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
-	16, // 61: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
-	22, // 62: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
-	64, // 63: wingsv.headpanel.v1.FederationHead.RemoveNode:output_type -> wingsv.headpanel.v1.RemoveNodeResponse
-	29, // 64: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
-	24, // 65: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	24, // 66: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
-	27, // 67: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
-	35, // 68: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
-	32, // 69: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
-	47, // 70: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
-	40, // 71: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
-	44, // 72: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
-	49, // 73: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:output_type -> wingsv.headpanel.v1.SetPayoutAddressResponse
-	52, // 74: wingsv.headpanel.v1.FederationHead.PayoutStatement:output_type -> wingsv.headpanel.v1.PayoutStatementResponse
-	57, // 75: wingsv.headpanel.v1.FederationHead.Epochs:output_type -> wingsv.headpanel.v1.EpochsResponse
-	60, // 76: wingsv.headpanel.v1.FederationHead.ReportInviteTree:output_type -> wingsv.headpanel.v1.ReportInviteTreeResponse
-	62, // 77: wingsv.headpanel.v1.FederationHead.ReportDonation:output_type -> wingsv.headpanel.v1.ReportDonationResponse
-	67, // 78: wingsv.headpanel.v1.FederationHead.Upstreams:output_type -> wingsv.headpanel.v1.UpstreamsResponse
-	67, // 79: wingsv.headpanel.v1.FederationHead.PutUpstream:output_type -> wingsv.headpanel.v1.UpstreamsResponse
-	67, // 80: wingsv.headpanel.v1.FederationHead.RemoveUpstream:output_type -> wingsv.headpanel.v1.UpstreamsResponse
-	67, // 81: wingsv.headpanel.v1.FederationHead.EnableUpstreams:output_type -> wingsv.headpanel.v1.UpstreamsResponse
-	54, // [54:82] is the sub-list for method output_type
-	26, // [26:54] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	75, // 11: wingsv.headpanel.v1.OracleLabel.values:type_name -> wingsv.headpanel.v1.OracleLabel.ValuesEntry
+	41, // 12: wingsv.headpanel.v1.OracleLabelsResponse.labels:type_name -> wingsv.headpanel.v1.OracleLabel
+	50, // 13: wingsv.headpanel.v1.OracleSubjectResponse.subject:type_name -> wingsv.headpanel.v1.OracleSubject
+	38, // 14: wingsv.headpanel.v1.OracleSubjectResponse.signals:type_name -> wingsv.headpanel.v1.OracleSignal
+	39, // 15: wingsv.headpanel.v1.OracleSubjectResponse.domains:type_name -> wingsv.headpanel.v1.OracleDomain
+	46, // 16: wingsv.headpanel.v1.OracleNode.reasons:type_name -> wingsv.headpanel.v1.OracleNodeReason
+	45, // 17: wingsv.headpanel.v1.OracleNodesResponse.nodes:type_name -> wingsv.headpanel.v1.OracleNode
+	49, // 18: wingsv.headpanel.v1.OracleSubject.classes:type_name -> wingsv.headpanel.v1.OracleClass
+	50, // 19: wingsv.headpanel.v1.OracleOverviewResponse.subjects:type_name -> wingsv.headpanel.v1.OracleSubject
+	49, // 20: wingsv.headpanel.v1.OracleOverviewResponse.signals:type_name -> wingsv.headpanel.v1.OracleClass
+	55, // 21: wingsv.headpanel.v1.PayoutStatementResponse.epochs:type_name -> wingsv.headpanel.v1.EpochAccrual
+	57, // 22: wingsv.headpanel.v1.PayoutStatementResponse.terms:type_name -> wingsv.headpanel.v1.PayoutTerms
+	58, // 23: wingsv.headpanel.v1.PayoutStatementResponse.pending:type_name -> wingsv.headpanel.v1.NodeAccrual
+	60, // 24: wingsv.headpanel.v1.EpochsResponse.epochs:type_name -> wingsv.headpanel.v1.EpochSummary
+	62, // 25: wingsv.headpanel.v1.ReportInviteTreeRequest.subjects:type_name -> wingsv.headpanel.v1.SubjectAncestry
+	69, // 26: wingsv.headpanel.v1.UpstreamsResponse.sources:type_name -> wingsv.headpanel.v1.UpstreamSource
+	69, // 27: wingsv.headpanel.v1.PutUpstreamRequest.source:type_name -> wingsv.headpanel.v1.UpstreamSource
+	5,  // 28: wingsv.headpanel.v1.FederationHead.GetPublicCounters:input_type -> wingsv.headpanel.v1.PublicCountersRequest
+	1,  // 29: wingsv.headpanel.v1.FederationHead.StreamLive:input_type -> wingsv.headpanel.v1.LiveSubscribe
+	12, // 30: wingsv.headpanel.v1.FederationHead.ListNodes:input_type -> wingsv.headpanel.v1.ListNodesRequest
+	7,  // 31: wingsv.headpanel.v1.FederationHead.DonorSummary:input_type -> wingsv.headpanel.v1.DonorSummaryRequest
+	8,  // 32: wingsv.headpanel.v1.FederationHead.DonorHistory:input_type -> wingsv.headpanel.v1.DonorHistoryRequest
+	17, // 33: wingsv.headpanel.v1.FederationHead.EnsureUser:input_type -> wingsv.headpanel.v1.EnsureUserRequest
+	19, // 34: wingsv.headpanel.v1.FederationHead.RevokeUser:input_type -> wingsv.headpanel.v1.RevokeUserRequest
+	15, // 35: wingsv.headpanel.v1.FederationHead.MintEnrollToken:input_type -> wingsv.headpanel.v1.MintEnrollTokenRequest
+	21, // 36: wingsv.headpanel.v1.FederationHead.SetNodeState:input_type -> wingsv.headpanel.v1.SetNodeStateRequest
+	67, // 37: wingsv.headpanel.v1.FederationHead.RemoveNode:input_type -> wingsv.headpanel.v1.RemoveNodeRequest
+	28, // 38: wingsv.headpanel.v1.FederationHead.SetNodeBudget:input_type -> wingsv.headpanel.v1.SetNodeBudgetRequest
+	23, // 39: wingsv.headpanel.v1.FederationHead.GetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettingsRequest
+	24, // 40: wingsv.headpanel.v1.FederationHead.SetFleetSettings:input_type -> wingsv.headpanel.v1.FleetSettings
+	26, // 41: wingsv.headpanel.v1.FederationHead.RestartComponent:input_type -> wingsv.headpanel.v1.RestartComponentRequest
+	30, // 42: wingsv.headpanel.v1.FederationHead.ProbeReports:input_type -> wingsv.headpanel.v1.ProbeReportsRequest
+	31, // 43: wingsv.headpanel.v1.FederationHead.RunProbes:input_type -> wingsv.headpanel.v1.RunProbesRequest
+	36, // 44: wingsv.headpanel.v1.FederationHead.OracleOverview:input_type -> wingsv.headpanel.v1.OracleOverviewRequest
+	37, // 45: wingsv.headpanel.v1.FederationHead.OracleSubject:input_type -> wingsv.headpanel.v1.OracleSubjectRequest
+	47, // 46: wingsv.headpanel.v1.FederationHead.OracleNodes:input_type -> wingsv.headpanel.v1.OracleNodesRequest
+	40, // 47: wingsv.headpanel.v1.FederationHead.OracleLabels:input_type -> wingsv.headpanel.v1.OracleLabelsRequest
+	43, // 48: wingsv.headpanel.v1.FederationHead.SetOracleLabel:input_type -> wingsv.headpanel.v1.SetOracleLabelRequest
+	52, // 49: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:input_type -> wingsv.headpanel.v1.SetPayoutAddressRequest
+	54, // 50: wingsv.headpanel.v1.FederationHead.PayoutStatement:input_type -> wingsv.headpanel.v1.PayoutStatementRequest
+	59, // 51: wingsv.headpanel.v1.FederationHead.Epochs:input_type -> wingsv.headpanel.v1.EpochsRequest
+	63, // 52: wingsv.headpanel.v1.FederationHead.ReportInviteTree:input_type -> wingsv.headpanel.v1.ReportInviteTreeRequest
+	65, // 53: wingsv.headpanel.v1.FederationHead.ReportDonation:input_type -> wingsv.headpanel.v1.ReportDonationRequest
+	70, // 54: wingsv.headpanel.v1.FederationHead.Upstreams:input_type -> wingsv.headpanel.v1.UpstreamsRequest
+	72, // 55: wingsv.headpanel.v1.FederationHead.PutUpstream:input_type -> wingsv.headpanel.v1.PutUpstreamRequest
+	73, // 56: wingsv.headpanel.v1.FederationHead.RemoveUpstream:input_type -> wingsv.headpanel.v1.RemoveUpstreamRequest
+	74, // 57: wingsv.headpanel.v1.FederationHead.EnableUpstreams:input_type -> wingsv.headpanel.v1.EnableUpstreamsRequest
+	4,  // 58: wingsv.headpanel.v1.FederationHead.GetPublicCounters:output_type -> wingsv.headpanel.v1.PublicCounters
+	2,  // 59: wingsv.headpanel.v1.FederationHead.StreamLive:output_type -> wingsv.headpanel.v1.LiveUpdate
+	13, // 60: wingsv.headpanel.v1.FederationHead.ListNodes:output_type -> wingsv.headpanel.v1.ListNodesResponse
+	6,  // 61: wingsv.headpanel.v1.FederationHead.DonorSummary:output_type -> wingsv.headpanel.v1.DonorCounters
+	10, // 62: wingsv.headpanel.v1.FederationHead.DonorHistory:output_type -> wingsv.headpanel.v1.DonorHistoryResponse
+	18, // 63: wingsv.headpanel.v1.FederationHead.EnsureUser:output_type -> wingsv.headpanel.v1.UserAllocation
+	20, // 64: wingsv.headpanel.v1.FederationHead.RevokeUser:output_type -> wingsv.headpanel.v1.RevokeUserResponse
+	16, // 65: wingsv.headpanel.v1.FederationHead.MintEnrollToken:output_type -> wingsv.headpanel.v1.MintEnrollTokenResponse
+	22, // 66: wingsv.headpanel.v1.FederationHead.SetNodeState:output_type -> wingsv.headpanel.v1.SetNodeStateResponse
+	68, // 67: wingsv.headpanel.v1.FederationHead.RemoveNode:output_type -> wingsv.headpanel.v1.RemoveNodeResponse
+	29, // 68: wingsv.headpanel.v1.FederationHead.SetNodeBudget:output_type -> wingsv.headpanel.v1.SetNodeBudgetResponse
+	24, // 69: wingsv.headpanel.v1.FederationHead.GetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	24, // 70: wingsv.headpanel.v1.FederationHead.SetFleetSettings:output_type -> wingsv.headpanel.v1.FleetSettings
+	27, // 71: wingsv.headpanel.v1.FederationHead.RestartComponent:output_type -> wingsv.headpanel.v1.RestartComponentResponse
+	35, // 72: wingsv.headpanel.v1.FederationHead.ProbeReports:output_type -> wingsv.headpanel.v1.ProbeReportsResponse
+	32, // 73: wingsv.headpanel.v1.FederationHead.RunProbes:output_type -> wingsv.headpanel.v1.RunProbesResponse
+	51, // 74: wingsv.headpanel.v1.FederationHead.OracleOverview:output_type -> wingsv.headpanel.v1.OracleOverviewResponse
+	44, // 75: wingsv.headpanel.v1.FederationHead.OracleSubject:output_type -> wingsv.headpanel.v1.OracleSubjectResponse
+	48, // 76: wingsv.headpanel.v1.FederationHead.OracleNodes:output_type -> wingsv.headpanel.v1.OracleNodesResponse
+	42, // 77: wingsv.headpanel.v1.FederationHead.OracleLabels:output_type -> wingsv.headpanel.v1.OracleLabelsResponse
+	42, // 78: wingsv.headpanel.v1.FederationHead.SetOracleLabel:output_type -> wingsv.headpanel.v1.OracleLabelsResponse
+	53, // 79: wingsv.headpanel.v1.FederationHead.SetPayoutAddress:output_type -> wingsv.headpanel.v1.SetPayoutAddressResponse
+	56, // 80: wingsv.headpanel.v1.FederationHead.PayoutStatement:output_type -> wingsv.headpanel.v1.PayoutStatementResponse
+	61, // 81: wingsv.headpanel.v1.FederationHead.Epochs:output_type -> wingsv.headpanel.v1.EpochsResponse
+	64, // 82: wingsv.headpanel.v1.FederationHead.ReportInviteTree:output_type -> wingsv.headpanel.v1.ReportInviteTreeResponse
+	66, // 83: wingsv.headpanel.v1.FederationHead.ReportDonation:output_type -> wingsv.headpanel.v1.ReportDonationResponse
+	71, // 84: wingsv.headpanel.v1.FederationHead.Upstreams:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	71, // 85: wingsv.headpanel.v1.FederationHead.PutUpstream:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	71, // 86: wingsv.headpanel.v1.FederationHead.RemoveUpstream:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	71, // 87: wingsv.headpanel.v1.FederationHead.EnableUpstreams:output_type -> wingsv.headpanel.v1.UpstreamsResponse
+	58, // [58:88] is the sub-list for method output_type
+	28, // [28:58] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_headpanel_proto_init() }
@@ -5549,7 +5870,7 @@ func file_headpanel_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_headpanel_proto_rawDesc), len(file_headpanel_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   70,
+			NumMessages:   75,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

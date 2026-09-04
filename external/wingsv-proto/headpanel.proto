@@ -54,6 +54,11 @@ service FederationHead {
   rpc OracleSubject(OracleSubjectRequest) returns (OracleSubjectResponse);
   // Судим и ноды тоже: враньё о трафике, провалы зондов, мигание
   rpc OracleNodes(OracleNodesRequest) returns (OracleNodesResponse);
+  // Разметка снимков: что наразмечала модель и что с этим сделал человек.
+  // Учить бустинг на непроверенной машинной разметке - способ выучить её же
+  // ошибки и потом резать по ним живых людей
+  rpc OracleLabels(OracleLabelsRequest) returns (OracleLabelsResponse);
+  rpc SetOracleLabel(SetOracleLabelRequest) returns (OracleLabelsResponse);
   // Деньги донора: куда платить и что уже начислено. Башка считает и хранит,
   // цепочка потом только фиксирует посчитанное
   rpc SetPayoutAddress(SetPayoutAddressRequest) returns (SetPayoutAddressResponse);
@@ -68,7 +73,7 @@ service FederationHead {
   // транзакции делает панель, башка получает уже подтверждённое
   rpc ReportDonation(ReportDonationRequest) returns (ReportDonationResponse);
   // Купленные подписки заводит владелец площадки. По умолчанию раздача
-  // выключена: за чужим сервером наш оракул слеп, и включать это должен человек
+  // выключена: за чужим сервером наш Oracle слеп, и включать это должен человек
   rpc Upstreams(UpstreamsRequest) returns (UpstreamsResponse);
   rpc PutUpstream(PutUpstreamRequest) returns (UpstreamsResponse);
   rpc RemoveUpstream(RemoveUpstreamRequest) returns (UpstreamsResponse);
@@ -275,7 +280,7 @@ message UserAllocation {
   uint32 nodes_entitled = 5;
   // Сколько пользователь пронёс за текущий период
   uint64 used_bytes = 6;
-  // Потолки скорости, байт в секунду. Соразмерны оценке оракула
+  // Потолки скорости, байт в секунду. Соразмерны оценке Oracle
   uint64 uplink_bps = 7;
   uint64 downlink_bps = 8;
 }
@@ -435,6 +440,45 @@ message OracleDomain {
   uint64 up_bytes = 3;
   uint64 down_bytes = 4;
   int64 last_seen_unix = 5;
+}
+
+message OracleLabelsRequest {
+  uint32 limit = 1;
+  uint32 offset = 2;
+  // Только обвинения: чистых накапливается на порядок больше, а проверять надо
+  // именно те, где модель кого-то записала в мошенники
+  bool accused_only = 3;
+}
+
+// OracleLabel - один размеченный снимок, как его показывают человеку.
+//
+// Вектор идёт числами и БЕЗ доменов: по нему модель и решала, по нему человек и
+// проверяет. Имён там нет и не будет
+message OracleLabel {
+  uint64 id = 1;
+  int64 at_unix = 2;
+  string subject_id = 3;
+  // -1 не размечен, 0 чисто, 1 злоупотребление
+  int32 label = 4;
+  // Кто разметил: claude, rules или human
+  string label_by = 5;
+  string why = 6;
+  map<string, double> values = 7;
+}
+
+message OracleLabelsResponse {
+  repeated OracleLabel labels = 1;
+  uint32 total = 2;
+  // Сколько всего размечено машиной и сколько подтвердил человек: по этим двум
+  // числам видно, можно ли уже учить
+  uint32 by_machine = 3;
+  uint32 by_human = 4;
+}
+
+message SetOracleLabelRequest {
+  uint64 id = 1;
+  // Приговор человека. Он старше машинного всегда
+  int32 label = 2;
 }
 
 message OracleSubjectResponse {
