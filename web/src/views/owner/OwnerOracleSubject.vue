@@ -65,7 +65,10 @@
 
   <section class="surface-card mt-6">
     <h2 class="section-title">Сигналы</h2>
-    <p class="admin-muted mt-1">Каждое наблюдение с временем и нодой, на которой оно случилось.</p>
+    <p class="admin-muted mt-1">
+      Ноду несут наблюдения с самих нод. Сверку объёма и разбор поведения делает башка целиком по участнику, и ноды у
+      таких сигналов нет.
+    </p>
     <SamsungSectionLoader v-if="signalsLoading" />
     <p v-else-if="!signals.length" class="state-hint mt-4">Сырых сигналов не осталось, их вес истёк.</p>
     <div v-else class="fed-node-list mt-4">
@@ -77,7 +80,7 @@
           </div>
           <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
             <span>{{ when(sig.at_unix) }}</span>
-            <span v-if="sig.node_id">нода {{ sig.node_id.slice(0, 8) }}</span>
+            <span>{{ sig.node_id ? `нода ${sig.node_id.slice(0, 8)}` : 'разбор на башке' }}</span>
           </span>
         </div>
       </div>
