@@ -43,10 +43,7 @@
     <div class="fed-cards">
       <div v-for="row in labels" :key="row.id" class="fed-card">
         <div class="fed-card-head">
-          <router-link
-            class="fed-card-name"
-            :to="{ name: 'owner-oracle-subject', params: { id: row.subject_id } }"
-          >
+          <router-link class="fed-card-name" :to="{ name: 'owner-oracle-subject', params: { id: row.subject_id } }">
             {{ row.subject_id }}
           </router-link>
           <span class="admin-pill shrink-0" :class="row.label === 1 ? 'is-offline' : 'is-online'">
@@ -99,7 +96,11 @@
 
   <section v-else-if="enabled" class="surface-card mt-6">
     <p class="state-hint">
-      {{ accusedOnly ? 'Обвинений пока нет - проверять нечего.' : 'Снимков пока нет: они копятся, пока люди ходят через ноды.' }}
+      {{
+        accusedOnly
+          ? 'Обвинений пока нет - проверять нечего.'
+          : 'Снимков пока нет: они копятся, пока люди ходят через ноды.'
+      }}
     </p>
   </section>
 </template>

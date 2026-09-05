@@ -60,10 +60,10 @@ type payoutStatementView struct {
 	Epochs         []payoutEpochView `json:"epochs"`
 	// Cluster - в какой сети смотреть транзакции. Зашитый explorer однажды
 	// покажет пустоту, потому что devnet и прод это разные миры
-	Cluster string `json:"cluster,omitempty"`
-	Terms          *payoutTermsView  `json:"terms,omitempty"`
-	Pending        []nodeAccrualView `json:"pending"`
-	PendingMicro   uint64            `json:"pending_micro"`
+	Cluster      string            `json:"cluster,omitempty"`
+	Terms        *payoutTermsView  `json:"terms,omitempty"`
+	Pending      []nodeAccrualView `json:"pending"`
+	PendingMicro uint64            `json:"pending_micro"`
 }
 
 // handlePayoutStatement отвечает донору, сколько ему причитается и за что

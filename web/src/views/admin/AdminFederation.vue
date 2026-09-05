@@ -196,7 +196,8 @@
                 :href="explorer(epoch.payout_tx)"
                 target="_blank"
                 rel="noopener"
-              >{{ epoch.payout_tx.slice(0, 12) }}...</a>
+                >{{ epoch.payout_tx.slice(0, 12) }}...</a
+              >
             </span>
           </div>
         </div>
@@ -291,7 +292,6 @@
     <SamsungPager v-model:page="nodePage" :total="summary.node_list.length" :per-page="NODES_PER_PAGE" />
   </section>
 
-
   <SamsungModal v-model="mintOpen" title="Новый сервер" :busy="minting">
     <p class="admin-muted">Токен скоро протухнет, поэтому команду лучше выполнить сразу.</p>
     <div class="form-grid mt-4">
@@ -307,7 +307,12 @@
     </template>
   </SamsungModal>
 
-  <SamsungModal :model-value="Boolean(budgetFor)" title="Сколько отдаём" :busy="Boolean(busyNode)" @update:model-value="budgetFor = ''">
+  <SamsungModal
+    :model-value="Boolean(budgetFor)"
+    title="Сколько отдаём"
+    :busy="Boolean(busyNode)"
+    @update:model-value="budgetFor = ''"
+  >
     <div class="form-grid">
       <OneuiInput v-model.number="budgetGb" label="GB в месяц" type="number" :min="1" />
     </div>
