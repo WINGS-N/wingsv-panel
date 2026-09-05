@@ -4,6 +4,7 @@ import LandingView from './views/LandingView.vue';
 import FederationLanding from './views/FederationLanding.vue';
 import LoginView from './views/LoginView.vue';
 import AccountMoveView from './views/AccountMoveView.vue';
+import QrApproveView from './views/QrApproveView.vue';
 import RegisterView from './views/RegisterView.vue';
 import AdminLayout from './views/admin/AdminLayout.vue';
 import AdminClientList from './views/admin/ClientList.vue';
@@ -53,6 +54,8 @@ const router = createRouter({
     // Переезд на общий вход. Живёт вне /admin: туда человека и не пускают, пока
     // он не переехал
     { path: '/account/move', component: AccountMoveView, name: 'account-move' },
+    // Ссылка из QR. Её открывает и приложение своим сканером, и системная камера
+    { path: '/link/:code', component: QrApproveView, name: 'qr-approve' },
     { path: '/register', component: RegisterView, name: 'register' },
     {
       path: '/admin',

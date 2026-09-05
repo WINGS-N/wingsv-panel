@@ -46,6 +46,8 @@ type Handler struct {
 	// остаётся кнопка на страницу провайдера, и это законный режим
 	session *accountsession.Client
 	halfway *halfwayDesk
+	// qr держит машины, которые ждут подтверждения с телефона
+	qr *qrDesk
 	// SPKI pins of the deployment CA, embedded in every enrollment link.
 	caPins [][]byte
 }
@@ -145,6 +147,12 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/account/login", h.handleAccountLogin)
 	mux.HandleFunc("/api/account/factor", h.handleAccountFactor)
 	mux.HandleFunc("/api/account/enroll", h.requireAuth(h.handleAccountEnroll))
+	// Вход по QR. start и status без сессии: их зовёт та самая машина, которая
+	// ещё не вошла
+	mux.HandleFunc("/api/qr/start", h.handleQRStart)
+	mux.HandleFunc("/api/qr/status", h.handleQRStatus)
+	mux.HandleFunc("/api/qr/pending", h.requireAuth(h.handleQRPending))
+	mux.HandleFunc("/api/qr/approve", h.requireAuth(h.handleQRApprove))
 	// Приглашать может любой администратор: дерево инвайтов и есть цена входа,
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.

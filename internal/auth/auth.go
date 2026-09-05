@@ -484,6 +484,27 @@ func (s *Service) newSession(adminID int64) (storage.AdminSession, error) {
 	return s.store.CreateSession(id, adminID, SessionTTL)
 }
 
+// OpenSession выдаёт сессию тому, кого уже подтвердили другим путём.
+//
+// Нужна для входа по QR: пароль там не набирают вовсе, личность подтверждает
+// вторая, уже вошедшая сторона. Отключённого не пускаем и здесь - иначе
+// подтверждение с телефона обходит бан
+func (s *Service) OpenSession(adminID int64) (storage.Admin, storage.AdminSession, error) {
+	admin, err := s.store.FindAdminByID(adminID)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	if suspended, reason, sErr := s.store.IsSuspended(admin.ID); sErr == nil && suspended {
+		return storage.Admin{}, storage.AdminSession{}, &SuspendedError{Reason: reason}
+	}
+	sess, err := s.newSession(admin.ID)
+	if err != nil {
+		return storage.Admin{}, storage.AdminSession{}, err
+	}
+	_ = s.store.MarkAdminLogin(admin.ID)
+	return admin, sess, nil
+}
+
 // mustRandomPassword fills the password column for an account that never uses
 // one. It is unguessable and nobody is ever told it, so the only way in is the
 // homeserver.

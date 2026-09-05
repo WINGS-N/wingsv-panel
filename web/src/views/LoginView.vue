@@ -61,6 +61,21 @@
             Войти через {{ account.name }}
           </SamsungButton>
 
+          <SamsungButton variant="secondary" class="login-submit mt-3" type="button" @click="startQR">
+            <template #icon><QrCode class="button-icon" aria-hidden="true" /></template>
+            Войти по QR-коду
+          </SamsungButton>
+
+          <div v-if="qr.url" class="qr-panel">
+            <div class="qr-canvas-frame"><canvas ref="qrCanvas" width="220" height="220"></canvas></div>
+            <p class="qr-hint">
+              Наведите камеру телефона или сканер в приложении. На телефоне подтвердите вход - и эта страница откроется
+              сама.
+            </p>
+            <p v-if="qr.state === 'expired'" class="state-error">Код просрочен, покажите новый.</p>
+            <p v-else-if="qr.state === 'refused'" class="state-error">Вход отклонён.</p>
+          </div>
+
           <p v-if="accountError" class="state-error mt-3">{{ accountError }}</p>
 
           <router-link v-if="registrationState.mode !== 'closed'" class="login-back-link" :to="{ name: 'register' }"
@@ -80,9 +95,9 @@
 <script setup>
 import InviteHero from '@/components/domain/InviteHero.vue';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { KeyRound, LogIn } from 'lucide-vue-next';
+import { KeyRound, LogIn, QrCode } from 'lucide-vue-next';
 import { login, registrationState } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
@@ -144,6 +159,64 @@ function signInWithAccount() {
 // Код второго фактора у WINGS Account проверяет провайдер, поэтому вход
 // удерживается на его стороне, а у нас остаётся только квиток
 const accountTicket = ref('');
+
+// Вход по QR: код показываем здесь, а подтверждают с телефона, где человек уже
+// вошёл. Пароль при этом не набирается вовсе
+const qr = reactive({ url: '', code: '', state: 'idle' });
+const qrCanvas = ref(null);
+let qrTimer = 0;
+
+onBeforeUnmount(stopQR);
+
+async function startQR() {
+  stopQR();
+  try {
+    const res = await fetch('/api/qr/start', { method: 'POST', credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'не вышло завести код');
+    qr.code = data.code;
+    qr.url = data.url;
+    qr.state = 'pending';
+    await drawQR(data.url);
+    qrTimer = window.setInterval(pollQR, 1000);
+  } catch (err) {
+    error.value = String(err.message || err);
+  }
+}
+
+function stopQR() {
+  if (qrTimer) window.clearInterval(qrTimer);
+  qrTimer = 0;
+}
+
+async function drawQR(link) {
+  await nextTick();
+  if (!qrCanvas.value) return;
+  const QR = await import('qrcode');
+  await QR.toCanvas(qrCanvas.value, link, {
+    errorCorrectionLevel: 'M',
+    width: 220,
+    margin: 1,
+    color: { dark: '#000000', light: '#ffffff' },
+  });
+}
+
+async function pollQR() {
+  try {
+    const res = await fetch(`/api/qr/status?code=${encodeURIComponent(qr.code)}`, { credentials: 'include' });
+    const data = await res.json();
+    qr.state = data.state;
+    if (data.state === 'approved') {
+      stopQR();
+      // Сессия уже стоит куки - дальше обычный путь после входа
+      window.location.assign(typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients');
+      return;
+    }
+    if (data.state === 'expired' || data.state === 'refused') stopQR();
+  } catch {
+    // Сеть моргнула - следующий тик разберётся
+  }
+}
 
 // Одна форма на два входа. Сначала пробуем свой пароль, потом учётку: у
 // половины админов пока только пароль, и заставлять их выбирать дверь глупо

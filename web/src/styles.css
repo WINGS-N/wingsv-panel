@@ -3289,3 +3289,61 @@ body.theme-light .oneui-switch-thumb {
     font-size: 16px;
   }
 }
+
+/* Вход по QR: чем просят и что показываем подтверждающему */
+.qr-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 6px 18px;
+}
+
+.qr-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qr-fact:last-child {
+  border-bottom: 0;
+}
+
+.qr-fact-label {
+  font-size: 13.5px;
+  color: rgba(252, 252, 252, 0.55);
+}
+
+.qr-fact-value {
+  font-size: 14.5px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+/* Код показываем на белом: сканеры читают его увереннее, чем инверсию */
+.qr-canvas-frame {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px;
+  line-height: 0;
+}
+
+.qr-hint {
+  font-size: 13.5px;
+  color: rgba(252, 252, 252, 0.62);
+  text-align: center;
+  max-width: 34ch;
+}

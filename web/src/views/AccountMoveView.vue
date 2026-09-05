@@ -21,7 +21,26 @@
         </h1>
         <p class="login-sub">Панель переезжает на {{ accountName }}. Заведите его один раз - и он откроет всё.</p>
 
-        <form class="login-form" @submit.prevent="onSubmit">
+        <form v-if="mode === 'link'" class="login-form" @submit.prevent="onLink">
+          <div class="input-field">
+            <OneuiInput v-model.trim="linkLogin" label="Логин учётки" autocomplete="username" />
+          </div>
+
+          <div class="input-field">
+            <OneuiInput v-model="linkPassword" label="Пароль учётки" type="password" autocomplete="current-password" />
+          </div>
+
+          <p v-if="error" class="state-error">{{ error }}</p>
+
+          <SamsungButton class="login-submit" type="submit" :busy="busy" :disabled="!linkLogin || !linkPassword">
+            <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
+            {{ busy ? 'Привязываем...' : 'Привязать' }}
+          </SamsungButton>
+
+          <button class="login-back-link" type="button" @click="backToEnroll">Завести новую</button>
+        </form>
+
+        <form v-else class="login-form" @submit.prevent="onSubmit">
           <div class="input-field">
             <OneuiInput :model-value="username" label="Логин" disabled />
           </div>
@@ -46,7 +65,7 @@
             {{ busy ? 'Заводим...' : `Завести ${accountName}` }}
           </SamsungButton>
 
-          <SamsungButton variant="secondary" class="login-submit mt-3" type="button" @click="linkExisting">
+          <SamsungButton variant="secondary" class="login-submit mt-3" type="button" @click="mode = 'link'">
             У меня уже есть {{ accountName }}
           </SamsungButton>
 
@@ -82,6 +101,9 @@ const confirm = ref('');
 const error = ref('');
 const hint = ref('');
 const busy = ref(false);
+const mode = ref('enroll');
+const linkLogin = ref('');
+const linkPassword = ref('');
 const year = computed(() => new Date().getFullYear());
 
 const username = computed(() => authState.value.admin?.username || '');
@@ -126,10 +148,36 @@ async function onSubmit() {
   }
 }
 
-// Привязка существующей идёт обычным входом: панель узнаёт человека по сессии и
-// цепляет учётку к нему, а не заводит второго
-function linkExisting() {
-  window.location.href = `/api/oidc/start?return_to=${encodeURIComponent('/admin/clients')}`;
+// Привязка существующей идёт через нашу же форму, а не через страницу
+// провайдера: панель узнаёт человека по сессии и цепляет учётку к нему
+async function onLink() {
+  if (busy.value) return;
+  busy.value = true;
+  error.value = '';
+  try {
+    const res = await fetch('/api/account/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: linkLogin.value, password: linkPassword.value, return_to: '/admin/clients' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'не вышло привязать');
+    if (data.second_factor) {
+      error.value = 'Учётка просит код из аутентификатора - войдите ей на странице входа';
+      return;
+    }
+    window.location.assign(data.redirect);
+  } catch (err) {
+    error.value = String(err.message || err);
+  } finally {
+    busy.value = false;
+  }
+}
+
+function backToEnroll() {
+  mode.value = 'enroll';
+  error.value = '';
 }
 
 async function signOut() {
