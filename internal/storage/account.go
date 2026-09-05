@@ -110,3 +110,17 @@ func (s *Store) HasAvatar(adminID int64) (bool, error) {
 	}
 	return len(got.AvatarPNG) > 0, nil
 }
+
+// HasAccount отвечает, привязана ли учётка. По ней решается, пускать ли человека
+// дальше входа: панель переезжает на общий вход, и пароль остаётся только
+// дверью, через которую эту учётку заводят
+func (s *Store) HasAccount(adminID int64) (bool, error) {
+	type row struct{ AccountSubject *string }
+	var got row
+	err := s.gdb.Model(&dbmodel.Admin{}).
+		Select("account_subject").Where("id = ?", adminID).Take(&got).Error
+	if err != nil {
+		return false, err
+	}
+	return got.AccountSubject != nil && strings.TrimSpace(*got.AccountSubject) != "", nil
+}

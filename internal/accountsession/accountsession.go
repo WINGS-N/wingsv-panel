@@ -218,3 +218,53 @@ func (c *Client) call(ctx context.Context, method, path string, body, out any) e
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
 }
+
+// Human - человек, которого панель заводит в сервисе учёток за него самого.
+//
+// Переезд идёт на нашей стороне намеренно: отправить сорок человек регистрироваться
+// самим значит получить сорок разных имён и половину не дошедших
+type Human struct {
+	Username  string
+	Email     string
+	FirstName string
+	LastName  string
+	Password  string
+}
+
+// CreateHuman заводит учётку и отдаёт её subject.
+//
+// Пароль уходит провайдеру и у нас не оседает. Имя берём панельное: человек уже
+// привык к нему, а разъезд имён потом не собрать
+func (c *Client) CreateHuman(ctx context.Context, who Human) (string, error) {
+	body := map[string]any{
+		"username": who.Username,
+		"profile": map[string]any{
+			"givenName":  firstNotEmpty(who.FirstName, who.Username),
+			"familyName": firstNotEmpty(who.LastName, "WINGS"),
+		},
+		"email": map[string]any{"email": who.Email, "isVerified": true},
+		"password": map[string]any{
+			"password":       who.Password,
+			"changeRequired": false,
+		},
+	}
+	var out struct {
+		UserID string `json:"userId"`
+	}
+	if err := c.call(ctx, http.MethodPost, "/v2/users/human", body, &out); err != nil {
+		return "", err
+	}
+	if out.UserID == "" {
+		return "", errors.New("accountsession: the provider created no user")
+	}
+	return out.UserID, nil
+}
+
+func firstNotEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}

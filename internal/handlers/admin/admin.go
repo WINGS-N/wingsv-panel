@@ -144,6 +144,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Свой экран входа: форму рисует панель, проверяет сервис учёток
 	mux.HandleFunc("/api/account/login", h.handleAccountLogin)
 	mux.HandleFunc("/api/account/factor", h.handleAccountFactor)
+	mux.HandleFunc("/api/account/enroll", h.requireAuth(h.handleAccountEnroll))
 	// Приглашать может любой администратор: дерево инвайтов и есть цена входа,
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.
@@ -309,6 +310,10 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request, admin storage
 	// asks whether the admin actually has a relay registered rather than whether a
 	// panel-global endpoint env happens to be set.
 	payload["self_provisioning"] = h.hasVkTurnNode(admin)
+	// Пока учётки нет, интерфейс обязан вести на переезд, а не рисовать разделы,
+	// которые всё равно ответят отказом
+	payload["account_link_needed"] = h.mustLinkAccount(admin)
+	payload["account_name"] = h.accountName()
 	writeJSON(w, http.StatusOK, payload)
 }
 
@@ -506,7 +511,9 @@ func (h *Handler) requireAuth(next authedHandler) http.HandlerFunc {
 // обычный участник: у него есть свой доступ к VPN и свой кабинет, но чужими
 // нодами и клиентами он не распоряжается
 func (h *Handler) requirePanel(next authedHandler) http.HandlerFunc {
-	return h.requireAuth(func(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	// Сначала переезд, потом всё остальное: панель перестаёт быть местом, где
+	// живут пароли, и свой пароль остаётся дверью только до заведения учётки
+	return h.requireAccount(func(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 		if !admin.PanelAccess && admin.Role != storage.RoleOwner {
 			writeError(w, http.StatusForbidden, "админ-панель для этого аккаунта закрыта")
 			return

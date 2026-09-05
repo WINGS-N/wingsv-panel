@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import LandingView from './views/LandingView.vue';
 import FederationLanding from './views/FederationLanding.vue';
 import LoginView from './views/LoginView.vue';
+import AccountMoveView from './views/AccountMoveView.vue';
 import RegisterView from './views/RegisterView.vue';
 import AdminLayout from './views/admin/AdminLayout.vue';
 import AdminClientList from './views/admin/ClientList.vue';
@@ -49,6 +50,9 @@ const router = createRouter({
     },
     { path: '/federation', component: FederationLanding, name: 'federation-landing' },
     { path: '/login', component: LoginView, name: 'login' },
+    // Переезд на общий вход. Живёт вне /admin: туда человека и не пускают, пока
+    // он не переехал
+    { path: '/account/move', component: AccountMoveView, name: 'account-move' },
     { path: '/register', component: RegisterView, name: 'register' },
     {
       path: '/admin',
@@ -145,6 +149,11 @@ router.beforeEach(async (to) => {
     if (!authState.value.admin) {
       return { path: '/login', query: { redirect: to.fullPath } };
     }
+  }
+  // Пока учётки нет, все разделы отвечают отказом - вести туда человека значит
+  // показать ему стену ошибок вместо одного понятного экрана
+  if (authState.value.admin?.account_link_needed && to.name !== 'account-move' && to.name !== 'login') {
+    return { name: 'account-move' };
   }
   // Аккаунт без доступа в панель - обычный участник: ему свой кабинет, а не
   // чужие ноды и клиенты
