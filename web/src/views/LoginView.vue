@@ -99,6 +99,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'v
 import { useRouter, useRoute } from 'vue-router';
 import { KeyRound, LogIn, QrCode } from 'lucide-vue-next';
 import { login, registrationState } from '@/stores/auth.js';
+import { drawQR } from '@/utils/qr.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
@@ -177,7 +178,7 @@ async function startQR() {
     qr.code = data.code;
     qr.url = data.url;
     qr.state = 'pending';
-    await drawQR(data.url);
+    await paintQR(data.url);
     qrTimer = window.setInterval(pollQR, 1000);
   } catch (err) {
     error.value = String(err.message || err);
@@ -189,16 +190,10 @@ function stopQR() {
   qrTimer = 0;
 }
 
-async function drawQR(link) {
+async function paintQR(link) {
   await nextTick();
   if (!qrCanvas.value) return;
-  const QR = await import('qrcode');
-  await QR.toCanvas(qrCanvas.value, link, {
-    errorCorrectionLevel: 'M',
-    width: 220,
-    margin: 1,
-    color: { dark: '#000000', light: '#ffffff' },
-  });
+  await drawQR(qrCanvas.value, link, 220);
 }
 
 async function pollQR() {
