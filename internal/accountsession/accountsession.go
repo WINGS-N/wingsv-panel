@@ -190,7 +190,9 @@ func (c *Client) call(ctx context.Context, method, path string, body, out any) e
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK {
+	// Любой успех, а не ровно 200: создание сессии провайдер отдаёт как 201, и
+	// сверка с одним кодом ломает вход целиком
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		var failure struct {
 			Message string `json:"message"`
 		}
