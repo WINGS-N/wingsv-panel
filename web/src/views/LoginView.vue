@@ -50,17 +50,6 @@
             {{ busy ? 'Входим...' : 'Войти' }}
           </SamsungButton>
 
-          <SamsungButton
-            v-if="account.enabled"
-            variant="secondary"
-            class="login-submit mt-3"
-            type="button"
-            @click="signInWithAccount"
-          >
-            <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
-            Войти через {{ account.name }}
-          </SamsungButton>
-
           <SamsungButton variant="secondary" class="login-submit mt-3" type="button" @click="startQR">
             <template #icon><QrCode class="button-icon" aria-hidden="true" /></template>
             Войти по QR-коду
@@ -97,8 +86,8 @@ import InviteHero from '@/components/domain/InviteHero.vue';
 
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { KeyRound, LogIn, QrCode } from 'lucide-vue-next';
-import { login, registrationState } from '@/stores/auth.js';
+import { LogIn, QrCode } from 'lucide-vue-next';
+import { authState, login, registrationState } from '@/stores/auth.js';
 import { drawQR } from '@/utils/qr.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
@@ -146,16 +135,6 @@ onMounted(async () => {
     // No account service is a normal state, not something to shout about.
   }
 });
-
-function signInWithAccount() {
-  const back = route.query.redirect || '/admin/clients';
-  // Код приглашения переносится и во вход: пригласить можно и того, у кого
-  // аккаунт уже есть - тогда он получает пригласившего, а не второй аккаунт
-  const params = new URLSearchParams({ return_to: back });
-  const invite = inviteToken.value;
-  if (invite) params.set('invite', invite);
-  window.location.href = `/api/oidc/start?${params.toString()}`;
-}
 
 // Код второго фактора у WINGS Account проверяет провайдер, поэтому вход
 // удерживается на его стороне, а у нас остаётся только квиток
@@ -223,8 +202,15 @@ async function onSubmit() {
     await submitAccountFactor();
     return;
   }
+  // Сперва учётка: переехавшие ходят через неё, и панельный пароль им не нужен
+  if (account.enabled && (await submitAccountLogin({ quiet: true }))) return;
   try {
     await login(username.value.trim().toLowerCase(), password.value, totpCode.value);
+    // Панельный пароль подошёл, а учётки нет - человеку прямая дорога на переезд
+    if (authState.value.admin?.account_link_needed) {
+      router.push({ name: 'account-move' });
+      return;
+    }
     const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients';
     // Возврат в приложение идёт мимо роутера: /app/link - серверный адрес,
     // который отдаёт редирект на схему приложения, а не страницу панели
@@ -240,10 +226,6 @@ async function onSubmit() {
       totpCode.value = '';
       return;
     }
-    if (account.enabled && err.status === 401) {
-      await submitAccountLogin();
-      return;
-    }
     error.value = err.message || 'Не удалось войти';
   } finally {
     busy.value = false;
@@ -252,7 +234,7 @@ async function onSubmit() {
 
 // Вход через учётку: форма наша, проверяет её сервис учёток, а обратно приходит
 // адрес, по которому браузер возвращается уже с кодом
-async function submitAccountLogin() {
+async function submitAccountLogin({ quiet = false } = {}) {
   try {
     const res = await fetch('/api/account/login', {
       method: 'POST',
@@ -266,19 +248,26 @@ async function submitAccountLogin() {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Не удалось войти');
+    if (!res.ok) {
+      // Молчим, пока есть вторая дверь: об ошибке скажет та, что не сработала
+      if (quiet) return false;
+      throw new Error(data.message || data.error || 'Не удалось войти');
+    }
     if (data.second_factor) {
       accountTicket.value = data.ticket;
       needsTotp.value = true;
       totpCode.value = '';
       error.value = '';
-      return;
+      busy.value = false;
+      return true;
     }
     window.location.assign(data.redirect);
+    return true;
   } catch (err) {
+    if (quiet) return false;
     error.value = err.message || 'Не удалось войти';
-  } finally {
     busy.value = false;
+    return false;
   }
 }
 

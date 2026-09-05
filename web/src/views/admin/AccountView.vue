@@ -341,8 +341,10 @@ async function loadAccount() {
   }
 }
 
+// Привязка идёт через наш же экран переезда: там та же форма, и уводить
+// человека на страницу провайдера незачем
 function linkAccount() {
-  window.location.href = `/api/oidc/start?return_to=${encodeURIComponent('/admin/account')}`;
+  router.push({ name: 'account-move' });
 }
 
 async function unlinkAccount() {

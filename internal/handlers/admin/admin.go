@@ -229,7 +229,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		ActorAdminID: admin.ID, ActorUsername: admin.Username,
 		Action: "auth.login", IP: clientIP(r),
 	})
-	writeJSON(w, http.StatusOK, adminMePayload(admin))
+	writeJSON(w, http.StatusOK, h.mePayload(admin))
 }
 
 type registerRequest struct {
@@ -311,7 +311,7 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
-	payload := adminMePayload(admin)
+	payload := h.mePayload(admin)
 	// self_provisioning tells the client-create form whether an autonomous
 	// VK-TURN-profile link is possible: it needs a vk-turn relay the app can
 	// self-enroll against. Without one the only valid link shape is Guardian, so
@@ -319,11 +319,19 @@ func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request, admin storage
 	// asks whether the admin actually has a relay registered rather than whether a
 	// panel-global endpoint env happens to be set.
 	payload["self_provisioning"] = h.hasVkTurnNode(admin)
-	// Пока учётки нет, интерфейс обязан вести на переезд, а не рисовать разделы,
-	// которые всё равно ответят отказом
+	writeJSON(w, http.StatusOK, payload)
+}
+
+// mePayload - тот же аккаунт плюс то, что знает только хендлер.
+//
+// Признак переезда обязан ехать и с входом тоже: без него интерфейс узнаёт о
+// нём только со следующего запроса, и человек успевает увидеть разделы, которые
+// всё равно ответят отказом
+func (h *Handler) mePayload(admin storage.Admin) map[string]any {
+	payload := adminMePayload(admin)
 	payload["account_link_needed"] = h.mustLinkAccount(admin)
 	payload["account_name"] = h.accountName()
-	writeJSON(w, http.StatusOK, payload)
+	return payload
 }
 
 func adminMePayload(admin storage.Admin) map[string]any {
