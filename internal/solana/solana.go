@@ -8,6 +8,7 @@ package solana
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -286,3 +287,56 @@ func (c *Client) RecentTransfers(ctx context.Context, owner, mint string, limit 
 	}
 	return out, nil
 }
+
+// OperatorCut - какую долю доната удерживает оператор, в сотых долях процента.
+//
+// Цифру держит цепочка, а не наша настройка: показать одно, а удержать другое -
+// это наёбка, пусть и ненамеренная
+func (c *Client) OperatorCut(ctx context.Context, feeAccount string) (uint16, error) {
+	body, err := json.Marshal(rpcRequest{
+		JSONRPC: "2.0", ID: 1, Method: "getAccountInfo",
+		Params: []any{feeAccount, map[string]any{"encoding": "base64"}},
+	})
+	if err != nil {
+		return 0, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("solana: rpc answered %d", resp.StatusCode)
+	}
+	var parsed struct {
+		Result struct {
+			Value *struct {
+				Data []string `json:"data"`
+			} `json:"value"`
+		} `json:"result"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return 0, err
+	}
+	if parsed.Result.Value == nil || len(parsed.Result.Value.Data) == 0 {
+		return 0, ErrNoTransfer
+	}
+	raw, err := base64.StdEncoding.DecodeString(parsed.Result.Value.Data[0])
+	if err != nil {
+		return 0, err
+	}
+	// Первый байт это вид аккаунта, дальше два байта ставки. Чужой вид значит,
+	// что адрес указан не тот, и читать оттуда цифру нельзя
+	if len(raw) < 3 || raw[0] != tagFee {
+		return 0, ErrNoTransfer
+	}
+	return uint16(raw[1]) | uint16(raw[2])<<8, nil
+}
+
+// tagFee - первый байт аккаунта комиссии в программе выплат
+const tagFee = 5

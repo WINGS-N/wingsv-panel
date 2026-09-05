@@ -17,6 +17,9 @@ const (
 	settingTrafficWallet = "donation_traffic_address"
 	settingDevWallet     = "donation_dev_address"
 	settingDonationMint  = "donation_mint"
+	// Аккаунт программы выплат, в котором лежит ставка оператора. Пусто -
+	// раздел просто не показывает долю, а не ломается
+	settingFeeState = "donation_fee_state"
 
 	defaultDevWallet = "D7jqCxX6huU3tQJGTLSNPMx3sR4op4fbeq689rwm9A7g"
 	// USDT на Solana. Занос другим токеном не засчитывается: считать курс мы не
@@ -49,6 +52,9 @@ type donationsResponse struct {
 	// это греет доверие прямо сейчас
 	TotalMicro  int64   `json:"total_micro"`
 	TrustCredit float64 `json:"trust_credit"`
+	// CutBps - сколько удерживает оператор с заноса на трафик. Цифра читается
+	// из цепочки, потому что там она и решается
+	CutBps uint16 `json:"cut_bps"`
 }
 
 func (h *Handler) donationWallets() donationWalletsView {
@@ -78,6 +84,7 @@ func (h *Handler) handleDonations(w http.ResponseWriter, r *http.Request, admin 
 		out.TotalMicro += row.AmountMicro
 	}
 	out.TrustCredit = h.trustCredit(r.Context(), admin)
+	out.CutBps = h.operatorCut(r.Context())
 	writeJSON(w, http.StatusOK, out)
 }
 
@@ -192,4 +199,21 @@ func donationError(err error) string {
 	default:
 		return "не смог проверить транзакцию: " + err.Error()
 	}
+}
+
+// operatorCut спрашивает у цепочки, какую долю заноса на трафик забирает
+// оператор. Не ответила - показываем ноль и молчим: раздел про деньги, а не про
+// состояние RPC
+func (h *Handler) operatorCut(ctx context.Context) uint16 {
+	account, _ := h.store.GetPlatformSetting(settingFeeState, "")
+	if strings.TrimSpace(account) == "" {
+		return 0
+	}
+	call, cancel := context.WithTimeout(ctx, federationTimeout)
+	defer cancel()
+	cut, err := solana.New("").OperatorCut(call, account)
+	if err != nil {
+		return 0
+	}
+	return cut
 }

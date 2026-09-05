@@ -14,6 +14,10 @@
       <div class="donate-card">
         <h3 class="donate-card-title">На трафик</h3>
         <p class="donate-card-note">В общий котёл, донорам за отданный трафик. Поднимает ваш уровень доверия.</p>
+        <p v-if="cutBps" class="donate-card-note mt-2">
+          Из заноса {{ cutPercent }} остаётся оператору, остальное уходит донорам. Долю держит сама программа выплат, и
+          меньше неё до котла не дойдёт ничего.
+        </p>
         <p v-if="!wallets.traffic" class="state-hint mt-3">Кошелёк ещё не настроен.</p>
         <CopyableValue v-else label="Кошелёк" :value="wallets.traffic" class="mt-3" />
       </div>
@@ -65,7 +69,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableValue from '@/components/domain/CopyableValue.vue';
@@ -75,6 +79,10 @@ const wallets = ref({ traffic: '', dev: '', mint: '' });
 const memo = ref('');
 const mine = ref([]);
 const totalMicro = ref(0);
+const cutBps = ref(0);
+
+// Доля показывается процентами: bps понятны только тем, кто и так в теме
+const cutPercent = computed(() => `${(cutBps.value / 100).toFixed(cutBps.value % 100 ? 2 : 0)}%`);
 const loadError = ref('');
 const signature = ref('');
 const claiming = ref(false);
@@ -92,6 +100,7 @@ async function load() {
     memo.value = data.memo || '';
     mine.value = data.mine || [];
     totalMicro.value = Number(data.total_micro || 0);
+    cutBps.value = Number(data.cut_bps || 0);
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
