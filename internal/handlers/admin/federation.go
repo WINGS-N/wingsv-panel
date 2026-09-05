@@ -256,9 +256,15 @@ func (h *Handler) handleFederationNodeState(w http.ResponseWriter, r *http.Reque
 
 	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
 	defer cancel()
-	// The node has to belong to this admin. The head checks no ownership here, so
-	// a panel that skipped this would let any admin touch anyone's machine
-	owned, err := h.fed.ListNodes(ctx, donorID(admin))
+	// Нода обязана принадлежать этому админу: башка владения не проверяет, и без
+	// этого любой правил бы чужую машину. Владелец - исключение: весь флот он и
+	// так видит, и не давать ему трогать то, что видно, значит показывать
+	// кнопку, которая всегда отвечает "нет такой ноды"
+	scope := donorID(admin)
+	if admin.Role == storage.RoleOwner {
+		scope = ""
+	}
+	owned, err := h.fed.ListNodes(ctx, scope)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "federation head unreachable: "+err.Error())
 		return

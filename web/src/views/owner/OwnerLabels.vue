@@ -3,7 +3,7 @@
     <div class="federation-live-head">
       <h2 class="section-title">Разметка</h2>
       <span class="admin-pill" :class="ready ? 'is-online' : 'is-info'">
-        {{ ready ? 'можно учить' : 'нужна проверка' }}
+        {{ ready ? 'можно учить' : `проверено ${byHuman} / ${NEEDED}` }}
       </span>
     </div>
     <p class="body-copy body-copy-wide">
@@ -22,7 +22,7 @@
       <div class="stat">
         <span class="stat-kicker">Проверено человеком</span>
         <span class="stat-value">{{ byHuman }}</span>
-        <span class="stat-meta">{{ byHuman >= NEEDED ? 'хватает' : `нужно хотя бы ${NEEDED}` }}</span>
+        <span class="stat-meta">{{ byHuman }} / {{ NEEDED }} для обучения</span>
       </div>
       <div class="stat">
         <span class="stat-kicker">Всего снимков</span>
@@ -110,8 +110,8 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 import SamsungPager from '@/components/controls/SamsungPager.vue';
 import { FEATURE_LABELS } from './oracleLabels.js';
 
-// NEEDED - с какого числа проверенных меток есть смысл учить. Меньше сотни это
-// не выборка, а анекдот
+// NEEDED - с какого числа проверенных человеком меток есть смысл учить модель.
+// Меньше сотни это не выборка, а хуйня
 const NEEDED = 100;
 const PER_PAGE = 12;
 
@@ -156,8 +156,8 @@ function apply(data) {
   note.value = data.error || '';
 }
 
-// Приговор человека перебивает машинный, поэтому список сразу перечитывается:
-// иначе на экране остаётся вчерашнее мнение модели
+// Приговор человека перебивает машинный, поэтому список сразу перечитывается,
+// иначе на экране висит вчерашнее мнение модели
 async function judge(row, label) {
   busy.value = row.id;
   try {
@@ -182,8 +182,8 @@ function toggleAccused() {
   page.value = 1;
 }
 
-// Нули не показываем: у любого снимка их большинство, и они топят те несколько
-// чисел, ради которых человек сюда и пришёл
+// Нули не показываем, у любого снимка их большинство, и эта хуйня топит те
+// несколько чисел, ради которых человек сюда и пришёл
 function shown(row) {
   const values = row.values || {};
   return Object.keys(values)

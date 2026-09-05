@@ -23,6 +23,7 @@ type fakeHead struct {
 	headpb.UnimplementedFederationHeadServer
 	nodesByDonor map[string][]*headpb.NodeSummary
 	stateCalls   []string
+	budgetCalls  []string
 }
 
 func (f *fakeHead) DonorSummary(_ context.Context, req *headpb.DonorSummaryRequest) (*headpb.DonorCounters, error) {
@@ -36,7 +37,20 @@ func (f *fakeHead) DonorSummary(_ context.Context, req *headpb.DonorSummaryReque
 }
 
 func (f *fakeHead) ListNodes(_ context.Context, req *headpb.ListNodesRequest) (*headpb.ListNodesResponse, error) {
+	// Пустой донор значит весь флот - так отвечает и настоящая башка
+	if req.GetDonorId() == "" {
+		all := make([]*headpb.NodeSummary, 0, len(f.nodesByDonor))
+		for _, nodes := range f.nodesByDonor {
+			all = append(all, nodes...)
+		}
+		return &headpb.ListNodesResponse{Nodes: all}, nil
+	}
 	return &headpb.ListNodesResponse{Nodes: f.nodesByDonor[req.GetDonorId()]}, nil
+}
+
+func (f *fakeHead) SetNodeBudget(_ context.Context, req *headpb.SetNodeBudgetRequest) (*headpb.SetNodeBudgetResponse, error) {
+	f.budgetCalls = append(f.budgetCalls, req.GetNodeId())
+	return &headpb.SetNodeBudgetResponse{DeclaredBudgetBytes: req.GetDeclaredBudgetBytes()}, nil
 }
 
 func (f *fakeHead) MintEnrollToken(_ context.Context, req *headpb.MintEnrollTokenRequest) (*headpb.MintEnrollTokenResponse, error) {
@@ -206,5 +220,46 @@ func TestWritePathsRefuseWhileTheFederationIsOff(t *testing.T) {
 				t.Errorf("status = %d, want 404 while the federation is off", rec.Code)
 			}
 		})
+	}
+}
+
+// Владелец видит весь флот, и править он должен всё, что видит: иначе кнопка
+// есть, а в ответ всегда "нет такой ноды"
+func TestOwnerEditsAnyNodeBudget(t *testing.T) {
+	head := &fakeHead{nodesByDonor: map[string][]*headpb.NodeSummary{
+		"admin-7": {{NodeId: "mine"}},
+		"admin-9": {{NodeId: "theirs"}},
+	}}
+	h := newFedHandler(t, head, true)
+
+	owner := admin7()
+	owner.Role = storage.RoleOwner
+	rec := httptest.NewRecorder()
+	h.handleFederationNodeState(
+		rec,
+		httptest.NewRequest(
+			http.MethodPut,
+			"/api/app/federation/nodes/theirs/budget",
+			strings.NewReader(`{"declared_budget_bytes":1073741824}`),
+		),
+		owner,
+	)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("владельцу не дали править чужую ноду: %d %s", rec.Code, rec.Body.String())
+	}
+
+	// Обычному админу чужая нода по-прежнему недоступна
+	rec = httptest.NewRecorder()
+	h.handleFederationNodeState(
+		rec,
+		httptest.NewRequest(
+			http.MethodPut,
+			"/api/app/federation/nodes/theirs/budget",
+			strings.NewReader(`{"declared_budget_bytes":1073741824}`),
+		),
+		admin7(),
+	)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("чужую ноду отдали обычному админу: %d", rec.Code)
 	}
 }
