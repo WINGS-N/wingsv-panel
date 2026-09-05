@@ -43,6 +43,9 @@ type Config struct {
 	OIDCClientSecret string
 	// AccountName - как звать эту дверь на экране входа
 	AccountName string
+	// AccountAPIToken - ключ сервисного пользователя провайдера. С ним панель
+	// показывает свою форму входа вместо чужой; без него остаётся кнопка
+	AccountAPIToken string
 
 	// FederationSecret keys that link. It is deliberately not the fleet secret
 	// every donated node holds: that would hand a donor the operator's view.
@@ -78,6 +81,7 @@ func Load() Config {
 		// строкой байт в байт, а MAS отдаёт его со слешем
 		OIDCIssuer:             getEnv("OIDC_ISSUER", ""),
 		AccountName:            getEnv("ACCOUNT_NAME", "WINGS Account"),
+		AccountAPIToken:        getEnv("ACCOUNT_API_TOKEN", ""),
 		OIDCClientID:           getEnv("OIDC_CLIENT_ID", ""),
 		OIDCClientSecret:       getEnv("OIDC_CLIENT_SECRET", ""),
 		FederationHead:         getEnv("FEDERATION_HEAD", ""),

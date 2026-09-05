@@ -141,10 +141,20 @@ function signInWithAccount() {
   window.location.href = `/api/oidc/start?${params.toString()}`;
 }
 
+// Код второго фактора у WINGS Account проверяет провайдер, поэтому вход
+// удерживается на его стороне, а у нас остаётся только квиток
+const accountTicket = ref('');
+
+// Одна форма на два входа. Сначала пробуем свой пароль, потом учётку: у
+// половины админов пока только пароль, и заставлять их выбирать дверь глупо
 async function onSubmit() {
   if (busy.value) return;
   busy.value = true;
   error.value = '';
+  if (accountTicket.value) {
+    await submitAccountFactor();
+    return;
+  }
   try {
     await login(username.value.trim().toLowerCase(), password.value, totpCode.value);
     const target = typeof route.query.redirect === 'string' ? route.query.redirect : '/admin/clients';
@@ -162,7 +172,66 @@ async function onSubmit() {
       totpCode.value = '';
       return;
     }
+    if (account.enabled && err.status === 401) {
+      await submitAccountLogin();
+      return;
+    }
     error.value = err.message || 'Не удалось войти';
+  } finally {
+    busy.value = false;
+  }
+}
+
+// Вход через учётку: форма наша, проверяет её сервис учёток, а обратно приходит
+// адрес, по которому браузер возвращается уже с кодом
+async function submitAccountLogin() {
+  try {
+    const res = await fetch('/api/account/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        login: username.value.trim(),
+        password: password.value,
+        return_to: typeof route.query.redirect === 'string' ? route.query.redirect : '',
+        invite: inviteToken.value || '',
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Не удалось войти');
+    if (data.second_factor) {
+      accountTicket.value = data.ticket;
+      needsTotp.value = true;
+      totpCode.value = '';
+      error.value = '';
+      return;
+    }
+    window.location.assign(data.redirect);
+  } catch (err) {
+    error.value = err.message || 'Не удалось войти';
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function submitAccountFactor() {
+  try {
+    const res = await fetch('/api/account/factor', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket: accountTicket.value, code: totpCode.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      // Квиток одноразовый: провайдер его уже съел, и вход начинается заново
+      accountTicket.value = '';
+      needsTotp.value = false;
+      throw new Error(data.error || 'Код не подошёл');
+    }
+    window.location.assign(data.redirect);
+  } catch (err) {
+    error.value = err.message || 'Код не подошёл';
   } finally {
     busy.value = false;
   }

@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"v.wingsnet.org/internal/accountsession"
 	"v.wingsnet.org/internal/auth"
 	"v.wingsnet.org/internal/avatarpic"
 	"v.wingsnet.org/internal/config"
@@ -41,6 +42,10 @@ type Handler struct {
 	// oidc is the deployment's own account service. Nil-safe: without one the
 	// panel simply never offers the button
 	oidc *oidcauth.Client
+	// session водит человека через наш собственный экран входа. Без настройки
+	// остаётся кнопка на страницу провайдера, и это законный режим
+	session *accountsession.Client
+	halfway *halfwayDesk
 	// SPKI pins of the deployment CA, embedded in every enrollment link.
 	caPins [][]byte
 }
@@ -52,6 +57,11 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		fed:           fedclient.New(cfg.FederationHead, cfg.FederationSecret),
 		appCodes:      newAppCodes(),
 		redeemLimiter: newAttemptLimiter(),
+		halfway:       newHalfwayDesk(),
+		session: accountsession.New(accountsession.Config{
+			Issuer: cfg.OIDCIssuer,
+			Token:  cfg.AccountAPIToken,
+		}),
 		oidc: oidcauth.New(oidcauth.Config{
 			Issuer:       cfg.OIDCIssuer,
 			ClientID:     cfg.OIDCClientID,
@@ -131,6 +141,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/oidc/start", h.handleOIDCStart)
 	mux.HandleFunc("/api/oidc/callback", h.handleOIDCCallback)
 	mux.HandleFunc("/api/oidc/link", h.requireAuth(h.handleOIDCLink))
+	// Свой экран входа: форму рисует панель, проверяет сервис учёток
+	mux.HandleFunc("/api/account/login", h.handleAccountLogin)
+	mux.HandleFunc("/api/account/factor", h.handleAccountFactor)
 	// Приглашать может любой администратор: дерево инвайтов и есть цена входа,
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.

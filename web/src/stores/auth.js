@@ -64,7 +64,11 @@ export async function login(username, password, code) {
       needsCode.totpRequired = true;
       throw needsCode;
     }
-    throw new Error(data.message || 'login failed');
+    const failed = new Error(data.message || 'login failed');
+    // Код ответа нужен экрану входа: на 401 он пробует ту же пару у сервиса
+    // учёток, а на всё остальное показывает ошибку как есть
+    failed.status = res.status;
+    throw failed;
   }
   const data = await res.json();
   authState.value.admin = data;
