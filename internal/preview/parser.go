@@ -1275,10 +1275,10 @@ func boolLabel(value bool, yes, no string) string {
 
 // backendLabel зовёт бэкенд по-человечески.
 //
-// Старые значения enum разбираются намеренно: их шлют давно поставленные
-// клиенты, и перестать их понимать значит ослепнуть на половину флота
+// Старьё в enum никто не шлёт, оно тупо лежит в 18 конфигах из 66: ветки нельзя
+// выкинуть до миграции блобов, иначе эти 18 останутся с пустой меткой нахуй
 //
-//nolint:staticcheck // SA1019: см. выше
+//nolint:staticcheck // SA1019: старьё живёт в базе, см. выше
 func backendLabel(backend wingsvpb.BackendType) string {
 	switch backend {
 	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD, wingsvpb.BackendType_BACKEND_TYPE_VK_TURN:

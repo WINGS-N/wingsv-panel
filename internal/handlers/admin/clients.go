@@ -115,10 +115,10 @@ func toClientView(c storage.Client) clientView {
 
 // backendTypeLabel maps the proto enum to a short user-facing label.
 //
-// Старые значения enum разбираются намеренно: их шлют давно поставленные
-// клиенты, и перестать их понимать значит ослепнуть на половину флота
+// Старьё в enum никто не шлёт, оно тупо лежит в 18 конфигах из 66: ветки нельзя
+// выкинуть до миграции блобов, иначе эти 18 останутся с пустой меткой нахуй
 //
-//nolint:staticcheck // SA1019: см. выше
+//nolint:staticcheck // SA1019: старьё живёт в базе, см. выше
 func backendTypeLabel(t wingsvpb.BackendType) string {
 	switch t {
 	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD, wingsvpb.BackendType_BACKEND_TYPE_VK_TURN:
