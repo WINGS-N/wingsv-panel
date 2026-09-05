@@ -182,12 +182,21 @@
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-[15px]">Эпоха {{ epoch.number }}</span>
               <span class="admin-pill">{{ usdt(epoch.amount_micro) }} USDT</span>
-              <span class="admin-pill" :class="epoch.tx_ref ? 'is-online' : 'is-info'">
-                {{ epoch.tx_ref ? 'можно забирать' : 'посчитана' }}
+              <span class="admin-pill" :class="epoch.payout_tx ? 'is-online' : 'is-info'">
+                {{ epoch.payout_tx ? 'выплачено' : epoch.tx_ref ? 'в цепочке' : 'посчитана' }}
               </span>
             </div>
             <span class="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-wings-muted">
               <span>{{ epochDate(epoch.start_unix) }} - {{ epochDate(epoch.end_unix) }}</span>
+              <span v-if="epoch.micro_per_gib">{{ epoch.micro_per_gib }} за GiB</span>
+              <!-- Ссылка на транзакцию: цифра без неё это обещание, а не деньги -->
+              <a
+                v-if="epoch.payout_tx"
+                class="admin-mono truncate underline"
+                :href="explorer(epoch.payout_tx)"
+                target="_blank"
+                rel="noopener"
+              >{{ epoch.payout_tx.slice(0, 12) }}...</a>
             </span>
           </div>
         </div>
@@ -336,6 +345,14 @@ import SamsungPager from '@/components/controls/SamsungPager.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import CopyableLink from '@/components/domain/CopyableLink.vue';
 import { formatBytes, formatSpeed as rate, formatUsdt as usdt } from '@/utils/format';
+
+// Куда смотреть транзакцию. Сеть берём из ответа башки: на devnet и в проде
+// адреса разные, а зашитый explorer однажды покажет пустоту
+const explorerBase = 'https://explorer.solana.com/tx/';
+
+function explorer(signature) {
+  return explorerBase + signature + (payouts.value.cluster ? '?cluster=' + payouts.value.cluster : '');
+}
 
 const enabled = ref(false);
 const loading = ref(false);

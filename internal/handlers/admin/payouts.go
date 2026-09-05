@@ -19,6 +19,13 @@ type payoutEpochView struct {
 	RootHex       string `json:"root_hex"`
 	TxRef         string `json:"tx_ref"`
 	PublishedUnix int64  `json:"published_unix"`
+	// PayoutTx - транзакция, которой донору заплатили. Пустая означает, что
+	// начислено, а деньги ещё не ушли: цифра без транзакции это обещание
+	PayoutTx string `json:"payout_tx,omitempty"`
+	PaidUnix int64  `json:"paid_unix,omitempty"`
+	// MicroPerGiB - цена гигабайта в этой эпохе. Плавает по казне, без неё
+	// выписка не объясняет, почему в этот раз меньше
+	MicroPerGiB uint64 `json:"micro_per_gib,omitempty"`
 }
 
 // nodeAccrualView - что набежало одной машине и почему столько. Донору мало
@@ -51,6 +58,9 @@ type payoutStatementView struct {
 	TotalMicro     uint64            `json:"total_micro"`
 	ClaimableMicro uint64            `json:"claimable_micro"`
 	Epochs         []payoutEpochView `json:"epochs"`
+	// Cluster - в какой сети смотреть транзакции. Зашитый explorer однажды
+	// покажет пустоту, потому что devnet и прод это разные миры
+	Cluster string `json:"cluster,omitempty"`
 	Terms          *payoutTermsView  `json:"terms,omitempty"`
 	Pending        []nodeAccrualView `json:"pending"`
 	PendingMicro   uint64            `json:"pending_micro"`
@@ -96,6 +106,8 @@ func (h *Handler) handlePayoutStatement(w http.ResponseWriter, r *http.Request, 
 			Number: e.GetNumber(), StartUnix: e.GetStartUnix(), EndUnix: e.GetEndUnix(),
 			AmountMicro: e.GetAmountMicro(), RootHex: e.GetRootHex(),
 			TxRef: e.GetTxRef(), PublishedUnix: e.GetPublishedUnix(),
+			PayoutTx: e.GetPayoutTx(), PaidUnix: e.GetPaidUnix(),
+			MicroPerGiB: e.GetMicroPerGib(),
 		})
 	}
 	if terms := got.GetTerms(); terms != nil {

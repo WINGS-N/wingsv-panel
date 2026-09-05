@@ -1,5 +1,5 @@
-// Head to panel. Separate from federation.proto because the peers are different:
-// this side is the operator's own panel, the other side is somebody else's server
+// Башка разговаривает с панелью. Отдельно от federation.proto, потому что
+// собеседники разные: тут своя панель оператора, там чужой сервер
 syntax = "proto3";
 
 package wingsv.headpanel.v1;
@@ -7,24 +7,24 @@ package wingsv.headpanel.v1;
 option go_package = "wingsnet.org/federation/gen/headpb;headpb";
 
 service FederationHead {
-  // Aggregates for the public landing page. Deliberately the narrowest message
-  // in this file: it is served to anybody
+  // Агрегаты для лендинга. Самое узкое сообщение в файле намеренно, его отдают
+  // кому угодно
   rpc GetPublicCounters(PublicCountersRequest) returns (PublicCounters);
-  // One long-lived stream so the panel can change what it is watching without
-  // dialing again
+  // Один долгоживущий стрим, чтобы панель меняла подписку без передозвона
   rpc StreamLive(stream LiveSubscribe) returns (stream LiveUpdate);
   rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
-  // What a donor is allowed to see about their own contribution. Aggregates
-  // only: there is no RPC anywhere in this service that maps a node to a profile
-  // or to a user, and adding one would break the privacy invariant
+  // Что донору дозволено видеть про свой вклад. Только агрегаты: во всём сервисе
+  // нет ни одной RPC, которая связывает ноду с профилем или человеком, и заводить
+  // такую нельзя нахуй
   rpc DonorSummary(DonorSummaryRequest) returns (DonorCounters);
   // Помесячная разбивка того же вклада. Счётчик за период обнуляется, и без
   // истории донору нечего показать за прошлый месяц.
   rpc DonorHistory(DonorHistoryRequest) returns (DonorHistoryResponse);
-  // Gives a free user nodes, or returns what they already have. Idempotent, so
-  // the panel can call it on every login without moving anybody
+  // Выдаёт бесплатному человеку ноды или возвращает те, что уже есть.
+  // Идемпотентно, поэтому панель может дёргать на каждый вход и никого не
+  // перетасует
   rpc EnsureUser(EnsureUserRequest) returns (UserAllocation);
-  // Takes a user off every node. Used when the oracle quarantines somebody
+  // Снимает человека со всех нод, когда oracle отправил его в карантин
   rpc RevokeUser(RevokeUserRequest) returns (RevokeUserResponse);
   rpc MintEnrollToken(MintEnrollTokenRequest) returns (MintEnrollTokenResponse);
   rpc SetNodeState(SetNodeStateRequest) returns (SetNodeStateResponse);
@@ -89,7 +89,7 @@ enum LiveScope {
 
 message LiveSubscribe {
   LiveScope scope = 1;
-  // Set for DONOR and NODE scope respectively
+  // Заполняется для scope DONOR и NODE соответственно
   string donor_id = 2;
   string node_id = 3;
 }
@@ -110,8 +110,8 @@ message GlobalCounters {
   uint64 down_bytes = 6;
   double up_rate_bps = 7;
   double down_rate_bps = 8;
-  // Since the federation started, not since this period or this process.
-  // Survives a restart, and a node leaving does not take its share away with it
+  // За всё время федерации, а не за период и не за жизнь процесса. Переживает
+  // рестарт, и ушедшая нода не уносит свою долю с собой
   uint64 lifetime_bytes = 9;
   // С начала текущего периода бюджета. Считается от сохранённой отметки, а не
   // от счётчиков в памяти, поэтому переживает выкат башки
@@ -121,8 +121,8 @@ message GlobalCounters {
   uint64 probe_bytes = 11;
 }
 
-// PublicCounters is what the landing page shows. No node ids, no donor ids, no
-// per-node breakdown: this is served without a session
+// Что показывает лендинг. Ни идентификаторов нод, ни доноров, ни разбивки по
+// машинам: это отдаётся вообще без сессии
 message PublicCounters {
   int64 unix_ms = 1;
   uint32 nodes_online = 2;
@@ -130,8 +130,8 @@ message PublicCounters {
   uint64 donated_bytes_this_period = 4;
   double up_rate_bps = 5;
   double down_rate_bps = 6;
-  // Everything the federation has ever carried. The period figure resets and
-  // makes the effort look smaller than it was; this one is the honest total
+  // Всё, что федерация протащила за свою жизнь. Цифра за период обнуляется и
+  // занижает вклад, а эта честная
   uint64 lifetime_bytes = 7;
   // Сколько из перенесённого ушло на проверки зондов
   uint64 probe_bytes = 8;
@@ -197,7 +197,7 @@ message NodeCounters {
 }
 
 message ListNodesRequest {
-  // Empty lists the whole fleet, which only the operator may ask for
+  // Пусто значит весь флот, и спросить такое может только оператор
   string donor_id = 1;
 }
 
@@ -237,41 +237,37 @@ message MintEnrollTokenRequest {
   // потолок площадки: раньше он был единственным, и лимит приходилось править
   // уже после того, как сервер зашёл
   uint32 budget_gb = 4;
-  // How many nodes may join on this one token. Zero and one both mean one.
-  //
-  // It exists for a donor bringing a fleet rather than a machine: a DaemonSet
-  // enrols every host it lands on from one Secret, and minting per host would
-  // mean one release per host. The single-use default stands for the paste-one-
-  // command case, where a token that outlives its node is a token somebody else
-  // can use.
+  // Сколько нод пустить по одному токену, ноль и единица значат одно и то же.
+  // Нужно донору с флотом: DaemonSet зачисляет каждый хост из одного Secret
   uint32 uses = 3;
 }
 
 message MintEnrollTokenResponse {
-  // The compound value the installer takes verbatim. It carries the fleet
-  // secret as well, because the transport is keyed before the node has one
+  // Составное значение, которое установщик берёт как есть. В нём же едет
+  // флотский секрет, потому что транспорт шифруется до того, как у ноды появится
+  // свой
   string enroll_token = 1;
   int64 expires_unix = 2;
-  // The whole command a donor pastes. Built by the head because the head is what
-  // knows its own public address and serves the installer; a panel guessing at it
-  // is a panel handing out a link to a 404
+  // Команда, которую донор вставляет целиком. Собирает башка, потому что она
+  // знает свой публичный адрес и сама отдаёт установщик, а панель, гадающая об
+  // этом, раздаёт ссылку на 404
   string install_command = 3;
-  // How many joins this token still authorises when it was issued
+  // Сколько вступлений токен ещё разрешал на момент выдачи
   uint32 uses = 4;
 }
 
 message EnsureUserRequest {
-  // Opaque to the head. The panel's own identifier, never an address or a handle
+  // Для башки это непрозрачная строка: идентификатор панели, а не адрес и не имя
   string user_id = 1;
 }
 
 message UserAllocation {
   string user_id = 1;
-  // The subscription URL the client fetches. Unguessable and unrelated to
-  // user_id, because it travels through screenshots and chat logs
+  // Адрес подписки, который тянет клиент. Неугадываемый и с user_id никак не
+  // связан, потому что путешествует по скриншотам и чатам
   string subscription_url = 2;
-  // How many nodes are serving this user. Deliberately not which ones: the panel
-  // has no business joining a user to a donor's machine
+  // Сколько нод обслуживает человека. Намеренно не какие именно: панели нехуй
+  // сшивать человека с машиной донора
   uint32 nodes = 3;
   int64 sticky_until_unix = 4;
   // Сколько нод полагается по уровню доверия. Отличается от nodes, когда во
@@ -350,7 +346,7 @@ message BuildChoice {
 }
 
 message RestartComponentRequest {
-  // xray | vktp
+  // xray или vktp
   string component = 1;
   // Пусто - весь флот
   string node_id = 2;
@@ -615,6 +611,16 @@ message EpochAccrual {
   string root_hex = 5;
   string tx_ref = 6;
   int64 published_unix = 7;
+  // Пруф для клейма: путь от своего листа к корню. Башка платит сама, так что
+  // донору он нужен только чтобы проверить нас
+  repeated bytes proof = 8;
+  // Транзакция, которой донору заплатили. Пустая означает, что начислено, но
+  // деньги ещё не ушли
+  string payout_tx = 9;
+  int64 paid_unix = 10;
+  // Цена гигабайта, по которой считали эту эпоху. Плавает по казне, поэтому без
+  // неё выписка не объясняет, почему в этот раз меньше
+  uint64 micro_per_gib = 11;
 }
 
 message PayoutStatementResponse {
