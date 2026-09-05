@@ -202,6 +202,14 @@ func (c *Client) call(ctx context.Context, method, path string, body, out any) e
 			return ErrBadPassword
 		case http.StatusPreconditionFailed:
 			return ErrNeedSecondFactor
+		case http.StatusBadRequest:
+			// Неверный пароль провайдер считает кривым запросом. Отличаем по
+			// тексту: у остальных четырёхсотых причина другая, и валить их в
+			// "пароль не подошёл" значит врать человеку
+			if strings.Contains(strings.ToLower(failure.Message), "password") ||
+				strings.Contains(strings.ToLower(failure.Message), "user") {
+				return ErrBadPassword
+			}
 		}
 		return fmt.Errorf("accountsession: the provider answered %d: %s", resp.StatusCode, failure.Message)
 	}
