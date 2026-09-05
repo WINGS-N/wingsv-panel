@@ -60,6 +60,7 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		appCodes:      newAppCodes(),
 		redeemLimiter: newAttemptLimiter(),
 		halfway:       newHalfwayDesk(),
+		qr:            newQRDesk(),
 		session: accountsession.New(accountsession.Config{
 			Issuer: cfg.OIDCIssuer,
 			Token:  cfg.AccountAPIToken,
