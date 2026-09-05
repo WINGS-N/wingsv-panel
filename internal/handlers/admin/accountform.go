@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -108,11 +109,13 @@ func (h *Handler) handleAccountLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	authURL, err := h.oidc.Start(ctx, safeReturnTo(req.ReturnTo), linkAdminID, strings.TrimSpace(req.Invite))
 	if err != nil {
+		log.Printf("account login: the provider did not start the request: %v", err)
 		writeError(w, http.StatusBadGateway, "account service unreachable")
 		return
 	}
 	authRequestID, err := h.session.Begin(ctx, authURL)
 	if err != nil {
+		log.Printf("account login: no auth request came back: %v", err)
 		writeError(w, http.StatusBadGateway, "account service unreachable")
 		return
 	}
@@ -123,6 +126,7 @@ func (h *Handler) handleAccountLogin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, "неверный логин или пароль")
 			return
 		}
+		log.Printf("account login: the session was not created: %v", err)
 		writeError(w, http.StatusBadGateway, "account service unreachable")
 		return
 	}
