@@ -46,10 +46,6 @@
           </div>
 
           <div class="input-field">
-            <OneuiInput v-model.trim="email" label="Почта" type="email" autocomplete="email" />
-          </div>
-
-          <div class="input-field">
             <OneuiInput v-model="password" label="Новый пароль" type="password" autocomplete="new-password" />
           </div>
 
@@ -95,7 +91,6 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 import { authState, logout, refreshSession } from '@/stores/auth.js';
 
 const router = useRouter();
-const email = ref('');
 const password = ref('');
 const confirm = ref('');
 const error = ref('');
@@ -109,9 +104,7 @@ const year = computed(() => new Date().getFullYear());
 const username = computed(() => authState.value.admin?.username || '');
 const accountName = computed(() => authState.value.admin?.account_name || 'WINGS Account');
 
-const canSubmit = computed(
-  () => email.value.includes('@') && password.value.length >= 8 && password.value === confirm.value,
-);
+const canSubmit = computed(() => password.value.length >= 8 && password.value === confirm.value);
 
 onMounted(async () => {
   await refreshSession();
@@ -129,7 +122,7 @@ async function onSubmit() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value, password: password.value }),
+      body: JSON.stringify({ password: password.value }),
     });
     const data = await res.json();
     if (data.name_taken) {

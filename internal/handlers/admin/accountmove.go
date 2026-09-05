@@ -59,7 +59,6 @@ func (h *Handler) accountName() string {
 }
 
 type accountEnrollRequest struct {
-	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -92,11 +91,6 @@ func (h *Handler) handleAccountEnroll(w http.ResponseWriter, r *http.Request, ad
 		writeError(w, http.StatusBadRequest, "bad request")
 		return
 	}
-	email := strings.TrimSpace(req.Email)
-	if email == "" || !strings.Contains(email, "@") {
-		writeError(w, http.StatusBadRequest, "нужна почта")
-		return
-	}
 	if len(req.Password) < 8 {
 		writeError(w, http.StatusBadRequest, "пароль короче восьми знаков")
 		return
@@ -104,7 +98,7 @@ func (h *Handler) handleAccountEnroll(w http.ResponseWriter, r *http.Request, ad
 
 	ctx, cancel := context.WithTimeout(r.Context(), accountTimeout)
 	defer cancel()
-	subject, err := h.session.CreateHuman(ctx, humanFor(admin, email, req.Password))
+	subject, err := h.session.CreateHuman(ctx, humanFor(admin, h.accountDomain(), req.Password))
 	if err != nil {
 		if errors.Is(err, accountsession.ErrNameTaken) {
 			// Учётка с таким именем уже есть, и почти всегда это его же: заводить
@@ -130,15 +124,33 @@ func (h *Handler) handleAccountEnroll(w http.ResponseWriter, r *http.Request, ad
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "login": accountLoginName(admin)})
 }
 
-// humanFor собирает заявку на учётку из того, что панель и так знает
-func humanFor(admin storage.Admin, email, password string) accountsession.Human {
+// humanFor собирает заявку на учётку из того, что панель и так знает.
+//
+// Почту не спрашиваем: у нас её нет ни у кого, и у Matrix её по умолчанию тоже
+// нет. Провайдер требует поле, поэтому кладём служебный адрес, помеченный
+// проверенным - человек его не видит и никогда не вводит
+func humanFor(admin storage.Admin, domain, password string) accountsession.Human {
 	return accountsession.Human{
 		Username:  admin.Username,
-		Email:     email,
+		Email:     admin.Username + "@" + domain,
 		FirstName: admin.Username,
 		LastName:  "WINGS",
 		Password:  password,
 	}
+}
+
+// accountDomain - имя сервиса учёток, из него же собирается служебный адрес
+func (h *Handler) accountDomain() string {
+	issuer := strings.TrimSpace(h.cfg.OIDCIssuer)
+	issuer = strings.TrimPrefix(strings.TrimPrefix(issuer, "https://"), "http://")
+	issuer = strings.TrimSuffix(issuer, "/")
+	if host, _, found := strings.Cut(issuer, "/"); found {
+		issuer = host
+	}
+	if issuer == "" {
+		return "wings.local"
+	}
+	return issuer
 }
 
 // accountLoginName - как человек будет звать себя на входе. Провайдер клеит к
