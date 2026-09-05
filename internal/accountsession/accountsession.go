@@ -32,6 +32,10 @@ var ErrBadPassword = errors.New("accountsession: wrong login or password")
 // ErrNeedSecondFactor - пароль принят, но нужен код. Не ошибка, а половина пути
 var ErrNeedSecondFactor = errors.New("accountsession: a second factor is required")
 
+// ErrNameTaken - имя у провайдера уже занято. Чаще всего своей же учёткой,
+// заведённой раньше панели, поэтому человеку предлагают привязать её
+var ErrNameTaken = errors.New("accountsession: that name already exists")
+
 // Config - что панель знает о сервисе учёток
 type Config struct {
 	// Issuer - база провайдера, та же, что у OIDC-клиента
@@ -202,12 +206,17 @@ func (c *Client) call(ctx context.Context, method, path string, body, out any) e
 			return ErrBadPassword
 		case http.StatusPreconditionFailed:
 			return ErrNeedSecondFactor
+		case http.StatusConflict:
+			return ErrNameTaken
 		case http.StatusBadRequest:
 			// Неверный пароль провайдер считает кривым запросом. Отличаем по
 			// тексту: у остальных четырёхсотых причина другая, и валить их в
 			// "пароль не подошёл" значит врать человеку
-			if strings.Contains(strings.ToLower(failure.Message), "password") ||
-				strings.Contains(strings.ToLower(failure.Message), "user") {
+			lower := strings.ToLower(failure.Message)
+			if strings.Contains(lower, "already exists") || strings.Contains(lower, "already taken") {
+				return ErrNameTaken
+			}
+			if strings.Contains(lower, "password") || strings.Contains(lower, "user") {
 				return ErrBadPassword
 			}
 		}

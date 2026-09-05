@@ -46,6 +46,10 @@
             {{ busy ? 'Заводим...' : `Завести ${accountName}` }}
           </SamsungButton>
 
+          <SamsungButton variant="secondary" class="login-submit mt-3" type="button" @click="linkExisting">
+            У меня уже есть {{ accountName }}
+          </SamsungButton>
+
           <p class="login-sub mt-3">
             Логин остаётся прежним, пароль от панели после переезда больше не нужен. Второй фактор и ключи входа
             настраиваются потом, в разделе аккаунта.
@@ -106,6 +110,11 @@ async function onSubmit() {
       body: JSON.stringify({ email: email.value, password: password.value }),
     });
     const data = await res.json();
+    if (data.name_taken) {
+      // Имя занято почти всегда своей же учёткой, заведённой раньше панели
+      error.value = data.message;
+      return;
+    }
     if (!res.ok) throw new Error(data.message || 'не вышло завести учётку');
     hint.value = 'Готово, входим...';
     await refreshSession();
@@ -115,6 +124,12 @@ async function onSubmit() {
   } finally {
     busy.value = false;
   }
+}
+
+// Привязка существующей идёт обычным входом: панель узнаёт человека по сессии и
+// цепляет учётку к нему, а не заводит второго
+function linkExisting() {
+  window.location.href = `/api/oidc/start?return_to=${encodeURIComponent('/admin/clients')}`;
 }
 
 async function signOut() {

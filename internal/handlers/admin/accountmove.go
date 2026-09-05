@@ -7,6 +7,7 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -105,6 +106,15 @@ func (h *Handler) handleAccountEnroll(w http.ResponseWriter, r *http.Request, ad
 	defer cancel()
 	subject, err := h.session.CreateHuman(ctx, humanFor(admin, email, req.Password))
 	if err != nil {
+		if errors.Is(err, accountsession.ErrNameTaken) {
+			// Учётка с таким именем уже есть, и почти всегда это его же: заводить
+			// вторую нельзя, а привязать первую можно обычным входом
+			writeJSON(w, http.StatusConflict, map[string]any{
+				"error": true, "name_taken": true,
+				"message": "учётка с таким именем уже есть - привяжите её",
+			})
+			return
+		}
 		log.Printf("account move: %s did not get an account: %v", admin.Username, err)
 		writeError(w, http.StatusBadGateway, "сервис учёток не завёл учётку")
 		return
