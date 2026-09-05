@@ -20,6 +20,6 @@ data:
 {{- end }}
 {{- if .Values.oidc.enabled }}
   OIDC_ISSUER: {{ required "oidc.issuer is required when the login is enabled" .Values.oidc.issuer | quote }}
-  MATRIX_HOMESERVER: {{ required "oidc.homeserver is required when the login is enabled" .Values.oidc.homeserver | quote }}
   OIDC_CLIENT_ID: {{ required "oidc.clientID is required when the login is enabled" .Values.oidc.clientID | quote }}
+  ACCOUNT_NAME: {{ .Values.oidc.name | default "WINGS Account" | quote }}
 {{- end }}

@@ -1,10 +1,9 @@
-// Package matrixauth signs admins in with the deployment's own Matrix account
-// service.
+// Package oidcauth signs admins in with the deployment's own account service.
 //
-// One homeserver and no other. That is the whole security property: the invite
-// tree only resists sybils because an identity costs something, and accepting
-// logins from any homeserver on the internet would let anybody mint as many
-// identities as they felt like on a server they run themselves.
+// One issuer and no other. That is the whole security property: the invite tree
+// only resists sybils because an identity costs something, and accepting logins
+// from any provider on the internet would let anybody mint as many identities as
+// they felt like on a server they run themselves.
 package oidcauth
 
 import (
@@ -13,7 +12,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -25,31 +23,31 @@ import (
 
 // Config is what the deployment knows about its own account service.
 type Config struct {
-	// Issuer is the MAS base URL. Pinned, and pinning it is what restricts logins
-	// to our own homeserver: no other issuer can mint a token this client accepts.
-	Issuer string
-	// Homeserver is the domain in an MXID, checked again after the exchange in
-	// case MAS is ever pointed at more than one.
-	Homeserver   string
+	// Issuer is the account service base URL. Pinned, and pinning it is what keeps
+	// logins to our own provider: no other issuer can mint a token this client
+	// accepts.
+	Issuer       string
 	ClientID     string
 	ClientSecret string
 	RedirectURL  string
 }
 
-// Enabled reports whether the deployment configured Matrix login at all.
+// Enabled reports whether the deployment configured account login at all.
+//
+// Ничего не настроено - панель просто живёт на своём пароле. Админ, поднявший её
+// у себя, про OIDC так и не узнает, и это намеренно
 func (c Config) Enabled() bool {
-	return strings.TrimSpace(c.Issuer) != "" &&
-		strings.TrimSpace(c.ClientID) != "" &&
-		strings.TrimSpace(c.Homeserver) != ""
+	return strings.TrimSpace(c.Issuer) != "" && strings.TrimSpace(c.ClientID) != ""
 }
 
 // Identity is who signed in.
 type Identity struct {
-	// MatrixID is the full @localpart:homeserver form. It is the account's
-	// identity here; the OIDC subject is kept only to notice a rename.
-	MatrixID    string
-	Localpart   string
-	Subject     string
+	// Subject - кто это по версии провайдера. Он и есть личность: имя человек
+	// меняет когда захочет, а subject выдаётся один раз
+	Subject string
+	// Username - предложенное имя. Годится только на завод нового админа, дальше
+	// решает Subject
+	Username    string
 	DisplayName string
 }
 
@@ -92,11 +90,7 @@ func New(cfg Config) *Client {
 func (c *Client) Enabled() bool { return c.cfg.Enabled() }
 
 // ErrDisabled means no account service is configured.
-var ErrDisabled = errors.New("oidcauth: matrix login is not configured")
-
-// ErrForeignHomeserver means the identity is not ours. Refusing it is the point:
-// an identity from somewhere else costs nothing to mint.
-var ErrForeignHomeserver = errors.New("oidcauth: identity is not from this homeserver")
+var ErrDisabled = errors.New("oidcauth: account login is not configured")
 
 // ErrUnknownState means the callback does not match a login this panel started.
 var ErrUnknownState = errors.New("oidcauth: unknown or expired login")
@@ -229,29 +223,23 @@ func (c *Client) Complete(ctx context.Context, state, code string) (Identity, st
 	return identity, got.returnTo, got.linkAdminID, got.invite, nil
 }
 
-// identityFrom builds the MXID and refuses anything that is not ours.
-func (c *Client) identityFrom(subject, localpart, name string) (Identity, error) {
-	localpart = strings.TrimSpace(localpart)
-	if localpart == "" {
-		return Identity{}, errors.New("oidcauth: the account service returned no username")
+// identityFrom собирает личность из того, что отдал провайдер.
+//
+// Имя чистим до локальной части: провайдер зовёт человека вида admin@org.домен,
+// а у нас имена короткие, и тащить в них домен незачем
+func (c *Client) identityFrom(subject, username, name string) (Identity, error) {
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
+		return Identity{}, errors.New("oidcauth: the account service returned no subject")
 	}
-	// MAS can hand back either a bare localpart or a full MXID depending on how
-	// it is configured, so normalise before checking the domain
-	mxid := localpart
-	if !strings.HasPrefix(mxid, "@") {
-		mxid = "@" + localpart + ":" + c.cfg.Homeserver
+	username = strings.TrimSpace(username)
+	if at := strings.IndexByte(username, '@'); at > 0 {
+		username = username[:at]
 	}
-	at, domain, found := strings.Cut(strings.TrimPrefix(mxid, "@"), ":")
-	if !found || at == "" {
-		return Identity{}, fmt.Errorf("oidcauth: %q is not a matrix id", mxid)
-	}
-	if !strings.EqualFold(domain, c.cfg.Homeserver) {
-		return Identity{}, ErrForeignHomeserver
-	}
+	username = strings.TrimPrefix(username, "@")
 	return Identity{
-		MatrixID:    "@" + at + ":" + strings.ToLower(domain),
-		Localpart:   at,
 		Subject:     subject,
+		Username:    strings.ToLower(username),
 		DisplayName: strings.TrimSpace(name),
 	}, nil
 }

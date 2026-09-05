@@ -154,25 +154,25 @@ func exerciseDialect(t *testing.T, driver Driver, dsn string) {
 		t.Fatal("restore did not lift the branch")
 	}
 
-	// matrix_id is unique but nullable, which is where dialects like to differ:
+	// account_subject is unique but nullable, which is where dialects like to differ:
 	// two admins with no account must both be allowed, one account must not be
-	if err := st.LinkMatrixID(invited.ID, "@invited:wings.example", "sub-a"); err != nil {
-		t.Fatalf("LinkMatrixID: %v", err)
+	if err := st.LinkAccount(invited.ID, "sub-a", "Invited"); err != nil {
+		t.Fatalf("LinkAccount: %v", err)
 	}
-	if err := st.LinkMatrixID(deeper.ID, "@invited:wings.example", "sub-a"); !errors.Is(err, ErrMatrixIDTaken) {
-		t.Fatalf("LinkMatrixID twice = %v, want ErrMatrixIDTaken", err)
+	if err := st.LinkAccount(deeper.ID, "sub-a", "Deeper"); !errors.Is(err, ErrAccountTaken) {
+		t.Fatalf("LinkAccount twice = %v, want ErrAccountTaken", err)
 	}
-	got, err := st.FindAdminByMatrixID("@invited:wings.example")
+	got, err := st.FindAdminByAccount("sub-a")
 	if err != nil || got.ID != invited.ID {
-		t.Fatalf("FindAdminByMatrixID = %+v err=%v", got, err)
+		t.Fatalf("FindAdminByAccount = %+v err=%v", got, err)
 	}
-	if id, err := st.MatrixIDFor(deeper.ID); err != nil || id != "" {
-		t.Fatalf("MatrixIDFor unlinked = %q err=%v", id, err)
+	if id, err := st.AccountNameFor(deeper.ID); err != nil || id != "" {
+		t.Fatalf("AccountNameFor unlinked = %q err=%v", id, err)
 	}
-	if err := st.UnlinkMatrixID(invited.ID); err != nil {
-		t.Fatalf("UnlinkMatrixID: %v", err)
+	if err := st.UnlinkAccount(invited.ID); err != nil {
+		t.Fatalf("UnlinkAccount: %v", err)
 	}
-	if _, err := st.FindAdminByMatrixID("@invited:wings.example"); !errors.Is(err, ErrNotFound) {
+	if _, err := st.FindAdminByAccount("sub-a"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("the account is still linked after unlinking: %v", err)
 	}
 

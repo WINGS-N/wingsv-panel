@@ -390,24 +390,24 @@ func GenerateInviteCode() (string, error) {
 	return strings.ToUpper(code), nil
 }
 
-// ErrMatrixAccountUnknown means nobody has attached this Matrix account, and the
-// deployment is not accepting new registrations from it.
-var ErrMatrixAccountUnknown = errors.New("auth: this matrix account is not linked to an admin")
+// ErrAccountUnknown means nobody has attached this account, and the deployment is
+// not accepting new registrations from it.
+var ErrAccountUnknown = errors.New("auth: this account is not linked to an admin")
 
-// LoginWithMatrix signs somebody in with an account on our own homeserver.
+// LoginWithAccount signs somebody in through our own account service.
 //
 // A first-time account is subject to exactly the same registration rules as a
-// password signup. That matters more than it looks: if Matrix login could create
-// an admin while registration is invite-only, it would be a way straight around
-// the invite tree, and the tree is the only thing making an identity cost
-// anything at all.
-func (s *Service) LoginWithMatrix(matrixID, localpart, subject, inviteToken string) (storage.Admin, storage.AdminSession, error) {
-	matrixID = strings.ToLower(strings.TrimSpace(matrixID))
-	if matrixID == "" {
+// password signup. That matters more than it looks: if this login could create an
+// admin while registration is invite-only, it would be a way straight around the
+// invite tree, and the tree is the only thing making an identity cost anything at
+// all.
+func (s *Service) LoginWithAccount(subject, username, displayName, inviteToken string) (storage.Admin, storage.AdminSession, error) {
+	subject = strings.TrimSpace(subject)
+	if subject == "" {
 		return storage.Admin{}, storage.AdminSession{}, ErrInvalidCredentials
 	}
 
-	admin, err := s.store.FindAdminByMatrixID(matrixID)
+	admin, err := s.store.FindAdminByAccount(subject)
 	switch {
 	case err == nil:
 		if suspended, reason, sErr := s.store.IsSuspended(admin.ID); sErr == nil && suspended {
@@ -436,19 +436,19 @@ func (s *Service) LoginWithMatrix(matrixID, localpart, subject, inviteToken stri
 		}
 	}
 
-	username, err := ValidateNewUsername(localpart)
+	username, err = ValidateNewUsername(username)
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
 	if _, err := s.store.FindAdminByUsername(username); err == nil {
 		// Somebody already holds the name. Refusing beats silently taking over an
-		// existing password account with a Matrix login
+		// existing password account with an account login
 		return storage.Admin{}, storage.AdminSession{}, ErrUsernameTaken
 	} else if !errors.Is(err, storage.ErrNotFound) {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
 
-	// No password: this account signs in through the homeserver and nothing else
+	// No password: this account signs in through the provider and nothing else
 	hash, err := HashPassword(mustRandomPassword())
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
@@ -463,7 +463,7 @@ func (s *Service) LoginWithMatrix(matrixID, localpart, subject, inviteToken stri
 			return storage.Admin{}, storage.AdminSession{}, ErrInviteTokenInvalid
 		}
 	}
-	if err := s.store.LinkMatrixID(created.ID, matrixID, subject); err != nil {
+	if err := s.store.LinkAccount(created.ID, subject, displayName); err != nil {
 		_ = s.store.DeleteAdmin(created.ID)
 		return storage.Admin{}, storage.AdminSession{}, err
 	}

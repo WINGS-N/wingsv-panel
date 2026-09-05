@@ -1,72 +1,62 @@
 package oidcauth
 
 import (
-	"errors"
 	"testing"
 )
 
 func testClient() *Client {
 	return New(Config{
-		Issuer: "https://mas.wings.example", Homeserver: "wings.example",
+		Issuer:   "https://id.wings.example",
 		ClientID: "panel", RedirectURL: "https://v.wings.example/cb",
 	})
 }
 
-// The whole security property: an identity from somewhere else costs nothing to
-// mint, so the invite tree would mean nothing if one were accepted
-func TestAnIdentityFromAnotherHomeserverIsRefused(t *testing.T) {
+// Личность - это subject. Без него связывать вход не с чем, и молча заводить
+// нового админа на пустоте нельзя
+func TestAnIdentityWithoutASubjectIsRefused(t *testing.T) {
 	c := testClient()
-	if _, err := c.identityFrom("sub", "@evil:attacker.example", ""); !errors.Is(err, ErrForeignHomeserver) {
-		t.Errorf("err = %v, want the foreign homeserver refused", err)
+	if _, err := c.identityFrom("  ", "alice", ""); err == nil {
+		t.Error("an identity with no subject was accepted")
 	}
 }
 
-// MAS hands back either a bare localpart or a full id depending on how it is
-// set up, and both have to land on the same account
-func TestBothFormsOfUsernameProduceTheSameID(t *testing.T) {
+// Провайдер зовёт человека вида admin@org.домен, а имена админов у нас короткие
+func TestTheUsernameLosesTheProviderDomain(t *testing.T) {
 	c := testClient()
-	fromLocalpart, err := c.identityFrom("sub", "alice", "Alice")
+	got, err := c.identityFrom("sub-1", "Admin@wings.id.wings.example", "WINGS Owner")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fromFull, err := c.identityFrom("sub", "@alice:wings.example", "Alice")
+	if got.Username != "admin" {
+		t.Errorf("username = %q, want the local part alone", got.Username)
+	}
+	if got.Subject != "sub-1" || got.DisplayName != "WINGS Owner" {
+		t.Errorf("identity = %+v", got)
+	}
+}
+
+// Имя у провайдера человек меняет когда захочет, поэтому решает subject
+func TestARenamedAccountKeepsItsSubject(t *testing.T) {
+	c := testClient()
+	before, err := c.identityFrom("sub-1", "alice", "Alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fromLocalpart.MatrixID != "@alice:wings.example" || fromFull.MatrixID != fromLocalpart.MatrixID {
-		t.Errorf("%q vs %q", fromLocalpart.MatrixID, fromFull.MatrixID)
-	}
-	if fromLocalpart.Localpart != "alice" {
-		t.Errorf("localpart = %q", fromLocalpart.Localpart)
-	}
-}
-
-// A domain differing only in case is the same homeserver, and treating it as
-// foreign would lock people out for no reason
-func TestTheHomeserverCheckIsCaseInsensitive(t *testing.T) {
-	c := testClient()
-	got, err := c.identityFrom("sub", "@alice:WINGS.EXAMPLE", "")
+	after, err := c.identityFrom("sub-1", "bob", "Bob")
 	if err != nil {
-		t.Fatalf("err = %v", err)
+		t.Fatal(err)
 	}
-	if got.MatrixID != "@alice:wings.example" {
-		t.Errorf("id = %q, want it normalised", got.MatrixID)
-	}
-}
-
-func TestAnEmptyUsernameIsRefused(t *testing.T) {
-	c := testClient()
-	if _, err := c.identityFrom("sub", "   ", ""); err == nil {
-		t.Error("an account with no username was accepted")
+	if before.Subject != after.Subject {
+		t.Errorf("subject moved from %q to %q", before.Subject, after.Subject)
 	}
 }
 
-// Without configuration the panel must offer nothing rather than half a flow
+// Без настройки панель обязана не предлагать ничего, а не половину потока
 func TestAnUnconfiguredClientIsDisabled(t *testing.T) {
 	for _, cfg := range []Config{
 		{},
-		{Issuer: "https://mas.example"},
-		{Issuer: "https://mas.example", ClientID: "panel"},
+		{Issuer: "https://id.example"},
+		{ClientID: "panel"},
 	} {
 		if New(cfg).Enabled() {
 			t.Errorf("config %+v reported itself ready", cfg)
@@ -77,7 +67,7 @@ func TestAnUnconfiguredClientIsDisabled(t *testing.T) {
 	}
 }
 
-// A callback that does not match a login this panel started is somebody else's
+// Колбэк, не совпавший с начатым здесь входом, принадлежит кому-то другому
 func TestAnUnknownStateIsRefused(t *testing.T) {
 	c := testClient()
 	c.states["known"] = pending{verifier: "v"}
@@ -87,10 +77,10 @@ func TestAnUnknownStateIsRefused(t *testing.T) {
 }
 
 // Слеш на конце issuer'а значащий. go-oidc сверяет то, что дали ему, с тем, что
-// вернул провайдер в discovery, посимвольно - а MAS отдаёт issuer со слешем.
-// Любая "нормализация" по дороге ломает вход целиком.
+// вернул провайдер в discovery, посимвольно. Любая "нормализация" по дороге
+// ломает вход целиком
 func TestIssuerIsPassedThroughUntouched(t *testing.T) {
-	const withSlash = "https://mxaccount.example.org/"
+	const withSlash = "https://id.example.org/"
 	c := New(Config{
 		Issuer:       withSlash,
 		ClientID:     "panel",

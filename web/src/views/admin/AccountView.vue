@@ -145,19 +145,16 @@
         </div>
       </div>
 
-      <div v-if="matrix.enabled" class="settings-card">
-        <h2 class="admin-section-subtitle">Matrix</h2>
-        <p class="admin-muted">
-          Вход через <strong>{{ matrix.homeserver }}</strong
-          >.
-        </p>
-        <p v-if="matrixError" class="state-error mt-2">{{ matrixError }}</p>
+      <div v-if="account.enabled" class="settings-card">
+        <h2 class="admin-section-subtitle">{{ account.name }}</h2>
+        <p class="admin-muted">Одна учётка на все наши сервисы. Пароль от панели при этом остаётся рабочим.</p>
+        <p v-if="accountError" class="state-error mt-2">{{ accountError }}</p>
         <div class="actions-row mt-3">
-          <template v-if="matrix.matrix_id">
-            <span class="admin-mono">{{ matrix.matrix_id }}</span>
-            <SamsungButton variant="ghost" :busy="matrixBusy" @click="unlinkMatrix">Отвязать</SamsungButton>
+          <template v-if="account.account">
+            <span class="admin-mono">{{ account.account }}</span>
+            <SamsungButton variant="ghost" :busy="accountBusy" @click="unlinkAccount">Отвязать</SamsungButton>
           </template>
-          <SamsungButton v-else @click="linkMatrix">Привязать аккаунт</SamsungButton>
+          <SamsungButton v-else @click="linkAccount">Привязать учётку</SamsungButton>
         </div>
       </div>
 
@@ -200,7 +197,7 @@ const roleLabel = computed(() => {
   return admin.value?.panel_access ? 'Администратор' : 'Участник федерации';
 });
 
-const matrix = reactive({ enabled: false, homeserver: '', matrix_id: '' });
+const account = reactive({ enabled: false, name: 'WINGS Account', account: '' });
 
 const panelBusy = ref(false);
 const panelError = ref('');
@@ -230,8 +227,8 @@ async function openPanel() {
     panelBusy.value = false;
   }
 }
-const matrixBusy = ref(false);
-const matrixError = ref('');
+const accountBusy = ref(false);
+const accountError = ref('');
 
 const disarm = reactive({ open: false, password: '' });
 const reissue = reactive({ open: false, password: '' });
@@ -333,32 +330,32 @@ function closeDisarm() {
   disarm.password = '';
 }
 
-onMounted(loadMatrix);
+onMounted(loadAccount);
 
-async function loadMatrix() {
+async function loadAccount() {
   try {
     const res = await fetch('/api/oidc/link', { credentials: 'include' });
-    if (res.ok) Object.assign(matrix, await res.json());
+    if (res.ok) Object.assign(account, await res.json());
   } catch {
     // No account service configured is a normal state.
   }
 }
 
-function linkMatrix() {
+function linkAccount() {
   window.location.href = `/api/oidc/start?return_to=${encodeURIComponent('/admin/account')}`;
 }
 
-async function unlinkMatrix() {
-  matrixBusy.value = true;
-  matrixError.value = '';
+async function unlinkAccount() {
+  accountBusy.value = true;
+  accountError.value = '';
   try {
     const res = await fetch('/api/oidc/link', { method: 'DELETE', credentials: 'include' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await loadMatrix();
+    await loadAccount();
   } catch (err) {
-    matrixError.value = String(err.message || err);
+    accountError.value = String(err.message || err);
   } finally {
-    matrixBusy.value = false;
+    accountBusy.value = false;
   }
 }
 

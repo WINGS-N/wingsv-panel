@@ -28,17 +28,18 @@ type Admin struct {
 	SuspendedAtUnix int64  `gorm:"column:suspended_at;not null;default:0"`
 	SuspendedReason string `gorm:"column:suspended_reason;not null;default:''"`
 	SuspendedByRoot int64  `gorm:"column:suspended_by_root;not null;default:0"`
-	// MatrixID is the account on our own homeserver, empty when the admin signs
-	// in with a password. A pointer because the uniqueness has to allow many
-	// admins with no account at all, and only NULL does that - an empty string
-	// would collide with every other admin who never linked one.
 	// PanelRequestedAt - когда участник попросил открыть ему админ-панель.
 	// Ноль означает, что он не просил: заявка снимается вместе с решением по ней
-	PanelRequestedAt int64   `gorm:"column:panel_requested_at;not null;default:0"`
-	MatrixID         *string `gorm:"column:matrix_id;uniqueIndex"`
-	MatrixSubject    string  `gorm:"column:matrix_subject;not null;default:''"`
-	CreatedAtUnix    int64   `gorm:"column:created_at;not null"`
-	UpdatedAtUnix    int64   `gorm:"column:updated_at;not null"`
+	PanelRequestedAt int64 `gorm:"column:panel_requested_at;not null;default:0"`
+	// AccountSubject - кто это по версии нашего провайдера входа. Указатель,
+	// потому что уникальность обязана пускать сколько угодно админов вообще без
+	// привязки, а это умеет только NULL: пустая строка столкнётся с соседней
+	AccountSubject *string `gorm:"column:account_subject;uniqueIndex"`
+	// AccountName - как человека зовут у провайдера. Держим для показа, решает
+	// всё равно subject: имя у провайдера меняется, номер нет
+	AccountName   string `gorm:"column:account_name;not null;default:''"`
+	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
+	UpdatedAtUnix int64  `gorm:"column:updated_at;not null"`
 }
 
 func (Admin) TableName() string { return "admins" }

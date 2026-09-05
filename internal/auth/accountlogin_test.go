@@ -9,10 +9,10 @@ import (
 	"v.wingsnet.org/internal/storage"
 )
 
-func matrixStore(t *testing.T, mode string) (*storage.Store, *Service) {
+func accountStore(t *testing.T, mode string) (*storage.Store, *Service) {
 	t.Helper()
 	st, err := storage.Open(storage.Options{
-		Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "matrix.db"),
+		Driver: storage.DriverSQLite, DSN: filepath.Join(t.TempDir(), "account.db"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -24,11 +24,11 @@ func matrixStore(t *testing.T, mode string) (*storage.Store, *Service) {
 }
 
 // The invite tree is the only thing making an identity cost anything. If a
-// Matrix login could create an admin while registration is invite-only, it would
+// this login could create an admin while registration is invite-only, it would
 // be a way straight around it
-func TestMatrixLoginDoesNotBypassInviteOnlyRegistration(t *testing.T) {
-	st, svc := matrixStore(t, RegistrationModeInvite)
-	_, _, err := svc.LoginWithMatrix("@newcomer:wings.example", "newcomer", "sub-1", "")
+func TestAccountLoginDoesNotBypassInviteOnlyRegistration(t *testing.T) {
+	st, svc := accountStore(t, RegistrationModeInvite)
+	_, _, err := svc.LoginWithAccount("sub-1", "newcomer", "", "")
 	if !errors.Is(err, ErrRegistrationInvite) {
 		t.Fatalf("err = %v, want an invite to be required", err)
 	}
@@ -38,16 +38,16 @@ func TestMatrixLoginDoesNotBypassInviteOnlyRegistration(t *testing.T) {
 }
 
 // And a closed panel stays closed
-func TestMatrixLoginRespectsClosedRegistration(t *testing.T) {
-	_, svc := matrixStore(t, RegistrationModeClosed)
-	if _, _, err := svc.LoginWithMatrix("@newcomer:wings.example", "newcomer", "sub-1", ""); !errors.Is(err, ErrRegistrationClosed) {
+func TestAccountLoginRespectsClosedRegistration(t *testing.T) {
+	_, svc := accountStore(t, RegistrationModeClosed)
+	if _, _, err := svc.LoginWithAccount("sub-1", "newcomer", "", ""); !errors.Is(err, ErrRegistrationClosed) {
 		t.Errorf("err = %v, want registration closed", err)
 	}
 }
 
 // With an invite it works, the invite is spent, and the edge lands in the tree
-func TestMatrixLoginWithAnInviteJoinsTheTree(t *testing.T) {
-	st, svc := matrixStore(t, RegistrationModeInvite)
+func TestAccountLoginWithAnInviteJoinsTheTree(t *testing.T) {
+	st, svc := accountStore(t, RegistrationModeInvite)
 	inviter, err := st.CreateAdmin("inviter", "hash", false, storage.RoleAdmin)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +56,7 @@ func TestMatrixLoginWithAnInviteJoinsTheTree(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	admin, sess, err := svc.LoginWithMatrix("@newcomer:wings.example", "newcomer", "sub-1", "tok-1")
+	admin, sess, err := svc.LoginWithAccount("sub-1", "newcomer", "", "tok-1")
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -77,19 +77,19 @@ func TestMatrixLoginWithAnInviteJoinsTheTree(t *testing.T) {
 		t.Error("the new admin is not attached under the inviter")
 	}
 	// The invite is spent, so the same token cannot bring in a second identity
-	if _, _, err := svc.LoginWithMatrix("@second:wings.example", "second", "sub-2", "tok-1"); err == nil {
+	if _, _, err := svc.LoginWithAccount("sub-2", "second", "", "tok-1"); err == nil {
 		t.Error("one invite let in two identities")
 	}
 }
 
 // Signing in again finds the same admin instead of making a new one
-func TestMatrixLoginIsStableAcrossSessions(t *testing.T) {
-	_, svc := matrixStore(t, RegistrationModeOpen)
-	first, _, err := svc.LoginWithMatrix("@stable:wings.example", "stable", "sub-1", "")
+func TestAccountLoginIsStableAcrossSessions(t *testing.T) {
+	_, svc := accountStore(t, RegistrationModeOpen)
+	first, _, err := svc.LoginWithAccount("sub-1", "stable", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, _, err := svc.LoginWithMatrix("@stable:wings.example", "stable", "sub-1", "")
+	second, _, err := svc.LoginWithAccount("sub-1", "stable", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,38 +99,38 @@ func TestMatrixLoginIsStableAcrossSessions(t *testing.T) {
 }
 
 // A cut branch cannot come back in through the side door
-func TestASuspendedAdminCannotSignInWithMatrix(t *testing.T) {
-	st, svc := matrixStore(t, RegistrationModeOpen)
-	admin, _, err := svc.LoginWithMatrix("@cut:wings.example", "cut", "sub-1", "")
+func TestASuspendedAdminCannotSignInWithAnAccount(t *testing.T) {
+	st, svc := accountStore(t, RegistrationModeOpen)
+	admin, _, err := svc.LoginWithAccount("sub-1", "cut", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := st.SuspendSubtree(admin.ID, "abuse"); err != nil {
 		t.Fatal(err)
 	}
-	_, _, err = svc.LoginWithMatrix("@cut:wings.example", "cut", "sub-1", "")
+	_, _, err = svc.LoginWithAccount("sub-1", "cut", "", "")
 	var suspended *SuspendedError
 	if !errors.As(err, &suspended) {
 		t.Fatalf("err = %v, want a suspension", err)
 	}
 }
 
-// Taking over an existing password account with a Matrix login of the same name
+// Taking over an existing password account with an account login of the same name
 // would be an account takeover, not a convenience
-func TestMatrixLoginWillNotClaimAnExistingUsername(t *testing.T) {
-	st, svc := matrixStore(t, RegistrationModeOpen)
+func TestAccountLoginWillNotClaimAnExistingUsername(t *testing.T) {
+	st, svc := accountStore(t, RegistrationModeOpen)
 	if _, err := st.CreateAdmin("taken", "hash", false, storage.RoleAdmin); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := svc.LoginWithMatrix("@taken:wings.example", "taken", "sub-1", ""); !errors.Is(err, ErrUsernameTaken) {
+	if _, _, err := svc.LoginWithAccount("sub-1", "taken", "", ""); !errors.Is(err, ErrUsernameTaken) {
 		t.Errorf("err = %v, want the name to be refused", err)
 	}
 }
 
-// One Matrix account, one admin
-func TestOneMatrixAccountCannotBeLinkedTwice(t *testing.T) {
-	st, svc := matrixStore(t, RegistrationModeOpen)
-	first, _, err := svc.LoginWithMatrix("@one:wings.example", "one", "sub-1", "")
+// One account, one admin
+func TestOneAccountCannotBeLinkedTwice(t *testing.T) {
+	st, svc := accountStore(t, RegistrationModeOpen)
+	first, _, err := svc.LoginWithAccount("sub-1", "one", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,20 +138,20 @@ func TestOneMatrixAccountCannotBeLinkedTwice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.LinkMatrixID(other.ID, "@one:wings.example", "sub-1"); !errors.Is(err, storage.ErrMatrixIDTaken) {
+	if err := st.LinkAccount(other.ID, "sub-1", "One"); !errors.Is(err, storage.ErrAccountTaken) {
 		t.Errorf("err = %v, want the account to be taken", err)
 	}
-	got, err := st.FindAdminByMatrixID("@one:wings.example")
+	got, err := st.FindAdminByAccount("sub-1")
 	if err != nil || got.ID != first.ID {
 		t.Errorf("account resolved to %+v err=%v", got, err)
 	}
 }
 
-// Uniqueness on the Matrix account has to allow any number of admins with no
+// Uniqueness on the account has to allow any number of admins with no
 // account at all. An empty string instead of NULL would make the second
 // unlinked admin collide with the first
-func TestManyAdminsCanHaveNoMatrixAccount(t *testing.T) {
-	st, _ := matrixStore(t, RegistrationModeOpen)
+func TestManyAdminsCanHaveNoAccount(t *testing.T) {
+	st, _ := accountStore(t, RegistrationModeOpen)
 	for _, name := range []string{"alpha", "bravo", "charlie"} {
 		if _, err := st.CreateAdmin(name, "hash", false, storage.RoleAdmin); err != nil {
 			t.Fatalf("creating %s: %v", name, err)
@@ -165,9 +165,9 @@ func TestManyAdminsCanHaveNoMatrixAccount(t *testing.T) {
 		t.Fatalf("got %d admins, want all three", len(admins))
 	}
 	for _, a := range admins {
-		id, err := st.MatrixIDFor(a.ID)
+		id, err := st.AccountNameFor(a.ID)
 		if err != nil || id != "" {
-			t.Errorf("%s has matrix id %q err=%v", a.Username, id, err)
+			t.Errorf("%s has account %q err=%v", a.Username, id, err)
 		}
 	}
 }

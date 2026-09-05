@@ -22,7 +22,6 @@ import OwnerInviteTree from '@/views/owner/OwnerInviteTree.vue';
 import CabinetLayout from '@/views/cabinet/CabinetLayout.vue';
 import CabinetAccess from '@/views/cabinet/CabinetAccess.vue';
 import CabinetDonate from '@/views/cabinet/CabinetDonate.vue';
-import MatrixLanding from '@/views/MatrixLanding.vue';
 import OwnerOracle from '@/views/owner/OwnerOracle.vue';
 import OwnerLabels from '@/views/owner/OwnerLabels.vue';
 import OwnerOracleSubject from '@/views/owner/OwnerOracleSubject.vue';
@@ -48,7 +47,6 @@ const router = createRouter({
         { path: 'account', component: AdminAccount, name: 'cabinet-account' },
       ],
     },
-    { path: '/matrix', component: MatrixLanding, name: 'matrix-landing' },
     { path: '/federation', component: FederationLanding, name: 'federation-landing' },
     { path: '/login', component: LoginView, name: 'login' },
     { path: '/register', component: RegisterView, name: 'register' },

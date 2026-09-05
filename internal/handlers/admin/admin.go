@@ -54,7 +54,6 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		redeemLimiter: newAttemptLimiter(),
 		oidc: oidcauth.New(oidcauth.Config{
 			Issuer:       cfg.OIDCIssuer,
-			Homeserver:   cfg.MatrixHomeserver,
 			ClientID:     cfg.OIDCClientID,
 			ClientSecret: cfg.OIDCClientSecret,
 			RedirectURL:  strings.TrimRight(cfg.PublicBaseURL, "/") + "/api/oidc/callback",

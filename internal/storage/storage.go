@@ -174,8 +174,10 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE admins ADD COLUMN suspended_at INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE admins ADD COLUMN suspended_reason TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE admins ADD COLUMN suspended_by_root INTEGER NOT NULL DEFAULT 0`,
-		`ALTER TABLE admins ADD COLUMN matrix_id TEXT`,
-		`ALTER TABLE admins ADD COLUMN matrix_subject TEXT NOT NULL DEFAULT ''`,
+		// Привязка к нашему сервису учёток. Решает subject, а не имя: имя у
+		// провайдера человек меняет когда захочет
+		`ALTER TABLE admins ADD COLUMN account_subject TEXT`,
+		`ALTER TABLE admins ADD COLUMN account_name TEXT NOT NULL DEFAULT ''`,
 		// Доступ в админ-панель отделён от аккаунта: личный доступ к VPN есть у
 		// каждого, а панель открывается отдельно. Существующие аккаунты
 		// заводились админами, поэтому единица по умолчанию
@@ -187,7 +189,7 @@ func applySchema(db *sql.DB, driver Driver) error {
 		// Отметки о правках по полям: по ним считается конфликт двух админов
 		`ALTER TABLE client_configs ADD COLUMN touched_fields TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE clients ADD COLUMN last_peer_ip TEXT NOT NULL DEFAULT ''`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_matrix_id ON admins(matrix_id) WHERE matrix_id IS NOT NULL`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_admins_account_subject ON admins(account_subject) WHERE account_subject IS NOT NULL`,
 		`ALTER TABLE server_nodes ADD COLUMN owner_admin_id INTEGER NOT NULL DEFAULT 0`,
 		`ALTER TABLE server_nodes ADD COLUMN grpc_token TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE server_nodes ADD COLUMN xray_state TEXT NOT NULL DEFAULT ''`,

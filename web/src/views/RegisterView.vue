@@ -70,15 +70,15 @@
           </SamsungButton>
 
           <SamsungButton
-            v-if="matrix.enabled"
+            v-if="account.enabled"
             variant="secondary"
             class="login-submit mt-3"
             type="button"
             :disabled="registrationState.mode === 'invite' && !inviteToken"
-            @click="registerWithMatrix"
+            @click="registerWithAccount"
           >
-            <template #icon><img src="/img/matrix.svg" alt="" class="button-icon-brand" aria-hidden="true" /></template>
-            Создать по Matrix ID
+            <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
+            Создать через {{ account.name }}
           </SamsungButton>
 
           <!-- Код уезжает вместе с переходом: приглашают и тех, у кого аккаунт уже
@@ -103,7 +103,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { UserPlus } from 'lucide-vue-next';
+import { KeyRound, UserPlus } from 'lucide-vue-next';
 import { register, registrationState } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
@@ -130,20 +130,20 @@ function onInviter(info) {
   inviter.username = info.username || '';
 }
 
-const matrix = reactive({ enabled: false, homeserver: '' });
+const account = reactive({ enabled: false, name: 'WINGS Account' });
 
 // Код приглашения уходит в start, а не в callback: обратно провайдер вернёт
 // только state и code, и без этого зарегистрировать первого посетителя нечем
 onMounted(async () => {
   try {
     const res = await fetch('/api/oidc/status', { credentials: 'include' });
-    if (res.ok) Object.assign(matrix, await res.json());
+    if (res.ok) Object.assign(account, await res.json());
   } catch {
     // Аккаунт-сервис недоступен - просто не показываем кнопку
   }
 });
 
-function registerWithMatrix() {
+function registerWithAccount() {
   const params = new URLSearchParams({ return_to: '/admin/clients' });
   if (inviteToken.value) params.set('invite', inviteToken.value);
   window.location.href = `/api/oidc/start?${params.toString()}`;

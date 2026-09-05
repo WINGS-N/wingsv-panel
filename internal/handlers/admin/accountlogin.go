@@ -13,9 +13,9 @@ import (
 	"v.wingsnet.org/internal/storage"
 )
 
-// matrixTimeout bounds a round trip to the account service. Short: somebody is
-// waiting on a redirect, and a hung homeserver must not hang the panel.
-const matrixTimeout = 10 * time.Second
+// accountTimeout bounds a round trip to the account service. Short: somebody is
+// waiting on a redirect, and a hung provider must not hang the panel.
+const accountTimeout = 10 * time.Second
 
 // handleOIDCStatus tells the login page whether to offer the button at all.
 func (h *Handler) handleOIDCStatus(w http.ResponseWriter, r *http.Request) {
@@ -24,8 +24,8 @@ func (h *Handler) handleOIDCStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"enabled":    h.oidc != nil && h.oidc.Enabled(),
-		"homeserver": h.cfg.MatrixHomeserver,
+		"enabled": h.oidc != nil && h.oidc.Enabled(),
+		"name":    h.cfg.AccountName,
 	})
 }
 
@@ -36,24 +36,24 @@ func (h *Handler) handleOIDCStatus(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleOIDCLink(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
 	switch r.Method {
 	case http.MethodGet:
-		matrixID, err := h.store.MatrixIDFor(admin.ID)
+		account, err := h.store.AccountNameFor(admin.ID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"enabled":    h.oidc != nil && h.oidc.Enabled(),
-			"homeserver": h.cfg.MatrixHomeserver,
-			"matrix_id":  matrixID,
+			"enabled": h.oidc != nil && h.oidc.Enabled(),
+			"name":    h.cfg.AccountName,
+			"account": account,
 		})
 	case http.MethodDelete:
-		if err := h.store.UnlinkMatrixID(admin.ID); err != nil {
+		if err := h.store.UnlinkAccount(admin.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		_ = h.store.AppendAudit(storage.AuditEntry{
 			ActorAdminID: admin.ID, ActorUsername: admin.Username,
-			Action: "admin.matrix_unlinked", TargetType: "admin",
+			Action: "admin.account_unlinked", TargetType: "admin",
 		})
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	default:
@@ -64,7 +64,7 @@ func (h *Handler) handleOIDCLink(w http.ResponseWriter, r *http.Request, admin s
 // handleOIDCStart sends the browser off to the account service.
 func (h *Handler) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
 	if h.oidc == nil || !h.oidc.Enabled() {
-		writeError(w, http.StatusNotFound, "matrix login is not configured")
+		writeError(w, http.StatusNotFound, "account login is not configured")
 		return
 	}
 	// An admin already signed in is attaching an account rather than signing in
@@ -73,7 +73,7 @@ func (h *Handler) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
 		linkAdminID = admin.ID
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), matrixTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), accountTimeout)
 	defer cancel()
 	// Код приглашения запоминается на нашей стороне: обратно провайдер отдаст
 	// только state и code, и без этого первый вход зарегистрировать некого
@@ -89,22 +89,20 @@ func (h *Handler) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
 // handleOIDCCallback finishes the login and drops the browser back in the panel.
 func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 	if h.oidc == nil || !h.oidc.Enabled() {
-		writeError(w, http.StatusNotFound, "matrix login is not configured")
+		writeError(w, http.StatusNotFound, "account login is not configured")
 		return
 	}
 	if reason := r.URL.Query().Get("error"); reason != "" {
 		h.oidcFail(w, r, reason)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), matrixTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), accountTimeout)
 	defer cancel()
 
 	identity, returnTo, linkAdminID, invite, err := h.oidc.Complete(ctx,
 		r.URL.Query().Get("state"), r.URL.Query().Get("code"))
 	if err != nil {
 		switch {
-		case errors.Is(err, oidcauth.ErrForeignHomeserver):
-			h.oidcFail(w, r, "foreign_homeserver")
 		case errors.Is(err, oidcauth.ErrUnknownState):
 			h.oidcFail(w, r, "expired")
 		default:
@@ -115,8 +113,8 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Attaching an account to the admin who is already signed in
 	if linkAdminID != 0 {
-		if err := h.store.LinkMatrixID(linkAdminID, identity.MatrixID, identity.Subject); err != nil {
-			if errors.Is(err, storage.ErrMatrixIDTaken) {
+		if err := h.store.LinkAccount(linkAdminID, identity.Subject, identity.DisplayName); err != nil {
+			if errors.Is(err, storage.ErrAccountTaken) {
 				h.oidcFail(w, r, "already_linked")
 				return
 			}
@@ -124,16 +122,15 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = h.store.AppendAudit(storage.AuditEntry{
-			ActorAdminID: linkAdminID, Action: "admin.matrix_linked",
-			TargetType: "admin", Message: identity.MatrixID,
+			ActorAdminID: linkAdminID, Action: "admin.account_linked",
+			TargetType: "admin", Message: identity.DisplayName,
 		})
 		http.Redirect(w, r, redirectTarget(returnTo, "/admin/account"), http.StatusFound)
 		return
 	}
 
-	admin, sess, err := h.auth.LoginWithMatrix(
-		identity.MatrixID, identity.Localpart, identity.Subject,
-		invite,
+	admin, sess, err := h.auth.LoginWithAccount(
+		identity.Subject, identity.Username, identity.DisplayName, invite,
 	)
 	if err != nil {
 		var suspended *auth.SuspendedError
@@ -154,7 +151,7 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 	h.auth.WriteSessionCookie(w, sess)
 	_ = h.store.AppendAudit(storage.AuditEntry{
 		ActorAdminID: admin.ID, ActorUsername: admin.Username,
-		Action: "admin.matrix_login", Message: identity.MatrixID,
+		Action: "admin.account_login", Message: identity.DisplayName,
 	})
 	http.Redirect(w, r, redirectTarget(returnTo, "/admin/clients"), http.StatusFound)
 }
@@ -162,7 +159,7 @@ func (h *Handler) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 // oidcFail sends the browser back with a reason the page can explain, rather
 // than dumping an OAuth error on somebody who only clicked a button.
 func (h *Handler) oidcFail(w http.ResponseWriter, r *http.Request, reason string) {
-	http.Redirect(w, r, "/login?matrix_error="+url.QueryEscape(reason), http.StatusFound)
+	http.Redirect(w, r, "/login?account_error="+url.QueryEscape(reason), http.StatusFound)
 }
 
 // safeReturnTo keeps a redirect inside this panel. An open redirect on a login

@@ -34,14 +34,15 @@ type Config struct {
 	// FederationHead is the wingsvpn-federation head's panel-facing gRPC address.
 	// Empty keeps every federation surface off, which is the default.
 	FederationHead string
-	// Matrix login through the deployment's own account service. Pinning the
-	// issuer is what keeps identities to our homeserver: an identity minted
-	// anywhere else costs nothing, and the invite tree only works because one
-	// costs something.
+	// Вход через собственный сервис учёток. Issuer прибит гвоздями: личность,
+	// выданную где-то ещё, никто не оплачивал, а инвайт-дерево держится ровно на
+	// том, что она чего-то стоит. Пусто - панель живёт на своём пароле, и админ,
+	// поднявший её у себя, про OIDC не узнает
 	OIDCIssuer       string
-	MatrixHomeserver string
 	OIDCClientID     string
 	OIDCClientSecret string
+	// AccountName - как звать эту дверь на экране входа
+	AccountName string
 
 	// FederationSecret keys that link. It is deliberately not the fleet secret
 	// every donated node holds: that would hand a donor the operator's view.
@@ -76,7 +77,7 @@ func Load() Config {
 		// Слеш на конце НЕ срезаем: go-oidc сверяет issuer из discovery со
 		// строкой байт в байт, а MAS отдаёт его со слешем
 		OIDCIssuer:             getEnv("OIDC_ISSUER", ""),
-		MatrixHomeserver:       getEnv("MATRIX_HOMESERVER", ""),
+		AccountName:            getEnv("ACCOUNT_NAME", "WINGS Account"),
 		OIDCClientID:           getEnv("OIDC_CLIENT_ID", ""),
 		OIDCClientSecret:       getEnv("OIDC_CLIENT_SECRET", ""),
 		FederationHead:         getEnv("FEDERATION_HEAD", ""),

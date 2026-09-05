@@ -44,9 +44,6 @@
           </div>
 
           <p v-if="error" class="state-error">{{ error }}</p>
-          <router-link v-if="matrix.enabled" class="login-link" :to="{ name: 'matrix-landing' }">
-            Что такое Matrix ID
-          </router-link>
 
           <SamsungButton class="login-submit" type="submit" :busy="busy" :disabled="!username || !password">
             <template #icon><LogIn class="button-icon" aria-hidden="true" /></template>
@@ -54,17 +51,17 @@
           </SamsungButton>
 
           <SamsungButton
-            v-if="matrix.enabled"
+            v-if="account.enabled"
             variant="secondary"
             class="login-submit mt-3"
             type="button"
-            @click="signInWithMatrix"
+            @click="signInWithAccount"
           >
-            <template #icon><img src="/img/matrix.svg" alt="" class="button-icon-brand" aria-hidden="true" /></template>
-            Войти по Matrix ID
+            <template #icon><KeyRound class="button-icon" aria-hidden="true" /></template>
+            Войти через {{ account.name }}
           </SamsungButton>
 
-          <p v-if="matrixError" class="state-error mt-3">{{ matrixError }}</p>
+          <p v-if="accountError" class="state-error mt-3">{{ accountError }}</p>
 
           <router-link v-if="registrationState.mode !== 'closed'" class="login-back-link" :to="{ name: 'register' }"
             >Создать аккаунт</router-link
@@ -85,7 +82,7 @@ import InviteHero from '@/components/domain/InviteHero.vue';
 
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { LogIn } from 'lucide-vue-next';
+import { KeyRound, LogIn } from 'lucide-vue-next';
 import { login, registrationState } from '@/stores/auth.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
@@ -102,13 +99,12 @@ const error = ref('');
 const busy = ref(false);
 const year = computed(() => new Date().getFullYear());
 
-const matrix = reactive({ enabled: false, homeserver: '' });
+const account = reactive({ enabled: false, name: 'WINGS Account' });
 
 // Whatever went wrong happened on a redirect, so the reason arrives in the URL.
 // Spelling it out beats leaving somebody staring at a login form that just
 // bounced them for no stated reason.
-const matrixReasons = {
-  foreign_homeserver: 'Этот аккаунт не с нашего homeserver.',
+const accountReasons = {
   expired: 'Вход просрочен, попробуйте ещё раз.',
   suspended: 'Аккаунт отключён.',
   registration_closed: 'Регистрация закрыта.',
@@ -116,26 +112,26 @@ const matrixReasons = {
   username_taken: 'Такой логин уже занят в панели.',
   already_linked: 'Этот аккаунт уже привязан к другому админу.',
   link_failed: 'Не удалось привязать аккаунт.',
-  exchange_failed: 'Homeserver не подтвердил вход.',
+  exchange_failed: 'Сервис учёток не подтвердил вход.',
   login_failed: 'Вход не удался.',
 };
 
-const matrixError = computed(() => {
-  const code = route.query.matrix_error;
+const accountError = computed(() => {
+  const code = route.query.account_error;
   if (!code) return '';
-  return matrixReasons[code] || 'Вход через Matrix не удался.';
+  return accountReasons[code] || `Вход через ${account.name} не удался.`;
 });
 
 onMounted(async () => {
   try {
     const res = await fetch('/api/oidc/status', { credentials: 'include' });
-    if (res.ok) Object.assign(matrix, await res.json());
+    if (res.ok) Object.assign(account, await res.json());
   } catch {
     // No account service is a normal state, not something to shout about.
   }
 });
 
-function signInWithMatrix() {
+function signInWithAccount() {
   const back = route.query.redirect || '/admin/clients';
   // Код приглашения переносится и во вход: пригласить можно и того, у кого
   // аккаунт уже есть - тогда он получает пригласившего, а не второй аккаунт
