@@ -11,7 +11,7 @@ func TestNewAccountGetsTheDefaultAvatar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer st.Close()
+	defer func() { _ = st.Close() }()
 
 	admin, err := st.CreateAccount("freshuser", "hash", false, RoleAdmin, false)
 	if err != nil {

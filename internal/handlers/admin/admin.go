@@ -428,7 +428,7 @@ func (h *Handler) handleMyAvatar(w http.ResponseWriter, r *http.Request, admin s
 			writeError(w, http.StatusBadRequest, "missing avatar file")
 			return
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 		if header.Size > maxAvatarBytes {
 			writeError(w, http.StatusRequestEntityTooLarge, "avatar too large (max 2 MiB)")
 			return
@@ -511,8 +511,4 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]any{"error": true, "message": message})
-}
-
-func parseInt64(value string) (int64, error) {
-	return strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 }

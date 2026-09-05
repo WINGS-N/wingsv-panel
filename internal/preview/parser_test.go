@@ -11,6 +11,7 @@ import (
 	"v.wingsnet.org/internal/gen/wingsvpb"
 )
 
+//nolint:staticcheck // SA1019: проверяем и устаревшие значения, они в базе
 func TestBackendLabel(t *testing.T) {
 	cases := []struct {
 		backend wingsvpb.BackendType
@@ -35,6 +36,8 @@ func TestBackendLabel(t *testing.T) {
 
 // backendLabelForConfig must consult Turn.tunnel_mode to disambiguate VK TURN
 // WG vs AWG, since the new BACKEND_TYPE_VK_TURN carries the choice in Turn.
+//
+//nolint:staticcheck // SA1019: устаревшие значения проверяем нарочно, они в базе
 func TestBackendLabelForConfig(t *testing.T) {
 	mk := func(b wingsvpb.BackendType, tm wingsvpb.TunnelMode) *wingsvpb.Config {
 		cfg := &wingsvpb.Config{Backend: b}

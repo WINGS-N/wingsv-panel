@@ -219,12 +219,6 @@ func (h *Handler) verifySecondFactor(admin storage.Admin, code string) bool {
 	return h.store.UseBackupCode(admin.ID, code)
 }
 
-// needsSecondFactor сообщает, спросит ли аккаунт код
-func (h *Handler) needsSecondFactor(admin storage.Admin) bool {
-	state, err := h.store.TOTPFor(admin.ID)
-	return err == nil && state.Confirmed
-}
-
 // generateBackupCodes делает коды вида 4f2a-9c17: читаются с бумаги без путаницы
 func generateBackupCodes() ([]string, error) {
 	out := make([]string, 0, backupCodeCount)

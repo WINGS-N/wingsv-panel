@@ -1159,6 +1159,12 @@
     @apply text-[14px] text-wings-danger;
   }
 
+  /* Список полей, которые кто-то увёл из-под рук, пока редактор был открыт */
+  .config-clash {
+    @apply mt-1.5 list-disc pl-[18px] text-[13px] text-wings-danger;
+    font-variant-numeric: tabular-nums;
+  }
+
   .admin-success {
     @apply text-[14px] text-emerald-300;
   }

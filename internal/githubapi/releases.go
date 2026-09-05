@@ -54,7 +54,7 @@ func (c *Client) FetchLatestRelease(ctx context.Context, repo string) (*Release,
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("github api returned %d", response.StatusCode)

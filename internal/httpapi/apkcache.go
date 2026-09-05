@@ -137,7 +137,7 @@ func (c *apkCache) ensure(ctx context.Context, release *githubapi.Release, asset
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("github download failed: %s", resp.Status)
 	}

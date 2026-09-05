@@ -102,7 +102,7 @@ func (c *Client) VerifyTransfer(ctx context.Context, signature, toOwner, mint st
 	if err != nil {
 		return Transfer{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return Transfer{}, fmt.Errorf("solana: rpc answered %d", resp.StatusCode)
 	}
@@ -251,7 +251,7 @@ func (c *Client) RecentTransfers(ctx context.Context, owner, mint string, limit 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("solana: rpc answered %d", resp.StatusCode)
 	}

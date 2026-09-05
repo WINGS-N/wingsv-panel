@@ -57,7 +57,7 @@ func TestMigrateSqliteRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open dst: %v", err)
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	var gotClient dbmodel.Client
 	if err := dst.Gorm().First(&gotClient, "id = ?", "c1").Error; err != nil {

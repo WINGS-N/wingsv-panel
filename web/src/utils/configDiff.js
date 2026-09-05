@@ -80,3 +80,46 @@ export function desiredApplied(desired, reported) {
   if (!desired || !reported) return false;
   return leafPaths(desired).every((path) => sameValue(readPath(desired, path), readPath(reported, path)));
 }
+
+// Собирает патч: только те ветки, которые правда разъехались с сохранённым
+// конфигом. Целиком конфиг слать нельзя - тогда любое сохранение объявляет
+// тронутыми все поля разом, и двое админов дерутся на ровном месте.
+export function buildPatch(draft, stored) {
+  const patch = {};
+  collect(draft || {}, stored || {}, patch);
+  return patch;
+}
+
+function collect(draft, stored, out) {
+  for (const key of Object.keys(draft)) {
+    const next = draft[key];
+    const was = stored ? stored[key] : undefined;
+    if (sameValue(next, was)) continue;
+    // Внутрь вложенного лезем вглубь: "тронут весь раздел" - это лишний срач
+    if (isPlainObject(next) && isPlainObject(was)) {
+      const nested = {};
+      collect(next, was, nested);
+      if (Object.keys(nested).length > 0) out[key] = nested;
+      continue;
+    }
+    out[key] = next;
+  }
+  // Стёртое поле тоже правка: иначе снятая галка нихуя не доедет
+  for (const key of Object.keys(stored || {})) {
+    if (key in draft) continue;
+    if (isEmpty(stored[key])) continue;
+    out[key] = emptyLike(stored[key]);
+  }
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function emptyLike(value) {
+  if (Array.isArray(value)) return [];
+  if (isPlainObject(value)) return {};
+  if (typeof value === 'boolean') return false;
+  if (typeof value === 'number') return 0;
+  return '';
+}

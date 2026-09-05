@@ -113,7 +113,7 @@ func drawLetters(img *image.RGBA, letters string, size int) error {
 	if err != nil {
 		return err
 	}
-	defer face.Close()
+	defer func() { _ = face.Close() }()
 
 	drawer := &font.Drawer{
 		Dst:  img,

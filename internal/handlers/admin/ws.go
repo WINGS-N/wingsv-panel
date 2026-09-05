@@ -52,7 +52,7 @@ func (h *Handler) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	defer conn.Close(websocket.StatusNormalClosure, "")
+	defer func() { _ = conn.Close(websocket.StatusNormalClosure, "") }()
 
 	sink := &adminSink{conn: conn, ch: make(chan guardianhub.AdminEvent, 64)}
 	h.hub.AttachAdmin(admin.ID, sink)

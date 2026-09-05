@@ -58,7 +58,7 @@ func ValidateNewUsername(username string) (string, error) {
 		return "", ErrUsernameTooShort
 	}
 	for _, r := range normalized {
-		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')) {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') {
 			return "", ErrUsernameInvalid
 		}
 	}

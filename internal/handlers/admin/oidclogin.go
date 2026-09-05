@@ -181,10 +181,3 @@ func redirectTarget(returnTo, fallback string) string {
 	}
 	return fallback
 }
-
-// matrixAccountKnown reports whether this account already had an admin before
-// the login, which is what separates a first sign-in from a repeat one
-func (h *Handler) oidcAccountKnown(matrixID string) bool {
-	_, err := h.store.FindAdminByMatrixID(matrixID)
-	return err == nil
-}

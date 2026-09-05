@@ -29,12 +29,12 @@ func Run(src, dst storage.Options) ([]Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open source: %w", err)
 	}
-	defer source.Close()
+	defer func() { _ = source.Close() }()
 	dest, err := storage.Open(dst)
 	if err != nil {
 		return nil, fmt.Errorf("open destination: %w", err)
 	}
-	defer dest.Close()
+	defer func() { _ = dest.Close() }()
 
 	sg, dg := source.Gorm(), dest.Gorm()
 	if err := dbmodel.AutoMigrate(dg); err != nil {

@@ -23,12 +23,12 @@ func TestPostgresRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewPostgres publisher: %v", err)
 	}
-	defer publisher.Close()
+	defer func() { _ = publisher.Close() }()
 	subscriber, err := NewPostgres(ctx, dsn)
 	if err != nil {
 		t.Fatalf("NewPostgres subscriber: %v", err)
 	}
-	defer subscriber.Close()
+	defer func() { _ = subscriber.Close() }()
 
 	got := make(chan []byte, 1)
 	subscriber.Subscribe("test.channel", func(payload []byte) { got <- payload })

@@ -193,6 +193,11 @@
         />
         <JsonEditor v-else v-model="configDraft" height="fixed" />
         <p v-if="configError" class="admin-error">{{ configError }}</p>
+        <!-- Поля, за которые идёт драка: без имён человек не понимает, что
+             именно у него из-под рук увели -->
+        <ul v-if="configClash.length" class="config-clash">
+          <li v-for="field in configClash" :key="field">{{ field }}</li>
+        </ul>
         <div class="actions-row mt-4">
           <SamsungButton :busy="busyPush" @click="pushConfig">
             <template #icon><UploadCloud class="button-icon" aria-hidden="true" /></template>
@@ -742,6 +747,7 @@
 </template>
 
 <script setup>
+import { buildPatch } from '@/utils/configDiff';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
@@ -871,6 +877,9 @@ const showQueueVkLinkModal = ref(false);
 // which vk-turn relay it takes IP:port from ('' keeps the endpoint already saved).
 const vkTurnNodes = ref([]);
 const provisionEnabled = ref(false);
+// Каким провижн приехал с сервера: без этого пустой патч не отличить от
+// снятой галки
+const provisionWasEnabled = ref(false);
 const provisionNodeId = ref('');
 const provisionSeeded = ref(false);
 const busyProvisionSave = ref(false);
@@ -1110,6 +1119,7 @@ async function loadDetail() {
     // config already carries; afterwards leave the admin's toggle untouched.
     if (!provisionSeeded.value && configDraftSeeded.value) {
       provisionEnabled.value = (formValue.value?.turn?.profiles || []).some((p) => p.wgProvisioned);
+      provisionWasEnabled.value = provisionEnabled.value;
       matchProvisionNodeFromConfig();
       provisionSeeded.value = true;
     }
@@ -1167,6 +1177,51 @@ async function saveManagement(remote) {
 // autoSaveProvision persists the provisioning toggle + node without the Push
 // button, reusing the config endpoint (which injects/refreshes the managed VK-TURN
 // profile server-side). Used by config-only clients.
+// Поля, которые кто-то увёл из-под рук, пока редактор был открыт
+const configClash = ref([]);
+
+/**
+ * Шлёт ПАТЧ, а не весь конфиг.
+ *
+ * Целиком гонять нельзя нахуй: тогда любое сохранение объявляет тронутыми все
+ * поля разом, и двое админов дерутся там, где правили разное. Патч несёт только
+ * разъехавшееся, а версия говорит, из чего мы исходили.
+ */
+async function savePatch(parsed, failure) {
+  const stored = detail.value?.desired_config || {};
+  const patch = buildPatch(parsed, stored);
+  if (Object.keys(patch).length === 0 && provisionEnabled.value === provisionWasEnabled.value) {
+    // Править нехуй: молча выходим, иначе плодим версии на пустом месте
+    configClash.value = [];
+    return undefined;
+  }
+  const res = await fetch(`/api/admin/clients/${id.value}/config`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      config: patch,
+      patch: true,
+      if_config_version: Number(detail.value?.config_version || 0),
+      provision: provisionEnabled.value,
+      vk_turn_node_id: provisionNodeId.value,
+    }),
+  });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    configClash.value = body.fields || [];
+    configError.value =
+      'Эти поля успели поменять: ' + configClash.value.join(', ') + '. Обновите страницу и правьте заново.';
+    return null;
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message || failure);
+  }
+  configClash.value = [];
+  return res;
+}
+
 async function autoSaveProvision() {
   if (busyProvisionSave.value) return;
   busyProvisionSave.value = true;
@@ -1177,20 +1232,8 @@ async function autoSaveProvision() {
     } catch {
       parsed = {};
     }
-    const res = await fetch(`/api/admin/clients/${id.value}/config`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        config: parsed,
-        provision: provisionEnabled.value,
-        vk_turn_node_id: provisionNodeId.value,
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || 'Не удалось сохранить');
-    }
+    const res = await savePatch(parsed, 'Не удалось сохранить');
+    if (res === null) return;
     await loadDetail();
   } catch (err) {
     configError.value = err.message || 'Не удалось сохранить';
@@ -1922,20 +1965,8 @@ async function pushConfig() {
   }
   busyPush.value = true;
   try {
-    const res = await fetch(`/api/admin/clients/${id.value}/config`, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        config: parsed,
-        provision: provisionEnabled.value,
-        vk_turn_node_id: provisionNodeId.value,
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || 'Не удалось применить');
-    }
+    const res = await savePatch(parsed, 'Не удалось применить');
+    if (res === null) return;
     await loadDetail();
   } catch (err) {
     configError.value = err.message;

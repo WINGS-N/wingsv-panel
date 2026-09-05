@@ -177,7 +177,7 @@ func (s *Server) handleLatestDownload(writer http.ResponseWriter, request *http.
 		} else if path, filename, _, ok := s.apk.cached(release.TagName); ok {
 			file, oErr := os.Open(path)
 			if oErr == nil {
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 				stat, sErr := file.Stat()
 				if sErr == nil {
 					writer.Header().Set("Content-Type", "application/vnd.android.package-archive")
@@ -203,7 +203,7 @@ func (s *Server) handleLatestDownload(writer http.ResponseWriter, request *http.
 		writeError(writer, http.StatusBadGateway, err.Error())
 		return
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode != http.StatusOK {
 		writeError(writer, http.StatusBadGateway, "github download failed")
@@ -539,7 +539,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer store.Close()
+	defer func() { _ = store.Close() }()
 	if err := store.MarkAllClientsOffline(); err != nil {
 		return err
 	}
@@ -566,7 +566,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		if busErr != nil {
 			return busErr
 		}
-		defer pgBus.Close()
+		defer func() { _ = pgBus.Close() }()
 		msgBus = pgBus
 	}
 	hub.AttachBus(msgBus, randomInstanceID())

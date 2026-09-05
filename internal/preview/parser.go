@@ -172,12 +172,12 @@ func inflatePayload(payload []byte) ([]byte, error) {
 
 	zlibReader, err := zlib.NewReader(bytes.NewReader(payload))
 	if err == nil {
-		defer zlibReader.Close()
+		defer func() { _ = zlibReader.Close() }()
 		return io.ReadAll(zlibReader)
 	}
 
 	flateReader := flate.NewReader(bytes.NewReader(payload))
-	defer flateReader.Close()
+	defer func() { _ = flateReader.Close() }()
 
 	inflated, flateErr := io.ReadAll(flateReader)
 	if flateErr != nil {
@@ -1273,6 +1273,12 @@ func boolLabel(value bool, yes, no string) string {
 	return no
 }
 
+// backendLabel зовёт бэкенд по-человечески.
+//
+// Старые значения enum разбираются намеренно: их шлют давно поставленные
+// клиенты, и перестать их понимать значит ослепнуть на половину флота
+//
+//nolint:staticcheck // SA1019: см. выше
 func backendLabel(backend wingsvpb.BackendType) string {
 	switch backend {
 	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD, wingsvpb.BackendType_BACKEND_TYPE_VK_TURN:
@@ -1295,6 +1301,8 @@ func backendLabel(backend wingsvpb.BackendType) string {
 // backendLabelForConfig refines the VK TURN label by Turn.tunnel_mode, since the
 // new BACKEND_TYPE_VK_TURN carries the WG/AWG choice in Turn rather than in the
 // backend enum.
+//
+//nolint:staticcheck // SA1019: устаревшее значение лежит в хранимых конфигах
 func backendLabelForConfig(config *wingsvpb.Config) string {
 	b := config.GetBackend()
 	if (b == wingsvpb.BackendType_BACKEND_TYPE_VK_TURN ||

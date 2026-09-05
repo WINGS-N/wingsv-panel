@@ -114,6 +114,11 @@ func toClientView(c storage.Client) clientView {
 }
 
 // backendTypeLabel maps the proto enum to a short user-facing label.
+//
+// Старые значения enum разбираются намеренно: их шлют давно поставленные
+// клиенты, и перестать их понимать значит ослепнуть на половину флота
+//
+//nolint:staticcheck // SA1019: см. выше
 func backendTypeLabel(t wingsvpb.BackendType) string {
 	switch t {
 	case wingsvpb.BackendType_BACKEND_TYPE_VK_TURN_WIREGUARD, wingsvpb.BackendType_BACKEND_TYPE_VK_TURN:
@@ -135,6 +140,8 @@ func backendTypeLabel(t wingsvpb.BackendType) string {
 // backendTypeLabelForConfig refines the VK TURN label by Turn.tunnel_mode, since
 // the new BACKEND_TYPE_VK_TURN carries the WG/AWG choice in Turn rather than in
 // the backend enum.
+//
+//nolint:staticcheck // SA1019: устаревшее значение лежит в хранимых конфигах
 func backendTypeLabelForConfig(cfg *wingsvpb.Config) string {
 	b := cfg.GetBackend()
 	if (b == wingsvpb.BackendType_BACKEND_TYPE_VK_TURN ||
@@ -292,7 +299,7 @@ func (h *Handler) resolveVkTurnEndpoint(admin storage.Admin, nodeID string) (str
 	if node.Kind != storage.ServerNodeVKTurnProxy {
 		return "", errors.New("selected node is not a vk-turn relay")
 	}
-	if node.OwnerAdminID != admin.ID && !(auth.IsOwner(admin) && node.OwnerAdminID == 0) {
+	if node.OwnerAdminID != admin.ID && (!auth.IsOwner(admin) || node.OwnerAdminID != 0) {
 		return "", errors.New("node not available")
 	}
 	host := node.GRPCEndpoint
@@ -1009,10 +1016,13 @@ func (h *Handler) respondClientDetail(w http.ResponseWriter, client storage.Clie
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"client":                  toClientView(client),
-		"desired_revision":        cfg.Revision,
-		"desired_updated":         tsRFC(cfg.UpdatedAt),
-		"desired_config":          desiredJSON,
+		"client":           toClientView(client),
+		"desired_revision": cfg.Revision,
+		"desired_updated":  tsRFC(cfg.UpdatedAt),
+		"desired_config":   desiredJSON,
+		// Версия нужна редактору: с ней он говорит, из чего исходил. Без неё
+		// правка второго админа затирается молча нахуй
+		"config_version":          cfg.ConfigVersion,
 		"reported_config":         reportedJSON,
 		"reported_config_updated": tsRFC(reportedAt),
 		"runtime":                 runtimeJSON,
