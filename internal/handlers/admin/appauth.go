@@ -67,9 +67,16 @@ func (a *appCodes) redeem(code string, now time.Time) (int64, bool) {
 // чужую страницу в том же браузере, и молчаливая выдача означала бы, что доступ
 // к аккаунту забрали, ничего у человека не спросив
 func (h *Handler) handleAppLink(w http.ResponseWriter, r *http.Request) {
-	target := "/app/consent"
+	query := url.Values{}
 	if device := strings.TrimSpace(r.URL.Query().Get("device")); device != "" {
-		target += "?device=" + url.QueryEscape(device)
+		query.Set("device", device)
+	}
+	if app := strings.TrimSpace(r.URL.Query().Get("app")); app != "" {
+		query.Set("app", app)
+	}
+	target := "/app/consent"
+	if len(query) > 0 {
+		target += "?" + query.Encode()
 	}
 	http.Redirect(w, r, target, http.StatusFound)
 }

@@ -14,9 +14,12 @@
           <h1 class="login-headline"><span>Разрешить доступ</span><span>к вашему аккаунту?</span></h1>
 
           <div class="consent-who">
-            <span class="consent-mark" aria-hidden="true">WV</span>
+            <img v-if="client.icon" :src="client.icon" alt="" class="consent-mark-img" aria-hidden="true" />
+            <span v-else class="consent-mark" aria-hidden="true">
+              <AppWindow class="consent-mark-fallback" />
+            </span>
             <span class="consent-who-text">
-              <span class="consent-who-name">WINGS V</span>
+              <span class="consent-who-name">{{ client.name }}</span>
               <span class="consent-who-meta">{{ device || 'приложение на этом устройстве' }}</span>
             </span>
           </div>
@@ -74,9 +77,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Check, Server, ShieldCheck, UserRound } from 'lucide-vue-next';
+import { AppWindow, Check, Server, ShieldCheck, UserRound } from 'lucide-vue-next';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 import { authState, refreshSession } from '@/stores/auth.js';
 
@@ -86,6 +89,9 @@ const busy = ref(false);
 const done = ref(false);
 const error = ref('');
 const redirect = ref('');
+// Кто просит доступ, решает сервер по своему списку: имя из адресной строки
+// подставит кто угодно, и человек разрешит доступ, глядя на чужую вывеску
+const client = reactive({ name: 'Приложение', icon: '' });
 const year = computed(() => new Date().getFullYear());
 
 const device = computed(() => String(route.query.device || '').slice(0, 60));
@@ -95,12 +101,23 @@ const hasPanel = computed(() => {
 });
 
 onMounted(async () => {
+  await loadClient();
   await refreshSession();
   // Спрашивать разрешение у того, кто ещё не вошёл, не о чем
   if (!authState.value.admin) {
     router.replace({ name: 'login', query: { redirect: route.fullPath } });
   }
 });
+
+async function loadClient() {
+  try {
+    const key = String(route.query.app || '').slice(0, 40);
+    const res = await fetch(`/api/app/client?app=${encodeURIComponent(key)}`, { credentials: 'include' });
+    if (res.ok) Object.assign(client, await res.json());
+  } catch {
+    // Не ответил - остаётся безымянное приложение, и это честнее выдумки
+  }
+}
 
 async function allow() {
   busy.value = true;
@@ -110,7 +127,7 @@ async function allow() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device_name: device.value }),
+      body: JSON.stringify({ device_name: device.value, app: String(route.query.app || '') }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'не вышло выдать доступ');

@@ -3471,17 +3471,29 @@ body.theme-light .oneui-switch-thumb {
   border-radius: 18px;
 }
 
-.consent-mark {
+.consent-mark,
+.consent-mark-img {
+  box-sizing: border-box;
   width: 42px;
   height: 42px;
   border-radius: 13px;
-  background: #1259d1;
+  flex: none;
+}
+
+.consent-mark-img {
+  object-fit: cover;
+}
+
+.consent-mark {
+  background: rgba(255, 255, 255, 0.08);
   display: grid;
   place-items: center;
-  font-weight: 700;
-  font-size: 15px;
-  color: #fff;
-  flex: none;
+  color: #b7c8ff;
+}
+
+.consent-mark-fallback {
+  width: 22px;
+  height: 22px;
 }
 
 .consent-who-text {
@@ -3519,9 +3531,12 @@ body.theme-light .oneui-switch-thumb {
 }
 
 .consent-grant-icon {
-  width: 30px;
-  height: 30px;
-  padding: 7px;
+  /* Размер вместе с полями: без этого круг раздувался на величину padding, а
+     значок в нём упирался в края */
+  box-sizing: border-box;
+  width: 38px;
+  height: 38px;
+  padding: 9px;
   border-radius: 999px;
   background: rgba(140, 168, 255, 0.14);
   color: #b7c8ff;
