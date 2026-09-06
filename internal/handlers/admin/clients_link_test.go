@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"encoding/hex"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,7 +33,16 @@ func TestBuildClientLinkRemoteControlOn(t *testing.T) {
 	if cfg.GetGuardian().GetClientId() != "c1" || !bytes.Equal(cfg.GetGuardian().GetClientToken(), token) {
 		t.Fatalf("guardian block wrong: %+v", cfg.GetGuardian())
 	}
-	assertManagedProfile(t, cfg, token)
+	// Под полным контролем в ссылке только дверь: профиль и ссылки приезжают по
+	// gRPC, и дублировать их в QR значит слать то, что панель тут же перезапишет
+	if cfg.GetTurn() != nil {
+		t.Fatalf("full-control link still carries a turn block: %+v", cfg.GetTurn())
+	}
+	// Адрес панели, а не websocket-путь: канал давно gRPC, приложение берёт
+	// отсюда только хост с портом
+	if url := cfg.GetGuardian().GetWsUrl(); url != "https://panel.example" {
+		t.Fatalf("guardian url %q is not the panel address", url)
+	}
 }
 
 func TestBuildClientLinkRemoteControlOff(t *testing.T) {
@@ -72,8 +82,10 @@ func assertManagedProfile(t *testing.T, cfg *wingsvpb.Config, token []byte) {
 	if !p.GetWgProvisioned() || p.GetProvisionClientId() != "c1" {
 		t.Fatalf("managed profile not marked provisioned: %+v", p)
 	}
-	if !bytes.Equal(p.GetProvisionToken(), token) {
-		t.Fatalf("managed profile token mismatch: %x", p.GetProvisionToken())
+	// Токен едет hex-строкой: один вид на панель и федерацию, а поле bytes
+	// несёт её байтами
+	if string(p.GetProvisionToken()) != hex.EncodeToString(token) {
+		t.Fatalf("managed profile token mismatch: %q", p.GetProvisionToken())
 	}
 	if p.GetVkTurnEndpoint() != "relay.example.com:56000" {
 		t.Fatalf("managed profile endpoint wrong: %q", p.GetVkTurnEndpoint())

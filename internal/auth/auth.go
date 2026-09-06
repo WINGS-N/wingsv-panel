@@ -349,6 +349,19 @@ func HashClientToken(token []byte) string {
 }
 
 func VerifyClientToken(hash string, token []byte) bool {
+	if verifyClientTokenBytes(hash, token) {
+		return true
+	}
+	// Токен ездит по ссылке hex-строкой, а хранится он сырыми байтами: сборки
+	// приложения, которые несут именно строку, обязаны подтверждаться так же
+	decoded, err := hex.DecodeString(string(token))
+	if err != nil || len(decoded) == 0 {
+		return false
+	}
+	return verifyClientTokenBytes(hash, decoded)
+}
+
+func verifyClientTokenBytes(hash string, token []byte) bool {
 	if strings.HasPrefix(hash, clientTokenHashPrefix) {
 		return subtle.ConstantTimeCompare([]byte(hash), []byte(HashClientToken(token))) == 1
 	}

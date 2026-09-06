@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net"
@@ -533,15 +534,14 @@ func (h *Handler) buildClientLink(
 	vkTurnEndpoint string,
 ) (string, error) {
 	cfg := &wingsvpb.Config{Ver: 1}
-	cfg.Turn = h.managedTurn(clientID, name, token, vkTurnEndpoint)
-	markVkTurnBackend(cfg)
-	// Enrollment link / QR: only a couple of links to bootstrap; the rest arrive
-	// over the Guardian WS from the stored config.
-	h.applyAdminVKLinks(cfg.Turn, admin.ID, maxEnrollmentVKLinks)
 	if remoteControl {
+		// Под полным контролем в ссылке остаётся только дверь: профиль, ссылки
+		// и остальное приезжают по gRPC сразу после подключения. Класть их ещё
+		// и в QR значит дублировать то, что через секунду перезапишет панель, и
+		// раздувать код до нечитаемого телефоном
 		cfg.Type = wingsvpb.ConfigType_CONFIG_TYPE_GUARDIAN
 		cfg.Guardian = &wingsvpb.Guardian{
-			WsUrl:                   deriveWsURL(h.cfg.PublicBaseURL),
+			WsUrl:                   derivePanelURL(h.cfg.PublicBaseURL),
 			ClientId:                clientID,
 			ClientToken:             token,
 			ClientName:              name,
@@ -554,6 +554,10 @@ func (h *Handler) buildClientLink(
 		}
 		return h.buildLink(cfg)
 	}
+	cfg.Turn = h.managedTurn(clientID, name, token, vkTurnEndpoint)
+	markVkTurnBackend(cfg)
+	// Ссылка без панели за спиной несёт всё сама: обновить её потом нечем
+	h.applyAdminVKLinks(cfg.Turn, admin.ID, maxEnrollmentVKLinks)
 	if cfg.Turn == nil {
 		return "", errors.New("register a vk-turn relay to issue a profile link without remote control")
 	}
@@ -749,7 +753,7 @@ func applyManagedTurnProfile(turn *wingsvpb.Turn, clientID, name string, token [
 		VkTurnEndpoint:    strings.TrimSpace(endpoint),
 		WgProvisioned:     true,
 		ProvisionClientId: clientID,
-		ProvisionToken:    token,
+		ProvisionToken:    []byte(hex.EncodeToString(token)),
 		// Force the mu/v1 (mux) TURN session mode for panel-provisioned profiles.
 		// Without an inner config the app falls back to its flat "mainline" default;
 		// the inner Turn carries only the session mode, the rest stays app-default.
@@ -802,15 +806,16 @@ func (h *Handler) applyProvisionToConfig(admin storage.Admin, client storage.Cli
 }
 
 // deriveWsURL converts an https://host[:port] base URL to wss://host[:port]/api/guardian/ws.
-func deriveWsURL(publicBaseURL string) string {
+// derivePanelURL - адрес панели, каким его набирает приложение.
+//
+// Канал давно gRPC, и websocket-путь в ссылке был чистым мусором: приложение
+// всё равно берёт отсюда только хост и порт, а схему с путём выбрасывает
+func derivePanelURL(publicBaseURL string) string {
 	base := strings.TrimRight(publicBaseURL, "/")
-	if strings.HasPrefix(base, "https://") {
-		return "wss://" + strings.TrimPrefix(base, "https://") + "/api/guardian/ws"
+	if strings.HasPrefix(base, "https://") || strings.HasPrefix(base, "http://") {
+		return base
 	}
-	if strings.HasPrefix(base, "http://") {
-		return "ws://" + strings.TrimPrefix(base, "http://") + "/api/guardian/ws"
-	}
-	return "wss://" + base + "/api/guardian/ws"
+	return "https://" + base
 }
 
 func (h *Handler) handleClientByID(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
