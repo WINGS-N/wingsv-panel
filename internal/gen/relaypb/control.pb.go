@@ -400,8 +400,32 @@ type Status struct {
 	// The relay's DTLS data-plane listen address (the -listen flag), so the panel
 	// can derive the endpoint apps dial without a separate configuration.
 	ListenEndpoint string `protobuf:"bytes,5,opt,name=listen_endpoint,json=listenEndpoint,proto3" json:"listen_endpoint,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Внешний адрес, каким релея видит интернет. Спрашивается у STUN: на своих
+	// интерфейсах машина за NAT видит совсем другое, и в ссылку клиенту оно не
+	// годится
+	PublicIp string `protobuf:"bytes,20,opt,name=public_ip,json=publicIp,proto3" json:"public_ip,omitempty"`
+	// ready separates serving from merely running: the process is alive well
+	// before it can carry traffic, and a supervisor that cannot tell the two apart
+	// reports a node as healthy while every client fails
+	Ready         bool   `protobuf:"varint,6,opt,name=ready,proto3" json:"ready,omitempty"`
+	UptimeSeconds uint64 `protobuf:"varint,7,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
+	// boot_id changes on restart, so a consumer knows the counters below restarted
+	// from zero rather than moving backwards
+	BootId string `protobuf:"bytes,8,opt,name=boot_id,json=bootId,proto3" json:"boot_id,omitempty"`
+	// aes_ni decides which wrap cipher suits this machine: without hardware AES,
+	// ChaCha20 is materially faster
+	AesNi                bool     `protobuf:"varint,9,opt,name=aes_ni,json=aesNi,proto3" json:"aes_ni,omitempty"`
+	SupportedWrapCiphers []string `protobuf:"bytes,10,rep,name=supported_wrap_ciphers,json=supportedWrapCiphers,proto3" json:"supported_wrap_ciphers,omitempty"`
+	WrapCipher           string   `protobuf:"bytes,11,opt,name=wrap_cipher,json=wrapCipher,proto3" json:"wrap_cipher,omitempty"`
+	// config_version increments on every applied reload, so a supervisor can tell
+	// that its change actually landed rather than assuming it did
+	ConfigVersion uint64 `protobuf:"varint,12,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	// federation говорит, что релей заперт на своём WireGuard и увести трафик на
+	// чужой бэкенд ему нельзя. Башка спрашивает это у самого процесса, потому что
+	// флаги в чужом systemd правит кто угодно
+	Federation    bool `protobuf:"varint,13,opt,name=federation,proto3" json:"federation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Status) Reset() {
@@ -469,6 +493,169 @@ func (x *Status) GetListenEndpoint() string {
 	return ""
 }
 
+func (x *Status) GetPublicIp() string {
+	if x != nil {
+		return x.PublicIp
+	}
+	return ""
+}
+
+func (x *Status) GetReady() bool {
+	if x != nil {
+		return x.Ready
+	}
+	return false
+}
+
+func (x *Status) GetUptimeSeconds() uint64 {
+	if x != nil {
+		return x.UptimeSeconds
+	}
+	return 0
+}
+
+func (x *Status) GetBootId() string {
+	if x != nil {
+		return x.BootId
+	}
+	return ""
+}
+
+func (x *Status) GetAesNi() bool {
+	if x != nil {
+		return x.AesNi
+	}
+	return false
+}
+
+func (x *Status) GetSupportedWrapCiphers() []string {
+	if x != nil {
+		return x.SupportedWrapCiphers
+	}
+	return nil
+}
+
+func (x *Status) GetWrapCipher() string {
+	if x != nil {
+		return x.WrapCipher
+	}
+	return ""
+}
+
+func (x *Status) GetConfigVersion() uint64 {
+	if x != nil {
+		return x.ConfigVersion
+	}
+	return 0
+}
+
+func (x *Status) GetFederation() bool {
+	if x != nil {
+		return x.Federation
+	}
+	return false
+}
+
+type ReloadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadRequest) Reset() {
+	*x = ReloadRequest{}
+	mi := &file_control_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadRequest) ProtoMessage() {}
+
+func (x *ReloadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_control_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadRequest.ProtoReflect.Descriptor instead.
+func (*ReloadRequest) Descriptor() ([]byte, []int) {
+	return file_control_proto_rawDescGZIP(), []int{7}
+}
+
+type ReloadResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// applied lists what was re-read in place
+	Applied []string `protobuf:"bytes,1,rep,name=applied,proto3" json:"applied,omitempty"`
+	// restart_required lists what could not be: a listen address or a transport
+	// key is bound at start, and pretending otherwise would leave the relay
+	// serving the old value while reporting the new one
+	RestartRequired []string `protobuf:"bytes,2,rep,name=restart_required,json=restartRequired,proto3" json:"restart_required,omitempty"`
+	ConfigVersion   uint64   `protobuf:"varint,3,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ReloadResponse) Reset() {
+	*x = ReloadResponse{}
+	mi := &file_control_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadResponse) ProtoMessage() {}
+
+func (x *ReloadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_control_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadResponse.ProtoReflect.Descriptor instead.
+func (*ReloadResponse) Descriptor() ([]byte, []int) {
+	return file_control_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ReloadResponse) GetApplied() []string {
+	if x != nil {
+		return x.Applied
+	}
+	return nil
+}
+
+func (x *ReloadResponse) GetRestartRequired() []string {
+	if x != nil {
+		return x.RestartRequired
+	}
+	return nil
+}
+
+func (x *ReloadResponse) GetConfigVersion() uint64 {
+	if x != nil {
+		return x.ConfigVersion
+	}
+	return 0
+}
+
 type ListPeersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -477,7 +664,7 @@ type ListPeersRequest struct {
 
 func (x *ListPeersRequest) Reset() {
 	*x = ListPeersRequest{}
-	mi := &file_control_proto_msgTypes[7]
+	mi := &file_control_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -489,7 +676,7 @@ func (x *ListPeersRequest) String() string {
 func (*ListPeersRequest) ProtoMessage() {}
 
 func (x *ListPeersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[7]
+	mi := &file_control_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -502,7 +689,7 @@ func (x *ListPeersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPeersRequest.ProtoReflect.Descriptor instead.
 func (*ListPeersRequest) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{7}
+	return file_control_proto_rawDescGZIP(), []int{9}
 }
 
 type Peers struct {
@@ -514,7 +701,7 @@ type Peers struct {
 
 func (x *Peers) Reset() {
 	*x = Peers{}
-	mi := &file_control_proto_msgTypes[8]
+	mi := &file_control_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -526,7 +713,7 @@ func (x *Peers) String() string {
 func (*Peers) ProtoMessage() {}
 
 func (x *Peers) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[8]
+	mi := &file_control_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -539,7 +726,7 @@ func (x *Peers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peers.ProtoReflect.Descriptor instead.
 func (*Peers) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{8}
+	return file_control_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Peers) GetPeers() []*Peer {
@@ -563,7 +750,7 @@ type CreatePeerRequest struct {
 
 func (x *CreatePeerRequest) Reset() {
 	*x = CreatePeerRequest{}
-	mi := &file_control_proto_msgTypes[9]
+	mi := &file_control_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -575,7 +762,7 @@ func (x *CreatePeerRequest) String() string {
 func (*CreatePeerRequest) ProtoMessage() {}
 
 func (x *CreatePeerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[9]
+	mi := &file_control_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -588,7 +775,7 @@ func (x *CreatePeerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePeerRequest.ProtoReflect.Descriptor instead.
 func (*CreatePeerRequest) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{9}
+	return file_control_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreatePeerRequest) GetPublicKey() string {
@@ -621,7 +808,7 @@ type Peer struct {
 
 func (x *Peer) Reset() {
 	*x = Peer{}
-	mi := &file_control_proto_msgTypes[10]
+	mi := &file_control_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -633,7 +820,7 @@ func (x *Peer) String() string {
 func (*Peer) ProtoMessage() {}
 
 func (x *Peer) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[10]
+	mi := &file_control_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -646,7 +833,7 @@ func (x *Peer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Peer.ProtoReflect.Descriptor instead.
 func (*Peer) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{10}
+	return file_control_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Peer) GetPublicKey() string {
@@ -707,7 +894,7 @@ type DeletePeerRequest struct {
 
 func (x *DeletePeerRequest) Reset() {
 	*x = DeletePeerRequest{}
-	mi := &file_control_proto_msgTypes[11]
+	mi := &file_control_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -719,7 +906,7 @@ func (x *DeletePeerRequest) String() string {
 func (*DeletePeerRequest) ProtoMessage() {}
 
 func (x *DeletePeerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[11]
+	mi := &file_control_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -732,7 +919,7 @@ func (x *DeletePeerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePeerRequest.ProtoReflect.Descriptor instead.
 func (*DeletePeerRequest) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{11}
+	return file_control_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeletePeerRequest) GetPublicKey() string {
@@ -750,7 +937,7 @@ type DeletePeerResponse struct {
 
 func (x *DeletePeerResponse) Reset() {
 	*x = DeletePeerResponse{}
-	mi := &file_control_proto_msgTypes[12]
+	mi := &file_control_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -762,7 +949,7 @@ func (x *DeletePeerResponse) String() string {
 func (*DeletePeerResponse) ProtoMessage() {}
 
 func (x *DeletePeerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[12]
+	mi := &file_control_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -775,7 +962,98 @@ func (x *DeletePeerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePeerResponse.ProtoReflect.Descriptor instead.
 func (*DeletePeerResponse) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{12}
+	return file_control_proto_rawDescGZIP(), []int{14}
+}
+
+type ShutdownRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Причина попадает в лог релея: перезапуск без объяснения выглядит падением
+	Reason        string `protobuf:"bytes,1,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShutdownRequest) Reset() {
+	*x = ShutdownRequest{}
+	mi := &file_control_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShutdownRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShutdownRequest) ProtoMessage() {}
+
+func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_control_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShutdownRequest.ProtoReflect.Descriptor instead.
+func (*ShutdownRequest) Descriptor() ([]byte, []int) {
+	return file_control_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ShutdownRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type ShutdownResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Через сколько релей закроется. Ответ уходит раньше выхода, иначе вызывающий
+	// получил бы обрыв соединения вместо подтверждения
+	DelayMs       uint32 `protobuf:"varint,1,opt,name=delay_ms,json=delayMs,proto3" json:"delay_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ShutdownResponse) Reset() {
+	*x = ShutdownResponse{}
+	mi := &file_control_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ShutdownResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ShutdownResponse) ProtoMessage() {}
+
+func (x *ShutdownResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_control_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ShutdownResponse.ProtoReflect.Descriptor instead.
+func (*ShutdownResponse) Descriptor() ([]byte, []int) {
+	return file_control_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ShutdownResponse) GetDelayMs() uint32 {
+	if x != nil {
+		return x.DelayMs
+	}
+	return 0
 }
 
 var File_control_proto protoreflect.FileDescriptor
@@ -812,14 +1090,32 @@ const file_control_proto_rawDesc = "" +
 	"\x16StreamsByProtocolEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\rR\x05value:\x028\x01\"\x12\n" +
-	"\x10GetStatusRequest\"\xb6\x01\n" +
+	"\x10GetStatusRequest\"\xde\x03\n" +
 	"\x06Status\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12!\n" +
 	"\fwg_interface\x18\x02 \x01(\tR\vwgInterface\x12\x1d\n" +
 	"\n" +
 	"peer_count\x18\x03 \x01(\rR\tpeerCount\x12'\n" +
 	"\x0factive_sessions\x18\x04 \x01(\x04R\x0eactiveSessions\x12'\n" +
-	"\x0flisten_endpoint\x18\x05 \x01(\tR\x0elistenEndpoint\"\x12\n" +
+	"\x0flisten_endpoint\x18\x05 \x01(\tR\x0elistenEndpoint\x12\x1b\n" +
+	"\tpublic_ip\x18\x14 \x01(\tR\bpublicIp\x12\x14\n" +
+	"\x05ready\x18\x06 \x01(\bR\x05ready\x12%\n" +
+	"\x0euptime_seconds\x18\a \x01(\x04R\ruptimeSeconds\x12\x17\n" +
+	"\aboot_id\x18\b \x01(\tR\x06bootId\x12\x15\n" +
+	"\x06aes_ni\x18\t \x01(\bR\x05aesNi\x124\n" +
+	"\x16supported_wrap_ciphers\x18\n" +
+	" \x03(\tR\x14supportedWrapCiphers\x12\x1f\n" +
+	"\vwrap_cipher\x18\v \x01(\tR\n" +
+	"wrapCipher\x12%\n" +
+	"\x0econfig_version\x18\f \x01(\x04R\rconfigVersion\x12\x1e\n" +
+	"\n" +
+	"federation\x18\r \x01(\bR\n" +
+	"federation\"\x0f\n" +
+	"\rReloadRequest\"|\n" +
+	"\x0eReloadResponse\x12\x18\n" +
+	"\aapplied\x18\x01 \x03(\tR\aapplied\x12)\n" +
+	"\x10restart_required\x18\x02 \x03(\tR\x0frestartRequired\x12%\n" +
+	"\x0econfig_version\x18\x03 \x01(\x04R\rconfigVersion\"\x12\n" +
 	"\x10ListPeersRequest\"6\n" +
 	"\x05Peers\x12-\n" +
 	"\x05peers\x18\x01 \x03(\v2\x17.vkturn.control.v1.PeerR\x05peers\"S\n" +
@@ -842,9 +1138,15 @@ const file_control_proto_rawDesc = "" +
 	"\x11DeletePeerRequest\x12\x1d\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\tR\tpublicKey\"\x14\n" +
-	"\x12DeletePeerResponse2\x95\x05\n" +
+	"\x12DeletePeerResponse\")\n" +
+	"\x0fShutdownRequest\x12\x16\n" +
+	"\x06reason\x18\x01 \x01(\tR\x06reason\"-\n" +
+	"\x10ShutdownResponse\x12\x19\n" +
+	"\bdelay_ms\x18\x01 \x01(\rR\adelayMs2\xb9\x06\n" +
 	"\x05Relay\x12K\n" +
-	"\tGetStatus\x12#.vkturn.control.v1.GetStatusRequest\x1a\x19.vkturn.control.v1.Status\x12J\n" +
+	"\tGetStatus\x12#.vkturn.control.v1.GetStatusRequest\x1a\x19.vkturn.control.v1.Status\x12M\n" +
+	"\x06Reload\x12 .vkturn.control.v1.ReloadRequest\x1a!.vkturn.control.v1.ReloadResponse\x12S\n" +
+	"\bShutdown\x12\".vkturn.control.v1.ShutdownRequest\x1a#.vkturn.control.v1.ShutdownResponse\x12J\n" +
 	"\tListPeers\x12#.vkturn.control.v1.ListPeersRequest\x1a\x18.vkturn.control.v1.Peers\x12K\n" +
 	"\n" +
 	"CreatePeer\x12$.vkturn.control.v1.CreatePeerRequest\x1a\x17.vkturn.control.v1.Peer\x12Y\n" +
@@ -867,7 +1169,7 @@ func file_control_proto_rawDescGZIP() []byte {
 	return file_control_proto_rawDescData
 }
 
-var file_control_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_control_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_control_proto_goTypes = []any{
 	(*ListFlowsRequest)(nil),    // 0: vkturn.control.v1.ListFlowsRequest
 	(*Flow)(nil),                // 1: vkturn.control.v1.Flow
@@ -876,36 +1178,44 @@ var file_control_proto_goTypes = []any{
 	(*FlowStats)(nil),           // 4: vkturn.control.v1.FlowStats
 	(*GetStatusRequest)(nil),    // 5: vkturn.control.v1.GetStatusRequest
 	(*Status)(nil),              // 6: vkturn.control.v1.Status
-	(*ListPeersRequest)(nil),    // 7: vkturn.control.v1.ListPeersRequest
-	(*Peers)(nil),               // 8: vkturn.control.v1.Peers
-	(*CreatePeerRequest)(nil),   // 9: vkturn.control.v1.CreatePeerRequest
-	(*Peer)(nil),                // 10: vkturn.control.v1.Peer
-	(*DeletePeerRequest)(nil),   // 11: vkturn.control.v1.DeletePeerRequest
-	(*DeletePeerResponse)(nil),  // 12: vkturn.control.v1.DeletePeerResponse
-	nil,                         // 13: vkturn.control.v1.FlowStats.StreamsByProtocolEntry
+	(*ReloadRequest)(nil),       // 7: vkturn.control.v1.ReloadRequest
+	(*ReloadResponse)(nil),      // 8: vkturn.control.v1.ReloadResponse
+	(*ListPeersRequest)(nil),    // 9: vkturn.control.v1.ListPeersRequest
+	(*Peers)(nil),               // 10: vkturn.control.v1.Peers
+	(*CreatePeerRequest)(nil),   // 11: vkturn.control.v1.CreatePeerRequest
+	(*Peer)(nil),                // 12: vkturn.control.v1.Peer
+	(*DeletePeerRequest)(nil),   // 13: vkturn.control.v1.DeletePeerRequest
+	(*DeletePeerResponse)(nil),  // 14: vkturn.control.v1.DeletePeerResponse
+	(*ShutdownRequest)(nil),     // 15: vkturn.control.v1.ShutdownRequest
+	(*ShutdownResponse)(nil),    // 16: vkturn.control.v1.ShutdownResponse
+	nil,                         // 17: vkturn.control.v1.FlowStats.StreamsByProtocolEntry
 }
 var file_control_proto_depIdxs = []int32{
 	1,  // 0: vkturn.control.v1.Flows.flows:type_name -> vkturn.control.v1.Flow
-	13, // 1: vkturn.control.v1.FlowStats.streams_by_protocol:type_name -> vkturn.control.v1.FlowStats.StreamsByProtocolEntry
-	10, // 2: vkturn.control.v1.Peers.peers:type_name -> vkturn.control.v1.Peer
+	17, // 1: vkturn.control.v1.FlowStats.streams_by_protocol:type_name -> vkturn.control.v1.FlowStats.StreamsByProtocolEntry
+	12, // 2: vkturn.control.v1.Peers.peers:type_name -> vkturn.control.v1.Peer
 	5,  // 3: vkturn.control.v1.Relay.GetStatus:input_type -> vkturn.control.v1.GetStatusRequest
-	7,  // 4: vkturn.control.v1.Relay.ListPeers:input_type -> vkturn.control.v1.ListPeersRequest
-	9,  // 5: vkturn.control.v1.Relay.CreatePeer:input_type -> vkturn.control.v1.CreatePeerRequest
-	11, // 6: vkturn.control.v1.Relay.DeletePeer:input_type -> vkturn.control.v1.DeletePeerRequest
-	0,  // 7: vkturn.control.v1.Relay.ListFlows:input_type -> vkturn.control.v1.ListFlowsRequest
-	3,  // 8: vkturn.control.v1.Relay.GetFlowStats:input_type -> vkturn.control.v1.GetFlowStatsRequest
-	3,  // 9: vkturn.control.v1.Relay.StreamFlowStats:input_type -> vkturn.control.v1.GetFlowStatsRequest
-	0,  // 10: vkturn.control.v1.Relay.StreamFlows:input_type -> vkturn.control.v1.ListFlowsRequest
-	6,  // 11: vkturn.control.v1.Relay.GetStatus:output_type -> vkturn.control.v1.Status
-	8,  // 12: vkturn.control.v1.Relay.ListPeers:output_type -> vkturn.control.v1.Peers
-	10, // 13: vkturn.control.v1.Relay.CreatePeer:output_type -> vkturn.control.v1.Peer
-	12, // 14: vkturn.control.v1.Relay.DeletePeer:output_type -> vkturn.control.v1.DeletePeerResponse
-	2,  // 15: vkturn.control.v1.Relay.ListFlows:output_type -> vkturn.control.v1.Flows
-	4,  // 16: vkturn.control.v1.Relay.GetFlowStats:output_type -> vkturn.control.v1.FlowStats
-	4,  // 17: vkturn.control.v1.Relay.StreamFlowStats:output_type -> vkturn.control.v1.FlowStats
-	2,  // 18: vkturn.control.v1.Relay.StreamFlows:output_type -> vkturn.control.v1.Flows
-	11, // [11:19] is the sub-list for method output_type
-	3,  // [3:11] is the sub-list for method input_type
+	7,  // 4: vkturn.control.v1.Relay.Reload:input_type -> vkturn.control.v1.ReloadRequest
+	15, // 5: vkturn.control.v1.Relay.Shutdown:input_type -> vkturn.control.v1.ShutdownRequest
+	9,  // 6: vkturn.control.v1.Relay.ListPeers:input_type -> vkturn.control.v1.ListPeersRequest
+	11, // 7: vkturn.control.v1.Relay.CreatePeer:input_type -> vkturn.control.v1.CreatePeerRequest
+	13, // 8: vkturn.control.v1.Relay.DeletePeer:input_type -> vkturn.control.v1.DeletePeerRequest
+	0,  // 9: vkturn.control.v1.Relay.ListFlows:input_type -> vkturn.control.v1.ListFlowsRequest
+	3,  // 10: vkturn.control.v1.Relay.GetFlowStats:input_type -> vkturn.control.v1.GetFlowStatsRequest
+	3,  // 11: vkturn.control.v1.Relay.StreamFlowStats:input_type -> vkturn.control.v1.GetFlowStatsRequest
+	0,  // 12: vkturn.control.v1.Relay.StreamFlows:input_type -> vkturn.control.v1.ListFlowsRequest
+	6,  // 13: vkturn.control.v1.Relay.GetStatus:output_type -> vkturn.control.v1.Status
+	8,  // 14: vkturn.control.v1.Relay.Reload:output_type -> vkturn.control.v1.ReloadResponse
+	16, // 15: vkturn.control.v1.Relay.Shutdown:output_type -> vkturn.control.v1.ShutdownResponse
+	10, // 16: vkturn.control.v1.Relay.ListPeers:output_type -> vkturn.control.v1.Peers
+	12, // 17: vkturn.control.v1.Relay.CreatePeer:output_type -> vkturn.control.v1.Peer
+	14, // 18: vkturn.control.v1.Relay.DeletePeer:output_type -> vkturn.control.v1.DeletePeerResponse
+	2,  // 19: vkturn.control.v1.Relay.ListFlows:output_type -> vkturn.control.v1.Flows
+	4,  // 20: vkturn.control.v1.Relay.GetFlowStats:output_type -> vkturn.control.v1.FlowStats
+	4,  // 21: vkturn.control.v1.Relay.StreamFlowStats:output_type -> vkturn.control.v1.FlowStats
+	2,  // 22: vkturn.control.v1.Relay.StreamFlows:output_type -> vkturn.control.v1.Flows
+	13, // [13:23] is the sub-list for method output_type
+	3,  // [3:13] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -922,7 +1232,7 @@ func file_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_control_proto_rawDesc), len(file_control_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

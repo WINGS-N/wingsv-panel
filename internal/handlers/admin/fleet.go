@@ -34,8 +34,9 @@ type fleetView struct {
 	PostQuantum   bool   `json:"post_quantum"`
 	TCPPort       uint32 `json:"tcp_port"`
 	XHTTPPort     uint32 `json:"xhttp_port"`
-	ConfigVersion uint64 `json:"config_version"`
-	DestPoolSize  uint32 `json:"dest_pool_size"`
+	ConfigVersion uint64   `json:"config_version"`
+	DestPoolSize  uint32   `json:"dest_pool_size"`
+	VKLinks       []string `json:"vk_links"`
 }
 
 func (h *Handler) handleFleetSettings(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
@@ -84,6 +85,7 @@ func (h *Handler) handleFleetSettings(w http.ResponseWriter, r *http.Request, ad
 			PostQuantum: req.PostQuantum,
 			TcpPort:     req.TCPPort,
 			XhttpPort:   req.XHTTPPort,
+			VkLinks:     req.VKLinks,
 		})
 		if err != nil {
 			writeError(w, http.StatusBadGateway, "голова федерации не приняла настройки: "+err.Error())
@@ -167,6 +169,7 @@ func toFleetView(s *headpb.FleetSettings) fleetView {
 		XHTTPPort:     s.GetXhttpPort(),
 		ConfigVersion: s.GetConfigVersion(),
 		DestPoolSize:  s.GetDestPoolSize(),
+		VKLinks:       s.GetVkLinks(),
 	}
 }
 

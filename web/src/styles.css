@@ -661,6 +661,18 @@
     min-height: 48px;
   }
 
+  .fleet-links {
+    @apply block w-full rounded-xl bg-transparent px-3 py-2 font-samsung text-[14px] leading-6 text-wings-text outline-none;
+    border: 1px solid theme('colors.wings.inputLine');
+    resize: vertical;
+  }
+
+  /* Две кнопки на ноду: на телефоне они встают друг под друга, а не выдавливают
+     карточку в горизонтальный скролл */
+  .fleet-node-actions {
+    @apply flex flex-wrap gap-2;
+  }
+
   .fleet-toggles {
     @apply flex flex-col gap-3;
   }

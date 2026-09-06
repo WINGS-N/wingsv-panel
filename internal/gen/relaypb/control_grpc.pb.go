@@ -20,6 +20,8 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Relay_GetStatus_FullMethodName       = "/vkturn.control.v1.Relay/GetStatus"
+	Relay_Reload_FullMethodName          = "/vkturn.control.v1.Relay/Reload"
+	Relay_Shutdown_FullMethodName        = "/vkturn.control.v1.Relay/Shutdown"
 	Relay_ListPeers_FullMethodName       = "/vkturn.control.v1.Relay/ListPeers"
 	Relay_CreatePeer_FullMethodName      = "/vkturn.control.v1.Relay/CreatePeer"
 	Relay_DeletePeer_FullMethodName      = "/vkturn.control.v1.Relay/DeletePeer"
@@ -39,6 +41,15 @@ const (
 // the app self-enroll path (which reaches the panel over its own gRPC).
 type RelayClient interface {
 	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*Status, error)
+	// Reload re-reads what can be re-read without dropping traffic, and reports
+	// what still needs a restart. A supervisor that had to kill the process to
+	// apply a change would take every live session with it, so this exists to keep
+	// that from being the only option.
+	Reload(ctx context.Context, in *ReloadRequest, opts ...grpc.CallOption) (*ReloadResponse, error)
+	// Shutdown завершает релей штатно. Перезапуском занимается тот, кто его
+	// запустил - systemd или kubelet: агент чужим процессом не распоряжается, а
+	// то, что нельзя перечитать на лету, иначе так и остаётся неприменённым.
+	Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*ShutdownResponse, error)
 	ListPeers(ctx context.Context, in *ListPeersRequest, opts ...grpc.CallOption) (*Peers, error)
 	CreatePeer(ctx context.Context, in *CreatePeerRequest, opts ...grpc.CallOption) (*Peer, error)
 	DeletePeer(ctx context.Context, in *DeletePeerRequest, opts ...grpc.CallOption) (*DeletePeerResponse, error)
@@ -65,6 +76,26 @@ func (c *relayClient) GetStatus(ctx context.Context, in *GetStatusRequest, opts 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Status)
 	err := c.cc.Invoke(ctx, Relay_GetStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *relayClient) Reload(ctx context.Context, in *ReloadRequest, opts ...grpc.CallOption) (*ReloadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReloadResponse)
+	err := c.cc.Invoke(ctx, Relay_Reload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *relayClient) Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*ShutdownResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ShutdownResponse)
+	err := c.cc.Invoke(ctx, Relay_Shutdown_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +200,15 @@ type Relay_StreamFlowsClient = grpc.ServerStreamingClient[Flows]
 // the app self-enroll path (which reaches the panel over its own gRPC).
 type RelayServer interface {
 	GetStatus(context.Context, *GetStatusRequest) (*Status, error)
+	// Reload re-reads what can be re-read without dropping traffic, and reports
+	// what still needs a restart. A supervisor that had to kill the process to
+	// apply a change would take every live session with it, so this exists to keep
+	// that from being the only option.
+	Reload(context.Context, *ReloadRequest) (*ReloadResponse, error)
+	// Shutdown завершает релей штатно. Перезапуском занимается тот, кто его
+	// запустил - systemd или kubelet: агент чужим процессом не распоряжается, а
+	// то, что нельзя перечитать на лету, иначе так и остаётся неприменённым.
+	Shutdown(context.Context, *ShutdownRequest) (*ShutdownResponse, error)
 	ListPeers(context.Context, *ListPeersRequest) (*Peers, error)
 	CreatePeer(context.Context, *CreatePeerRequest) (*Peer, error)
 	DeletePeer(context.Context, *DeletePeerRequest) (*DeletePeerResponse, error)
@@ -193,6 +233,12 @@ type UnimplementedRelayServer struct{}
 
 func (UnimplementedRelayServer) GetStatus(context.Context, *GetStatusRequest) (*Status, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+}
+func (UnimplementedRelayServer) Reload(context.Context, *ReloadRequest) (*ReloadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Reload not implemented")
+}
+func (UnimplementedRelayServer) Shutdown(context.Context, *ShutdownRequest) (*ShutdownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
 }
 func (UnimplementedRelayServer) ListPeers(context.Context, *ListPeersRequest) (*Peers, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPeers not implemented")
@@ -250,6 +296,42 @@ func _Relay_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RelayServer).GetStatus(ctx, req.(*GetStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Relay_Reload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RelayServer).Reload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Relay_Reload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RelayServer).Reload(ctx, req.(*ReloadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Relay_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ShutdownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RelayServer).Shutdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Relay_Shutdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RelayServer).Shutdown(ctx, req.(*ShutdownRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -376,6 +458,14 @@ var Relay_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStatus",
 			Handler:    _Relay_GetStatus_Handler,
+		},
+		{
+			MethodName: "Reload",
+			Handler:    _Relay_Reload_Handler,
+		},
+		{
+			MethodName: "Shutdown",
+			Handler:    _Relay_Shutdown_Handler,
 		},
 		{
 			MethodName: "ListPeers",

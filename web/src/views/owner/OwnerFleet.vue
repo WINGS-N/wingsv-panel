@@ -17,6 +17,15 @@
           </option>
         </select>
       </label>
+      <label class="input-field">
+        <span class="field-label">Сборка VK TURN</span>
+        <select v-model="selectedVktp" class="fleet-select">
+          <option value="">не менять</option>
+          <option v-for="r in vktpReleases" :key="r.tag" :value="r.tag" :disabled="!r.asset_url">
+            {{ r.tag }}{{ r.prerelease ? ' (pre)' : '' }}{{ r.asset_url ? '' : ' - нет сборки под linux' }}
+          </option>
+        </select>
+      </label>
       <!-- При автовыборе поле прячется: голова держит dest сама и перепишет
            всё, что сюда вписали, - показывать редактируемое поле значит врать -->
       <OneuiInput
@@ -59,6 +68,20 @@
       </label>
     </div>
 
+    <label class="input-field mt-5">
+      <span class="field-label">VK-ссылки для раздачи</span>
+      <textarea
+        v-model="vkLinksText"
+        class="fleet-links"
+        rows="5"
+        spellcheck="false"
+        placeholder="https://vk.com/call/join/..."
+      ></textarea>
+      <span class="fleet-toggle-hint"
+        >По одной в строке. Уезжают приложению вместе с конфигом и складываются к тем, что у него уже есть.</span
+      >
+    </label>
+
     <div class="actions-row">
       <SamsungButton :busy="saving" @click="save">
         <template #icon><Save class="button-icon" aria-hidden="true" /></template>
@@ -67,6 +90,10 @@
       <SamsungButton variant="ghost" :busy="restarting" @click="restart('xray')">
         <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
         Перезапустить Xray везде
+      </SamsungButton>
+      <SamsungButton variant="ghost" :busy="restarting" @click="restart('vktp')">
+        <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
+        Перезапустить VK TURN везде
       </SamsungButton>
     </div>
     <p v-if="notice" class="admin-muted mt-3 text-[13px]">{{ notice }}</p>
@@ -115,10 +142,16 @@
             <span class="admin-pill is-offline">{{ n.state }}</span>
           </span>
         </div>
-        <SamsungButton variant="ghost" :busy="restarting" @click="restartOne(n)">
-          <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
-          Перезапустить
-        </SamsungButton>
+        <div class="fleet-node-actions">
+          <SamsungButton variant="ghost" :busy="restarting" @click="restartOne(n, 'xray')">
+            <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
+            Xray
+          </SamsungButton>
+          <SamsungButton variant="ghost" :busy="restarting" @click="restartOne(n, 'vktp')">
+            <template #icon><RefreshCw class="button-icon" aria-hidden="true" /></template>
+            VK TURN
+          </SamsungButton>
+        </div>
       </div>
     </div>
     <p v-else class="admin-muted mt-4">Нод пока нет.</p>
@@ -136,6 +169,8 @@ import OneuiSwitch from '@/components/controls/OneuiSwitch.vue';
 const fleet = reactive({
   xray_version: '',
   xray_url: '',
+  vktp_version: '',
+  vktp_url: '',
   reality_dest: '',
   auto_dest: false,
   post_quantum: false,
@@ -143,9 +178,13 @@ const fleet = reactive({
   tcp_port: 443,
   xhttp_port: 8443,
   config_version: 0,
+  vk_links: [],
 });
 const xrayReleases = ref([]);
 const selectedXray = ref('');
+const vktpReleases = ref([]);
+const selectedVktp = ref('');
+const vkLinksText = ref('');
 const loadError = ref('');
 const notice = ref('');
 const saving = ref(false);
@@ -165,14 +204,14 @@ async function loadNodes() {
   }
 }
 
-async function restartOne(node) {
+async function restartOne(node, component) {
   restarting.value = true;
   try {
     const res = await fetch('/api/admin/fleet/restart', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ component: 'xray', node_id: node.id }),
+      body: JSON.stringify({ component, node_id: node.id }),
     });
     if (!res.ok) throw new Error(await errorText(res));
     notice.value = `Команда ушла на ${node.hostname || node.id.slice(0, 8)}.`;
@@ -193,6 +232,8 @@ async function load() {
     if (!res.ok) throw new Error(await errorText(res));
     Object.assign(fleet, await res.json());
     selectedXray.value = fleet.xray_version || '';
+    selectedVktp.value = fleet.vktp_version || '';
+    vkLinksText.value = (fleet.vk_links || []).join('\n');
     loadError.value = '';
   } catch (err) {
     loadError.value = String(err.message || err);
@@ -200,12 +241,18 @@ async function load() {
 }
 
 async function loadReleases() {
+  xrayReleases.value = await releasesOf('xray');
+  vktpReleases.value = await releasesOf('vktp');
+}
+
+async function releasesOf(component) {
   try {
-    const res = await fetch('/api/admin/fleet/releases', { credentials: 'include' });
-    if (!res.ok) return;
-    xrayReleases.value = (await res.json()).releases || [];
+    const res = await fetch(`/api/admin/fleet/releases?component=${component}`, { credentials: 'include' });
+    if (!res.ok) return [];
+    return (await res.json()).releases || [];
   } catch {
     // Список релизов - удобство: без него настройки всё равно сохраняются
+    return [];
   }
 }
 
@@ -214,11 +261,18 @@ async function save() {
   try {
     // Пустой выбор означает "не трогать сборку": иначе сохранение любой другой
     // настройки снесло бы флоту Xray
-    const chosen = xrayReleases.value.find((r) => r.tag === selectedXray.value);
+    const xray = xrayReleases.value.find((r) => r.tag === selectedXray.value);
+    const vktp = vktpReleases.value.find((r) => r.tag === selectedVktp.value);
     const body = {
       ...fleet,
-      xray_version: chosen ? chosen.tag : '',
-      xray_url: chosen ? chosen.asset_url : '',
+      xray_version: xray ? xray.tag : '',
+      xray_url: xray ? xray.asset_url : '',
+      vktp_version: vktp ? vktp.tag : '',
+      vktp_url: vktp ? vktp.asset_url : '',
+      vk_links: vkLinksText.value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean),
     };
     const res = await fetch('/api/admin/fleet', {
       method: 'POST',

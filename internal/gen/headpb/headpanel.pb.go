@@ -1857,7 +1857,11 @@ type FleetSettings struct {
 	ConfigVersion uint64 `protobuf:"varint,9,opt,name=config_version,json=configVersion,proto3" json:"config_version,omitempty"`
 	// Сколько целей в проверенном пуле. Ноды разводятся по нему, поэтому dest в
 	// поле выше - лишь та, что досталась бы ноде без своей записи
-	DestPoolSize  uint32 `protobuf:"varint,10,opt,name=dest_pool_size,json=destPoolSize,proto3" json:"dest_pool_size,omitempty"`
+	DestPoolSize uint32 `protobuf:"varint,10,opt,name=dest_pool_size,json=destPoolSize,proto3" json:"dest_pool_size,omitempty"`
+	// Пул VK-ссылок на весь флот. Приложение получает его при провижне и
+	// складывает к своим: одна ссылка из QR - это один сдохший звонок до полного
+	// отсутствия связи, а набирать их вручную человек не должен
+	VkLinks       []string `protobuf:"bytes,11,rep,name=vk_links,json=vkLinks,proto3" json:"vk_links,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1960,6 +1964,13 @@ func (x *FleetSettings) GetDestPoolSize() uint32 {
 		return x.DestPoolSize
 	}
 	return 0
+}
+
+func (x *FleetSettings) GetVkLinks() []string {
+	if x != nil {
+		return x.VkLinks
+	}
+	return nil
 }
 
 type BuildChoice struct {
@@ -5514,7 +5525,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x16\n" +
 	"\x06reason\x18\x03 \x01(\tR\x06reason\"\x16\n" +
 	"\x14SetNodeStateResponse\"\x16\n" +
-	"\x14FleetSettingsRequest\"\x88\x03\n" +
+	"\x14FleetSettingsRequest\"\xa3\x03\n" +
 	"\rFleetSettings\x124\n" +
 	"\x04xray\x18\x01 \x01(\v2 .wingsv.headpanel.v1.BuildChoiceR\x04xray\x124\n" +
 	"\x04vktp\x18\x02 \x01(\v2 .wingsv.headpanel.v1.BuildChoiceR\x04vktp\x12!\n" +
@@ -5527,7 +5538,8 @@ const file_headpanel_proto_rawDesc = "" +
 	"xhttp_port\x18\b \x01(\rR\txhttpPort\x12%\n" +
 	"\x0econfig_version\x18\t \x01(\x04R\rconfigVersion\x12$\n" +
 	"\x0edest_pool_size\x18\n" +
-	" \x01(\rR\fdestPoolSize\"Q\n" +
+	" \x01(\rR\fdestPoolSize\x12\x19\n" +
+	"\bvk_links\x18\v \x03(\tR\avkLinks\"Q\n" +
 	"\vBuildChoice\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +

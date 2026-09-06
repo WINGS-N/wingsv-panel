@@ -10,6 +10,15 @@ option go_package = "github.com/cacggghp/vk-turn-proxy/controlpb;controlpb";
 // the app self-enroll path (which reaches the panel over its own gRPC).
 service Relay {
   rpc GetStatus(GetStatusRequest) returns (Status);
+  // Reload re-reads what can be re-read without dropping traffic, and reports
+  // what still needs a restart. A supervisor that had to kill the process to
+  // apply a change would take every live session with it, so this exists to keep
+  // that from being the only option.
+  rpc Reload(ReloadRequest) returns (ReloadResponse);
+  // Shutdown завершает релей штатно. Перезапуском занимается тот, кто его
+  // запустил - systemd или kubelet: агент чужим процессом не распоряжается, а
+  // то, что нельзя перечитать на лету, иначе так и остаётся неприменённым.
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
   rpc ListPeers(ListPeersRequest) returns (Peers);
   rpc CreatePeer(CreatePeerRequest) returns (Peer);
   rpc DeletePeer(DeletePeerRequest) returns (DeletePeerResponse);
@@ -68,6 +77,42 @@ message Status {
   // The relay's DTLS data-plane listen address (the -listen flag), so the panel
   // can derive the endpoint apps dial without a separate configuration.
   string listen_endpoint = 5;
+  // Внешний адрес, каким релея видит интернет. Спрашивается у STUN: на своих
+  // интерфейсах машина за NAT видит совсем другое, и в ссылку клиенту оно не
+  // годится
+  string public_ip = 20;
+  // ready separates serving from merely running: the process is alive well
+  // before it can carry traffic, and a supervisor that cannot tell the two apart
+  // reports a node as healthy while every client fails
+  bool ready = 6;
+  uint64 uptime_seconds = 7;
+  // boot_id changes on restart, so a consumer knows the counters below restarted
+  // from zero rather than moving backwards
+  string boot_id = 8;
+  // aes_ni decides which wrap cipher suits this machine: without hardware AES,
+  // ChaCha20 is materially faster
+  bool aes_ni = 9;
+  repeated string supported_wrap_ciphers = 10;
+  string wrap_cipher = 11;
+  // config_version increments on every applied reload, so a supervisor can tell
+  // that its change actually landed rather than assuming it did
+  uint64 config_version = 12;
+  // federation говорит, что релей заперт на своём WireGuard и увести трафик на
+  // чужой бэкенд ему нельзя. Башка спрашивает это у самого процесса, потому что
+  // флаги в чужом systemd правит кто угодно
+  bool federation = 13;
+}
+
+message ReloadRequest {}
+
+message ReloadResponse {
+  // applied lists what was re-read in place
+  repeated string applied = 1;
+  // restart_required lists what could not be: a listen address or a transport
+  // key is bound at start, and pretending otherwise would leave the relay
+  // serving the old value while reporting the new one
+  repeated string restart_required = 2;
+  uint64 config_version = 3;
 }
 
 message ListPeersRequest {}
@@ -101,3 +146,14 @@ message DeletePeerRequest {
 }
 
 message DeletePeerResponse {}
+
+message ShutdownRequest {
+  // Причина попадает в лог релея: перезапуск без объяснения выглядит падением
+  string reason = 1;
+}
+
+message ShutdownResponse {
+  // Через сколько релей закроется. Ответ уходит раньше выхода, иначе вызывающий
+  // получил бы обрыв соединения вместо подтверждения
+  uint32 delay_ms = 1;
+}
