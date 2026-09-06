@@ -75,8 +75,10 @@ func (h *Handler) handleInvites(w http.ResponseWriter, r *http.Request, admin st
 		}
 		// Пустое тело - обычный одноразовый код без срока
 		_ = json.NewDecoder(r.Body).Decode(&req)
-		if req.MaxUses < 1 {
-			req.MaxUses = 1
+		// Ноль означает код без потолка, и правка его на единицу молча ломала
+		// то, что база и приложение понимают с самого начала
+		if req.MaxUses < 0 {
+			req.MaxUses = 0
 		}
 		if req.MaxUses > maxInviteUses {
 			writeError(w, http.StatusBadRequest,
@@ -173,8 +175,10 @@ func (h *Handler) inviteView(it storage.InviteToken) inviteView {
 		ExpiresAt: formatOptionalTime(it.ExpiresAt),
 		MaxUses:   it.MaxUses,
 		UseCount:  it.UseCount,
-		Spent:     it.UseCount >= it.MaxUses,
-		Link:      strings.TrimRight(h.cfg.PublicBaseURL, "/") + "/register?invite=" + it.Token,
+		// Код без потолка не тратится нихуя: без этой проверки ноль сравнивался
+		// с нулём, и свежий безлимитный код рождался сразу израсходованным
+		Spent: it.MaxUses > 0 && it.UseCount >= it.MaxUses,
+		Link:  strings.TrimRight(h.cfg.PublicBaseURL, "/") + "/register?invite=" + it.Token,
 	}
 }
 

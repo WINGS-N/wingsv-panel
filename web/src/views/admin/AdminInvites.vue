@@ -47,7 +47,7 @@
             <span class="fed-card-fact-label">Использован</span>
             <span class="fed-card-fact-value">
               {{ it.use_count }}
-              <span class="text-wings-kicker">/ {{ it.max_uses ? it.max_uses : 'без потолка' }}</span>
+              <span class="text-wings-kicker">/ {{ it.max_uses ? it.max_uses : '∞' }}</span>
             </span>
           </div>
           <div class="fed-card-fact">
@@ -69,7 +69,7 @@
 
   <SamsungModal v-model="createOpen" title="Новый код" :busy="creating">
     <div class="form-grid">
-      <OneuiInput v-model.number="maxUses" label="Человек по коду" type="number" :min="1" :max="50" />
+      <OneuiInput v-model.number="maxUses" label="Человек по коду (0 - без потолка)" type="number" :min="0" :max="50" />
       <OneuiInput v-model.number="ttlHours" label="Живёт часов (0 - без срока)" type="number" :min="0" :max="8760" />
     </div>
     <template #actions>
@@ -170,7 +170,7 @@ async function create() {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        max_uses: Math.max(1, Number(maxUses.value) || 1),
+        max_uses: Math.max(0, Number(maxUses.value) || 0),
         ttl_hours: Math.max(0, Number(ttlHours.value) || 0),
       }),
     });
