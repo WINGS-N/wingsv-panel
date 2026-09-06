@@ -61,16 +61,33 @@ func (a *appCodes) redeem(code string, now time.Time) (int64, bool) {
 	return entry.adminID, true
 }
 
-// handleAppLink выдаёт код вошедшему и уводит его обратно в приложение.
+// handleAppLink уводит на экран согласия.
 //
-// Открывается прямо из приложения, поэтому сессии обычно ещё нет: вместо
-// отказа человек отправляется на экран входа, а оттуда возвращается сюда
+// Код тут больше не выдаётся: эту ссылку может открыть что угодно, включая
+// чужую страницу в том же браузере, и молчаливая выдача означала бы, что доступ
+// к аккаунту забрали, ничего у человека не спросив
 func (h *Handler) handleAppLink(w http.ResponseWriter, r *http.Request) {
-	admin, err := h.auth.Authenticate(r)
-	if err != nil {
-		http.Redirect(w, r, "/login?redirect="+url.QueryEscape("/app/link"), http.StatusFound)
+	target := "/app/consent"
+	if device := strings.TrimSpace(r.URL.Query().Get("device")); device != "" {
+		target += "?device=" + url.QueryEscape(device)
+	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+// handleAppConsent выдаёт код, когда человек согласился.
+//
+// Только POST и только с сессией: согласие обязано быть действием, а не
+// побочным эффектом перехода по ссылке
+func (h *Handler) handleAppConsent(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	var req struct {
+		DeviceName string `json:"device_name"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
 	code, err := auth.GenerateInviteToken()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -79,9 +96,10 @@ func (h *Handler) handleAppLink(w http.ResponseWriter, r *http.Request) {
 	h.appCodes.issue(code, admin.ID, time.Now())
 	_ = h.store.AppendAudit(storage.AuditEntry{
 		ActorAdminID: admin.ID, ActorUsername: admin.Username,
-		Action: "app.link_started", IP: clientIP(r),
+		Action: "app.consent_given", IP: clientIP(r),
+		Message: strings.TrimSpace(req.DeviceName),
 	})
-	http.Redirect(w, r, appCallbackScheme+"?code="+code, http.StatusFound)
+	writeJSON(w, http.StatusOK, map[string]any{"redirect": appCallbackScheme + "?code=" + code})
 }
 
 // handleAppSession меняет одноразовый код на токен устройства

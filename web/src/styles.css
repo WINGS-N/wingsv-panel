@@ -3458,3 +3458,95 @@ body.theme-light .oneui-switch-thumb {
   margin-bottom: 8px;
   text-align: center;
 }
+
+/* Согласие на доступ приложения: кто просит и что получит */
+.consent-who {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-top: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+}
+
+.consent-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #1259d1;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  flex: none;
+}
+
+.consent-who-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.consent-who-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.consent-who-meta {
+  font-size: 12.5px;
+  color: rgba(252, 252, 252, 0.55);
+}
+
+.consent-grants {
+  display: flex;
+  flex-direction: column;
+  margin-top: 18px;
+}
+
+.consent-grant {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.consent-grant:last-child {
+  border-bottom: 0;
+}
+
+.consent-grant-icon {
+  width: 30px;
+  height: 30px;
+  padding: 7px;
+  border-radius: 999px;
+  background: rgba(140, 168, 255, 0.14);
+  color: #b7c8ff;
+  flex: none;
+}
+
+.consent-grant-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.consent-grant-title {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.consent-grant-note {
+  font-size: 12.5px;
+  color: rgba(252, 252, 252, 0.55);
+}
+
+.consent-fineprint {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: rgba(252, 252, 252, 0.55);
+  text-align: center;
+}

@@ -5,6 +5,7 @@ import FederationLanding from './views/FederationLanding.vue';
 import LoginView from './views/LoginView.vue';
 import AccountMoveView from './views/AccountMoveView.vue';
 import QrApproveView from './views/QrApproveView.vue';
+import AppConsentView from './views/AppConsentView.vue';
 import RegisterView from './views/RegisterView.vue';
 import AdminLayout from './views/admin/AdminLayout.vue';
 import AdminClientList from './views/admin/ClientList.vue';
@@ -56,6 +57,8 @@ const router = createRouter({
     { path: '/account/move', component: AccountMoveView, name: 'account-move' },
     // Ссылка из QR. Её открывает и приложение своим сканером, и системная камера
     { path: '/link/:code', component: QrApproveView, name: 'qr-approve' },
+    // Согласие на доступ приложения: сюда уводит /app/link
+    { path: '/app/consent', component: AppConsentView, name: 'app-consent' },
     { path: '/register', component: RegisterView, name: 'register' },
     {
       path: '/admin',

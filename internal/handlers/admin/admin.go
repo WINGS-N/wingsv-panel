@@ -120,6 +120,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,
 	// приложение меняет его на токен устройства и дальше ходит только по нему
 	mux.HandleFunc("/app/link", h.handleAppLink)
+	mux.HandleFunc("/api/app/consent", h.requireAuth(h.handleAppConsent))
 	mux.HandleFunc("/api/app/login", h.handleAppLogin)
 	mux.HandleFunc("/api/app/session", h.handleAppSession)
 	mux.HandleFunc("/api/app/me", h.requireApp(h.handleAppMe))
