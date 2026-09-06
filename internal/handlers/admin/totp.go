@@ -51,6 +51,12 @@ func otpauthURL(username, secret string) string {
 
 // handleTOTP управляет 2FA своего аккаунта
 func (h *Handler) handleTOTP(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	// У переехавшего второй фактор живёт в учётке: она общая, и держать свой
+	// поверх неё значит спрашивать код дважды
+	if subject, managed := h.accountOf(admin); managed {
+		h.accountTOTP(w, r, admin, subject)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		state, err := h.store.TOTPFor(admin.ID)

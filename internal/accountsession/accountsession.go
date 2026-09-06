@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -318,4 +319,140 @@ func (c *Client) Owner(ctx context.Context, session Session) (string, error) {
 		return "", errors.New("accountsession: the session has no owner")
 	}
 	return out.Session.Factors.User.ID, nil
+}
+
+// UploadAvatar кладёт картинку в учётку самого человека.
+//
+// Только его ключом: служебный тут бесполезен нахуй - провайдер положит аватар
+// служебному пользователю, а человек останется с прежним
+func (c *Client) UploadAvatar(ctx context.Context, accessToken string, png []byte) error {
+	if !c.cfg.Enabled() {
+		return ErrDisabled
+	}
+	if strings.TrimSpace(accessToken) == "" {
+		return errors.New("accountsession: no token of the person")
+	}
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", "avatar.png")
+	if err != nil {
+		return err
+	}
+	if _, err := part.Write(png); err != nil {
+		return err
+	}
+	if err := form.Close(); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		strings.TrimRight(c.cfg.Issuer, "/")+"/assets/v1/users/me/avatar", &body)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("accountsession: the provider answered %d on the avatar", resp.StatusCode)
+	}
+	return nil
+}
+
+// AvatarURL говорит, есть ли у человека картинка в учётке и где она лежит.
+//
+// Пусто - значит человек её не ставил, и наш дефолтный аватар остаётся на месте
+func (c *Client) AvatarURL(ctx context.Context, subject string) (string, error) {
+	var out struct {
+		User struct {
+			Human struct {
+				Profile struct {
+					AvatarURL string `json:"avatarUrl"`
+				} `json:"profile"`
+			} `json:"human"`
+		} `json:"user"`
+	}
+	if err := c.get(ctx, "/v2/users/"+url.PathEscape(subject), &out); err != nil {
+		return "", err
+	}
+	return out.User.Human.Profile.AvatarURL, nil
+}
+
+// get - чтение служебным ключом, без тела запроса
+func (c *Client) get(ctx context.Context, path string, out any) error {
+	if !c.cfg.Enabled() {
+		return ErrDisabled
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		strings.TrimRight(c.cfg.Issuer, "/")+path, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.cfg.Token)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("accountsession: the provider answered %d", resp.StatusCode)
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+// ChangePassword меняет пароль в учётке.
+//
+// Старый пароль проверяем ДО этого своей же дверью входа: служебному ключу
+// провайдер разрешает менять пароль без всякой проверки, и полагаться на его
+// verification значит не проверять нихуя
+func (c *Client) ChangePassword(ctx context.Context, subject, newPassword string) error {
+	body := map[string]any{
+		"newPassword": map[string]any{"password": newPassword, "changeRequired": false},
+	}
+	return c.call(ctx, http.MethodPost, "/v2/users/"+url.PathEscape(subject)+"/password", body, nil)
+}
+
+// TOTPSecret - что показать человеку, чтобы он завёл второй фактор
+type TOTPSecret struct {
+	Secret string `json:"secret"`
+	URI    string `json:"uri"`
+}
+
+// StartTOTP заводит второй фактор и отдаёт секрет. Пока его не подтвердили
+// кодом, он не работает
+func (c *Client) StartTOTP(ctx context.Context, subject string) (TOTPSecret, error) {
+	var out TOTPSecret
+	err := c.call(ctx, http.MethodPost, "/v2/users/"+url.PathEscape(subject)+"/totp", map[string]any{}, &out)
+	return out, err
+}
+
+// VerifyTOTP включает второй фактор, если код сошёлся
+func (c *Client) VerifyTOTP(ctx context.Context, subject, code string) error {
+	body := map[string]any{"code": code}
+	return c.call(ctx, http.MethodPost, "/v2/users/"+url.PathEscape(subject)+"/totp/_verify", body, nil)
+}
+
+// DropTOTP выключает второй фактор
+func (c *Client) DropTOTP(ctx context.Context, subject string) error {
+	return c.call(ctx, http.MethodDelete, "/v2/users/"+url.PathEscape(subject)+"/totp", nil, nil)
+}
+
+// HasTOTP говорит, включён ли у человека второй фактор
+func (c *Client) HasTOTP(ctx context.Context, subject string) (bool, error) {
+	var out struct {
+		Methods []string `json:"authMethodTypes"`
+	}
+	if err := c.get(ctx, "/v2/users/"+url.PathEscape(subject)+"/authentication_methods", &out); err != nil {
+		return false, err
+	}
+	for _, method := range out.Methods {
+		if strings.Contains(method, "TOTP") {
+			return true, nil
+		}
+	}
+	return false, nil
 }

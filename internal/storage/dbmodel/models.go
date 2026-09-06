@@ -37,9 +37,14 @@ type Admin struct {
 	AccountSubject *string `gorm:"column:account_subject;uniqueIndex"`
 	// AccountName - как человека зовут у провайдера. Держим для показа, решает
 	// всё равно subject: имя у провайдера меняется, номер нет
-	AccountName   string `gorm:"column:account_name;not null;default:''"`
-	CreatedAtUnix int64  `gorm:"column:created_at;not null"`
-	UpdatedAtUnix int64  `gorm:"column:updated_at;not null"`
+	AccountName string `gorm:"column:account_name;not null;default:''"`
+	// Ключи самого человека у провайдера. Часть его учётки правится только от
+	// его имени: служебным ключом туда не залезть нихуя
+	AccountAccessToken  string `gorm:"column:account_access_token;not null;default:''"`
+	AccountRefreshToken string `gorm:"column:account_refresh_token;not null;default:''"`
+	AccountTokenExpires int64  `gorm:"column:account_token_expires;not null;default:0"`
+	CreatedAtUnix       int64  `gorm:"column:created_at;not null"`
+	UpdatedAtUnix       int64  `gorm:"column:updated_at;not null"`
 }
 
 func (Admin) TableName() string { return "admins" }

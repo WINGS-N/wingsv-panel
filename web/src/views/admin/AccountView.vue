@@ -35,6 +35,7 @@
     <div class="settings-grid mt-6">
       <div class="settings-card">
         <h2 class="admin-section-subtitle">Пароль</h2>
+        <p v-if="security.managed" class="admin-muted">От {{ account.name }} - он же открывает все наши сервисы.</p>
         <form class="admin-account-form" @submit.prevent="onSubmit">
           <OneuiInput v-model="oldPassword" label="Текущий пароль" type="password" autocomplete="current-password" />
           <div class="mt-3">
@@ -60,8 +61,14 @@
         <h2 class="admin-section-subtitle">2FA</h2>
         <p class="admin-muted">
           Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении.
+          <template v-if="security.managed"
+            >Живёт в {{ account.name }}, поэтому спросят его везде, а не только тут.</template
+          >
         </p>
         <p v-if="totpError" class="state-error mt-2">{{ totpError }}</p>
+        <p v-if="security.managed && totp.enabled" class="state-hint mt-2">
+          Резервных кодов у общей учётки нет - вместо них заводятся ключи входа.
+        </p>
 
         <div v-if="totp.enabled">
           <div class="actions-row mt-3">
@@ -147,15 +154,23 @@
 
       <div v-if="account.enabled" class="settings-card">
         <h2 class="admin-section-subtitle">{{ account.name }}</h2>
-        <p class="admin-muted">Одна учётка на все наши сервисы. Пароль от панели при этом остаётся рабочим.</p>
-        <p v-if="accountError" class="state-error mt-2">{{ accountError }}</p>
-        <div class="actions-row mt-3">
-          <template v-if="account.account">
-            <span class="admin-mono">{{ account.account }}</span>
-            <SamsungButton variant="ghost" :busy="accountBusy" @click="unlinkAccount">Отвязать</SamsungButton>
-          </template>
-          <SamsungButton v-else @click="linkAccount">Привязать учётку</SamsungButton>
-        </div>
+        <template v-if="security.managed">
+          <p class="admin-muted">
+            Пароль, второй фактор и фото живут в учётке - одни на все наши сервисы. Меняются они здесь же, просто
+            уезжают туда.
+          </p>
+          <div class="actions-row mt-3">
+            <span class="admin-mono">{{ account.account || username }}</span>
+            <span class="admin-pill is-online">подключена</span>
+          </div>
+        </template>
+        <template v-else>
+          <p class="admin-muted">Одна учётка на все наши сервисы. Пока не заведена - панель живёт на своём пароле.</p>
+          <p v-if="accountError" class="state-error mt-2">{{ accountError }}</p>
+          <div class="actions-row mt-3">
+            <SamsungButton @click="linkAccount">Завести учётку</SamsungButton>
+          </div>
+        </template>
       </div>
 
       <!-- Панель открывается самому, если владелец не включил модерацию -->
@@ -198,6 +213,9 @@ const roleLabel = computed(() => {
 });
 
 const account = reactive({ enabled: false, name: 'WINGS Account', account: '' });
+// Чем управляется этот аккаунт. Пока учётки нет, всё остаётся панельным, и
+// админ, поднявший панель у себя, ничего этого даже не увидит
+const security = reactive({ managed: false, totp: false });
 
 const panelBusy = ref(false);
 const panelError = ref('');
@@ -227,7 +245,6 @@ async function openPanel() {
     panelBusy.value = false;
   }
 }
-const accountBusy = ref(false);
 const accountError = ref('');
 
 const disarm = reactive({ open: false, password: '' });
@@ -331,6 +348,16 @@ function closeDisarm() {
 }
 
 onMounted(loadAccount);
+onMounted(loadSecurity);
+
+async function loadSecurity() {
+  try {
+    const res = await fetch('/api/admin/me/security', { credentials: 'include' });
+    if (res.ok) Object.assign(security, await res.json());
+  } catch {
+    // Молчим: без ответа просто остаёмся на панельном режиме
+  }
+}
 
 async function loadAccount() {
   try {
@@ -345,20 +372,6 @@ async function loadAccount() {
 // человека на страницу провайдера незачем
 function linkAccount() {
   router.push({ name: 'account-move' });
-}
-
-async function unlinkAccount() {
-  accountBusy.value = true;
-  accountError.value = '';
-  try {
-    const res = await fetch('/api/oidc/link', { method: 'DELETE', credentials: 'include' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    await loadAccount();
-  } catch (err) {
-    accountError.value = String(err.message || err);
-  } finally {
-    accountBusy.value = false;
-  }
 }
 
 const router = useRouter();

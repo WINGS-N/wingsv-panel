@@ -124,3 +124,56 @@ func (s *Store) HasAccount(adminID int64) (bool, error) {
 	}
 	return got.AccountSubject != nil && strings.TrimSpace(*got.AccountSubject) != "", nil
 }
+
+// AccountTokens - ключи человека у провайдера
+type AccountTokens struct {
+	Access    string
+	Refresh   string
+	ExpiresAt time.Time
+}
+
+// SaveAccountTokens кладёт ключи, полученные при входе.
+//
+// Без них панель умеет только то, что разрешено служебному ключу, а личные
+// вещи вроде аватара правятся исключительно от имени самого человека
+func (s *Store) SaveAccountTokens(adminID int64, tokens AccountTokens) error {
+	fields := map[string]any{
+		"account_access_token":  tokens.Access,
+		"account_token_expires": tokens.ExpiresAt.UTC().Unix(),
+		"updated_at":            time.Now().UTC().UnixMilli(),
+	}
+	// Пустой ключ обновления не затирает прежний: провайдер отдаёт его один раз
+	if strings.TrimSpace(tokens.Refresh) != "" {
+		fields["account_refresh_token"] = tokens.Refresh
+	}
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", adminID).Updates(fields).Error
+}
+
+// AccountTokensOf поднимает ключи человека
+func (s *Store) AccountTokensOf(adminID int64) (AccountTokens, error) {
+	var row dbmodel.Admin
+	if err := s.gdb.Where("id = ?", adminID).Take(&row).Error; err != nil {
+		return AccountTokens{}, err
+	}
+	return AccountTokens{
+		Access:    row.AccountAccessToken,
+		Refresh:   row.AccountRefreshToken,
+		ExpiresAt: time.Unix(row.AccountTokenExpires, 0).UTC(),
+	}, nil
+}
+
+// AccountSubjectOf - кто этот админ у провайдера. Пусто означает, что он ещё не
+// переехал и живёт на панельном пароле
+func (s *Store) AccountSubjectOf(adminID int64) (string, error) {
+	type row struct{ AccountSubject *string }
+	var got row
+	err := s.gdb.Model(&dbmodel.Admin{}).
+		Select("account_subject").Where("id = ?", adminID).Take(&got).Error
+	if err != nil {
+		return "", err
+	}
+	if got.AccountSubject == nil {
+		return "", nil
+	}
+	return *got.AccountSubject, nil
+}

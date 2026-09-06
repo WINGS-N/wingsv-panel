@@ -114,6 +114,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/me/access", h.requireAuth(h.handleMyAccess))
 	mux.HandleFunc("/api/admin/me/panel-access", h.requireAuth(h.handlePanelAccess))
 	mux.HandleFunc("/api/admin/me/totp", h.requireAuth(h.handleTOTP))
+	// Чем управляется этот аккаунт: своей панелью или общей учёткой
+	mux.HandleFunc("/api/admin/me/security", h.requireAuth(h.handleAccountSecurity))
 	mux.HandleFunc("/api/admin/me/totp/qr", h.requireAuth(h.handleTOTPQR))
 	// Аккаунт в приложении: браузер уводит человека обратно с одноразовым кодом,
 	// приложение меняет его на токен устройства и дальше ходит только по нему
@@ -392,6 +394,10 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request, a
 		writeError(w, http.StatusBadRequest, "new password too short")
 		return
 	}
+	if subject, managed := h.accountOf(admin); managed {
+		h.changeAccountPassword(w, r, admin, subject, req)
+		return
+	}
 	if err := h.auth.ChangePassword(admin.ID, req.OldPassword, req.NewPassword); err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			writeError(w, http.StatusUnauthorized, "invalid old password")
@@ -495,6 +501,8 @@ func (h *Handler) handleMyAvatar(w http.ResponseWriter, r *http.Request, admin s
 			ActorAdminID: admin.ID, ActorUsername: admin.Username,
 			Action: "auth.avatar_changed", IP: clientIP(r),
 		})
+		// Учётка общая, значит и картинка одна на все сервисы
+		h.pushAvatarToAccount(r.Context(), admin, buf)
 		writeJSON(w, http.StatusOK, map[string]any{"avatar_version": version})
 	case http.MethodDelete:
 		if err := h.store.ClearAdminAvatar(admin.ID); err != nil {
@@ -504,6 +512,8 @@ func (h *Handler) handleMyAvatar(w http.ResponseWriter, r *http.Request, admin s
 		// Аккаунт возвращается к аватару, который был у него с регистрации
 		if picture, drawErr := avatarpic.Generate(admin.Username); drawErr == nil {
 			_, _ = h.store.SetAdminAvatar(admin.ID, "image/png", picture)
+			// Сброс тоже общий: иначе в учётке останется висеть снятая картинка
+			h.pushAvatarToAccount(r.Context(), admin, picture)
 		}
 		_ = h.store.AppendAudit(storage.AuditEntry{
 			ActorAdminID: admin.ID, ActorUsername: admin.Username,

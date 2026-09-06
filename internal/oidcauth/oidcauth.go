@@ -49,6 +49,11 @@ type Identity struct {
 	// решает Subject
 	Username    string
 	DisplayName string
+	// AccessToken и RefreshToken - ключи самого человека. Часть провайдера
+	// работает только от его имени: аватар кладётся в его учётку, а не нашу
+	AccessToken  string
+	RefreshToken string
+	ExpiresAt    time.Time
 }
 
 // pendingTTL bounds how long a started login stays valid. Short: it covers one
@@ -118,7 +123,9 @@ func (c *Client) discover(ctx context.Context) error {
 		// политикой ещё на согласии - причём страницу отказа он же не может
 		// отрисовать, так что наружу это выглядит как 500 без объяснений.
 		// Имя, localpart и аватар приезжают claim-ами в id_token и так.
-		Scopes: []string{oidc.ScopeOpenID},
+		// offline_access нужен ради ключа обновления: без него доступ живёт часы,
+		// а аватар человек меняет когда захочет
+		Scopes: []string{oidc.ScopeOpenID, oidc.ScopeOfflineAccess},
 	}
 	return nil
 }
@@ -220,6 +227,9 @@ func (c *Client) Complete(ctx context.Context, state, code string) (Identity, st
 	if err != nil {
 		return Identity{}, "", 0, "", err
 	}
+	identity.AccessToken = token.AccessToken
+	identity.RefreshToken = token.RefreshToken
+	identity.ExpiresAt = token.Expiry
 	return identity, got.returnTo, got.linkAdminID, got.invite, nil
 }
 
@@ -296,4 +306,33 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// Refresh меняет протухший ключ доступа на свежий.
+//
+// Ключ живёт часы, а аватар человек меняет когда захочет: без обновления панель
+// упёрлась бы в "срок вышел" через полдня после входа
+func (c *Client) Refresh(ctx context.Context, refreshToken string) (Identity, error) {
+	if !c.cfg.Enabled() {
+		return Identity{}, ErrDisabled
+	}
+	if strings.TrimSpace(refreshToken) == "" {
+		return Identity{}, errors.New("oidcauth: no refresh token")
+	}
+	if err := c.discover(ctx); err != nil {
+		return Identity{}, err
+	}
+	c.mu.Lock()
+	oauthCfg := c.oauth
+	c.mu.Unlock()
+
+	token, err := oauthCfg.TokenSource(ctx, &oauth2.Token{RefreshToken: refreshToken}).Token()
+	if err != nil {
+		return Identity{}, err
+	}
+	return Identity{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		ExpiresAt:    token.Expiry,
+	}, nil
 }

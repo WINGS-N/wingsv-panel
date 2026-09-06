@@ -178,6 +178,10 @@ func applySchema(db *sql.DB, driver Driver) error {
 		// провайдера человек меняет когда захочет
 		`ALTER TABLE admins ADD COLUMN account_subject TEXT`,
 		`ALTER TABLE admins ADD COLUMN account_name TEXT NOT NULL DEFAULT ''`,
+		// Ключи человека у провайдера: без них его же аватар туда не положить
+		`ALTER TABLE admins ADD COLUMN account_access_token TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE admins ADD COLUMN account_refresh_token TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE admins ADD COLUMN account_token_expires INTEGER NOT NULL DEFAULT 0`,
 		// Доступ в админ-панель отделён от аккаунта: личный доступ к VPN есть у
 		// каждого, а панель открывается отдельно. Существующие аккаунты
 		// заводились админами, поэтому единица по умолчанию
