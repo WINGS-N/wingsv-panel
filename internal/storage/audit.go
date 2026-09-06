@@ -209,11 +209,7 @@ func (s *Store) CreateInviteWithUses(token string, expiresAt time.Time, createdB
 		CreatedByAdminID: &createdBy,
 		MaxUses:          maxUses,
 	}
-	// У колонки стоит default:1, а gorm считает Go-ноль "не задано" и подставляет
-	// этот дефолт. Из-за этого безлимитный код молча превращался в одноразовый,
-	// поэтому ноль пишем явным Select
-	if err := s.gdb.Select("token", "created_at", "expires_at", "created_by_admin_id", "max_uses").
-		Create(&row).Error; err != nil {
+	if err := s.gdb.Create(&row).Error; err != nil {
 		return InviteToken{}, err
 	}
 	return InviteToken{
