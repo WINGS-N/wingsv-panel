@@ -3394,3 +3394,67 @@ body.theme-light .oneui-switch-thumb {
   color: rgba(252, 252, 252, 0.62);
   max-width: 32ch;
 }
+
+/* Код из шести цифр: форма поля сама говорит, сколько знаков ждут */
+.code-input {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.code-cell {
+  width: 44px;
+  height: 54px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fbfbfb;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  caret-color: #1259d1;
+}
+
+.code-cell:focus {
+  outline: 2px solid #1259d1;
+  outline-offset: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 420px) {
+  .code-cell {
+    width: 38px;
+    height: 48px;
+    font-size: 19px;
+  }
+}
+
+/* Код для аутентификатора: по центру секции, на белом - сканеры читают его
+   увереннее, чем инверсию */
+.totp-qr-frame {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.totp-qr {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px;
+  line-height: 0;
+  box-sizing: content-box;
+}
+
+.totp-secret {
+  margin-top: 14px;
+  text-align: center;
+  word-break: break-all;
+}
+
+.totp-code-label {
+  margin-top: 18px;
+  margin-bottom: 8px;
+  text-align: center;
+}

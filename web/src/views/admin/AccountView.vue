@@ -35,7 +35,6 @@
     <div class="settings-grid mt-6">
       <div class="settings-card">
         <h2 class="admin-section-subtitle">Пароль</h2>
-        <p v-if="security.managed" class="admin-muted">От {{ account.name }} - он же открывает все наши сервисы.</p>
         <form class="admin-account-form" @submit.prevent="onSubmit">
           <OneuiInput v-model="oldPassword" label="Текущий пароль" type="password" autocomplete="current-password" />
           <div class="mt-3">
@@ -61,14 +60,8 @@
         <h2 class="admin-section-subtitle">2FA</h2>
         <p class="admin-muted">
           Код из приложения-аутентификатора спрашивается при каждом входе - и в панели, и в приложении.
-          <template v-if="security.managed"
-            >Живёт в {{ account.name }}, поэтому спросят его везде, а не только тут.</template
-          >
         </p>
         <p v-if="totpError" class="state-error mt-2">{{ totpError }}</p>
-        <p v-if="security.managed && totp.enabled" class="state-hint mt-2">
-          Резервных кодов у общей учётки нет - вместо них заводятся ключи входа.
-        </p>
 
         <div v-if="totp.enabled">
           <div class="actions-row mt-3">
@@ -122,11 +115,10 @@
           <p class="body-copy mt-3">
             Отсканируйте код приложением-аутентификатором и введите шесть цифр, которые оно покажет.
           </p>
-          <img v-if="totpQr" :src="totpQr" alt="QR для 2FA" class="totp-qr" />
-          <p class="admin-mono admin-muted">{{ totpSetup.secret }}</p>
-          <div class="form-grid mt-3">
-            <OneuiInput v-model.trim="totpCode" label="Код из приложения" inputmode="numeric" maxlength="6" />
-          </div>
+          <div class="totp-qr-frame"><canvas ref="totpCanvas" class="totp-qr" width="220" height="220"></canvas></div>
+          <p class="admin-mono admin-muted totp-secret">{{ totpSetup.secret }}</p>
+          <p class="admin-muted totp-code-label">Код из приложения</p>
+          <CodeInput v-model="totpCode" label="Код из приложения" @complete="confirmTotp" />
           <div class="actions-row">
             <SamsungButton :busy="totpBusy" @click="confirmTotp">Подтвердить</SamsungButton>
             <SamsungButton variant="ghost" @click="totpSetup.otpauth = ''">Отмена</SamsungButton>
@@ -152,27 +144,6 @@
         </div>
       </div>
 
-      <div v-if="account.enabled" class="settings-card">
-        <h2 class="admin-section-subtitle">{{ account.name }}</h2>
-        <template v-if="security.managed">
-          <p class="admin-muted">
-            Пароль, второй фактор и фото живут в учётке - одни на все наши сервисы. Меняются они здесь же, просто
-            уезжают туда.
-          </p>
-          <div class="actions-row mt-3">
-            <span class="admin-mono">{{ account.account || username }}</span>
-            <span class="admin-pill is-online">подключена</span>
-          </div>
-        </template>
-        <template v-else>
-          <p class="admin-muted">Одна учётка на все наши сервисы. Пока не заведена - панель живёт на своём пароле.</p>
-          <p v-if="accountError" class="state-error mt-2">{{ accountError }}</p>
-          <div class="actions-row mt-3">
-            <SamsungButton @click="linkAccount">Завести учётку</SamsungButton>
-          </div>
-        </template>
-      </div>
-
       <!-- Панель открывается самому, если владелец не включил модерацию -->
       <div v-if="!hasPanel" class="settings-card">
         <h2 class="admin-section-subtitle">Управление клиентами</h2>
@@ -188,10 +159,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Camera, KeyRound, ShieldCheck, Trash2 } from 'lucide-vue-next';
 import { authState, changePassword, myAvatarUrl, refreshSession } from '@/stores/auth.js';
+import { drawQR } from '@/utils/qr.js';
+import CodeInput from '@/components/controls/CodeInput.vue';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
 
@@ -203,7 +176,18 @@ const totpError = ref('');
 const backupCodes = ref([]);
 // Картинку рисует панель по своему же секрету: принимать её содержимое
 // параметром значило бы рисовать чужой QR по чужой просьбе
-const totpQr = computed(() => (totpSetup.otpauth ? `/api/admin/me/totp/qr?v=${totpVersion.value}` : ''));
+const totpCanvas = ref(null);
+
+// Код рисуем на месте: серверная картинка была без нашей иконки и не знала
+// ничего про общую учётку
+watch(
+  () => totpSetup.otpauth,
+  async (link) => {
+    if (!link) return;
+    await nextTick();
+    if (totpCanvas.value) await drawQR(totpCanvas.value, link, 220);
+  },
+);
 const totpVersion = ref(0);
 
 // Роль показывается словами: "owner" в интерфейсе ничего не объясняет
@@ -212,7 +196,6 @@ const roleLabel = computed(() => {
   return admin.value?.panel_access ? 'Администратор' : 'Участник федерации';
 });
 
-const account = reactive({ enabled: false, name: 'WINGS Account', account: '' });
 // Чем управляется этот аккаунт. Пока учётки нет, всё остаётся панельным, и
 // админ, поднявший панель у себя, ничего этого даже не увидит
 const security = reactive({ managed: false, totp: false });
@@ -245,7 +228,6 @@ async function openPanel() {
     panelBusy.value = false;
   }
 }
-const accountError = ref('');
 
 const disarm = reactive({ open: false, password: '' });
 const reissue = reactive({ open: false, password: '' });
@@ -347,7 +329,6 @@ function closeDisarm() {
   disarm.password = '';
 }
 
-onMounted(loadAccount);
 onMounted(loadSecurity);
 
 async function loadSecurity() {
@@ -357,21 +338,6 @@ async function loadSecurity() {
   } catch {
     // Молчим: без ответа просто остаёмся на панельном режиме
   }
-}
-
-async function loadAccount() {
-  try {
-    const res = await fetch('/api/oidc/link', { credentials: 'include' });
-    if (res.ok) Object.assign(account, await res.json());
-  } catch {
-    // No account service configured is a normal state.
-  }
-}
-
-// Привязка идёт через наш же экран переезда: там та же форма, и уводить
-// человека на страницу провайдера незачем
-function linkAccount() {
-  router.push({ name: 'account-move' });
 }
 
 const router = useRouter();
@@ -490,16 +456,6 @@ async function removeAvatar() {
 
 .hidden {
   display: none;
-}
-
-.totp-qr {
-  display: block;
-  width: 200px;
-  height: 200px;
-  margin: 16px 0 12px;
-  border-radius: 18px;
-  background: #fbfbfb;
-  padding: 10px;
 }
 
 .backup-codes {
