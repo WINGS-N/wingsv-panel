@@ -50,18 +50,29 @@
             {{ busy ? 'Входим...' : 'Войти' }}
           </SamsungButton>
 
-          <SamsungButton variant="secondary" class="login-submit mt-3" type="button" @click="startQR">
+          <SamsungButton
+            variant="secondary"
+            class="login-submit mt-3"
+            type="button"
+            :busy="qr.starting"
+            @click="startQR"
+          >
             <template #icon><QrCode class="button-icon" aria-hidden="true" /></template>
-            Войти по QR-коду
+            {{ qr.url ? 'Показать новый код' : 'Войти по QR-коду' }}
           </SamsungButton>
 
           <div v-if="qr.url" class="qr-panel">
             <div class="qr-canvas-frame"><canvas ref="qrCanvas" width="220" height="220"></canvas></div>
             <p class="qr-hint">
-              Наведите камеру телефона или сканер в приложении. На телефоне подтвердите вход - и эта страница откроется
-              сама.
+              Наведите камеру телефона или сканер в приложении и подтвердите там вход. Войдёте вы здесь, на этом
+              компьютере - телефон только подтверждает.
             </p>
-            <p v-if="qr.state === 'expired'" class="state-error">Код просрочен, покажите новый.</p>
+            <p v-if="qr.state === 'pending'" class="qr-waiting">
+              <SamsungLoader class="qr-waiting-spinner" />
+              <span>Ждём подтверждения с телефона</span>
+            </p>
+            <p v-else-if="qr.state === 'approved'" class="qr-hint">Подтверждено, входим...</p>
+            <p v-else-if="qr.state === 'expired'" class="state-error">Код просрочен, покажите новый.</p>
             <p v-else-if="qr.state === 'refused'" class="state-error">Вход отклонён.</p>
           </div>
 
@@ -91,6 +102,7 @@ import { authState, login, registrationState } from '@/stores/auth.js';
 import { drawQR } from '@/utils/qr.js';
 import OneuiInput from '@/components/controls/OneuiInput.vue';
 import SamsungButton from '@/components/layout/SamsungButton.vue';
+import SamsungLoader from '@/components/layout/SamsungLoader.vue';
 
 const router = useRouter();
 
@@ -142,14 +154,16 @@ const accountTicket = ref('');
 
 // Вход по QR: код показываем здесь, а подтверждают с телефона, где человек уже
 // вошёл. Пароль при этом не набирается вовсе
-const qr = reactive({ url: '', code: '', state: 'idle' });
+const qr = reactive({ url: '', code: '', state: 'idle', starting: false });
 const qrCanvas = ref(null);
 let qrTimer = 0;
 
 onBeforeUnmount(stopQR);
 
 async function startQR() {
+  if (qr.starting) return;
   stopQR();
+  qr.starting = true;
   try {
     const res = await fetch('/api/qr/start', { method: 'POST', credentials: 'include' });
     const data = await res.json();
@@ -161,6 +175,8 @@ async function startQR() {
     qrTimer = window.setInterval(pollQR, 1000);
   } catch (err) {
     error.value = String(err.message || err);
+  } finally {
+    qr.starting = false;
   }
 }
 

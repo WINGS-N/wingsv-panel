@@ -3347,3 +3347,50 @@ body.theme-light .oneui-switch-thumb {
   text-align: center;
   max-width: 34ch;
 }
+
+/* Ожидание подтверждения с телефона: без него код висит немым квадратом и
+   непонятно, ждёт ли он чего-то вообще */
+.qr-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: rgba(252, 252, 252, 0.62);
+}
+
+.qr-waiting-spinner {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* Подтверждено: дальше человек идёт к компьютеру, и сказать об этом надо прямо */
+.qr-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 26px;
+  text-align: center;
+}
+
+.qr-done-mark {
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  border-radius: 999px;
+  background: rgba(140, 168, 255, 0.14);
+  color: #b7c8ff;
+}
+
+.qr-done-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.qr-done-note {
+  font-size: 13.5px;
+  color: rgba(252, 252, 252, 0.62);
+  max-width: 32ch;
+}

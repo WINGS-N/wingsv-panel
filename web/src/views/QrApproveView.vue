@@ -16,7 +16,7 @@
     <main class="login-main">
       <section class="login-card surface-card">
         <h1 class="login-headline"><span>Впустить</span><span>эту машину?</span></h1>
-        <p class="login-sub">Кто-то открыл панель и просит войти вашей учёткой</p>
+        <p class="login-sub">Панель на другом устройстве просит войти вашей учёткой. Вход произойдёт там, а не здесь</p>
 
         <div v-if="loading" class="mt-6 flex justify-center"><SamsungLoader /></div>
 
@@ -39,10 +39,16 @@
           <p class="state-hint mt-4">Если это не вы - просто закройте страницу. Без подтверждения никого не пустят.</p>
           <p v-if="error" class="state-error mt-3">{{ error }}</p>
 
-          <SamsungButton class="login-submit mt-4" :busy="busy" :disabled="done" @click="approve">
+          <SamsungButton v-if="!done" class="login-submit mt-4" :busy="busy" @click="approve">
             <template #icon><Check class="button-icon" aria-hidden="true" /></template>
-            {{ done ? 'Впущено' : 'Впустить' }}
+            Впустить
           </SamsungButton>
+
+          <div v-else class="qr-done">
+            <Check class="qr-done-mark" aria-hidden="true" />
+            <p class="qr-done-title">Впущено</p>
+            <p class="qr-done-note">Вернитесь к компьютеру - там уже вошли. Эту страницу можно закрыть.</p>
+          </div>
         </template>
 
         <p v-else class="state-error mt-4">{{ error || 'Код просрочен. Обновите страницу входа и покажите новый.' }}</p>
