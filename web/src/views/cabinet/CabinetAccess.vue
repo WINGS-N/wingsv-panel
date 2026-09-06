@@ -11,6 +11,10 @@
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
     <p v-else-if="!enabled" class="state-hint">Федерация выключена, выдавать пока нечего.</p>
 
+    <p v-if="access.quarantined" class="state-error">
+      Доступ снят: Oracle срезал доверие до {{ access.confidence }}. Серверы вернутся, когда оценка поднимется.
+    </p>
+
     <div v-if="enabled" class="admin-stats">
       <div class="stat">
         <span class="stat-kicker">
@@ -44,7 +48,7 @@
           <img src="/img/oneui/security-high.svg" alt="" class="stat-kicker-img" aria-hidden="true" />
           Доверие
         </span>
-        <span class="stat-value">{{ trust ? trust.confidence : '-' }}</span>
+        <span class="stat-value">{{ trust ? trust.confidence : access.confidence }}</span>
         <span class="stat-meta">{{ trust ? bandMeaning(trust.band) : 'оценка появится с первой сессией' }}</span>
       </div>
     </div>
@@ -103,6 +107,8 @@ const access = reactive({
   subscription_url: '',
   sticky_until: 0,
   import_link: '',
+  quarantined: false,
+  confidence: 0,
 });
 const trustRaw = ref(null);
 const trust = computed(() => trustRaw.value);

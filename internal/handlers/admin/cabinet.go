@@ -110,6 +110,10 @@ func (h *Handler) handleMyAccess(w http.ResponseWriter, r *http.Request, admin s
 		"panel_access": admin.PanelAccess || admin.Role == storage.RoleOwner,
 		"role":         admin.Role,
 		"sticky_until": got.GetStickyUntilUnix(),
+		// В карантине ноды сняты, но человек обязан видеть себя: без этих двух
+		// полей кабинет показывал бы пустой список и молчал, за что
+		"quarantined": got.GetQuarantined(),
+		"confidence":  got.GetConfidence(),
 		// Трафик по строкам списка. Локальный счётчик в приложении обнуляется
 		// при переустановке, а этот считает башка по тому же источнику, из
 		// которого потом берутся деньги

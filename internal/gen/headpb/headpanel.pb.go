@@ -1422,7 +1422,14 @@ type UserAllocation struct {
 	// Трафик по каждому серверу. Локальный счётчик в приложении обнуляется при
 	// переустановке и врёт после смены профиля, а этот считает башка по тому же
 	// источнику, из которого потом берутся деньги
-	Servers       []*ServerUsage `protobuf:"bytes,9,rep,name=servers,proto3" json:"servers,omitempty"`
+	Servers []*ServerUsage `protobuf:"bytes,9,rep,name=servers,proto3" json:"servers,omitempty"`
+	// Человек в карантине: ноды сняты, но смотреть на себя он право не терял.
+	// Отказ вместо ответа оставлял его в чёрном ящике - ни доверия, ни трафика,
+	// ни причины, за которую срезали
+	Quarantined bool `protobuf:"varint,10,opt,name=quarantined,proto3" json:"quarantined,omitempty"`
+	// Оценка Oracle прямо сейчас, 0-100. По ней кабинет объясняет, почему выдача
+	// такая, а не другая
+	Confidence    uint32 `protobuf:"varint,11,opt,name=confidence,proto3" json:"confidence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1518,6 +1525,20 @@ func (x *UserAllocation) GetServers() []*ServerUsage {
 		return x.Servers
 	}
 	return nil
+}
+
+func (x *UserAllocation) GetQuarantined() bool {
+	if x != nil {
+		return x.Quarantined
+	}
+	return false
+}
+
+func (x *UserAllocation) GetConfidence() uint32 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
 }
 
 // ServerUsage - сколько прошло через одну СТРОКУ списка: сервер плюс транспорт.
@@ -5460,7 +5481,7 @@ const file_headpanel_proto_rawDesc = "" +
 	"\x0finstall_command\x18\x03 \x01(\tR\x0einstallCommand\x12\x12\n" +
 	"\x04uses\x18\x04 \x01(\rR\x04uses\",\n" +
 	"\x11EnsureUserRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xda\x02\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\x9c\x03\n" +
 	"\x0eUserAllocation\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12)\n" +
 	"\x10subscription_url\x18\x02 \x01(\tR\x0fsubscriptionUrl\x12\x14\n" +
@@ -5472,7 +5493,12 @@ const file_headpanel_proto_rawDesc = "" +
 	"\n" +
 	"uplink_bps\x18\a \x01(\x04R\tuplinkBps\x12!\n" +
 	"\fdownlink_bps\x18\b \x01(\x04R\vdownlinkBps\x12:\n" +
-	"\aservers\x18\t \x03(\v2 .wingsv.headpanel.v1.ServerUsageR\aservers\"\x9f\x01\n" +
+	"\aservers\x18\t \x03(\v2 .wingsv.headpanel.v1.ServerUsageR\aservers\x12 \n" +
+	"\vquarantined\x18\n" +
+	" \x01(\bR\vquarantined\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\v \x01(\rR\n" +
+	"confidence\"\x9f\x01\n" +
 	"\vServerUsage\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
 	"\bup_bytes\x18\x02 \x01(\x04R\aupBytes\x12\x1d\n" +
