@@ -277,3 +277,45 @@ func firstNotEmpty(values ...string) string {
 	}
 	return ""
 }
+
+// Owner говорит, чья это сессия.
+//
+// Проверка пароля возвращает только номер сессии, а приложению нужен человек:
+// по нему панель и находит, кому выдавать токен
+func (c *Client) Owner(ctx context.Context, session Session) (string, error) {
+	if !c.cfg.Enabled() {
+		return "", ErrDisabled
+	}
+	path := "/v2/sessions/" + url.PathEscape(session.ID) +
+		"?sessionToken=" + url.QueryEscape(session.Token)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		strings.TrimRight(c.cfg.Issuer, "/")+path, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.cfg.Token)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return "", fmt.Errorf("accountsession: the provider answered %d", resp.StatusCode)
+	}
+	var out struct {
+		Session struct {
+			Factors struct {
+				User struct {
+					ID string `json:"id"`
+				} `json:"user"`
+			} `json:"factors"`
+		} `json:"session"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", err
+	}
+	if out.Session.Factors.User.ID == "" {
+		return "", errors.New("accountsession: the session has no owner")
+	}
+	return out.Session.Factors.User.ID, nil
+}

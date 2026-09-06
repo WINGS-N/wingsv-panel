@@ -211,3 +211,13 @@ func (h *Handler) handleQRApprove(w http.ResponseWriter, r *http.Request, admin 
 	})
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
+
+// Приложение подтверждает вход тем же способом, только своим токеном: телефон
+// сканирует код с ноутбука, а входит в панель ноутбук
+func (h *Handler) handleAppQRPending(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	h.handleQRPending(w, r, admin)
+}
+
+func (h *Handler) handleAppQRApprove(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	h.handleQRApprove(w, r, admin)
+}

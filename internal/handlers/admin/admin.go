@@ -154,6 +154,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/qr/status", h.handleQRStatus)
 	mux.HandleFunc("/api/qr/pending", h.requireAuth(h.handleQRPending))
 	mux.HandleFunc("/api/qr/approve", h.requireAuth(h.handleQRApprove))
+	// То же самое для приложения: там своя дверь, без браузера и редиректов
+	mux.HandleFunc("/api/app/account/login", h.handleAppAccountLogin)
+	mux.HandleFunc("/api/app/qr/pending", h.requireApp(h.handleAppQRPending))
+	mux.HandleFunc("/api/app/qr/approve", h.requireApp(h.handleAppQRApprove))
 	// Приглашать может любой администратор: дерево инвайтов и есть цена входа,
 	// и растить его - не привилегия владельца. Владельцу остаётся обрезка ветви:
 	// выдать доступ и отобрать чужой - разные права.
