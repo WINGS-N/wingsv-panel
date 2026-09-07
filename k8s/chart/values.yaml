@@ -146,6 +146,10 @@ ingress:
   provisioning:
     enabled: true
     path: /wingsv.provisioning.v1.Provisioning/
+    # Каждый gRPC-сервис панели нуждается в своём правиле: у Guardian он свой, и
+    # без него телефон стучится в веб-обработчик и висит в "подключаемся" вечно
+    extraPaths:
+      - /wingsv.guardian.Guardian/
 
 resources:
   requests:

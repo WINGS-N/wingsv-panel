@@ -1,7 +1,9 @@
 {{- if .Values.ingress.provisioning.enabled }}
-# Plain Ingress cannot say "talk h2c to the backend", and the provisioning gRPC
-# is cleartext HTTP/2 behind the TLS the proxy terminates. Hence the Traefik CRD
-# for this one route while everything else stays on the Ingress.
+# Plain Ingress cannot say "talk h2c to the backend", and the panel's gRPC is
+# cleartext HTTP/2 behind the TLS the proxy terminates. Hence the Traefik CRD for
+# these routes while everything else stays on the Ingress. Every gRPC service the
+# panel exposes needs its own path rule: an unrouted one is not an error anywhere,
+# it is a client that connects to the web handler and waits for ever.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -11,12 +13,16 @@ spec:
   entryPoints:
     - websecure
   routes:
+{{- range (concat (list .Values.ingress.provisioning.path) .Values.ingress.provisioning.extraPaths) }}
+{{- if . }}
     - kind: Rule
-      match: Host(`{{ .Values.ingress.host }}`) && PathPrefix(`{{ .Values.ingress.provisioning.path }}`)
+      match: Host(`{{ $.Values.ingress.host }}`) && PathPrefix(`{{ . }}`)
       services:
-        - name: {{ include "panel.name" . }}-grpc
-          port: {{ .Values.config.provisioningListen | trimPrefix ":" | int }}
+        - name: {{ include "panel.name" $ }}-grpc
+          port: {{ $.Values.config.provisioningListen | trimPrefix ":" | int }}
           scheme: h2c
+{{- end }}
+{{- end }}
   tls:
     secretName: {{ include "panel.tlsSecret" . }}
 {{- end }}
