@@ -218,7 +218,9 @@ func (h *Handler) handleInviteLookup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, inviterView{Valid: false, Reason: "код не найден или уже недействителен"})
 		return
 	}
-	if invite.UseCount >= invite.MaxUses {
+	// Ноль в max_uses - код без потолка, его выписывает приложение. Сравнение
+	// без этой оговорки объявляло любой бессрочный код использованным
+	if invite.MaxUses > 0 && invite.UseCount >= invite.MaxUses {
 		writeJSON(w, http.StatusOK, inviterView{Valid: false, Reason: "по этому коду уже зарегистрировались"})
 		return
 	}
@@ -226,7 +228,10 @@ func (h *Handler) handleInviteLookup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, inviterView{Valid: false, Reason: "срок действия кода истёк"})
 		return
 	}
-	view := inviterView{Valid: true, Remaining: invite.MaxUses - invite.UseCount}
+	view := inviterView{Valid: true}
+	if invite.MaxUses > 0 {
+		view.Remaining = invite.MaxUses - invite.UseCount
+	}
 	if admin, err := h.store.FindAdminByID(invite.CreatedByAdminID); err == nil {
 		view.Username = admin.Username
 		view.AvatarVersion = admin.AvatarVersion

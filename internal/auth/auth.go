@@ -256,7 +256,10 @@ func (s *Service) Register(username, password, inviteToken string) (storage.Admi
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
-	if mode == RegistrationModeInvite {
+	// Код гасим всегда, когда он назван, а не только в режиме приглашений:
+	// человек пришёл по ссылке, а при открытой регистрации код молча
+	// пропадал - и он оставался вне дерева, без бесплатного доступа
+	if strings.TrimSpace(inviteToken) != "" {
 		if err := s.store.RedeemInvite(inviteToken, admin.ID); err != nil {
 			_ = s.store.DeleteAdmin(admin.ID)
 			return storage.Admin{}, storage.AdminSession{}, ErrInviteTokenInvalid
@@ -470,7 +473,7 @@ func (s *Service) LoginWithAccount(subject, username, displayName, inviteToken s
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
-	if mode == RegistrationModeInvite {
+	if strings.TrimSpace(inviteToken) != "" {
 		if err := s.store.RedeemInvite(inviteToken, created.ID); err != nil {
 			_ = s.store.DeleteAdmin(created.ID)
 			return storage.Admin{}, storage.AdminSession{}, ErrInviteTokenInvalid
