@@ -181,12 +181,13 @@ func (c *Client) Finish(ctx context.Context, authRequestID string, session Sessi
 // callAs ходит тем же путём, но своим ключом: заводить людей логин-клиенту не
 // положено, а сессии админским ключом дёргать незачем
 func (c *Client) callAs(ctx context.Context, token, method, path string, body, out any) error {
-	if strings.TrimSpace(token) == "" || token == c.cfg.Token {
-		return c.call(ctx, method, path, body, out)
+	client := c
+	if strings.TrimSpace(token) != "" && token != c.cfg.Token {
+		swapped := *c
+		swapped.cfg.Token = token
+		client = &swapped
 	}
-	swapped := *c
-	swapped.cfg.Token = token
-	return swapped.call(ctx, method, path, body, out)
+	return client.call(ctx, method, path, body, out)
 }
 
 func (c *Client) call(ctx context.Context, method, path string, body, out any) error {
@@ -217,26 +218,30 @@ func (c *Client) call(ctx context.Context, method, path string, body, out any) e
 			Message string `json:"message"`
 		}
 		_ = json.NewDecoder(resp.Body).Decode(&failure)
+		// Причину провайдера тащим наружу вместе с типом ошибки: без неё
+		// политика паролей выглядит как "пароль не подошёл", и искать её
+		// приходится руками через API
+		detail := fmt.Errorf("accountsession: the provider answered %d: %s", resp.StatusCode, failure.Message)
 		switch resp.StatusCode {
 		case http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound:
-			return ErrBadPassword
+			return fmt.Errorf("%w: %w", ErrBadPassword, detail)
 		case http.StatusPreconditionFailed:
-			return ErrNeedSecondFactor
+			return fmt.Errorf("%w: %w", ErrNeedSecondFactor, detail)
 		case http.StatusConflict:
-			return ErrNameTaken
+			return fmt.Errorf("%w: %w", ErrNameTaken, detail)
 		case http.StatusBadRequest:
 			// Неверный пароль провайдер считает кривым запросом. Отличаем по
 			// тексту: у остальных четырёхсотых причина другая, и валить их в
 			// "пароль не подошёл" значит врать человеку
 			lower := strings.ToLower(failure.Message)
 			if strings.Contains(lower, "already exists") || strings.Contains(lower, "already taken") {
-				return ErrNameTaken
+				return fmt.Errorf("%w: %w", ErrNameTaken, detail)
 			}
 			if strings.Contains(lower, "password") || strings.Contains(lower, "user") {
-				return ErrBadPassword
+				return fmt.Errorf("%w: %w", ErrBadPassword, detail)
 			}
 		}
-		return fmt.Errorf("accountsession: the provider answered %d: %s", resp.StatusCode, failure.Message)
+		return detail
 	}
 	if out == nil {
 		return nil
