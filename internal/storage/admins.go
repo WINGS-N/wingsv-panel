@@ -112,9 +112,7 @@ func (s *Store) CreateAccount(username, passwordHash string, mustChange bool, ro
 	if err := s.gdb.Create(&row).Error; err != nil {
 		return Admin{}, err
 	}
-	// Аватар заводится вместе с аккаунтом: он есть с первой же минуты, а не
-	// появляется хуй знает когда
-	if picture := avatarpic.Default(); len(picture) > 0 {
+	if picture, err := avatarpic.Generate(username); err == nil && len(picture) > 0 {
 		if _, err := s.SetAdminAvatar(row.ID, "image/png", picture); err == nil {
 			row.AvatarVersion++
 		}
