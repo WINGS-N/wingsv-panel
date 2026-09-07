@@ -106,22 +106,6 @@
     <p class="admin-muted mt-1">Начисляется за трафик, который подписали клиенты. Период закрывается раз в неделю.</p>
     <p v-if="payouts.note" class="state-hint mt-3">{{ payouts.note }}</p>
     <template v-else>
-      <div v-if="payouts.stake" class="keyval mt-4">
-        <span class="keyval-label">
-          {{
-            staked
-              ? 'Залог внесён: ' + usdt(payouts.stake.staked_micro) + ' USDT'
-              : 'Залог не внесён, трафик идёт бесплатно'
-          }}
-        </span>
-        <span class="keyval-value">
-          <SamsungButton variant="secondary" @click="stakeOpen = true">
-            <template #icon><Wallet class="button-icon" aria-hidden="true" /></template>
-            {{ staked ? 'Пополнить залог' : 'Внести залог' }}
-          </SamsungButton>
-        </span>
-      </div>
-
       <div class="mt-4 flex flex-wrap items-end gap-3">
         <OneuiInput
           v-model="walletDraft"
@@ -133,13 +117,26 @@
           <template #icon><Wallet class="button-icon" aria-hidden="true" /></template>
           Сохранить
         </SamsungButton>
+        <SamsungButton v-if="payouts.stake" variant="secondary" @click="stakeOpen = true">
+          <template #icon><Coins class="button-icon" aria-hidden="true" /></template>
+          {{ staked ? 'Пополнить залог' : 'Внести залог' }}
+        </SamsungButton>
       </div>
       <p v-if="walletError" class="state-error mt-2">{{ walletError }}</p>
       <p v-else-if="!payouts.address" class="state-hint mt-2">
         Без кошелька начисления копятся, но в расчётный период не попадают.
       </p>
+      <p v-else-if="!staked" class="state-hint mt-2">
+        Пока залог не внесён, трафик идёт бесплатно: за период не начисляется ничего.
+      </p>
 
-      <div v-if="payouts.terms" class="fed-card-facts mt-4 sm:grid-cols-4">
+      <div v-if="payouts.terms" class="fed-card-facts mt-4 sm:grid-cols-5">
+        <div v-if="payouts.stake" class="fed-card-fact">
+          <span class="fed-card-fact-label">Залог</span>
+          <span class="fed-card-fact-value">
+            {{ usdt(payouts.stake.staked_micro) }} / {{ usdt(payouts.stake.required_micro) }} USDT
+          </span>
+        </div>
         <div class="fed-card-fact">
           <span class="fed-card-fact-label">Ставка</span>
           <span class="fed-card-fact-value">{{ ratePerTb }} USDT за TB</span>
@@ -391,6 +388,7 @@ import {
   Boxes,
   Radio,
   CalendarRange,
+  Coins,
   PauseCircle,
   Pencil,
   PlayCircle,
