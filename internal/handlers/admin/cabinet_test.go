@@ -96,6 +96,12 @@ func TestPanelGoesThroughTheOwnerWhenModerated(t *testing.T) {
 // У кого панель и так есть, просить нечего
 func TestPanelAccessRejectedWhenAlreadyGranted(t *testing.T) {
 	h, admin := appHandler(t)
+	// Заведённый участник панели не имеет, её выдают отдельно - поэтому для
+	// проверки её надо выдать руками
+	if err := h.store.SetPanelAccess(admin.ID, true); err != nil {
+		t.Fatalf("панель не выдалась: %v", err)
+	}
+	admin.PanelAccess = true
 	res := postJSON(t, h.requireAuthFor(admin, h.handlePanelAccess), "/api/admin/me/panel-access", nil, "")
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("код = %d, want 400", res.Code)

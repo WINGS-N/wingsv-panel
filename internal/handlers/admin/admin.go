@@ -6,9 +6,11 @@
 package admin
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -279,11 +281,33 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.auth.WriteSessionCookie(w, sess)
+	h.enrollAccount(r.Context(), admin, req.Password)
 	_ = h.store.AppendAudit(storage.AuditEntry{
 		ActorAdminID: admin.ID, ActorUsername: admin.Username,
 		Action: "auth.register", IP: clientIP(r),
 	})
 	writeJSON(w, http.StatusCreated, adminMePayload(admin))
+}
+
+// enrollAccount заводит человеку учётку в WINGS Account тем же паролем.
+//
+// Регистрация в панели и есть заведение участника, и требовать после неё второй
+// раз "заведите учётку" значит показывать человеку нашу внутреннюю кухню.
+// Провайдер лежит - регистрацию это не отменяет: учётку он заведёт кнопкой сам
+func (h *Handler) enrollAccount(ctx context.Context, admin storage.Admin, password string) {
+	if !h.session.Enabled() || password == "" {
+		return
+	}
+	call, cancel := context.WithTimeout(ctx, accountTimeout)
+	defer cancel()
+	subject, err := h.session.CreateHuman(call, humanFor(admin, h.accountDomain(), password))
+	if err != nil {
+		log.Printf("register: %s got no account: %v", admin.Username, err)
+		return
+	}
+	if err := h.store.LinkAccount(admin.ID, subject, admin.Username); err != nil {
+		log.Printf("register: the account of %s was not linked: %v", admin.Username, err)
+	}
 }
 
 func (h *Handler) handleRegistrationStatus(w http.ResponseWriter, r *http.Request) {

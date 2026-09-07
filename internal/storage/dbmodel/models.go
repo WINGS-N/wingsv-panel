@@ -13,10 +13,13 @@ type Admin struct {
 	PasswordHash       string `gorm:"column:password_hash;not null"`
 	MustChangePassword int64  `gorm:"column:must_change_password;not null;default:0"`
 	Role               string `gorm:"column:role;not null;default:'admin'"`
-	PanelAccess        int64  `gorm:"column:panel_access;not null;default:1"`
-	LastLoginAt        int64  `gorm:"column:last_login_at;not null;default:0"`
-	AvatarMime         string `gorm:"column:avatar_mime;not null;default:''"`
-	AvatarPNG          []byte `gorm:"column:avatar_png"`
+	// default:0 - не украшение: gorm считает Go-шный ноль пустым значением и
+	// подставляет вместо него дефолт из тега, поэтому с default:1 каждый
+	// заведённый участник молча получал админ-панель
+	PanelAccess int64  `gorm:"column:panel_access;not null;default:0"`
+	LastLoginAt int64  `gorm:"column:last_login_at;not null;default:0"`
+	AvatarMime  string `gorm:"column:avatar_mime;not null;default:''"`
+	AvatarPNG   []byte `gorm:"column:avatar_png"`
 	// AvatarBlob - хеш картинки в blobs. Одна и та же аватарка у десятка
 	// аккаунтов лежит одним блобом, а не десятком копий нахуй
 	AvatarBlob    string `gorm:"column:avatar_blob;not null;default:''"`
