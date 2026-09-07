@@ -44,6 +44,10 @@ type Config struct {
 	// Token - PAT сервисного пользователя. Им панель и создаёт сессии: своего
 	// пароля она не видит никогда, проверяет его провайдер
 	Token string
+	// AdminToken - ключ с правом заводить людей. Логин-клиенту такое право не
+	// положено, и провайдер отбивает создание учётки отказом, который снаружи
+	// неотличим от неверного пароля. Пустой - работаем одним ключом
+	AdminToken string
 }
 
 func (c Config) Enabled() bool {
@@ -174,6 +178,17 @@ func (c *Client) Finish(ctx context.Context, authRequestID string, session Sessi
 
 // call - один запрос к API. Ошибку провайдера разворачиваем в свою: наружу
 // должно уходить "логин или пароль не подошли", а не его внутренний код
+// callAs ходит тем же путём, но своим ключом: заводить людей логин-клиенту не
+// положено, а сессии админским ключом дёргать незачем
+func (c *Client) callAs(ctx context.Context, token, method, path string, body, out any) error {
+	if strings.TrimSpace(token) == "" || token == c.cfg.Token {
+		return c.call(ctx, method, path, body, out)
+	}
+	swapped := *c
+	swapped.cfg.Token = token
+	return swapped.call(ctx, method, path, body, out)
+}
+
 func (c *Client) call(ctx context.Context, method, path string, body, out any) error {
 	if !c.cfg.Enabled() {
 		return ErrDisabled
@@ -261,7 +276,7 @@ func (c *Client) CreateHuman(ctx context.Context, who Human) (string, error) {
 	var out struct {
 		UserID string `json:"userId"`
 	}
-	if err := c.call(ctx, http.MethodPost, "/v2/users/human", body, &out); err != nil {
+	if err := c.callAs(ctx, c.cfg.AdminToken, http.MethodPost, "/v2/users/human", body, &out); err != nil {
 		return "", err
 	}
 	if out.UserID == "" {

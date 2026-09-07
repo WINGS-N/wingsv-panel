@@ -46,6 +46,10 @@ type Config struct {
 	// AccountAPIToken - ключ сервисного пользователя провайдера. С ним панель
 	// показывает свою форму входа вместо чужой; без него остаётся кнопка
 	AccountAPIToken string
+	// AccountAdminToken - ключ с правом заводить людей. Логин-клиент такого
+	// права не имеет: он умеет только проверять пароль, а на создание учётки
+	// провайдер отвечает отказом, неотличимым от неверного пароля
+	AccountAdminToken string
 
 	// FederationSecret keys that link. It is deliberately not the fleet secret
 	// every donated node holds: that would hand a donor the operator's view.
@@ -82,6 +86,7 @@ func Load() Config {
 		OIDCIssuer:             getEnv("OIDC_ISSUER", ""),
 		AccountName:            getEnv("ACCOUNT_NAME", "WINGS Account"),
 		AccountAPIToken:        getEnv("ACCOUNT_API_TOKEN", ""),
+		AccountAdminToken:      getEnv("ACCOUNT_ADMIN_TOKEN", ""),
 		OIDCClientID:           getEnv("OIDC_CLIENT_ID", ""),
 		OIDCClientSecret:       getEnv("OIDC_CLIENT_SECRET", ""),
 		FederationHead:         getEnv("FEDERATION_HEAD", ""),

@@ -64,8 +64,9 @@ func New(cfg config.Config, store *storage.Store, authSvc *auth.Service, hub *gu
 		halfway:       newHalfwayDesk(),
 		qr:            newQRDesk(),
 		session: accountsession.New(accountsession.Config{
-			Issuer: cfg.OIDCIssuer,
-			Token:  cfg.AccountAPIToken,
+			Issuer:     cfg.OIDCIssuer,
+			Token:      cfg.AccountAPIToken,
+			AdminToken: cfg.AccountAdminToken,
 		}),
 		oidc: oidcauth.New(oidcauth.Config{
 			Issuer:       cfg.OIDCIssuer,
