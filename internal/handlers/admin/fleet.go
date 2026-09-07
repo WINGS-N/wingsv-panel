@@ -22,18 +22,18 @@ const xrayForkRepo = "WINGS-N/Xray-core"
 const relayForkRepo = "WINGS-N/vk-turn-proxy"
 
 type fleetView struct {
-	XrayVersion   string `json:"xray_version"`
-	XrayURL       string `json:"xray_url"`
-	XraySHA512    string `json:"xray_sha512"`
-	VKTPVersion   string `json:"vktp_version"`
-	VKTPURL       string `json:"vktp_url"`
-	VKTPSHA512    string `json:"vktp_sha512"`
-	AutoUpgrade   bool   `json:"auto_upgrade"`
-	RealityDest   string `json:"reality_dest"`
-	AutoDest      bool   `json:"auto_dest"`
-	PostQuantum   bool   `json:"post_quantum"`
-	TCPPort       uint32 `json:"tcp_port"`
-	XHTTPPort     uint32 `json:"xhttp_port"`
+	XrayVersion   string   `json:"xray_version"`
+	XrayURL       string   `json:"xray_url"`
+	XraySHA512    string   `json:"xray_sha512"`
+	VKTPVersion   string   `json:"vktp_version"`
+	VKTPURL       string   `json:"vktp_url"`
+	VKTPSHA512    string   `json:"vktp_sha512"`
+	AutoUpgrade   bool     `json:"auto_upgrade"`
+	RealityDest   string   `json:"reality_dest"`
+	AutoDest      bool     `json:"auto_dest"`
+	PostQuantum   bool     `json:"post_quantum"`
+	TCPPort       uint32   `json:"tcp_port"`
+	XHTTPPort     uint32   `json:"xhttp_port"`
 	ConfigVersion uint64   `json:"config_version"`
 	DestPoolSize  uint32   `json:"dest_pool_size"`
 	VKLinks       []string `json:"vk_links"`
