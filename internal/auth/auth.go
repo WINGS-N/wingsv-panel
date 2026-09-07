@@ -252,7 +252,7 @@ func (s *Service) Register(username, password, inviteToken string) (storage.Admi
 	}
 	// Пришедший по приглашению получает личный доступ к VPN, но не панель:
 	// панель добавляет владелец отдельно
-	admin, err := s.store.CreateAccount(username, hash, false, storage.RoleAdmin, false)
+	admin, err := s.store.CreateAccount(username, hash, false, storage.RoleUser, false)
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
@@ -466,7 +466,7 @@ func (s *Service) LoginWithAccount(subject, username, displayName, inviteToken s
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}
-	created, err := s.store.CreateAccount(username, hash, false, storage.RoleAdmin, false)
+	created, err := s.store.CreateAccount(username, hash, false, storage.RoleUser, false)
 	if err != nil {
 		return storage.Admin{}, storage.AdminSession{}, err
 	}

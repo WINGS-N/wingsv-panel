@@ -13,7 +13,19 @@ import (
 const (
 	RoleOwner = "owner"
 	RoleAdmin = "admin"
+	// RoleUser - обычный участник: свой VPN и федерация, панели нет. Роль
+	// поднимается до админской ровно тогда, когда панель открыли, иначе
+	// половина людей называлась бы админами, ни хуя не администрируя
+	RoleUser = "user"
 )
+
+// RoleForPanel возвращает роль, соответствующую доступу в панель
+func RoleForPanel(panelAccess bool) string {
+	if panelAccess {
+		return RoleAdmin
+	}
+	return RoleUser
+}
 
 type Admin struct {
 	ID                 int64
@@ -52,7 +64,7 @@ func toStorageAdmin(m dbmodel.Admin) Admin {
 		a.PanelRequestedAt = time.UnixMilli(m.PanelRequestedAt).UTC()
 	}
 	if a.Role == "" {
-		a.Role = RoleAdmin
+		a.Role = RoleForPanel(a.PanelAccess)
 	}
 	return a
 }
@@ -85,7 +97,7 @@ func (s *Store) CreateAdmin(username, passwordHash string, mustChange bool, role
 // приглашению получает личный доступ к VPN, но не панель: её выдаёт владелец
 func (s *Store) CreateAccount(username, passwordHash string, mustChange bool, role string, panelAccess bool) (Admin, error) {
 	if role == "" {
-		role = RoleAdmin
+		role = RoleForPanel(panelAccess)
 	}
 	now := time.Now().UTC().UnixMilli()
 	row := dbmodel.Admin{
@@ -313,11 +325,15 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-// SetPanelAccess открывает или закрывает аккаунту админ-панель
+// SetPanelAccess открывает или закрывает аккаунту админ-панель.
+//
+// Роль едет следом за доступом, но владельца не трогаем: он владелец и без
+// панели
 func (s *Store) SetPanelAccess(id int64, allowed bool) error {
-	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).
+	return s.gdb.Model(&dbmodel.Admin{}).Where("id = ? AND role <> ?", id, RoleOwner).
 		Updates(map[string]any{
 			"panel_access": boolToInt(allowed),
+			"role":         RoleForPanel(allowed),
 			"updated_at":   time.Now().UTC().UnixMilli(),
 		}).Error
 }
