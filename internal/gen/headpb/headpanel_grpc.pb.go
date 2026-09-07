@@ -45,6 +45,7 @@ const (
 	FederationHead_SetOracleLabel_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/SetOracleLabel"
 	FederationHead_SetPayoutAddress_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/SetPayoutAddress"
 	FederationHead_PayoutStatement_FullMethodName   = "/wingsv.headpanel.v1.FederationHead/PayoutStatement"
+	FederationHead_ReleaseStake_FullMethodName      = "/wingsv.headpanel.v1.FederationHead/ReleaseStake"
 	FederationHead_Epochs_FullMethodName            = "/wingsv.headpanel.v1.FederationHead/Epochs"
 	FederationHead_ReportInviteTree_FullMethodName  = "/wingsv.headpanel.v1.FederationHead/ReportInviteTree"
 	FederationHead_ReportDonation_FullMethodName    = "/wingsv.headpanel.v1.FederationHead/ReportDonation"
@@ -114,6 +115,7 @@ type FederationHeadClient interface {
 	// цепочка потом только фиксирует посчитанное
 	SetPayoutAddress(ctx context.Context, in *SetPayoutAddressRequest, opts ...grpc.CallOption) (*SetPayoutAddressResponse, error)
 	PayoutStatement(ctx context.Context, in *PayoutStatementRequest, opts ...grpc.CallOption) (*PayoutStatementResponse, error)
+	ReleaseStake(ctx context.Context, in *ReleaseStakeRequest, opts ...grpc.CallOption) (*ReleaseStakeResponse, error)
 	// Все эпохи разом - это уже владельцу площадки, а не донору
 	Epochs(ctx context.Context, in *EpochsRequest, opts ...grpc.CallOption) (*EpochsResponse, error)
 	// Дерево инвайтов живёт в панели, а трафик в башке. Без этой карты башка не
@@ -372,6 +374,16 @@ func (c *federationHeadClient) PayoutStatement(ctx context.Context, in *PayoutSt
 	return out, nil
 }
 
+func (c *federationHeadClient) ReleaseStake(ctx context.Context, in *ReleaseStakeRequest, opts ...grpc.CallOption) (*ReleaseStakeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseStakeResponse)
+	err := c.cc.Invoke(ctx, FederationHead_ReleaseStake_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *federationHeadClient) Epochs(ctx context.Context, in *EpochsRequest, opts ...grpc.CallOption) (*EpochsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EpochsResponse)
@@ -502,6 +514,7 @@ type FederationHeadServer interface {
 	// цепочка потом только фиксирует посчитанное
 	SetPayoutAddress(context.Context, *SetPayoutAddressRequest) (*SetPayoutAddressResponse, error)
 	PayoutStatement(context.Context, *PayoutStatementRequest) (*PayoutStatementResponse, error)
+	ReleaseStake(context.Context, *ReleaseStakeRequest) (*ReleaseStakeResponse, error)
 	// Все эпохи разом - это уже владельцу площадки, а не донору
 	Epochs(context.Context, *EpochsRequest) (*EpochsResponse, error)
 	// Дерево инвайтов живёт в панели, а трафик в башке. Без этой карты башка не
@@ -595,6 +608,9 @@ func (UnimplementedFederationHeadServer) SetPayoutAddress(context.Context, *SetP
 }
 func (UnimplementedFederationHeadServer) PayoutStatement(context.Context, *PayoutStatementRequest) (*PayoutStatementResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PayoutStatement not implemented")
+}
+func (UnimplementedFederationHeadServer) ReleaseStake(context.Context, *ReleaseStakeRequest) (*ReleaseStakeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseStake not implemented")
 }
 func (UnimplementedFederationHeadServer) Epochs(context.Context, *EpochsRequest) (*EpochsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Epochs not implemented")
@@ -1041,6 +1057,24 @@ func _FederationHead_PayoutStatement_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FederationHead_ReleaseStake_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseStakeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FederationHeadServer).ReleaseStake(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FederationHead_ReleaseStake_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FederationHeadServer).ReleaseStake(ctx, req.(*ReleaseStakeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FederationHead_Epochs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EpochsRequest)
 	if err := dec(in); err != nil {
@@ -1261,6 +1295,10 @@ var FederationHead_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PayoutStatement",
 			Handler:    _FederationHead_PayoutStatement_Handler,
+		},
+		{
+			MethodName: "ReleaseStake",
+			Handler:    _FederationHead_ReleaseStake_Handler,
 		},
 		{
 			MethodName: "Epochs",

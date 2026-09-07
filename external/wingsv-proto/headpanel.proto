@@ -63,6 +63,7 @@ service FederationHead {
   // цепочка потом только фиксирует посчитанное
   rpc SetPayoutAddress(SetPayoutAddressRequest) returns (SetPayoutAddressResponse);
   rpc PayoutStatement(PayoutStatementRequest) returns (PayoutStatementResponse);
+  rpc ReleaseStake(ReleaseStakeRequest) returns (ReleaseStakeResponse);
   // Все эпохи разом - это уже владельцу площадки, а не донору
   rpc Epochs(EpochsRequest) returns (EpochsResponse);
   // Дерево инвайтов живёт в панели, а трафик в башке. Без этой карты башка не
@@ -603,6 +604,16 @@ message SetPayoutAddressRequest {
 }
 
 message SetPayoutAddressResponse {}
+
+message ReleaseStakeRequest {
+  string donor_id = 1;
+  // Micro - сколько забрать. Ноль означает "весь залог"
+  uint64 micro = 2;
+}
+
+message ReleaseStakeResponse {
+  StakeStatus stake = 1;
+}
 
 message PayoutStatementRequest {
   string donor_id = 1;

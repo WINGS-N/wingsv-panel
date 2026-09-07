@@ -338,12 +338,24 @@
         :rows="2"
         class="mt-4"
       />
-      <p class="admin-muted mt-3">
+      <p v-if="stakeUnlockDate" class="state-hint mt-3">
+        {{ usdt(payouts.stake.pending_micro) }} USDT заказано к выводу, отдадим {{ stakeUnlockDate }}.
+      </p>
+      <p v-else class="admin-muted mt-3">
         Залог возвращается по заявке, с недельной задержкой. Он отвечает за честность отчётов: расхождение с расписками
         клиентов снимается из него.
       </p>
+      <p v-if="stakeError" class="state-error mt-2">{{ stakeError }}</p>
     </template>
     <template #actions>
+      <SamsungButton
+        v-if="payouts.stake && payouts.stake.staked_micro"
+        :busy="releasingStake"
+        :disabled="stakeLocked"
+        @click="releaseStake"
+      >
+        {{ payouts.stake.pending_micro ? 'Забрать залог' : 'Заказать вывод' }}
+      </SamsungButton>
       <SamsungButton :busy="loadingPayouts" @click="loadPayouts">Обновить</SamsungButton>
       <SamsungButton variant="secondary" @click="stakeOpen = false">Закрыть</SamsungButton>
     </template>
@@ -482,6 +494,19 @@ const loadingPayouts = ref(false);
 
 // Залог решает, платят ли донору вообще: без него трафик едет бесплатно
 const staked = computed(() => Boolean(payouts.stake?.enough));
+const releasingStake = ref(false);
+const stakeError = ref('');
+
+// Заказанный вывод отдают после кулдауна, и до срока кнопка только злит
+const stakeUnlockDate = computed(() => {
+  const at = Number(payouts.stake?.unlock_unix || 0);
+  return at > 0 ? epochDate(at) : '';
+});
+const stakeLocked = computed(() => {
+  const at = Number(payouts.stake?.unlock_unix || 0);
+  return at > 0 && at * 1000 > Date.now();
+});
+
 const stakeLeftMicro = computed(() => {
   const need = Number(payouts.stake?.required_micro || 0);
   const have = Number(payouts.stake?.staked_micro || 0);
@@ -576,6 +601,25 @@ async function loadPayouts() {
     // Выплаты - не повод завалить весь раздел: счётчики трафика важнее
   } finally {
     loadingPayouts.value = false;
+  }
+}
+
+async function releaseStake() {
+  releasingStake.value = true;
+  stakeError.value = '';
+  try {
+    const res = await fetch('/api/admin/federation/payouts/stake/release', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ micro: 0 }),
+    });
+    if (!res.ok) throw new Error(await errorText(res));
+    payouts.stake = await res.json();
+  } catch (e) {
+    stakeError.value = e.message || 'не вышло';
+  } finally {
+    releasingStake.value = false;
   }
 }
 

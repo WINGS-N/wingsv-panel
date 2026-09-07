@@ -315,6 +315,16 @@ func (c *Client) PayoutStatement(ctx context.Context, donorID string, limit uint
 	return client.PayoutStatement(ctx, &headpb.PayoutStatementRequest{DonorId: donorID, Limit: limit})
 }
 
+// ReleaseStake забирает залог донору: первый заход заказывает вывод, второй
+// после кулдауна отдаёт деньги
+func (c *Client) ReleaseStake(ctx context.Context, donorID string, micro uint64) (*headpb.ReleaseStakeResponse, error) {
+	client, err := c.dial()
+	if err != nil {
+		return nil, err
+	}
+	return client.ReleaseStake(ctx, &headpb.ReleaseStakeRequest{DonorId: donorID, Micro: micro})
+}
+
 // SetPayoutAddress записывает кошелёк донора
 func (c *Client) SetPayoutAddress(ctx context.Context, donorID, address string) error {
 	client, err := c.dial()

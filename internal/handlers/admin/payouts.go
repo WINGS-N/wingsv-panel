@@ -3,6 +3,8 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -143,6 +145,48 @@ func (h *Handler) handlePayoutStatement(w http.ResponseWriter, r *http.Request, 
 	}
 	if stake := got.GetStake(); stake != nil {
 		view.Stake = &stakeView{
+			DepositAddress: stake.GetDepositAddress(),
+			StakedMicro:    stake.GetStakedMicro(),
+			RequiredMicro:  stake.GetRequiredMicro(),
+			IncomingMicro:  stake.GetIncomingMicro(),
+			PendingMicro:   stake.GetPendingMicro(),
+			UnlockUnix:     stake.GetUnlockUnix(),
+			Enough:         stake.GetEnough(),
+		}
+	}
+	writeJSON(w, http.StatusOK, view)
+}
+
+type releaseStakeRequest struct {
+	// Micro - сколько забрать. Ноль означает весь залог
+	Micro uint64 `json:"micro"`
+}
+
+// handleReleaseStake возвращает залог на кошелёк донора
+func (h *Handler) handleReleaseStake(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !h.federationOn() {
+		writeError(w, http.StatusForbidden, "федерация выключена")
+		return
+	}
+	var req releaseStakeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "invalid body")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
+	defer cancel()
+	got, err := h.fed.ReleaseStake(ctx, donorID(admin), req.Micro)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	view := stakeView{}
+	if stake := got.GetStake(); stake != nil {
+		view = stakeView{
 			DepositAddress: stake.GetDepositAddress(),
 			StakedMicro:    stake.GetStakedMicro(),
 			RequiredMicro:  stake.GetRequiredMicro(),
