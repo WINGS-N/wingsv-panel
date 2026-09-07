@@ -98,11 +98,30 @@
   <section v-if="enabled && payouts.enabled" class="surface-card mt-6">
     <div class="federation-live-head">
       <h2 class="section-title">Выплаты</h2>
-      <span v-if="payouts.total_micro" class="admin-pill is-info">{{ usdt(payouts.total_micro) }} USDT начислено</span>
+      <span v-if="!staked" class="admin-pill">без залога - бесплатно</span>
+      <span v-else-if="payouts.total_micro" class="admin-pill is-info"
+        >{{ usdt(payouts.total_micro) }} USDT начислено</span
+      >
     </div>
     <p class="admin-muted mt-1">Начисляется за трафик, который подписали клиенты. Период закрывается раз в неделю.</p>
     <p v-if="payouts.note" class="state-hint mt-3">{{ payouts.note }}</p>
     <template v-else>
+      <div v-if="payouts.stake" class="keyval mt-4">
+        <span class="keyval-label">
+          {{
+            staked
+              ? 'Залог внесён: ' + usdt(payouts.stake.staked_micro) + ' USDT'
+              : 'Залог не внесён, трафик идёт бесплатно'
+          }}
+        </span>
+        <span class="keyval-value">
+          <SamsungButton variant="secondary" @click="stakeOpen = true">
+            <template #icon><Wallet class="button-icon" aria-hidden="true" /></template>
+            {{ staked ? 'Пополнить залог' : 'Внести залог' }}
+          </SamsungButton>
+        </span>
+      </div>
+
       <div class="mt-4 flex flex-wrap items-end gap-3">
         <OneuiInput
           v-model="walletDraft"
@@ -292,6 +311,47 @@
     <SamsungPager v-model:page="nodePage" :total="summary.node_list.length" :per-page="NODES_PER_PAGE" />
   </section>
 
+  <SamsungModal v-model="stakeOpen" title="Залог">
+    <p v-if="!payouts.address" class="admin-muted">Сначала укажите кошелёк: личный адрес взноса выводится из него.</p>
+    <template v-else-if="payouts.stake">
+      <p class="admin-muted">
+        Переведите USDT на этот адрес с любого кошелька или биржи. Ничего подписывать и указывать не нужно - адрес ваш
+        собственный, взнос опознаётся по нему.
+      </p>
+      <div class="fed-card-facts mt-4 sm:grid-cols-3">
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Нужно</span>
+          <span class="fed-card-fact-value">{{ usdt(payouts.stake.required_micro) }} USDT</span>
+        </div>
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Внесено</span>
+          <span class="fed-card-fact-value">{{ usdt(payouts.stake.staked_micro) }} USDT</span>
+        </div>
+        <div class="fed-card-fact">
+          <span class="fed-card-fact-label">Осталось</span>
+          <span class="fed-card-fact-value">{{ usdt(stakeLeftMicro) }} USDT</span>
+        </div>
+      </div>
+      <p v-if="payouts.stake.incoming_micro" class="state-hint mt-3">
+        {{ usdt(payouts.stake.incoming_micro) }} USDT уже пришло и зачисляется, это занимает пару минут.
+      </p>
+      <CopyableLink
+        v-if="payouts.stake.deposit_address"
+        :value="payouts.stake.deposit_address"
+        :rows="2"
+        class="mt-4"
+      />
+      <p class="admin-muted mt-3">
+        Залог возвращается по заявке, с недельной задержкой. Он отвечает за честность отчётов: расхождение с расписками
+        клиентов снимается из него.
+      </p>
+    </template>
+    <template #actions>
+      <SamsungButton :busy="loadingPayouts" @click="loadPayouts">Обновить</SamsungButton>
+      <SamsungButton variant="secondary" @click="stakeOpen = false">Закрыть</SamsungButton>
+    </template>
+  </SamsungModal>
+
   <SamsungModal v-model="mintOpen" title="Новый сервер" :busy="minting">
     <p class="admin-muted">Токен скоро протухнет, поэтому команду лучше выполнить сразу.</p>
     <div class="form-grid mt-4">
@@ -416,6 +476,18 @@ const payouts = reactive({
   epochs: [],
   pending: [],
   terms: null,
+  stake: null,
+});
+
+const stakeOpen = ref(false);
+const loadingPayouts = ref(false);
+
+// Залог решает, платят ли донору вообще: без него трафик едет бесплатно
+const staked = computed(() => Boolean(payouts.stake?.enough));
+const stakeLeftMicro = computed(() => {
+  const need = Number(payouts.stake?.required_micro || 0);
+  const have = Number(payouts.stake?.staked_micro || 0);
+  return Math.max(need - have, 0);
 });
 
 // Ставка за гигабайт в микро-USDT человеку ни о чём не говорит: в терабайтах
@@ -483,6 +555,7 @@ async function confirmRemove() {
 }
 
 async function loadPayouts() {
+  loadingPayouts.value = true;
   try {
     const res = await fetch('/api/admin/federation/payouts', { credentials: 'include' });
     if (!res.ok) throw new Error(await errorText(res));
@@ -497,11 +570,14 @@ async function loadPayouts() {
       pending: data.pending || [],
       pending_micro: Number(data.pending_micro || 0),
       terms: data.terms || null,
+      stake: data.stake || null,
     });
     // Поле не перетираем, пока человек в нём печатает
     if (!walletDraft.value) walletDraft.value = payouts.address;
   } catch {
     // Выплаты - не повод завалить весь раздел: счётчики трафика важнее
+  } finally {
+    loadingPayouts.value = false;
   }
 }
 

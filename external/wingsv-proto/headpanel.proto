@@ -645,6 +645,25 @@ message PayoutStatementResponse {
   // Что набежало в текущем НЕзакрытом периоде, по каждой машине
   repeated NodeAccrual pending = 6;
   uint64 pending_micro = 7;
+  // Залог. Без него донор возит трафик бесплатно, и цифру начислений ему
+  // показывать нечестно
+  StakeStatus stake = 8;
+}
+
+// StakeStatus - залог донора глазами цепочки
+message StakeStatus {
+  // Deposit - личный адрес донора для взноса: шлёт с любого кошелька, опознаём
+  // по самому адресу
+  string deposit_address = 1;
+  uint64 staked_micro = 2;
+  uint64 required_micro = 3;
+  // IncomingMicro - пришло на личный счёт и ещё не оприходовано
+  uint64 incoming_micro = 4;
+  // PendingMicro - заказано к выводу, unlock_unix - когда отдадут
+  uint64 pending_micro = 5;
+  int64 unlock_unix = 6;
+  // Enough - хватает ли залога, чтобы попасть в выплаты
+  bool enough = 7;
 }
 
 // PayoutTerms - прайс и правила счёта

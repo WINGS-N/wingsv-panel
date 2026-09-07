@@ -64,6 +64,22 @@ type payoutStatementView struct {
 	Terms        *payoutTermsView  `json:"terms,omitempty"`
 	Pending      []nodeAccrualView `json:"pending"`
 	PendingMicro uint64            `json:"pending_micro"`
+	// Stake - залог. Без него донор возит трафик бесплатно, и башка не
+	// начисляет ему ничего
+	Stake *stakeView `json:"stake,omitempty"`
+}
+
+// stakeView - залог донора глазами цепочки
+type stakeView struct {
+	// DepositAddress - личный адрес взноса: шлём с любого кошелька, опознаётся
+	// по самому адресу
+	DepositAddress string `json:"deposit_address"`
+	StakedMicro    uint64 `json:"staked_micro"`
+	RequiredMicro  uint64 `json:"required_micro"`
+	IncomingMicro  uint64 `json:"incoming_micro"`
+	PendingMicro   uint64 `json:"pending_micro"`
+	UnlockUnix     int64  `json:"unlock_unix"`
+	Enough         bool   `json:"enough"`
 }
 
 // handlePayoutStatement отвечает донору, сколько ему причитается и за что
@@ -124,6 +140,17 @@ func (h *Handler) handlePayoutStatement(w http.ResponseWriter, r *http.Request, 
 			BillableBytes: n.GetBillableBytes(), ProbeConfirmed: n.GetProbeConfirmed(),
 			FactorBps: n.GetFactorBps(), AmountMicro: n.GetAmountMicro(),
 		})
+	}
+	if stake := got.GetStake(); stake != nil {
+		view.Stake = &stakeView{
+			DepositAddress: stake.GetDepositAddress(),
+			StakedMicro:    stake.GetStakedMicro(),
+			RequiredMicro:  stake.GetRequiredMicro(),
+			IncomingMicro:  stake.GetIncomingMicro(),
+			PendingMicro:   stake.GetPendingMicro(),
+			UnlockUnix:     stake.GetUnlockUnix(),
+			Enough:         stake.GetEnough(),
+		}
 	}
 	writeJSON(w, http.StatusOK, view)
 }
