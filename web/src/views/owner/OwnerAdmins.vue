@@ -6,7 +6,7 @@
     <template #actions>
       <SamsungButton @click="openCreate">
         <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
-        Создать админа
+        Создать участника
       </SamsungButton>
     </template>
 
@@ -153,7 +153,7 @@
       </ul>
     </div>
 
-    <SamsungModal v-model="showCreate" title="Новый админ">
+    <SamsungModal v-model="showCreate" title="Новый участник">
       <OneuiInput
         v-model="newUsername"
         label="Логин (только a-z, 0-9)"
@@ -163,7 +163,13 @@
       <div class="mt-3">
         <OneuiInput v-model="newPassword" label="Пароль" type="text" autocomplete="off" />
       </div>
-      <p class="admin-muted mt-2">Минимум 8 символов. Админ обязан сменить пароль при первом входе.</p>
+      <p class="admin-muted mt-2">Минимум 8 символов. Пароль придётся сменить при первом входе.</p>
+      <div class="keyval mt-3">
+        <span class="keyval-label">Сразу открыть админ-панель</span>
+        <span class="keyval-value">
+          <OneuiSwitch v-model="newPanelAccess" />
+        </span>
+      </div>
       <p v-if="createError" class="state-error mt-3">{{ createError }}</p>
       <template #actions>
         <SamsungButton :busy="creating" :disabled="!canCreate" @click="onCreateAdmin">
@@ -260,6 +266,7 @@ const linkFormatOptions = [
 const showCreate = ref(false);
 const newUsername = ref('');
 const newPassword = ref('');
+const newPanelAccess = ref(false);
 const creating = ref(false);
 const createError = ref('');
 const resetTarget = ref(null);
@@ -313,6 +320,7 @@ async function loadInvites() {
 
 function openCreate() {
   newUsername.value = '';
+  newPanelAccess.value = false;
   newPassword.value = '';
   createError.value = '';
   showCreate.value = true;
@@ -331,7 +339,11 @@ async function onCreateAdmin() {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: newUsername.value, password: newPassword.value }),
+      body: JSON.stringify({
+        username: newUsername.value,
+        password: newPassword.value,
+        panel_access: newPanelAccess.value,
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));

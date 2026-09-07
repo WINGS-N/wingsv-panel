@@ -151,6 +151,9 @@ func (h *Handler) respondListAdmins(w http.ResponseWriter) {
 type createAdminRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	// PanelAccess - открыть ли панель сразу. По умолчанию заводится обычный
+	// участник, а панель он берёт сам кнопкой в кабинете
+	PanelAccess bool `json:"panel_access"`
 }
 
 func (h *Handler) respondCreateAdmin(w http.ResponseWriter, r *http.Request, owner storage.Admin) {
@@ -187,7 +190,7 @@ func (h *Handler) respondCreateAdmin(w http.ResponseWriter, r *http.Request, own
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	created, err := h.store.CreateAdmin(username, hash, true, storage.RoleAdmin)
+	created, err := h.store.CreateAccount(username, hash, true, storage.RoleForPanel(req.PanelAccess), req.PanelAccess)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
