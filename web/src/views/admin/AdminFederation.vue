@@ -426,7 +426,7 @@ import { formatBytes, formatSpeed as rate, formatUsdt as usdt } from '@/utils/fo
 const explorerBase = 'https://explorer.solana.com/tx/';
 
 function explorer(signature) {
-  return explorerBase + signature + (payouts.value.cluster ? '?cluster=' + payouts.value.cluster : '');
+  return explorerBase + signature + (payouts.cluster ? '?cluster=' + payouts.cluster : '');
 }
 
 const enabled = ref(false);
@@ -487,6 +487,9 @@ const payouts = reactive({
   pending: [],
   terms: null,
   stake: null,
+  // В какой сети смотреть транзакцию. Приходит от башки: на devnet и в проде
+  // адреса разные
+  cluster: '',
 });
 
 const stakeOpen = ref(false);
@@ -594,6 +597,7 @@ async function loadPayouts() {
       pending_micro: Number(data.pending_micro || 0),
       terms: data.terms || null,
       stake: data.stake || null,
+      cluster: data.cluster || '',
     });
     // Поле не перетираем, пока человек в нём печатает
     if (!walletDraft.value) walletDraft.value = payouts.address;
