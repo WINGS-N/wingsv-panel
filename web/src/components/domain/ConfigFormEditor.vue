@@ -293,10 +293,6 @@
         <OneuiSwitch :model-value="!!xraySettings.allowLan" @change="setXrayS('allowLan', $event)" />
       </div>
       <div class="form-row">
-        <label class="form-label">Allow insecure<ConfigPendingMark path="xray.settings.allowInsecure" /></label>
-        <OneuiSwitch :model-value="!!xraySettings.allowInsecure" @change="setXrayS('allowInsecure', $event)" />
-      </div>
-      <div class="form-row">
         <label class="form-label">IPv6<ConfigPendingMark path="xray.settings.ipv6" /></label>
         <OneuiSwitch :model-value="!!xraySettings.ipv6" @change="setXrayS('ipv6', $event)" />
       </div>
@@ -321,6 +317,18 @@
         />
       </div>
       <div class="form-row">
+        <label class="form-label">Proxy QUIC<ConfigPendingMark path="xray.settings.proxyQuicEnabled" /></label>
+        <OneuiSwitch :model-value="!!xraySettings.proxyQuicEnabled" @change="setXrayS('proxyQuicEnabled', $event)" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Транспорт<ConfigPendingMark path="xray.settings.transportMode" /></label>
+        <OneuiSelect
+          :model-value="xraySettings.transportMode || 'XRAY_TRANSPORT_MODE_UNSPECIFIED'"
+          :options="xrayTransportOptions"
+          @change="setXrayS('transportMode', $event === 'XRAY_TRANSPORT_MODE_UNSPECIFIED' ? undefined : $event)"
+        />
+      </div>
+      <div class="form-row">
         <label class="form-label">Wake probe<ConfigPendingMark path="xray.settings.wakeProbeMode" /></label>
         <OneuiSelect
           :model-value="xraySettings.wakeProbeMode || 'WAKE_PROBE_MODE_UNSPECIFIED'"
@@ -328,6 +336,108 @@
           @change="setXrayS('wakeProbeMode', $event === 'WAKE_PROBE_MODE_UNSPECIFIED' ? undefined : $event)"
         />
       </div>
+
+      <h4 class="form-subsection-title">Локальный прокси (SOCKS)</h4>
+      <div class="form-row">
+        <label class="form-label">Включён<ConfigPendingMark path="xray.settings.localProxyEnabled" /></label>
+        <OneuiSwitch :model-value="!!xraySettings.localProxyEnabled" @change="setXrayS('localProxyEnabled', $event)" />
+      </div>
+      <template v-if="xraySettings.localProxyEnabled">
+        <div class="form-row form-row-stack">
+          <label class="form-label">Адрес<ConfigPendingMark path="xray.settings.localProxyListenAddress" /></label>
+          <input
+            class="text-input"
+            :value="xraySettings.localProxyListenAddress || ''"
+            placeholder="127.0.0.1"
+            @input="setXrayS('localProxyListenAddress', $event.target.value)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Порт<ConfigPendingMark path="xray.settings.localProxyPort" /></label>
+          <input
+            class="text-input text-input-narrow"
+            type="number"
+            :value="xraySettings.localProxyPort || ''"
+            @input="setXrayNumber('localProxyPort', $event.target.value)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Авторизация<ConfigPendingMark path="xray.settings.localProxyAuthEnabled" /></label>
+          <OneuiSwitch
+            :model-value="!!xraySettings.localProxyAuthEnabled"
+            @change="setXrayS('localProxyAuthEnabled', $event)"
+          />
+        </div>
+        <template v-if="xraySettings.localProxyAuthEnabled">
+          <div class="form-row form-row-stack">
+            <label class="form-label">Логин<ConfigPendingMark path="xray.settings.localProxyUsername" /></label>
+            <input
+              class="text-input"
+              :value="xraySettings.localProxyUsername || ''"
+              @input="setXrayS('localProxyUsername', $event.target.value)"
+            />
+          </div>
+          <div class="form-row form-row-stack">
+            <label class="form-label">Пароль<ConfigPendingMark path="xray.settings.localProxyPassword" /></label>
+            <input
+              class="text-input"
+              :value="xraySettings.localProxyPassword || ''"
+              @input="setXrayS('localProxyPassword', $event.target.value)"
+            />
+          </div>
+        </template>
+      </template>
+
+      <h4 class="form-subsection-title">HTTP-прокси</h4>
+      <div class="form-row">
+        <label class="form-label">Включён<ConfigPendingMark path="xray.settings.httpProxyEnabled" /></label>
+        <OneuiSwitch :model-value="!!xraySettings.httpProxyEnabled" @change="setXrayS('httpProxyEnabled', $event)" />
+      </div>
+      <template v-if="xraySettings.httpProxyEnabled">
+        <div class="form-row form-row-stack">
+          <label class="form-label">Адрес<ConfigPendingMark path="xray.settings.httpProxyListenAddress" /></label>
+          <input
+            class="text-input"
+            :value="xraySettings.httpProxyListenAddress || ''"
+            placeholder="127.0.0.1"
+            @input="setXrayS('httpProxyListenAddress', $event.target.value)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Порт<ConfigPendingMark path="xray.settings.httpProxyPort" /></label>
+          <input
+            class="text-input text-input-narrow"
+            type="number"
+            :value="xraySettings.httpProxyPort || ''"
+            @input="setXrayNumber('httpProxyPort', $event.target.value)"
+          />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Авторизация<ConfigPendingMark path="xray.settings.httpProxyAuthEnabled" /></label>
+          <OneuiSwitch
+            :model-value="!!xraySettings.httpProxyAuthEnabled"
+            @change="setXrayS('httpProxyAuthEnabled', $event)"
+          />
+        </div>
+        <template v-if="xraySettings.httpProxyAuthEnabled">
+          <div class="form-row form-row-stack">
+            <label class="form-label">Логин<ConfigPendingMark path="xray.settings.httpProxyUsername" /></label>
+            <input
+              class="text-input"
+              :value="xraySettings.httpProxyUsername || ''"
+              @input="setXrayS('httpProxyUsername', $event.target.value)"
+            />
+          </div>
+          <div class="form-row form-row-stack">
+            <label class="form-label">Пароль<ConfigPendingMark path="xray.settings.httpProxyPassword" /></label>
+            <input
+              class="text-input"
+              :value="xraySettings.httpProxyPassword || ''"
+              @input="setXrayS('httpProxyPassword', $event.target.value)"
+            />
+          </div>
+        </template>
+      </template>
     </FormSection>
 
     <!-- WB Stream -->
@@ -544,6 +654,30 @@
         <label class="form-label">All apps<ConfigPendingMark path="xposed.allApps" /></label>
         <OneuiSwitch :model-value="!!xposed.allApps" @change="setXposed('allApps', $event)" />
       </div>
+      <div v-if="!xposed.allApps" class="form-row form-row-stack">
+        <label class="form-label"
+          >Пакеты под хуком (через запятую или с новой строки)<ConfigPendingMark path="xposed.targetPackages"
+        /></label>
+        <textarea
+          class="text-input"
+          rows="5"
+          spellcheck="false"
+          :value="(xposed.targetPackages || []).join('\n')"
+          @input="setXposedArray('targetPackages', $event.target.value)"
+        />
+      </div>
+      <div class="form-row form-row-stack">
+        <label class="form-label"
+          >Пакеты, от которых прячем VPN<ConfigPendingMark path="xposed.hiddenVpnPackages"
+        /></label>
+        <textarea
+          class="text-input"
+          rows="5"
+          spellcheck="false"
+          :value="(xposed.hiddenVpnPackages || []).join('\n')"
+          @input="setXposedArray('hiddenVpnPackages', $event.target.value)"
+        />
+      </div>
       <div class="form-row">
         <label class="form-label">Native hook<ConfigPendingMark path="xposed.nativeHookEnabled" /></label>
         <OneuiSwitch :model-value="!!xposed.nativeHookEnabled" @change="setXposed('nativeHookEnabled', $event)" />
@@ -636,6 +770,43 @@
           class="text-input"
           :value="sharing.fallbackUpstreamInterface || ''"
           @input="setSharing('fallbackUpstreamInterface', $event.target.value)"
+        />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Masquerade<ConfigPendingMark path="sharing.masqueradeMode" /></label>
+        <OneuiSelect
+          :model-value="sharing.masqueradeMode || 'SHARING_MASQUERADE_MODE_UNSPECIFIED'"
+          :options="masqueradeOptions"
+          @change="setSharing('masqueradeMode', $event === 'SHARING_MASQUERADE_MODE_UNSPECIFIED' ? undefined : $event)"
+        />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Wi-Fi lock<ConfigPendingMark path="sharing.wifiLock" /></label>
+        <OneuiSelect
+          :model-value="sharing.wifiLock || 'SHARING_WIFI_LOCK_UNSPECIFIED'"
+          :options="wifiLockOptions"
+          @change="setSharing('wifiLock', $event === 'SHARING_WIFI_LOCK_UNSPECIFIED' ? undefined : $event)"
+        />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Монитор адресов<ConfigPendingMark path="sharing.ipMonitorMode" /></label>
+        <OneuiSelect
+          :model-value="sharing.ipMonitorMode || 'SHARING_IP_MONITOR_MODE_UNSPECIFIED'"
+          :options="ipMonitorOptions"
+          @change="setSharing('ipMonitorMode', $event === 'SHARING_IP_MONITOR_MODE_UNSPECIFIED' ? undefined : $event)"
+        />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Режим репитера<ConfigPendingMark path="sharing.repeaterSafeMode" /></label>
+        <OneuiSwitch :model-value="!!sharing.repeaterSafeMode" @change="setSharing('repeaterSafeMode', $event)" />
+      </div>
+      <div class="form-row">
+        <label class="form-label"
+          >Системная точка для временной раздачи<ConfigPendingMark path="sharing.tempHotspotUseSystem"
+        /></label>
+        <OneuiSwitch
+          :model-value="!!sharing.tempHotspotUseSystem"
+          @change="setSharing('tempHotspotUseSystem', $event)"
         />
       </div>
     </FormSection>
@@ -932,6 +1103,18 @@
           @change="setByeDpi('proxytestUseCustomStrategies', $event)"
         />
       </div>
+      <div v-if="byeDpi.proxytestUseCustomStrategies" class="form-row form-row-stack">
+        <label class="form-label"
+          >Стратегии, по одной на строку<ConfigPendingMark path="byeDpi.proxytestCustomStrategies"
+        /></label>
+        <textarea
+          class="text-input"
+          rows="5"
+          spellcheck="false"
+          :value="byeDpi.proxytestCustomStrategies || ''"
+          @input="setByeDpi('proxytestCustomStrategies', $event.target.value || undefined)"
+        />
+      </div>
     </FormSection>
   </div>
 </template>
@@ -1055,6 +1238,35 @@ function normalizeBackend(value) {
 const tunnelModeOptions = [
   { value: 'TUNNEL_MODE_WIREGUARD', label: 'WireGuard' },
   { value: 'TUNNEL_MODE_AMNEZIAWG', label: 'AmneziaWG' },
+];
+
+const xrayTransportOptions = [
+  { value: 'XRAY_TRANSPORT_MODE_UNSPECIFIED', label: 'По умолчанию' },
+  { value: 'XRAY_TRANSPORT_MODE_DIRECT', label: 'Напрямую' },
+  { value: 'XRAY_TRANSPORT_MODE_VK_TURN_TCP', label: 'Через VK TURN (TCP)' },
+];
+
+const masqueradeOptions = [
+  { value: 'SHARING_MASQUERADE_MODE_UNSPECIFIED', label: 'По умолчанию' },
+  { value: 'SHARING_MASQUERADE_MODE_NONE', label: 'Без masquerade' },
+  { value: 'SHARING_MASQUERADE_MODE_SIMPLE', label: 'Simple' },
+  { value: 'SHARING_MASQUERADE_MODE_NETD', label: 'Netd' },
+];
+
+const wifiLockOptions = [
+  { value: 'SHARING_WIFI_LOCK_UNSPECIFIED', label: 'По умолчанию' },
+  { value: 'SHARING_WIFI_LOCK_SYSTEM', label: 'Системный' },
+  { value: 'SHARING_WIFI_LOCK_FULL', label: 'Full' },
+  { value: 'SHARING_WIFI_LOCK_HIGH_PERF', label: 'High perf' },
+  { value: 'SHARING_WIFI_LOCK_LOW_LATENCY', label: 'Low latency' },
+];
+
+const ipMonitorOptions = [
+  { value: 'SHARING_IP_MONITOR_MODE_UNSPECIFIED', label: 'По умолчанию' },
+  { value: 'SHARING_IP_MONITOR_MODE_NETLINK', label: 'Netlink' },
+  { value: 'SHARING_IP_MONITOR_MODE_NETLINK_ROOT', label: 'Netlink (root)' },
+  { value: 'SHARING_IP_MONITOR_MODE_POLL', label: 'Опрос' },
+  { value: 'SHARING_IP_MONITOR_MODE_POLL_ROOT', label: 'Опрос (root)' },
 ];
 
 const wakeProbeOptions = [
@@ -1300,6 +1512,17 @@ function generateTurnWrapKey() {
   setTurnWrapKeyHex(hex);
 }
 
+// Числовое поле формы: пустая строка значит "не задано", а не ноль
+function setXrayNumber(key, raw) {
+  const text = String(raw ?? '').trim();
+  if (text === '') {
+    setXrayS(key, undefined);
+    return;
+  }
+  const parsed = Number(text);
+  setXrayS(key, Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : undefined);
+}
+
 function setXrayS(key, value) {
   const next = { ...xraySettings.value };
   if (value === undefined || value === '' || value === null) delete next[key];
@@ -1388,6 +1611,14 @@ function setAwg(key, value) {
 
 function setAppRouting(key, value) {
   setSubObj('appRouting', key, value);
+}
+
+function setXposedArray(key, text) {
+  const arr = text
+    .split(/[,\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  setXposed(key, arr.length ? arr : undefined);
 }
 
 function setAppRoutingArray(key, text) {
