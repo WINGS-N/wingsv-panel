@@ -469,6 +469,7 @@ type settingsRequest struct {
 	AllowAdminGRPC *bool  `json:"allow_admin_grpc"`
 	LinkFormat     string `json:"link_format"`
 	PanelByRequest *bool  `json:"panel_by_request"`
+	CryptoEnabled  *bool  `json:"crypto_enabled"`
 }
 
 func (h *Handler) settingsPayload() (map[string]any, error) {
@@ -488,11 +489,16 @@ func (h *Handler) settingsPayload() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	crypto, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "true")
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"registration_mode": mode,
 		"allow_admin_grpc":  allowGRPC == "true",
 		"link_format":       linkFormat,
 		"panel_by_request":  byRequest == "true",
+		"crypto_enabled":    crypto != "false",
 	}, nil
 }
 
@@ -567,6 +573,20 @@ func (h *Handler) handleSettings(w http.ResponseWriter, r *http.Request, owner s
 			_ = h.store.AppendAudit(storage.AuditEntry{
 				ActorAdminID: owner.ID, ActorUsername: owner.Username,
 				Action: "owner.panel_by_request_changed", Message: value, IP: clientIP(r),
+			})
+		}
+		if req.CryptoEnabled != nil {
+			value := "false"
+			if *req.CryptoEnabled {
+				value = "true"
+			}
+			if err := h.store.SetPlatformSetting(storage.SettingCryptoEnabled, value); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			_ = h.store.AppendAudit(storage.AuditEntry{
+				ActorAdminID: owner.ID, ActorUsername: owner.Username,
+				Action: "owner.crypto_enabled_changed", Message: value, IP: clientIP(r),
 			})
 		}
 		payload, err := h.settingsPayload()

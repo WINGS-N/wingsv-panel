@@ -70,6 +70,9 @@ func (h *Handler) StartDonationScan(ctx context.Context) {
 }
 
 func (h *Handler) scanDonations(ctx context.Context) {
+	if !h.cryptoOn() {
+		return
+	}
 	wallets := h.donationWallets()
 	client := solana.New("")
 	for kind, wallet := range map[string]string{"traffic": wallets.Traffic, "dev": wallets.Dev} {

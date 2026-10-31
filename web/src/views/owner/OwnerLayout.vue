@@ -74,7 +74,12 @@
             <ShoppingCart class="admin-nav-icon" aria-hidden="true" />
             <span>Купленное</span>
           </router-link>
-          <router-link class="admin-nav-link" :to="{ name: 'owner-payouts' }" active-class="is-active">
+          <router-link
+            v-if="cryptoEnabled"
+            class="admin-nav-link"
+            :to="{ name: 'owner-payouts' }"
+            active-class="is-active"
+          >
             <Coins class="admin-nav-icon" aria-hidden="true" />
             <span>Выплаты</span>
           </router-link>
@@ -97,7 +102,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   ClipboardCheck,
@@ -121,6 +126,17 @@ import SamsungButton from '@/components/layout/SamsungButton.vue';
 const router = useRouter();
 const busy = ref(false);
 const admin = computed(() => authState.value.admin);
+// Выключенная денежная часть убирает раздел целиком, а не показывает его пустым
+const cryptoEnabled = ref(true);
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/owner/settings', { credentials: 'include' });
+    if (!res.ok) return;
+    const body = await res.json();
+    cryptoEnabled.value = body.crypto_enabled !== false;
+  } catch {}
+});
 
 const avatarInitials = computed(() => {
   const username = admin.value?.username || '';

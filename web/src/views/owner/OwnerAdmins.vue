@@ -115,6 +115,16 @@
       </span>
     </div>
 
+    <h3 class="admin-section-subtitle mt-6">Выплаты и заносы</h3>
+    <div class="keyval mt-2">
+      <span class="keyval-label">
+        Считать выплаты донорам и принимать заносы. Выключено - остаётся только адрес на разработку
+      </span>
+      <span class="keyval-value">
+        <OneuiSwitch :model-value="cryptoEnabled" @update:model-value="setCryptoEnabled" />
+      </span>
+    </div>
+
     <h3 class="admin-section-subtitle mt-6">Админ-панель участникам</h3>
     <div class="keyval mt-2">
       <span class="keyval-label">
@@ -258,6 +268,7 @@ const invites = ref([]);
 const loadError = ref('');
 const allowAdminGRPC = ref(false);
 const panelByRequest = ref(false);
+const cryptoEnabled = ref(true);
 const linkFormat = ref('brotli');
 const linkFormatOptions = [
   { value: 'brotli', label: 'Brotli (основной)' },
@@ -448,6 +459,7 @@ async function loadSettings() {
       const body = await res.json();
       allowAdminGRPC.value = !!body.allow_admin_grpc;
       panelByRequest.value = !!body.panel_by_request;
+      cryptoEnabled.value = body.crypto_enabled !== false;
       linkFormat.value = body.link_format || 'brotli';
     }
   } catch {}
@@ -480,6 +492,21 @@ async function setAllowAdminGRPC(value) {
     });
     if (!res.ok) throw new Error(await res.text());
     allowAdminGRPC.value = value;
+  } catch (err) {
+    loadError.value = err.message;
+  }
+}
+
+async function setCryptoEnabled(value) {
+  try {
+    const res = await fetch('/api/owner/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crypto_enabled: value }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    cryptoEnabled.value = value;
   } catch (err) {
     loadError.value = err.message;
   }

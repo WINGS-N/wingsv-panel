@@ -317,11 +317,26 @@ func windowHours(r *http.Request) uint32 {
 	return uint32(n)
 }
 
+// cryptoOn сообщает, включена ли денежная часть. Пустая настройка значит
+// включено: установка, которая уже платит донорам, не должна остановиться
+// от того, что тумблер ещё ни разу не трогали
+func (h *Handler) cryptoOn() bool {
+	value, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "true")
+	if err != nil {
+		return true
+	}
+	return value != "false"
+}
+
 // handleEpochs показывает владельцу закрытые расчётные периоды: сколько
 // начислено, скольким донорам и уехал ли корень в цепочку
 func (h *Handler) handleEpochs(w http.ResponseWriter, r *http.Request, _ storage.Admin) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !h.cryptoOn() {
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": false, "crypto_enabled": false})
 		return
 	}
 	if h.fed == nil || !h.fed.Enabled() {

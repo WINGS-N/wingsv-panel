@@ -182,10 +182,16 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/admin/federation/enroll-token", h.requirePanel(h.handleFederationEnrollToken))
 	mux.HandleFunc("/api/admin/federation/live", h.requirePanel(h.handleFederationLive))
 	mux.HandleFunc("/api/admin/donations", h.requireAuth(h.handleDonations))
-	mux.HandleFunc("/api/admin/donations/claim", h.requireAuth(h.handleClaimDonation))
-	mux.HandleFunc("/api/admin/federation/payouts", h.requirePanel(h.handlePayoutStatement))
-	mux.HandleFunc("/api/admin/federation/payouts/address", h.requirePanel(h.handlePayoutAddress))
-	mux.HandleFunc("/api/admin/federation/payouts/stake/release", h.requirePanel(h.handleReleaseStake))
+	mux.HandleFunc("/api/admin/donations/claim", h.requireAuth(h.requireCrypto(h.handleClaimDonation)))
+	mux.HandleFunc("/api/admin/federation/payouts", h.requirePanel(h.requireCrypto(h.handlePayoutStatement)))
+	mux.HandleFunc(
+		"/api/admin/federation/payouts/address",
+		h.requirePanel(h.requireCrypto(h.handlePayoutAddress)),
+	)
+	mux.HandleFunc(
+		"/api/admin/federation/payouts/stake/release",
+		h.requirePanel(h.requireCrypto(h.handleReleaseStake)),
+	)
 	mux.HandleFunc("/api/admin/federation/nodes/", h.requirePanel(h.handleFederationNodeState))
 	mux.HandleFunc("/api/admin/master/config", h.requirePanel(h.handleMasterConfig))
 	mux.HandleFunc("/api/admin/master/config/apply", h.requirePanel(h.handleMasterConfigApply))
@@ -569,6 +575,29 @@ func (h *Handler) requireAuth(next authedHandler) http.HandlerFunc {
 // requirePanel пускает только тех, кому открыта админ-панель. Аккаунт без неё -
 // обычный участник: у него есть свой доступ к VPN и свой кабинет, но чужими
 // нодами и клиентами он не распоряжается
+// cryptoOn сообщает, включена ли денежная часть. Пустая настройка значит
+// включено: установка, которая уже платит донорам, не должна остановиться
+// от того, что тумблер ещё ни разу не трогали
+func (h *Handler) cryptoOn() bool {
+	value, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "true")
+	if err != nil {
+		return true
+	}
+	return value != "false"
+}
+
+// requireCrypto закрывает ручки, которые что-то считают или двигают деньги.
+// Адрес на разработку это не трогает: он отдаётся и при выключенной крипте
+func (h *Handler) requireCrypto(next authedHandler) authedHandler {
+	return func(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
+		if !h.cryptoOn() {
+			writeError(w, http.StatusForbidden, "денежная часть выключена")
+			return
+		}
+		next(w, r, admin)
+	}
+}
+
 func (h *Handler) requirePanel(next authedHandler) http.HandlerFunc {
 	// Сначала переезд, потом всё остальное: панель перестаёт быть местом, где
 	// живут пароли, и свой пароль остаётся дверью только до заведения учётки

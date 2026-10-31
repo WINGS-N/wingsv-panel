@@ -55,6 +55,9 @@ type donationsResponse struct {
 	// CutBps - сколько удерживает оператор с заноса на трафик. Цифра читается
 	// из цепочки, потому что там она и решается
 	CutBps uint16 `json:"cut_bps"`
+	// CryptoEnabled - включена ли денежная часть. Выключена - остаётся только
+	// адрес на разработку, остального раздела просто нет
+	CryptoEnabled bool `json:"crypto_enabled"`
 }
 
 func (h *Handler) donationWallets() donationWalletsView {
@@ -70,12 +73,25 @@ func (h *Handler) handleDonations(w http.ResponseWriter, r *http.Request, admin 
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	if !h.cryptoOn() {
+		// Кошелёк разработки это реквизит, а не механика: он переживает
+		// выключение, а котёл, код для memo и история заносов - нет
+		wallets := h.donationWallets()
+		writeJSON(w, http.StatusOK, donationsResponse{
+			Wallets: donationWalletsView{Dev: wallets.Dev, Mint: wallets.Mint},
+		})
+		return
+	}
 	rows, err := h.store.DonationsOf(admin.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "не смог поднять заносы")
 		return
 	}
-	out := donationsResponse{Wallets: h.donationWallets(), Memo: MemoFor(admin.ID)}
+	out := donationsResponse{
+		Wallets:       h.donationWallets(),
+		Memo:          MemoFor(admin.ID),
+		CryptoEnabled: true,
+	}
 	for _, row := range rows {
 		out.Mine = append(out.Mine, donationView{
 			Kind: row.Kind, AmountMicro: row.AmountMicro,

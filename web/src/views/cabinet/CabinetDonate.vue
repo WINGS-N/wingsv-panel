@@ -2,16 +2,17 @@
   <section class="surface-card">
     <div class="federation-live-head">
       <h2 class="section-title">Поддержать</h2>
-      <span v-if="totalMicro" class="admin-pill is-info">{{ usdt(totalMicro) }} USDT от вас</span>
+      <span v-if="cryptoEnabled && totalMicro" class="admin-pill is-info">{{ usdt(totalMicro) }} USDT от вас</span>
     </div>
-    <p class="body-copy body-copy-wide">
+    <p v-if="cryptoEnabled" class="body-copy body-copy-wide">
       Переводы в USDT, сеть Solana. Обязательно укажите свой код в поле memo - по нему платёж находит ваш аккаунт, и
       засчитывается он сам в течение минуты.
     </p>
+    <p v-else class="body-copy body-copy-wide">Переводы в USDT, сеть Solana.</p>
     <p v-if="loadError" class="state-error">{{ loadError }}</p>
 
     <div class="donate-grid mt-4">
-      <div class="donate-card">
+      <div v-if="cryptoEnabled" class="donate-card">
         <h3 class="donate-card-title">На трафик</h3>
         <p class="donate-card-note">В общий котёл, донорам за отданный трафик. Поднимает ваш уровень доверия.</p>
         <p v-if="cutBps" class="donate-card-note mt-2">
@@ -28,13 +29,13 @@
         <CopyableValue label="Кошелёк" :value="wallets.dev" class="mt-3" />
       </div>
 
-      <div class="donate-card">
+      <div v-if="cryptoEnabled" class="donate-card">
         <h3 class="donate-card-title">Ваш код</h3>
         <p class="donate-card-note">Кладите его в memo перевода, иначе занос останется анонимным.</p>
         <CopyableValue label="memo" :value="memo" class="mt-3" />
       </div>
 
-      <div class="donate-card">
+      <div v-if="cryptoEnabled" class="donate-card">
         <h3 class="donate-card-title">Не нашлось?</h3>
         <p class="donate-card-note">Если перевод с кодом не появился, вставьте TXID - проверим руками.</p>
         <div class="mt-3 flex items-end gap-2">
@@ -47,7 +48,7 @@
     </div>
   </section>
 
-  <section v-if="mine.length" class="surface-card mt-6">
+  <section v-if="cryptoEnabled && mine.length" class="surface-card mt-6">
     <h2 class="section-title">Ваши заносы</h2>
     <div class="fed-node-list mt-2">
       <div v-for="row in mine" :key="row.reference" class="fed-node-row">
@@ -80,6 +81,9 @@ const memo = ref('');
 const mine = ref([]);
 const totalMicro = ref(0);
 const cutBps = ref(0);
+// Выключенная денежная часть оставляет на экране один адрес на разработку:
+// котла, кода для memo и разбора переводов в этой установке просто нет
+const cryptoEnabled = ref(true);
 
 // Доля показывается процентами: bps понятны только тем, кто и так в теме
 const cutPercent = computed(() => `${(cutBps.value / 100).toFixed(cutBps.value % 100 ? 2 : 0)}%`);
@@ -98,6 +102,7 @@ async function load() {
     const data = await res.json();
     wallets.value = data.wallets || { traffic: '', dev: '', mint: '' };
     memo.value = data.memo || '';
+    cryptoEnabled.value = data.crypto_enabled !== false;
     mine.value = data.mine || [];
     totalMicro.value = Number(data.total_micro || 0);
     cutBps.value = Number(data.cut_bps || 0);
