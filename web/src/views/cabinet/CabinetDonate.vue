@@ -83,7 +83,7 @@ const totalMicro = ref(0);
 const cutBps = ref(0);
 // Выключенная денежная часть оставляет на экране один адрес на разработку:
 // котла, кода для memo и разбора переводов в этой установке просто нет
-const cryptoEnabled = ref(true);
+const cryptoEnabled = ref(false);
 
 // Доля показывается процентами: bps понятны только тем, кто и так в теме
 const cutPercent = computed(() => `${(cutBps.value / 100).toFixed(cutBps.value % 100 ? 2 : 0)}%`);

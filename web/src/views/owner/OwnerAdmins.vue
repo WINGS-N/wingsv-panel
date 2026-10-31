@@ -268,7 +268,7 @@ const invites = ref([]);
 const loadError = ref('');
 const allowAdminGRPC = ref(false);
 const panelByRequest = ref(false);
-const cryptoEnabled = ref(true);
+const cryptoEnabled = ref(false);
 const linkFormat = ref('brotli');
 const linkFormatOptions = [
   { value: 'brotli', label: 'Brotli (основной)' },

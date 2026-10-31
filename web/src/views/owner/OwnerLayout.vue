@@ -127,7 +127,7 @@ const router = useRouter();
 const busy = ref(false);
 const admin = computed(() => authState.value.admin);
 // Выключенная денежная часть убирает раздел целиком, а не показывает его пустым
-const cryptoEnabled = ref(true);
+const cryptoEnabled = ref(false);
 
 onMounted(async () => {
   try {

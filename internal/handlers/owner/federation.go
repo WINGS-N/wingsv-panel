@@ -317,15 +317,14 @@ func windowHours(r *http.Request) uint32 {
 	return uint32(n)
 }
 
-// cryptoOn сообщает, включена ли денежная часть. Пустая настройка значит
-// включено: установка, которая уже платит донорам, не должна остановиться
-// от того, что тумблер ещё ни разу не трогали
+// cryptoOn сообщает, включена ли денежная часть. По умолчанию выключена:
+// основной режим - без выплат, деньги включает владелец вручную
 func (h *Handler) cryptoOn() bool {
-	value, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "true")
+	value, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "false")
 	if err != nil {
-		return true
+		return false
 	}
-	return value != "false"
+	return value == "true"
 }
 
 // handleEpochs показывает владельцу закрытые расчётные периоды: сколько

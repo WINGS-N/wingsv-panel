@@ -489,7 +489,7 @@ func (h *Handler) settingsPayload() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	crypto, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "true")
+	crypto, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "false")
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +498,7 @@ func (h *Handler) settingsPayload() (map[string]any, error) {
 		"allow_admin_grpc":  allowGRPC == "true",
 		"link_format":       linkFormat,
 		"panel_by_request":  byRequest == "true",
-		"crypto_enabled":    crypto != "false",
+		"crypto_enabled":    crypto == "true",
 	}, nil
 }
 

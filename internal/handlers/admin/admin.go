@@ -575,15 +575,14 @@ func (h *Handler) requireAuth(next authedHandler) http.HandlerFunc {
 // requirePanel пускает только тех, кому открыта админ-панель. Аккаунт без неё -
 // обычный участник: у него есть свой доступ к VPN и свой кабинет, но чужими
 // нодами и клиентами он не распоряжается
-// cryptoOn сообщает, включена ли денежная часть. Пустая настройка значит
-// включено: установка, которая уже платит донорам, не должна остановиться
-// от того, что тумблер ещё ни разу не трогали
+// cryptoOn сообщает, включена ли денежная часть. По умолчанию выключена:
+// основной режим - без выплат, деньги включает владелец вручную
 func (h *Handler) cryptoOn() bool {
-	value, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "true")
+	value, err := h.store.GetPlatformSetting(storage.SettingCryptoEnabled, "false")
 	if err != nil {
-		return true
+		return false
 	}
-	return value != "false"
+	return value == "true"
 }
 
 // requireCrypto закрывает ручки, которые что-то считают или двигают деньги.

@@ -50,20 +50,21 @@ func TestDonationsKeepOnlyTheDevWalletWhenCryptoIsOff(t *testing.T) {
 	}
 }
 
-// Пока тумблер не трогали, денежная часть считается включённой.
-func TestCryptoStaysOnByDefault(t *testing.T) {
+// По умолчанию денежная часть выключена: основной режим без выплат. Включается
+// только явным "true".
+func TestCryptoIsOffByDefault(t *testing.T) {
 	h, _ := appHandler(t)
-	if !h.cryptoOn() {
-		t.Fatal("установка без тумблера потеряла денежную часть")
+	if h.cryptoOn() {
+		t.Fatal("денежная часть включена без явной настройки")
 	}
 	if wallets := h.donationWallets(); wallets.Dev != defaultDevWallet {
-		t.Fatalf("адрес на разработку = %q", wallets.Dev)
+		t.Fatalf("адрес на разработку = %q, он должен оставаться", wallets.Dev)
 	}
-	if err := h.store.SetPlatformSetting(storage.SettingCryptoEnabled, "false"); err != nil {
+	if err := h.store.SetPlatformSetting(storage.SettingCryptoEnabled, "true"); err != nil {
 		t.Fatal(err)
 	}
-	if h.cryptoOn() {
-		t.Fatal("тумблер выключен, а денежная часть жива")
+	if !h.cryptoOn() {
+		t.Fatal("тумблер включён, а денежная часть мертва")
 	}
 }
 
