@@ -125,6 +125,15 @@
       </span>
     </div>
 
+    <div class="keyval mt-2">
+      <span class="keyval-label">
+        Пускать в федерацию без приглашения. Выключено - корнем дерева встаёт только донор с сервером
+      </span>
+      <span class="keyval-value">
+        <OneuiSwitch :model-value="federationOpenEntry" @update:model-value="setFederationOpenEntry" />
+      </span>
+    </div>
+
     <h3 class="admin-section-subtitle mt-6">Админ-панель участникам</h3>
     <div class="keyval mt-2">
       <span class="keyval-label">
@@ -135,7 +144,7 @@
       </span>
     </div>
 
-    <div v-if="registrationState.mode === 'invite'" class="mt-4">
+    <div v-if="registrationState.mode !== 'closed'" class="mt-4">
       <div class="actions-row">
         <SamsungButton variant="secondary" @click="onCreateInvite">
           <template #icon><Plus class="button-icon" aria-hidden="true" /></template>
@@ -268,6 +277,7 @@ const invites = ref([]);
 const loadError = ref('');
 const allowAdminGRPC = ref(false);
 const panelByRequest = ref(false);
+const federationOpenEntry = ref(false);
 const cryptoEnabled = ref(false);
 const linkFormat = ref('brotli');
 const linkFormatOptions = [
@@ -459,6 +469,7 @@ async function loadSettings() {
       const body = await res.json();
       allowAdminGRPC.value = !!body.allow_admin_grpc;
       panelByRequest.value = !!body.panel_by_request;
+      federationOpenEntry.value = !!body.federation_open_entry;
       cryptoEnabled.value = body.crypto_enabled !== false;
       linkFormat.value = body.link_format || 'brotli';
     }
@@ -527,6 +538,21 @@ async function setPanelByRequest(value) {
   }
 }
 
+async function setFederationOpenEntry(value) {
+  try {
+    const res = await fetch('/api/owner/settings', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ federation_open_entry: value }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    federationOpenEntry.value = value;
+  } catch (err) {
+    loadError.value = err.message;
+  }
+}
+
 async function setRegistrationMode(mode) {
   if (registrationState.value.mode === mode) return;
   try {
@@ -538,7 +564,7 @@ async function setRegistrationMode(mode) {
     });
     if (!res.ok) throw new Error(await res.text());
     registrationState.value = { mode, loaded: true };
-    if (mode === 'invite') loadInvites();
+    if (mode !== 'closed') loadInvites();
   } catch (err) {
     loadError.value = err.message;
   }
