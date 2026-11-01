@@ -127,6 +127,10 @@ func (h *Handler) mayInvite(r *http.Request, admin storage.Admin) error {
 	if redeemed, err := h.store.RedeemedInvite(admin.ID); err == nil && redeemed {
 		return nil
 	}
+	// Открытая регистрация: владелец снял порог, и корнем дерева встаёт любой
+	if open, err := h.store.GetPlatformSetting(storage.SettingFederationOpenEntry, "false"); err == nil && open == "true" {
+		return nil
+	}
 	if !h.federationOn() {
 		return errors.New("приглашать могут участники федерации, а она сейчас выключена")
 	}

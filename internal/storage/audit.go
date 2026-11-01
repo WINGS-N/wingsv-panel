@@ -21,6 +21,12 @@ const (
 	// disabled: a deployment that never opted in has nothing to reason about.
 	SettingFederationEnabled = "federation_enabled"
 
+	// SettingFederationOpenEntry снимает донорский порог с того, кто входит в
+	// дерево корнем, без приглашения: регистрация в федерацию становится открытой.
+	// Сами приглашения при этом работают как раньше - они остаются способом
+	// привести своих и попасть в дерево ветвью. Выключено по умолчанию.
+	SettingFederationOpenEntry = "federation_open_entry"
+
 	// SettingPanelByRequest включает модерацию: панель тогда открывает владелец,
 	// а не сам участник. По умолчанию выключено - вести своих клиентов вправе
 	// каждый, кто уже в дереве
