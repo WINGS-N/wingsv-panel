@@ -48,28 +48,58 @@ func ParseWingsConfig(raw string) (*wingsvpb.Config, error) {
 const brotliQuality = 5
 
 // BuildWingsLink собирает ссылку wingsv:// в основном формате: байт 0x13,
-// дальше protobuf, сжатый brotli, всё в base64url
+// дальше protobuf, сжатый brotli, всё в алфавите без подчёркиваний
 func BuildWingsLink(config *wingsvpb.Config) (string, error) {
-	raw, err := proto.Marshal(config)
+	framed, err := brotliFrame(config)
 	if err != nil {
 		return "", err
+	}
+	return SchemePrefix + encodeLinkPayload(framed), nil
+}
+
+// BuildWingsLinkLegacyAlphabet собирает ту же brotli-ссылку прежним base64url.
+// Нужна сборкам, которые brotli читают, а точку в теле ссылки ещё нет
+func BuildWingsLinkLegacyAlphabet(config *wingsvpb.Config) (string, error) {
+	framed, err := brotliFrame(config)
+	if err != nil {
+		return "", err
+	}
+	return SchemePrefix + base64.RawURLEncoding.EncodeToString(framed), nil
+}
+
+func brotliFrame(config *wingsvpb.Config) ([]byte, error) {
+	raw, err := proto.Marshal(config)
+	if err != nil {
+		return nil, err
 	}
 	var compressed bytes.Buffer
 	w := brotli.NewWriterLevel(&compressed, brotliQuality)
 	if _, err := w.Write(raw); err != nil {
 		_ = w.Close()
-		return "", err
+		return nil, err
 	}
 	if err := w.Close(); err != nil {
-		return "", err
+		return nil, err
 	}
-	payload := append([]byte{FormatProtobufBrotli}, compressed.Bytes()...)
-	encoded := base64.RawURLEncoding.EncodeToString(payload)
-	return SchemePrefix + encoded, nil
+	return append([]byte{FormatProtobufBrotli}, compressed.Bytes()...), nil
 }
 
-// BuildWingsLinkDeflate собирает ссылку в старом формате. Нужен там, где на той
-// стороне заведомо старая сборка приложения
+// encodeLinkPayload кодирует кадр в тело ссылки. Отличие от base64url одно: 63-й
+// символ алфавита не подчёркивание, а точка. Пара подчёркиваний подряд выходила
+// сама собой, а мессенджеры читают её как разметку и съедают кусок ссылки.
+//
+// Завершающую точку автолинковка обрезает как знак конца предложения, поэтому
+// такой хвост закрывается знаком равенства - его декодер снимает вместе с padding
+func encodeLinkPayload(framed []byte) string {
+	encoded := strings.ReplaceAll(base64.RawURLEncoding.EncodeToString(framed), "_", ".")
+	if strings.HasSuffix(encoded, ".") {
+		encoded += "="
+	}
+	return encoded
+}
+
+// BuildWingsLinkDeflate собирает ссылку в старом формате, с прежним алфавитом: на
+// той стороне заведомо старая сборка, а точку она не прочитает
 func BuildWingsLinkDeflate(config *wingsvpb.Config) (string, error) {
 	raw, err := proto.Marshal(config)
 	if err != nil {

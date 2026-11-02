@@ -1238,7 +1238,10 @@ func appRoutingActivePackageCount(app *wingsvpb.AppRouting) int {
 
 func normalizeBase64(value string) string {
 	value = strings.TrimSpace(value)
-	return strings.TrimRight(value, "=")
+	value = strings.TrimRight(value, "=")
+	// Точка - 63-й символ алфавита наших ссылок вместо подчёркивания; у ссылок
+	// прошлого формата её нет, так что замена безобидна для обоих
+	return strings.ReplaceAll(value, ".", "_")
 }
 
 func firstNonEmpty(values ...string) string {
