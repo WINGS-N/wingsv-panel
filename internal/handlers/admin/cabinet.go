@@ -175,6 +175,15 @@ func (h *Handler) mayUseFederation(ctx context.Context, admin storage.Admin) err
 	if redeemed, err := h.store.RedeemedInvite(admin.ID); err == nil && redeemed {
 		return nil
 	}
+	// Открытый вход: владелец снял требование приглашения, и федерация доступна
+	// всем. Сами приглашения при этом живут дальше, дерево никуда не девается
+	if open, err := h.store.GetPlatformSetting(storage.SettingFederationOpenEntry, "false"); err == nil && open == "true" {
+		return nil
+	}
+	// Голова недоступна - отказ, а не паника: спросить про донорство не у кого
+	if !h.federationOn() {
+		return errors.New("федерация сейчас выключена")
+	}
 	// Донор - корень собственной ветки: его никто не приглашал, но он отдал
 	// сервер, и это тот же вклад
 	summary, err := h.fed.DonorSummary(ctx, donorID(admin))
