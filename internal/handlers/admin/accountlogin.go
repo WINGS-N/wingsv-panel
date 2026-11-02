@@ -17,6 +17,14 @@ import (
 // waiting on a redirect, and a hung provider must not hang the panel.
 const accountTimeout = 10 * time.Second
 
+// Заведение учётки при регистрации: провайдер над ним думает дольше обычного
+// запроса, а человек ждёт не форму, а конец регистрации
+const (
+	accountEnrollTimeout    = 40 * time.Second
+	accountEnrollAttempts   = 2
+	accountEnrollRetryDelay = 2 * time.Second
+)
+
 // handleOIDCStatus tells the login page whether to offer the button at all.
 func (h *Handler) handleOIDCStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

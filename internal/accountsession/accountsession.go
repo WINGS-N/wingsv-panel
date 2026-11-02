@@ -20,8 +20,10 @@ import (
 	"time"
 )
 
-// requestTimeout - один заход к провайдеру. Человек ждёт форму, а не вечность
-const requestTimeout = 10 * time.Second
+// requestTimeout - один заход к провайдеру. Человек ждёт форму, а не вечность.
+// Это только потолок транспорта: срок каждого вызова задаёт его контекст, и
+// заведение учётки берёт себе больше, потому что провайдер над ним думает
+const requestTimeout = 45 * time.Second
 
 // ErrDisabled - панель не настроена на сервис учёток
 var ErrDisabled = errors.New("accountsession: the account service is not configured")

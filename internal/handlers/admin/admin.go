@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"v.wingsnet.org/internal/accountsession"
 	"v.wingsnet.org/internal/auth"
@@ -306,9 +307,10 @@ func (h *Handler) enrollAccount(ctx context.Context, admin storage.Admin, passwo
 	if !h.session.Enabled() || password == "" {
 		return
 	}
-	call, cancel := context.WithTimeout(ctx, accountTimeout)
-	defer cancel()
-	subject, err := h.session.CreateHuman(call, humanFor(admin, h.accountDomain(), password))
+	// Своё время жизни, не от запроса: браузер мог уже уйти с ответом, а учётку
+	// всё равно надо завести - иначе человека встретит экран переезда и просьба
+	// ввести пароль второй раз
+	subject, err := h.createAccountWithRetry(admin, password)
 	if err != nil {
 		log.Printf("register: %s got no account: %v", admin.Username, err)
 		return
@@ -316,6 +318,27 @@ func (h *Handler) enrollAccount(ctx context.Context, admin storage.Admin, passwo
 	if err := h.store.LinkAccount(admin.ID, subject, admin.Username); err != nil {
 		log.Printf("register: the account of %s was not linked: %v", admin.Username, err)
 	}
+}
+
+// createAccountWithRetry зовёт провайдера и, когда тот не уложился в срок,
+// заходит второй раз: отказ по таймауту тут не окончательный, а учётка нужна
+// сразу, иначе регистрация разваливается на два шага
+func (h *Handler) createAccountWithRetry(admin storage.Admin, password string) (string, error) {
+	who := humanFor(admin, h.accountDomain(), password)
+	var lastErr error
+	for attempt := range accountEnrollAttempts {
+		if attempt > 0 {
+			time.Sleep(accountEnrollRetryDelay)
+		}
+		call, cancel := context.WithTimeout(context.Background(), accountEnrollTimeout)
+		subject, err := h.session.CreateHuman(call, who)
+		cancel()
+		if err == nil {
+			return subject, nil
+		}
+		lastErr = err
+	}
+	return "", lastErr
 }
 
 func (h *Handler) handleRegistrationStatus(w http.ResponseWriter, r *http.Request) {
