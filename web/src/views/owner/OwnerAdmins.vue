@@ -100,8 +100,8 @@
         @update:model-value="setLinkFormat"
       />
       <p class="admin-muted mt-2">
-        Brotli короче на четверть - QR получается крупнее и читается быстрее. Сборки приложения, вышедшие до его
-        появления, такую ссылку не прочитают: для них есть старый формат.
+        Основной формат не ставит в ссылку подчёркивания, которые мессенджеры принимают за разметку. Сборки, вышедшие до
+        него, читают прежний алфавит, а совсем старые - deflate.
       </p>
     </div>
 
@@ -282,6 +282,7 @@ const cryptoEnabled = ref(false);
 const linkFormat = ref('brotli');
 const linkFormatOptions = [
   { value: 'brotli', label: 'Brotli (основной)' },
+  { value: 'brotli_legacy', label: 'Brotli, прежний алфавит' },
   { value: 'deflate', label: 'Старый deflate' },
 ];
 const showCreate = ref(false);

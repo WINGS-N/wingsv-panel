@@ -542,7 +542,9 @@ func (h *Handler) handleSettings(w http.ResponseWriter, r *http.Request, owner s
 			})
 		}
 		if format := strings.TrimSpace(req.LinkFormat); format != "" {
-			if format != storage.LinkFormatBrotli && format != storage.LinkFormatDeflate {
+			if format != storage.LinkFormatBrotli &&
+				format != storage.LinkFormatBrotliLegacy &&
+				format != storage.LinkFormatDeflate {
 				writeError(w, http.StatusBadRequest, "unknown link_format")
 				return
 			}

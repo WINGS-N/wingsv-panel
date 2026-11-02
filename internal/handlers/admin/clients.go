@@ -572,9 +572,14 @@ func (h *Handler) buildLink(cfg *wingsvpb.Config) (string, error) {
 	if h.store == nil {
 		return preview.BuildWingsLink(cfg)
 	}
-	if format, err := h.store.GetPlatformSetting(storage.SettingLinkFormat, storage.LinkFormatBrotli); err == nil &&
-		format == storage.LinkFormatDeflate {
-		return preview.BuildWingsLinkDeflate(cfg)
+	format, err := h.store.GetPlatformSetting(storage.SettingLinkFormat, storage.LinkFormatBrotli)
+	if err == nil {
+		switch format {
+		case storage.LinkFormatDeflate:
+			return preview.BuildWingsLinkDeflate(cfg)
+		case storage.LinkFormatBrotliLegacy:
+			return preview.BuildWingsLinkLegacyAlphabet(cfg)
+		}
 	}
 	return preview.BuildWingsLink(cfg)
 }
