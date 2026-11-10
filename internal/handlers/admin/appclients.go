@@ -18,8 +18,9 @@ type appClient struct {
 // knownAppClients - список целиком. Незнакомый ключ показывается безымянным, и
 // это правильно: имя, которому нечем подтвердиться, хуже отсутствия имени
 var knownAppClients = map[string]appClient{
-	"wingsv": {Name: "WINGS V", Icon: "/img/wingsv-icon.webp"},
-	"matrix": {Name: "Matrix", Icon: "/img/matrix.svg"},
+	"wingsv":    {Name: "WINGS V", Icon: "/img/wingsv-icon.webp"},
+	"wingsvdex": {Name: "WINGS V DeX", Icon: "/img/wingsv-icon.webp"},
+	"matrix":    {Name: "Matrix", Icon: "/img/matrix.svg"},
 }
 
 // handleAppClient рассказывает экрану согласия, кто именно постучался
