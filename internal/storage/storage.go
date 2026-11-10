@@ -190,6 +190,9 @@ func applySchema(db *sql.DB, driver Driver) error {
 		`ALTER TABLE admins ADD COLUMN panel_requested_at INTEGER NOT NULL DEFAULT 0`,
 		// Картинки переехали в blobs: в аккаунте остаётся только хеш
 		`ALTER TABLE admins ADD COLUMN avatar_blob TEXT NOT NULL DEFAULT ''`,
+		// Хеши уменьшенных копий: {"64":"...","128":"..."}. Без них список
+		// аккаунтов тянет полноразмерные картинки на каждую строку
+		`ALTER TABLE admins ADD COLUMN avatar_sizes TEXT NOT NULL DEFAULT ''`,
 		// Отметки о правках по полям: по ним считается конфликт двух админов
 		`ALTER TABLE client_configs ADD COLUMN touched_fields TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE clients ADD COLUMN last_peer_ip TEXT NOT NULL DEFAULT ''`,

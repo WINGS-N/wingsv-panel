@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"encoding/json"
 	"errors"
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -250,9 +252,11 @@ func (s *Store) SetAdminAvatar(id int64, mime string, bytes []byte) (int64, erro
 		return 0, err
 	}
 	previous := s.avatarBlobOf(id)
+	sizes := s.putAvatarSizes(bytes)
 	if err := s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).Updates(map[string]any{
 		"avatar_mime":    mime,
 		"avatar_blob":    hash,
+		"avatar_sizes":   sizes,
 		"avatar_png":     gorm.Expr("NULL"),
 		"avatar_version": gorm.Expr("avatar_version + 1"),
 		"updated_at":     time.Now().UTC().UnixMilli(),
@@ -288,6 +292,95 @@ func (s *Store) GetAdminAvatar(id int64) (mime string, data []byte, version int6
 	}
 	// Старьё, заведённое до blobs, держит байты прямо в себе - его не бросаем
 	return m.AvatarMime, m.AvatarPNG, m.AvatarVersion, nil
+}
+
+// putAvatarSizes режет картинку и складывает копии в blobs, возвращая JSON с их
+// хешами. Молча пропускает то, что не прочиталось: своя картинка у человека уже
+// лежит, и ронять её загрузку из-за кривого ресайза незачем
+func (s *Store) putAvatarSizes(source []byte) string {
+	if len(source) == 0 {
+		return ""
+	}
+	made := map[string]string{}
+	for _, size := range avatarpic.Sizes {
+		scaled, err := avatarpic.Resize(source, size)
+		if err != nil {
+			continue
+		}
+		hash, err := s.PutBlob("image/png", scaled)
+		if err != nil {
+			continue
+		}
+		made[strconv.Itoa(size)] = hash
+	}
+	if len(made) == 0 {
+		return ""
+	}
+	encoded, err := json.Marshal(made)
+	if err != nil {
+		return ""
+	}
+	return string(encoded)
+}
+
+// GetAdminAvatarSized отдаёт копию нужного размера.
+//
+// Нет готовой - возвращает оригинал: старые аккаунты заводились без копий, и
+// гонять по ним миграцию ради картинки не стоит того
+func (s *Store) GetAdminAvatarSized(id int64, size int) (mime string, data []byte, version int64, err error) {
+	if size <= 0 {
+		return s.GetAdminAvatar(id)
+	}
+	var m dbmodel.Admin
+	if err = s.gdb.Select("avatar_sizes", "avatar_version").
+		Where("id = ?", id).First(&m).Error; err != nil {
+		return "", nil, 0, err
+	}
+	want := strconv.Itoa(avatarpic.NearestSize(size))
+	if mime, data, ok := s.sizedFromJSON(m.AvatarSizes, want); ok {
+		return mime, data, m.AvatarVersion, nil
+	}
+	// Копий нет: картинка легла до того, как мы начали их делать. Режем сейчас и
+	// запоминаем, иначе каждый запрос будет резать заново
+	origMime, origData, origVersion, err := s.GetAdminAvatar(id)
+	if err != nil || len(origData) == 0 {
+		return origMime, origData, origVersion, err
+	}
+	sizes := s.putAvatarSizes(origData)
+	if sizes == "" {
+		return origMime, origData, origVersion, nil
+	}
+	if err := s.gdb.Model(&dbmodel.Admin{}).Where("id = ?", id).
+		Update("avatar_sizes", sizes).Error; err != nil {
+		return origMime, origData, origVersion, nil
+	}
+	if mime, data, ok := s.sizedFromJSON(sizes, want); ok {
+		return mime, data, origVersion, nil
+	}
+	return origMime, origData, origVersion, nil
+}
+
+// sizedFromJSON достаёт копию нужного размера из сохранённого набора
+func (s *Store) sizedFromJSON(encoded, want string) (string, []byte, bool) {
+	if encoded == "" {
+		return "", nil, false
+	}
+	var made map[string]string
+	if json.Unmarshal([]byte(encoded), &made) != nil {
+		return "", nil, false
+	}
+	hash := made[want]
+	if hash == "" {
+		return "", nil, false
+	}
+	mime, data, err := s.GetBlob(hash)
+	if err != nil || len(data) == 0 {
+		return "", nil, false
+	}
+	if mime == "" {
+		mime = "image/png"
+	}
+	return mime, data, true
 }
 
 // avatarBlobOf - хеш текущей картинки аккаунта

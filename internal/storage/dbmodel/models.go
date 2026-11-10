@@ -24,7 +24,9 @@ type Admin struct {
 	// аккаунтов лежит одним блобом, а не десятком копий нахуй
 	AvatarBlob    string `gorm:"column:avatar_blob;not null;default:''"`
 	AvatarVersion int64  `gorm:"column:avatar_version;not null;default:0"`
-	VKLinks       string `gorm:"column:vk_links;not null;default:''"`
+	// AvatarSizes - JSON с хешами уменьшенных копий по размеру
+	AvatarSizes string `gorm:"column:avatar_sizes;not null;default:''"`
+	VKLinks     string `gorm:"column:vk_links;not null;default:''"`
 	// SuspendedAtUnix cuts this admin out of the invite tree. Zero means active.
 	// A suspension is inherited by everyone below: an invite tree is only worth
 	// having if a bad branch can be taken off at any point in it.

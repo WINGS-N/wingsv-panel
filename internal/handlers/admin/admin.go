@@ -490,7 +490,10 @@ func (h *Handler) handleAvatar(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	mime, data, _, err := h.store.GetAdminAvatar(id)
+	// ?s=128 - какой размер нужен. Список аккаунтов тянет по картинке на строку,
+	// и гонять туда полноразмерные бессмысленно
+	size, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("s")))
+	mime, data, _, err := h.store.GetAdminAvatarSized(id, size)
 	if err != nil || len(data) == 0 {
 		// Своей картинки нет - отдаём кружок с буквой имени. На 404 каждый клиент
 		// лепил бы свою затычку, а их дохуя и все разные
@@ -503,6 +506,11 @@ func (h *Handler) handleAvatar(w http.ResponseWriter, r *http.Request) {
 		if drawErr != nil {
 			http.NotFound(w, r)
 			return
+		}
+		if size > 0 {
+			if scaled, scaleErr := avatarpic.Resize(generated, avatarpic.NearestSize(size)); scaleErr == nil {
+				generated = scaled
+			}
 		}
 		w.Header().Set("Content-Type", "image/png")
 		w.Header().Set("Cache-Control", "private, max-age=86400")
