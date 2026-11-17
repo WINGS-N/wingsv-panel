@@ -882,6 +882,9 @@ const provisionEnabled = ref(false);
 // снятой галки
 const provisionWasEnabled = ref(false);
 const provisionNodeId = ref('');
+// С какой нодой клиент приехал с сервера. Без этого смена ноды неотличима от
+// пустого патча, и сохранение молча выходит, ничего не отправив
+const provisionNodeWas = ref('');
 const provisionSeeded = ref(false);
 const busyProvisionSave = ref(false);
 const vkTurnNodeOptions = computed(() => [
@@ -1122,6 +1125,7 @@ async function loadDetail() {
       provisionEnabled.value = (formValue.value?.turn?.profiles || []).some((p) => p.wgProvisioned);
       provisionWasEnabled.value = provisionEnabled.value;
       matchProvisionNodeFromConfig();
+      provisionNodeWas.value = provisionNodeId.value;
       provisionSeeded.value = true;
     }
     if (!remoteControlSeeded.value) {
@@ -1191,7 +1195,9 @@ const configClash = ref([]);
 async function savePatch(parsed, failure) {
   const stored = detail.value?.desired_config || {};
   const patch = buildPatch(parsed, stored);
-  if (Object.keys(patch).length === 0 && provisionEnabled.value === provisionWasEnabled.value) {
+  const provisionUntouched =
+    provisionEnabled.value === provisionWasEnabled.value && provisionNodeId.value === provisionNodeWas.value;
+  if (Object.keys(patch).length === 0 && provisionUntouched) {
     // Править нехуй: молча выходим, иначе плодим версии на пустом месте
     configClash.value = [];
     return undefined;
@@ -1220,6 +1226,8 @@ async function savePatch(parsed, failure) {
     throw new Error(body.message || failure);
   }
   configClash.value = [];
+  provisionWasEnabled.value = provisionEnabled.value;
+  provisionNodeWas.value = provisionNodeId.value;
   return res;
 }
 
