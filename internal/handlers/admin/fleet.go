@@ -1,10 +1,16 @@
 package admin
 
 import (
+	"bufio"
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	headpb "v.wingsnet.org/internal/gen/headpb"
 	"v.wingsnet.org/internal/storage"
@@ -48,11 +54,10 @@ func (h *Handler) handleFleetSettings(w http.ResponseWriter, r *http.Request, ad
 		writeError(w, http.StatusNotFound, "federation is off")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
-	defer cancel()
-
 	switch r.Method {
 	case http.MethodGet:
+		ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
+		defer cancel()
 		got, err := h.fed.FleetSettings(ctx)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, "голова федерации недоступна: "+err.Error())
@@ -76,6 +81,18 @@ func (h *Handler) handleFleetSettings(w http.ResponseWriter, r *http.Request, ad
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		if req.XrayURL != "" {
+			digestCtx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+			digest, err := fetchXraySHA512(digestCtx, req.XrayURL, req.XrayVersion)
+			cancel()
+			if err != nil {
+				writeError(w, http.StatusBadGateway, "не удалось получить SHA-512 Xray: "+err.Error())
+				return
+			}
+			req.XraySHA512 = digest
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), federationTimeout)
+		defer cancel()
 		saved, err := h.fed.SetFleetSettings(ctx, &headpb.FleetSettings{
 			Xray:        &headpb.BuildChoice{Version: req.XrayVersion, Url: req.XrayURL, Sha512: req.XraySHA512},
 			Vktp:        &headpb.BuildChoice{Version: req.VKTPVersion, Url: req.VKTPURL, Sha512: req.VKTPSHA512},
@@ -100,6 +117,45 @@ func (h *Handler) handleFleetSettings(w http.ResponseWriter, r *http.Request, ad
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
+}
+
+func fetchXraySHA512(ctx context.Context, assetURL, tag string) (string, error) {
+	u, err := url.Parse(assetURL)
+	prefix := "/" + xrayForkRepo + "/releases/download/"
+	if err != nil || u.Scheme != "https" || u.Host != "github.com" || u.User != nil ||
+		u.RawQuery != "" || u.Fragment != "" || tag == "" || strings.Contains(tag, "/") ||
+		u.Path != prefix+tag+"/Xray-linux-64.zip" {
+		return "", fmt.Errorf("invalid Xray release asset URL")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, assetURL+".dgst", nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub returned HTTP %d", resp.StatusCode)
+	}
+	scanner := bufio.NewScanner(io.LimitReader(resp.Body, 16<<10))
+	for scanner.Scan() {
+		key, value, ok := strings.Cut(scanner.Text(), "=")
+		if !ok || strings.TrimSpace(key) != "SHA2-512" {
+			continue
+		}
+		digest := strings.TrimSpace(value)
+		decoded, err := hex.DecodeString(digest)
+		if err != nil || len(decoded) != 64 {
+			return "", fmt.Errorf("invalid SHA-512 in release checksum")
+		}
+		return strings.ToLower(digest), nil
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+	return "", fmt.Errorf("missing SHA-512 in release checksum")
 }
 
 func (h *Handler) handleFleetRestart(w http.ResponseWriter, r *http.Request, admin storage.Admin) {
