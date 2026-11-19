@@ -1,7 +1,7 @@
 FROM node:22-alpine AS frontend-builder
 RUN corepack enable
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY web ./web
 COPY index.html vite.config.js tailwind.config.js postcss.config.js ./
 RUN pnpm install --frozen-lockfile
